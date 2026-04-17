@@ -684,7 +684,7 @@
     }
 
     // ── Access Code Gate ──
-    (function() {
+    (async function() {
       var ACCESS_CODE_KEY = 'access_code_verified';
       var gate = document.getElementById('accessGate');
       var input = document.getElementById('accessCodeInput');
@@ -698,14 +698,7 @@
       }
 
       // Fetch access code from Firestore (unauthenticated read allowed for this doc)
-      var _accessCode = null;
-      db.collection('app_state').doc('access_code').get().then(function(doc) {
-        if (doc.exists && doc.data().code) {
-          _accessCode = doc.data().code;
-        }
-      }).catch(function(err) {
-        console.error('Failed to fetch access code:', err);
-      });
+      var _accessCode = await getAccessCode();
 
       function verifyCode() {
         var code = (input.value || '').trim();
@@ -734,7 +727,30 @@
       input.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') verifyCode();
       });
+
+      // Auto verify using `code` from URL query params (if provided).
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+
+      if (code) {
+        input.value = code;
+        verifyCode();
+      }
     })();
+
+    function getAccessCode() {
+      return db.collection('app_state').doc('access_code').get().then(function(doc) {
+          if (doc.exists && doc.data().code) {
+            _accessCode = doc.data().code;
+          }
+
+          return _accessCode;
+        }).catch(function(err) {
+          console.error('Failed to fetch access code:', err);
+          return null;
+        });
+    }
+   
   </script>
 
   <!-- Walking pet behavior controller -->
