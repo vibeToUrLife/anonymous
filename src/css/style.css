@@ -390,10 +390,40 @@ body {
     word-break: break-word;
 }
 .reply-item:last-child { border-bottom: none; }
+.reply-sender {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(168,85,247,0.75);
+    margin-right: 4px;
+}
 .reply-time {
     font-size: 10px;
     opacity: 0.4;
     margin-left: 6px;
+}
+/* Anonymous toggle — inline inside reply input row */
+.reply-anon-toggle {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    user-select: none;
+    flex-shrink: 0;
+}
+.reply-anon-toggle input[type="checkbox"] {
+    width: 13px;
+    height: 13px;
+    accent-color: #a855f7;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.reply-anon-icon {
+    font-size: 14px;
+    line-height: 1;
+}
+.reply-anon-text {
+    font-size: 11px;
+    color: rgba(255,255,255,0.4);
 }
 .reply-input-row {
     display: flex;
@@ -1044,6 +1074,8 @@ body.light-theme .reply-item {
     border-color: rgba(0,0,0,0.06);
     color: #444;
 }
+body.light-theme .reply-sender { color: rgba(120,60,200,0.7); }
+body.light-theme .reply-anon-text { color: rgba(0,0,0,0.4); }
 body.light-theme .reply-input-row input {
     background: rgba(0,0,0,0.04); color: #333;
     border-color: rgba(0,0,0,0.1);

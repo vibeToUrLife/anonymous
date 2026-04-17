@@ -987,6 +987,13 @@ function buildReplyItem(r) {
     });
     div.appendChild(img);
     }
+    // Show sender name if reply was posted non-anonymously
+    if (r.name) {
+    const name = document.createElement('span');
+    name.className = 'reply-sender';
+    name.textContent = r.name + ':';
+    div.appendChild(name);
+    }
     if (r.text) {
     const txt = document.createElement('span');
     safeTextWithBreaks(txt, r.text);
@@ -1103,6 +1110,11 @@ function buildReplyInput(docId) {
         const reply = { ts: Date.now() };
         if (text) reply.text = text;
         if (replyPendingImage) reply.image = replyPendingImage;
+        // Include sender name when user chooses non-anonymous
+        if (!anonCheckbox.checked) {
+            const senderName = localStorage.getItem('flappy_name') || auth.currentUser?.displayName || 'User';
+            reply.name = senderName;
+        }
         suppressNextReplyNotif = true;
         await answersRef.doc(docId).update({
         replies: firebase.firestore.FieldValue.arrayUnion(reply)
@@ -1122,10 +1134,32 @@ function buildReplyInput(docId) {
     if (e.key === 'Enter') { e.preventDefault(); doSend(); }
     });
     inp.addEventListener('click', (e) => e.stopPropagation());
+    // Anonymous toggle checkbox (inline, beside input) — remember last choice
+    const anonLabel = document.createElement('label');
+    anonLabel.className = 'reply-anon-toggle';
+    anonLabel.title = 'Toggle anonymous reply';
+    anonLabel.addEventListener('click', (e) => e.stopPropagation());
+    const anonCheckbox = document.createElement('input');
+    anonCheckbox.type = 'checkbox';
+    // Restore last preference; default is anonymous (true)
+    anonCheckbox.checked = localStorage.getItem('reply_anon_pref') !== 'false';
+    const anonIcon = document.createElement('span');
+    anonIcon.className = 'reply-anon-icon';
+    anonIcon.textContent = anonCheckbox.checked ? '🕶️' : '👤';
+    anonLabel.appendChild(anonCheckbox);
+    anonLabel.appendChild(anonIcon);
+    // Update icon and persist preference when toggled
+    anonCheckbox.addEventListener('change', (e) => {
+        e.stopPropagation();
+        localStorage.setItem('reply_anon_pref', anonCheckbox.checked ? 'true' : 'false');
+        anonIcon.textContent = anonCheckbox.checked ? '🕶️' : '👤';
+    });
+
     row.appendChild(fileInput);
     row.appendChild(attachBtn);
     row.appendChild(gifReplyBtn);
     row.appendChild(inp);
+    row.appendChild(anonLabel);
     row.appendChild(btn);
     wrapper.appendChild(row);
     wrapper.appendChild(preview);
