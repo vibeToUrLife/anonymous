@@ -10,9 +10,21 @@ body {
 }
 
 /* ── Header ── */
+/* ── Heading logo wrapper ── */
+.page-title-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding-top: 36px;
+}
+.page-logo {
+    flex-shrink: 0;
+    display: block;
+}
 .page-title {
     text-align: center;
-    padding: 36px 20px 6px;
+    padding: 0 20px 6px;
     font-size: 28px;
     font-weight: 700;
     letter-spacing: 0.5px;
@@ -1052,6 +1064,9 @@ body.light-theme {
     background: linear-gradient(135deg, #e8e4f0, #f0eef5, #dde4f0);
     color: #333;
 }
+/* Keep logo visible on light background */
+body.light-theme .page-logo .logo-body { fill: #6b5ce7; }
+body.light-theme .page-logo .logo-dot  { fill: #3a1d8a; }
 body.light-theme .page-title {
     background: linear-gradient(90deg, #6b5ce7, #3a8fd4);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
@@ -1752,7 +1767,7 @@ body.light-theme .spin-result-food { color: #b8860b; }
 }
 
 /* ── Main content offset when sidebar open (desktop) ── */
-body.sidebar-open .page-title,
+body.sidebar-open .page-title-wrapper,
 body.sidebar-open .page-subtitle,
 body.sidebar-open .bubble-wrap {
     margin-left: 360px;
@@ -1960,7 +1975,7 @@ body.sidebar-open .bubble-wrap {
     .input-area { padding: 10px 12px; }
     .img-preview-strip { bottom: 68px; padding: 6px 12px; }
     .sidebar { width: 85vw; left: -85vw; }
-    body.sidebar-open .page-title,
+    body.sidebar-open .page-title-wrapper,
     body.sidebar-open .page-subtitle,
     body.sidebar-open .bubble-wrap { margin-left: 0; }
 

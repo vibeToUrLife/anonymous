@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 32" width="36" height="32">
+  <!-- Pixel art speech bubble -->
+  <rect x="8"  y="0"  width="20" height="4" fill="#c8b6ff"/>
+  <rect x="4"  y="4"  width="28" height="4" fill="#c8b6ff"/>
+  <rect x="0"  y="8"  width="36" height="12" fill="#c8b6ff"/>
+  <rect x="4"  y="20" width="28" height="4" fill="#c8b6ff"/>
+  <rect x="8"  y="24" width="20" height="4" fill="#c8b6ff"/>
+  <rect x="12" y="28" width="8"  height="4" fill="#c8b6ff"/>
+  <!-- Three pixel typing dots -->
+  <rect x="8"  y="12" width="4" height="4" fill="#7b5ea7"/>
+  <rect x="16" y="12" width="4" height="4" fill="#7b5ea7"/>
+  <rect x="24" y="12" width="4" height="4" fill="#7b5ea7"/>
+</svg>
