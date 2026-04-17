@@ -231,6 +231,97 @@
     }
     .access-enter-btn:hover { opacity: 0.85; }
     .access-error { color: #f87171; font-size: 12px; margin-top: 10px; min-height: 18px; }
+
+    /* ── What's New overlay ── */
+    .whats-new-overlay {
+      position: fixed; inset: 0; z-index: 9500;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(4px);
+      animation: fadeIn 0.25s ease;
+    }
+    .whats-new-overlay.hidden { display: none; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .whats-new-box {
+      max-width: 360px; width: 90%;
+      padding: 28px 24px 22px;
+      border-radius: 20px;
+      background: linear-gradient(145deg, rgba(30,20,60,0.98), rgba(20,15,50,0.98));
+      border: 1px solid rgba(168,85,247,0.3);
+      box-shadow: 0 12px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(168,85,247,0.1);
+    }
+    .whats-new-badge {
+      display: inline-block;
+      font-size: 13px; font-weight: 800; letter-spacing: 0.5px;
+      color: #fff;
+      background: linear-gradient(135deg, #a855f7, #6366f1);
+      border-radius: 20px; padding: 4px 12px;
+      margin-bottom: 16px;
+    }
+    .whats-new-list {
+      list-style: none; margin: 0 0 20px; padding: 0;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .whats-new-list li {
+      font-size: 13px; line-height: 1.6;
+      color: rgba(255,255,255,0.75);
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+      border-left: 3px solid rgba(168,85,247,0.5);
+    }
+    .whats-new-list li strong { color: #fff; }
+    .whats-new-kbd {
+      display: inline-block; font-size: 13px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 5px; padding: 0 5px;
+    }
+    .whats-new-close {
+      width: 100%; padding: 11px;
+      border: none; border-radius: 12px;
+      background: linear-gradient(135deg, #a855f7, #6366f1);
+      color: #fff; font-size: 14px; font-weight: 700;
+      cursor: pointer; transition: opacity 0.2s;
+    }
+    .whats-new-close:hover { opacity: 0.85; }
+    body.light-theme .whats-new-box {
+      background: linear-gradient(145deg, rgba(245,242,255,0.99), rgba(235,230,255,0.99));
+      border-color: rgba(120,60,200,0.25);
+    }
+    body.light-theme .whats-new-list li { color: rgba(0,0,0,0.65); background: rgba(0,0,0,0.04); }
+    body.light-theme .whats-new-list li strong { color: #222; }
+    body.light-theme .whats-new-kbd { background: rgba(0,0,0,0.08); }
+
+    /* ── What's New dev editor (Settings) ── */
+    .wn-editor-input, .wn-editor-textarea {
+      width: 100%; box-sizing: border-box;
+      padding: 8px 12px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      color: #fff; font-size: 12px; outline: none;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+    .wn-editor-input:focus, .wn-editor-textarea:focus { border-color: rgba(168,85,247,0.45); }
+    .wn-editor-input::placeholder, .wn-editor-textarea::placeholder { color: rgba(255,255,255,0.3); }
+    .wn-editor-textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+    .wn-editor-hint { font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 3px; }
+    .wn-editor-save {
+      margin-top: 8px; width: 100%; padding: 9px;
+      border: none; border-radius: 10px;
+      background: linear-gradient(135deg, #a855f7, #6366f1);
+      color: #fff; font-size: 13px; font-weight: 700;
+      cursor: pointer; transition: opacity 0.2s;
+    }
+    .wn-editor-save:hover { opacity: 0.85; }
+    .wn-editor-save:disabled { opacity: 0.5; cursor: not-allowed; }
+    .wn-editor-status { font-size: 11px; margin-top: 6px; min-height: 16px; color: rgba(168,85,247,0.85); }
+    body.light-theme .wn-editor-input, body.light-theme .wn-editor-textarea {
+      background: rgba(0,0,0,0.04); color: #333; border-color: rgba(0,0,0,0.1);
+    }
+    body.light-theme .wn-editor-input::placeholder, body.light-theme .wn-editor-textarea::placeholder { color: rgba(0,0,0,0.3); }
+    body.light-theme .wn-editor-hint { color: rgba(0,0,0,0.35); }
+    body.light-theme .wn-editor-status { color: rgba(100,40,180,0.8); }
   </style>
 </head>
 <body>
@@ -338,6 +429,22 @@
         <div class="settings-label">Data</div>
         <button class="settings-cache-btn" id="clearCacheBtn">🗑️ Clear Local Cache</button>
       </div>
+
+      <!-- Developer-only: What's New editor (hidden for regular users) -->
+      <hr class="settings-divider" id="wnEditorDivider" style="display:none">
+      <div class="settings-section" id="wnEditorSection" style="display:none">
+        <div class="settings-label">📣 What's New Editor <span style="font-size:10px;opacity:0.5">(dev only)</span></div>
+        <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+          <input type="text" class="wn-editor-input" id="wnVersionInput" placeholder="Version key e.g. v3" maxlength="20">
+          <div class="wn-editor-hint">Bump the version to make all users see the popup again.</div>
+          <input type="text" class="wn-editor-input" id="wnBadgeInput" placeholder="Badge text e.g. 🆕 What's New" maxlength="60">
+          <textarea class="wn-editor-textarea" id="wnItemsInput" placeholder="One update item per line (plain text or HTML)&#10;e.g. 💬 &lt;strong&gt;New feature&lt;/strong&gt; — description here."></textarea>
+          <div class="wn-editor-hint">Each line becomes one bullet in the popup.</div>
+          <button class="wn-editor-save" id="wnSaveBtn">💾 Save &amp; Publish</button>
+          <div class="wn-editor-status" id="wnEditorStatus"></div>
+        </div>
+      </div>
+
       <hr class="settings-divider">
       <button class="settings-logout-btn" id="settingsLogoutBtn">🚶 Sign Out</button>
       <button class="settings-close-btn" id="settingsCloseBtn">Close</button>
@@ -649,6 +756,15 @@
     <button class="celebration-close" id="celebrationClose">Dismiss</button>
   </div>
 
+  <!-- What's New overlay — content is driven by WHATS_NEW_CONFIG in the script below -->
+  <div class="whats-new-overlay hidden" id="whatsNewOverlay">
+    <div class="whats-new-box">
+      <div class="whats-new-badge" id="whatsNewBadge"></div>
+      <ul class="whats-new-list" id="whatsNewList"></ul>
+      <button class="whats-new-close" id="whatsNewClose">Got it! 👍</button>
+    </div>
+  </div>
+
   </div> <!-- /app-content -->
 
   <!-- Spin result popup (outside sidebar/app-content for proper z-index) -->
@@ -750,6 +866,112 @@
           return null;
         });
     }
+
+    // ── What's New: fetch from Firestore, show once per version ──
+    // Developer UIDs (must match isDeveloper() in firestore.rules)
+    var WN_DEV_UIDS = ['HClZmAeuEaUVjHqUaFLFFMTMQnd2', 'eUs3isAgsaRT9VLKEFI4HEFbCnk1'];
+    var WN_DOC      = db.collection('app_state').doc('whats_new');
+
+    (function() {
+      var overlay   = document.getElementById('whatsNewOverlay');
+      var closeBtn  = document.getElementById('whatsNewClose');
+      var badgeEl   = document.getElementById('whatsNewBadge');
+      var listEl    = document.getElementById('whatsNewList');
+      // Dev editor elements
+      var editorDivider  = document.getElementById('wnEditorDivider');
+      var editorSection  = document.getElementById('wnEditorSection');
+      var versionInput   = document.getElementById('wnVersionInput');
+      var badgeInput     = document.getElementById('wnBadgeInput');
+      var itemsInput     = document.getElementById('wnItemsInput');
+      var saveBtn        = document.getElementById('wnSaveBtn');
+      var editorStatus   = document.getElementById('wnEditorStatus');
+      if (!overlay || !closeBtn) return;
+
+      // Store fetched version for the close handler
+      var _wnVersion = null;
+
+      function renderPopup(data) {
+        if (!data || !data.version) return;
+        _wnVersion = data.version;
+        var seenKey = 'seen_whats_new_' + data.version;
+        if (localStorage.getItem(seenKey)) return;
+
+        // Populate badge
+        if (badgeEl) badgeEl.textContent = data.badge || '🆕 What\'s New';
+        // Populate items list
+        if (listEl) {
+          listEl.innerHTML = '';
+          var items = Array.isArray(data.items) ? data.items : [];
+          items.forEach(function(html) {
+            var li = document.createElement('li');
+            li.innerHTML = html;
+            listEl.appendChild(li);
+          });
+        }
+        setTimeout(function() { overlay.classList.remove('hidden'); }, 800);
+      }
+
+      // Populate developer editor with current Firestore data
+      function populateEditor(data) {
+        if (!data) return;
+        if (versionInput) versionInput.value = data.version || '';
+        if (badgeInput)   badgeInput.value   = data.badge   || '';
+        if (itemsInput)   itemsInput.value   = Array.isArray(data.items) ? data.items.join('\n') : '';
+      }
+
+      // Watch for login
+      var _wnObserver = new MutationObserver(function() {
+        var appContent = document.getElementById('appContent');
+        if (appContent && appContent.classList.contains('visible')) {
+          _wnObserver.disconnect();
+          var uid = auth.currentUser && auth.currentUser.uid;
+          var isDev = uid && WN_DEV_UIDS.indexOf(uid) !== -1;
+
+          // Fetch What's New doc from Firestore (single read)
+          WN_DOC.get().then(function(doc) {
+            var data = doc.exists ? doc.data() : null;
+            renderPopup(data);
+            if (isDev) {
+              // Show dev editor and load current values
+              if (editorDivider) editorDivider.style.display = '';
+              if (editorSection) editorSection.style.display = '';
+              populateEditor(data);
+            }
+          }).catch(function() {});
+
+          // Dev editor: save to Firestore
+          if (isDev && saveBtn) {
+            saveBtn.addEventListener('click', function() {
+              var version = (versionInput.value || '').trim();
+              var badge   = (badgeInput.value   || '').trim();
+              var rawItems = (itemsInput.value  || '');
+              var items = rawItems.split('\n').map(function(s) { return s.trim(); }).filter(Boolean);
+              if (!version) { editorStatus.textContent = '⚠️ Version key is required.'; return; }
+              saveBtn.disabled = true;
+              editorStatus.textContent = 'Saving…';
+              WN_DOC.set({ version: version, badge: badge, items: items })
+                .then(function() {
+                  editorStatus.textContent = '✅ Published! Users will see the popup on next visit.';
+                  saveBtn.disabled = false;
+                })
+                .catch(function(err) {
+                  editorStatus.textContent = '❌ ' + (err.message || 'Save failed');
+                  saveBtn.disabled = false;
+                });
+            });
+          }
+        }
+      });
+      var appContent = document.getElementById('appContent');
+      if (appContent) {
+        _wnObserver.observe(appContent, { attributes: true, attributeFilter: ['class'] });
+      }
+
+      closeBtn.addEventListener('click', function() {
+        if (_wnVersion) localStorage.setItem('seen_whats_new_' + _wnVersion, 'true');
+        overlay.classList.add('hidden');
+      });
+    })();
    
   </script>
 

@@ -113,6 +113,11 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAuth() && isDeveloper(request.auth.uid);
     }
+    match /app_state/whats_new {
+      // Anyone logged in can read; only developers can publish updates
+      allow read: if isAuth();
+      allow write: if isAuth() && isDeveloper(request.auth.uid);
+    }
     match /app_state/{docId} {
       allow read: if isAuth();
       allow write: if isAuth();
