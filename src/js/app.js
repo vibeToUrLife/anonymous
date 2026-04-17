@@ -1134,10 +1134,10 @@ function buildReplyInput(docId) {
     if (e.key === 'Enter') { e.preventDefault(); doSend(); }
     });
     inp.addEventListener('click', (e) => e.stopPropagation());
-    // Anonymous toggle checkbox (inline, beside input) — remember last choice
+    // Anonymous checkbox tick (inline, beside input) — remember last choice
     const anonLabel = document.createElement('label');
     anonLabel.className = 'reply-anon-toggle';
-    anonLabel.title = 'Toggle anonymous reply';
+    anonLabel.title = 'Reply anonymously';
     anonLabel.addEventListener('click', (e) => e.stopPropagation());
     const anonCheckbox = document.createElement('input');
     anonCheckbox.type = 'checkbox';
@@ -1145,14 +1145,13 @@ function buildReplyInput(docId) {
     anonCheckbox.checked = localStorage.getItem('reply_anon_pref') !== 'false';
     const anonIcon = document.createElement('span');
     anonIcon.className = 'reply-anon-icon';
-    anonIcon.textContent = anonCheckbox.checked ? '🕶️' : '👤';
+    anonIcon.textContent = '🕶️';
     anonLabel.appendChild(anonCheckbox);
     anonLabel.appendChild(anonIcon);
-    // Update icon and persist preference when toggled
+    // Persist preference when toggled
     anonCheckbox.addEventListener('change', (e) => {
         e.stopPropagation();
         localStorage.setItem('reply_anon_pref', anonCheckbox.checked ? 'true' : 'false');
-        anonIcon.textContent = anonCheckbox.checked ? '🕶️' : '👤';
     });
 
     row.appendChild(fileInput);

@@ -392,9 +392,12 @@ body {
 .reply-item:last-child { border-bottom: none; }
 .reply-sender {
     font-size: 11px;
-    font-weight: 600;
-    color: rgba(168,85,247,0.75);
-    margin-right: 4px;
+    font-weight: 700;
+    color: #fff;
+    background: rgba(168,85,247,0.35);
+    border-radius: 6px;
+    padding: 0 5px;
+    margin-right: 5px;
 }
 .reply-time {
     font-size: 10px;
@@ -1074,7 +1077,10 @@ body.light-theme .reply-item {
     border-color: rgba(0,0,0,0.06);
     color: #444;
 }
-body.light-theme .reply-sender { color: rgba(120,60,200,0.7); }
+body.light-theme .reply-sender {
+    color: #fff;
+    background: rgba(100,40,180,0.5);
+}
 body.light-theme .reply-anon-text { color: rgba(0,0,0,0.4); }
 body.light-theme .reply-input-row input {
     background: rgba(0,0,0,0.04); color: #333;
