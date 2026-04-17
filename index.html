@@ -919,52 +919,72 @@
         if (itemsInput)   itemsInput.value   = Array.isArray(data.items) ? data.items.join('\n') : '';
       }
 
-      // Watch for login
-      var _wnObserver = new MutationObserver(function() {
-        var appContent = document.getElementById('appContent');
-        if (appContent && appContent.classList.contains('visible')) {
-          _wnObserver.disconnect();
-          var uid = auth.currentUser && auth.currentUser.uid;
-          var isDev = uid && WN_DEV_UIDS.indexOf(uid) !== -1;
+      // Fetch from server (bypass offline cache) so newly published versions always show
+      function fetchAndRender() {
+        var uid = auth.currentUser && auth.currentUser.uid;
+        var isDev = uid && WN_DEV_UIDS.indexOf(uid) !== -1;
 
-          // Fetch What's New doc from Firestore (single read)
-          WN_DOC.get().then(function(doc) {
+        // Force server read so stale offline cache never blocks a new version
+        WN_DOC.get({ source: 'server' }).then(function(doc) {
+          var data = doc.exists ? doc.data() : null;
+          renderPopup(data);
+          if (isDev) {
+            if (editorDivider) editorDivider.style.display = '';
+            if (editorSection) editorSection.style.display = '';
+            populateEditor(data);
+          }
+        }).catch(function() {
+          // Server unavailable — fall back to cache so offline users still work
+          WN_DOC.get({ source: 'cache' }).then(function(doc) {
             var data = doc.exists ? doc.data() : null;
             renderPopup(data);
             if (isDev) {
-              // Show dev editor and load current values
               if (editorDivider) editorDivider.style.display = '';
               if (editorSection) editorSection.style.display = '';
               populateEditor(data);
             }
           }).catch(function() {});
+        });
 
-          // Dev editor: save to Firestore
-          if (isDev && saveBtn) {
-            saveBtn.addEventListener('click', function() {
-              var version = (versionInput.value || '').trim();
-              var badge   = (badgeInput.value   || '').trim();
-              var rawItems = (itemsInput.value  || '');
-              var items = rawItems.split('\n').map(function(s) { return s.trim(); }).filter(Boolean);
-              if (!version) { editorStatus.textContent = '⚠️ Version key is required.'; return; }
-              saveBtn.disabled = true;
-              editorStatus.textContent = 'Saving…';
-              WN_DOC.set({ version: version, badge: badge, items: items })
-                .then(function() {
-                  editorStatus.textContent = '✅ Published! Users will see the popup on next visit.';
-                  saveBtn.disabled = false;
-                })
-                .catch(function(err) {
-                  editorStatus.textContent = '❌ ' + (err.message || 'Save failed');
-                  saveBtn.disabled = false;
-                });
-            });
-          }
+        // Dev editor: save to Firestore
+        if (isDev && saveBtn && !saveBtn._wnBound) {
+          saveBtn._wnBound = true;
+          saveBtn.addEventListener('click', function() {
+            var version  = (versionInput.value  || '').trim();
+            var badge    = (badgeInput.value     || '').trim();
+            var rawItems = (itemsInput.value     || '');
+            var items    = rawItems.split('\n').map(function(s) { return s.trim(); }).filter(Boolean);
+            if (!version) { editorStatus.textContent = '⚠️ Version key is required.'; return; }
+            saveBtn.disabled = true;
+            editorStatus.textContent = 'Saving…';
+            WN_DOC.set({ version: version, badge: badge, items: items })
+              .then(function() {
+                editorStatus.textContent = '✅ Published! Users will see the popup on next visit.';
+                saveBtn.disabled = false;
+              })
+              .catch(function(err) {
+                editorStatus.textContent = '❌ ' + (err.message || 'Save failed');
+                saveBtn.disabled = false;
+              });
+          });
         }
-      });
+      }
+
+      // Watch for login — also check immediately in case auth resolved before observer attached
       var appContent = document.getElementById('appContent');
-      if (appContent) {
-        _wnObserver.observe(appContent, { attributes: true, attributeFilter: ['class'] });
+      function _onAppVisible() {
+        if (appContent && appContent.classList.contains('visible')) {
+          if (_wnObserver) _wnObserver.disconnect();
+          fetchAndRender();
+          return true;
+        }
+        return false;
+      }
+      var _wnObserver = null;
+      if (!_onAppVisible()) {
+        // Not visible yet — watch for the class to be added
+        _wnObserver = new MutationObserver(function() { _onAppVisible(); });
+        if (appContent) _wnObserver.observe(appContent, { attributes: true, attributeFilter: ['class'] });
       }
 
       closeBtn.addEventListener('click', function() {
