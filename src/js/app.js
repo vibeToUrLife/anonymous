@@ -118,6 +118,7 @@ const imgPreviewThumb = document.getElementById('imgPreviewThumb');
 const removePreview = document.getElementById('removePreview');
 const lightbox = document.getElementById('lightbox');
 const lightboxImg = document.getElementById('lightboxImg');
+const ansAnonCheckbox = document.getElementById("ansCommentAnon");
 let toastTimer = null;
 let pendingImage = null;  // base64 string of compressed image
 let suppressNextNotif = false; // suppress notification for self-sent messages
@@ -814,6 +815,13 @@ function render(items) {
         bubble.appendChild(d);
     }
 
+    // Name display
+    if (a.name && a.name != '') {
+        bubble.insertAdjacentHTML('beforeend', `
+            <div><span class="answer-sender">${a.name || ''}</span></div>
+        `);
+    }
+
     // HP bar (game-style)
     const hpWrapper = document.createElement('div');
     hpWrapper.className = 'bubble-hp-wrapper';
@@ -1154,6 +1162,13 @@ function buildReplyInput(docId) {
         localStorage.setItem('reply_anon_pref', anonCheckbox.checked ? 'true' : 'false');
     });
 
+    ansAnonCheckbox.checked = localStorage.getItem('ans_anon_pref') !== 'false';
+    // Persist preference when toggled
+    ansAnonCheckbox.addEventListener('change', (e) => {
+        e.stopPropagation();
+        localStorage.setItem('ans_anon_pref', ansAnonCheckbox.checked ? 'true' : 'false');
+    });
+
     row.appendChild(fileInput);
     row.appendChild(attachBtn);
     row.appendChild(gifReplyBtn);
@@ -1181,6 +1196,9 @@ async function submit() {
     const doc = { ts: Date.now() };
     if (text) doc.text = text;
     if (pendingImage) doc.image = pendingImage;
+    if (!ansAnonCheckbox.checked) {
+        doc.name = localStorage.getItem('flappy_name') || auth.currentUser?.displayName || 'User';
+    }
     suppressNextNotif = true;
     shouldScrollToBottom = true;
     const docRef = await answersRef.add(doc);
@@ -2020,7 +2038,9 @@ function _subscribeAnswers() {
     snapshot.forEach((doc) => {
     const d = doc.data();
     if (now - d.ts < SIX_HOURS) {
-        items.push({ id: doc.id, text: d.text ?? '', ts: d.ts, image: d.image ?? null, replies: d.replies ?? [], reactions: d.reactions ?? {}, type: d.type ?? null, pollOptions: d.pollOptions ?? null, pollVotes: d.pollVotes ?? {} });
+        temp = { id: doc.id, text: d.text ?? '', ts: d.ts, image: d.image ?? null, replies: d.replies ?? [], reactions: d.reactions ?? {}, type: d.type ?? null, pollOptions: d.pollOptions ?? null, pollVotes: d.pollVotes ?? {} };
+        if (d.name) temp.name = d.name ?? '';
+        items.push(temp);
     }
     });
     // Reverse to chronological order (query fetched desc for limit efficiency)

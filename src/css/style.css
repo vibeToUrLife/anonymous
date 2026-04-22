@@ -402,7 +402,7 @@ body {
     word-break: break-word;
 }
 .reply-item:last-child { border-bottom: none; }
-.reply-sender {
+.answer-sender, .reply-sender {
     font-size: 11px;
     font-weight: 700;
     color: #fff;
@@ -411,13 +411,18 @@ body {
     padding: 0 5px;
     margin-right: 5px;
 }
+
+.answer-sender {
+    font-size: 1rem;
+}
+
 .reply-time {
     font-size: 10px;
     opacity: 0.4;
     margin-left: 6px;
 }
 /* Anonymous toggle — inline inside reply input row */
-.reply-anon-toggle {
+.ans-anon-toggle, .reply-anon-toggle {
     display: flex;
     align-items: center;
     gap: 3px;
