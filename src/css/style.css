@@ -2070,9 +2070,39 @@ body.sidebar-open .bubble-wrap {
 /* ── Responsive ── */
 @media (max-width: 480px) {
     .page-title { font-size: 22px; }
+    .bubble-wrap { padding: 16px 12px 156px; }
     .bubble { max-width: 90vw; font-size: 14px; padding: 16px 18px 12px; }
-    .input-area { padding: 10px 12px; }
-    .img-preview-strip { bottom: 68px; padding: 6px 12px; }
+    .input-area {
+        padding: 10px 12px;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    /* Keep the message box on its own row so phone layouts do not crush the field. */
+    .input-area textarea {
+        order: 4;
+        flex: 1 1 calc(100% - 80px);
+        min-width: 0;
+        padding: 10px 14px;
+        height: 42px;
+        font-size: 14px;
+    }
+    .input-area #sendBtn {
+        order: 5;
+        flex: 0 0 auto;
+        height: 42px;
+        padding: 0 16px;
+        border-radius: 20px;
+        font-size: 14px;
+    }
+    .input-area .ans-anon-toggle {
+        order: 3;
+        margin-left: auto;
+        min-height: 38px;
+    }
+    .img-preview-strip { bottom: 118px; padding: 6px 12px; }
+    .gif-picker,
+    .poll-creator { bottom: 118px; }
     .sidebar { width: 85vw; left: -85vw; }
     body.sidebar-open .page-title-wrapper,
     body.sidebar-open .page-subtitle,
@@ -2083,11 +2113,39 @@ body.sidebar-open .bubble-wrap {
     .vote-item .vote-btn { width: 32px; height: 32px; font-size: 14px; }
     .vote-item .vote-action { width: 32px; height: 32px; font-size: 13px; }
 
-    .reply-input-row input { font-size: 14px; padding: 5px 10px; height: 34px; }
-    .reply-input-row .reply-send-btn { font-size: 14px; height: 34px; line-height: 34px; }
+    .reply-input-row {
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .reply-input-row input {
+        order: 4;
+        flex: 1 1 calc(100% - 58px);
+        min-width: 0;
+        font-size: 14px;
+        padding: 0 12px;
+        height: 38px;
+    }
+    .reply-input-row .reply-send-btn {
+        order: 5;
+        min-width: 46px;
+        padding: 0 12px;
+        font-size: 14px;
+        height: 38px;
+        line-height: 38px;
+    }
+    .reply-input-row .reply-anon-toggle {
+        order: 3;
+        margin-left: auto;
+        min-height: 34px;
+    }
     .reply-attach { width: 34px; min-width: 34px; height: 34px; }
     .reply-item { font-size: 13px; }
-    .attach-btn { width: 42px; min-width: 42px; height: 42px; font-size: 18px; }
+    .attach-btn,
+    .gif-btn,
+    .poll-btn { width: 38px; min-width: 38px; height: 38px; }
+    .attach-btn { font-size: 18px; }
+    .gif-btn { font-size: 12px; }
+    .poll-btn { font-size: 18px; }
 }
 
 /* ── Login gate overlay ── */
