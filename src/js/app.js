@@ -189,8 +189,57 @@ function createReplyId() {
 function getReplyKey(reply, replyIndex) {
     return reply.id || ('legacy:' + replyIndex + ':' + (reply.ts || 0));
 }
-function getReplyReactionStorageKey(docId, reply, replyIndex) {
-    return docId + '::' + getReplyKey(reply, replyIndex);
+function buildReplyPath(parentPath, reply, replyIndex) {
+    return [...parentPath, getReplyKey(reply, replyIndex)];
+}
+function getReplyReactionStorageKey(docId, replyPath) {
+    return docId + '::' + replyPath.join('>');
+}
+function cloneRepliesTree(replies) {
+    return (replies || []).map((reply) => {
+    const nextReply = { ...reply };
+    if (Array.isArray(reply.replies) && reply.replies.length) {
+        nextReply.replies = cloneRepliesTree(reply.replies);
+    } else {
+        delete nextReply.replies;
+    }
+    return nextReply;
+    });
+}
+function getReplyAtPath(replies, replyPath) {
+    let currentReplies = replies;
+    let currentReply = null;
+    for (const segment of replyPath) {
+    const replyIndex = currentReplies.findIndex((reply, index) => getReplyKey(reply, index) === segment);
+    if (replyIndex === -1) return null;
+    currentReply = currentReplies[replyIndex];
+    currentReplies = Array.isArray(currentReply.replies) ? currentReply.replies : [];
+    }
+    return currentReply;
+}
+function countAllReplies(replies) {
+    return (replies || []).reduce((total, reply) => total + 1 + countAllReplies(reply.replies || []), 0);
+}
+function getLatestReply(replies) {
+    let latestReply = null;
+    (replies || []).forEach((reply) => {
+    if (!latestReply || (reply.ts || 0) > (latestReply.ts || 0)) latestReply = reply;
+    const nestedLatest = getLatestReply(reply.replies || []);
+    if (nestedLatest && (!latestReply || (nestedLatest.ts || 0) > (latestReply.ts || 0))) {
+        latestReply = nestedLatest;
+    }
+    });
+    return latestReply;
+}
+function toLiteReplies(replies) {
+    return (replies || []).map((reply) => ({
+    id: reply.id ?? null,
+    name: reply.name ?? '',
+    text: reply.text,
+    ts: reply.ts,
+    reactions: reply.reactions ?? {},
+    replies: toLiteReplies(reply.replies || [])
+    }));
 }
 
 async function toggleReaction(docId, emoji) {
@@ -210,8 +259,30 @@ async function toggleReaction(docId, emoji) {
     }
 }
 
-async function toggleReplyReaction(docId, replyKey, emoji) {
-    const storageKey = docId + '::' + replyKey;
+async function persistReply(docId, parentReplyPath, reply) {
+    await db.runTransaction(async (tx) => {
+    const ref = answersRef.doc(docId);
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new Error('Reply target not found');
+
+    const data = snap.data() || {};
+    const replies = cloneRepliesTree(Array.isArray(data.replies) ? data.replies : []);
+
+    if (parentReplyPath && parentReplyPath.length) {
+        const parentReply = getReplyAtPath(replies, parentReplyPath);
+        if (!parentReply) throw new Error('Reply target not found');
+        if (!Array.isArray(parentReply.replies)) parentReply.replies = [];
+        parentReply.replies.push(reply);
+    } else {
+        replies.push(reply);
+    }
+
+    tx.update(ref, { replies });
+    });
+}
+
+async function toggleReplyReaction(docId, replyPath, emoji) {
+    const storageKey = getReplyReactionStorageKey(docId, replyPath);
     const mine = getMyReplyReactions(storageKey);
     const removing = mine.has(emoji);
 
@@ -223,13 +294,9 @@ async function toggleReplyReaction(docId, replyKey, emoji) {
         if (!snap.exists) throw new Error('Reply not found');
 
         const data = snap.data() || {};
-        const replies = Array.isArray(data.replies)
-        ? data.replies.map(reply => ({ ...reply }))
-        : [];
-        const replyIndex = replies.findIndex((reply, index) => getReplyKey(reply, index) === replyKey);
-        if (replyIndex === -1) throw new Error('Reply not found');
-
-        const reply = replies[replyIndex];
+        const replies = cloneRepliesTree(Array.isArray(data.replies) ? data.replies : []);
+        const reply = getReplyAtPath(replies, replyPath);
+        if (!reply) throw new Error('Reply not found');
         const reactions = { ...(reply.reactions || {}) };
         const nextCount = Math.max(0, (reactions[emoji] || 0) + (removing ? -1 : 1));
 
@@ -239,7 +306,6 @@ async function toggleReplyReaction(docId, replyKey, emoji) {
         if (Object.keys(reactions).length) reply.reactions = reactions;
         else delete reply.reactions;
 
-        replies[replyIndex] = reply;
         tx.update(ref, { replies });
     });
     } catch {
@@ -308,11 +374,10 @@ function updateReactions(bubble, a) {
     oldRow.replaceWith(newRow);
 }
 
-function buildReplyReactionsRow(docId, reply, replyIndex) {
+function buildReplyReactionsRow(docId, reply, replyPath) {
     const row = document.createElement('div');
     row.className = 'bubble-reactions reply-reactions';
-    const replyKey = getReplyKey(reply, replyIndex);
-    const storageKey = getReplyReactionStorageKey(docId, reply, replyIndex);
+    const storageKey = getReplyReactionStorageKey(docId, replyPath);
     const mine = getMyReplyReactions(storageKey);
 
     REACTION_EMOJIS.forEach(emoji => {
@@ -323,7 +388,7 @@ function buildReplyReactionsRow(docId, reply, replyIndex) {
         btn.innerHTML = '<span class="r-emoji">' + emoji + '</span><span class="r-count">' + (count || '') + '</span>';
         btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        toggleReplyReaction(docId, replyKey, emoji);
+        toggleReplyReaction(docId, replyPath, emoji);
         });
         row.appendChild(btn);
     }
@@ -344,7 +409,7 @@ function buildReplyReactionsRow(docId, reply, replyIndex) {
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
         popup.classList.remove('show');
-        toggleReplyReaction(docId, replyKey, emoji);
+        toggleReplyReaction(docId, replyPath, emoji);
     });
     popup.appendChild(btn);
     });
@@ -985,17 +1050,19 @@ function render(items) {
     footer.className = 'bubble-footer';
 
     const replyBtn = document.createElement('button');
+    const replyCount = countAllReplies(a.replies);
     replyBtn.className = 'reply-toggle';
-    replyBtn.textContent = '💬 Reply' + (a.replies.length ? ' (' + a.replies.length + ')' : '');
+    replyBtn.textContent = '💬 Reply' + (replyCount ? ' (' + replyCount + ')' : '');
     // Store latest data on bubble for reply toggling
     bubble._replyData = a;
     replyBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         const container = bubble.querySelector('.replies-container');
         const latest = bubble._replyData || a;
+        const latestReplyCount = countAllReplies(latest.replies);
         if (container) {
         container.remove();
-        replyBtn.textContent = '💬 Reply' + (latest.replies.length ? ' (' + latest.replies.length + ')' : '');
+        replyBtn.textContent = '💬 Reply' + (latestReplyCount ? ' (' + latestReplyCount + ')' : '');
         } else {
         openReplies(bubble, latest);
         }
@@ -1046,32 +1113,33 @@ function updateReplies(bubble, a) {
     // Always keep latest data on bubble so reopen works
     bubble._replyData = a;
     const container = bubble.querySelector('.replies-container');
+    const replyCount = countAllReplies(a.replies);
     if (!container) {
     // Update reply count on the toggle button
     const btn = bubble.querySelector('.reply-toggle');
-    if (btn) btn.textContent = '💬 Reply' + (a.replies.length ? ' (' + a.replies.length + ')' : '');
+    if (btn) btn.textContent = '💬 Reply' + (replyCount ? ' (' + replyCount + ')' : '');
     return;
     }
     // Preserve user's in-progress text and pending image before re-rendering
-    const oldInput = container.querySelector('.reply-input-row input[type="text"]');
+    const oldInput = container.querySelector('.reply-input-root .reply-input-row input[type="text"]');
     const savedText = oldInput ? oldInput.value : '';
-    const oldPreview = container.querySelector('.reply-preview');
+    const oldPreview = container.querySelector('.reply-input-root .reply-preview');
     const savedImage = oldPreview && oldPreview.style.display !== 'none'
     ? oldPreview.querySelector('img')?.src : null;
 
     // Re-render reply items only, keep input row
     const replyItems = container.querySelectorAll('.reply-item');
     replyItems.forEach(el => el.remove());
-    const inputWrapper = container.querySelector('.reply-input-row')?.parentElement;
+    const inputWrapper = container.querySelector('.reply-input-root');
     a.replies.forEach((r, replyIndex) => {
-    container.insertBefore(buildReplyItem(a.id, r, replyIndex), inputWrapper);
+    container.insertBefore(buildReplyItem(a.id, r, buildReplyPath([], r, replyIndex), 0), inputWrapper);
     });
 
     // Restore user's in-progress text and pending image
-    const newInput = container.querySelector('.reply-input-row input[type="text"]');
+    const newInput = container.querySelector('.reply-input-root .reply-input-row input[type="text"]');
     if (newInput && savedText) newInput.value = savedText;
     if (savedImage) {
-    const newPreview = container.querySelector('.reply-preview');
+    const newPreview = container.querySelector('.reply-input-root .reply-preview');
     const newPreviewImg = newPreview?.querySelector('img');
     if (newPreview && newPreviewImg) {
         newPreviewImg.src = savedImage;
@@ -1080,7 +1148,7 @@ function updateReplies(bubble, a) {
     }
     // Update button count
     const btn = bubble.querySelector('.reply-toggle');
-    if (btn) btn.textContent = '💬 Reply (' + a.replies.length + ')';
+    if (btn) btn.textContent = '💬 Reply' + (replyCount ? ' (' + replyCount + ')' : '');
 }
 
 function openReplies(bubble, a) {
@@ -1089,15 +1157,15 @@ function openReplies(bubble, a) {
     container = document.createElement('div');
     container.className = 'replies-container';
     a.replies.forEach((r, replyIndex) => {
-    container.appendChild(buildReplyItem(a.id, r, replyIndex));
+    container.appendChild(buildReplyItem(a.id, r, buildReplyPath([], r, replyIndex), 0));
     });
     container.appendChild(buildReplyInput(a.id));
     bubble.appendChild(container);
 }
 
-function buildReplyItem(docId, r, replyIndex) {
+function buildReplyItem(docId, r, replyPath, depth) {
     const div = document.createElement('div');
-    div.className = 'reply-item';
+    div.className = 'reply-item' + (depth > 0 ? ' is-nested' : '');
     if (r.image) {
     const img = document.createElement('img');
     img.className = 'reply-img';
@@ -1126,12 +1194,74 @@ function buildReplyItem(docId, r, replyIndex) {
     time.className = 'reply-time';
     time.textContent = fmtReplyTime(r.ts);
     div.appendChild(time);
-    div.appendChild(buildReplyReactionsRow(docId, r, replyIndex));
+
+    div.appendChild(buildReplyReactionsRow(docId, r, replyPath));
+
+    const childReplies = Array.isArray(r.replies) ? r.replies : [];
+    if (depth < 1) {
+    const actions = document.createElement('div');
+    const childCount = countAllReplies(childReplies);
+    actions.className = 'reply-actions';
+
+    const childrenWrap = document.createElement('div');
+    childrenWrap.className = 'reply-children';
+    childReplies.forEach((childReply, childIndex) => {
+        childrenWrap.appendChild(buildReplyItem(docId, childReply, buildReplyPath(replyPath, childReply, childIndex), depth + 1));
+    });
+
+    let threadBtn = null;
+    function setChildrenOpen(open) {
+        childrenWrap.classList.toggle('open', open);
+        if (threadBtn) {
+        threadBtn.textContent = (open ? 'Hide thread' : 'Show thread') + ' (' + childCount + ')';
+        }
+    }
+
+    if (childCount) {
+        threadBtn = document.createElement('button');
+        threadBtn.className = 'reply-to-reply-toggle';
+        setChildrenOpen(false);
+        threadBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const willOpen = !childrenWrap.classList.contains('open');
+        if (!willOpen) {
+            const existingInput = childrenWrap.querySelector('.nested-reply-input');
+            if (existingInput) existingInput.remove();
+            replyBtn.textContent = '↪ Reply';
+        }
+        setChildrenOpen(willOpen);
+        });
+        actions.appendChild(threadBtn);
+    }
+
+    const replyBtn = document.createElement('button');
+    replyBtn.className = 'reply-to-reply-toggle';
+    replyBtn.textContent = '↪ Reply';
+    actions.appendChild(replyBtn);
+    div.appendChild(actions);
+    replyBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const existingInput = childrenWrap.querySelector('.nested-reply-input');
+        if (existingInput) {
+        existingInput.remove();
+        replyBtn.textContent = '↪ Reply';
+        if (!childCount) setChildrenOpen(false);
+        } else {
+        setChildrenOpen(true);
+        childrenWrap.appendChild(buildReplyInput(docId, replyPath, depth + 1));
+        replyBtn.textContent = '↪ Cancel';
+        }
+    });
+
+    div.appendChild(childrenWrap);
+    }
+
     return div;
 }
 
-function buildReplyInput(docId) {
+function buildReplyInput(docId, parentReplyPath, depth) {
     const wrapper = document.createElement('div');
+    wrapper.className = parentReplyPath && parentReplyPath.length ? 'nested-reply-input' : 'reply-input-root';
     const row = document.createElement('div');
     row.className = 'reply-input-row';
     let replyPendingImage = null;
@@ -1240,9 +1370,7 @@ function buildReplyInput(docId) {
             reply.name = senderName;
         }
         suppressNextReplyNotif = true;
-        await answersRef.doc(docId).update({
-        replies: firebase.firestore.FieldValue.arrayUnion(reply)
-        });
+        await persistReply(docId, parentReplyPath, reply);
         inp.value = '';
         replyPendingImage = null;
         preview.style.display = 'none';
@@ -1285,6 +1413,12 @@ function buildReplyInput(docId) {
         localStorage.setItem('ans_anon_pref', ansAnonCheckbox.checked ? 'true' : 'false');
     });
 
+    if (depth > 0) {
+    row.classList.add('reply-input-row-nested');
+    inp.classList.add('reply-input-field-nested');
+    btn.classList.add('reply-send-btn-nested');
+    anonLabel.classList.add('reply-anon-toggle-nested');
+    }
     row.appendChild(fileInput);
     row.appendChild(attachBtn);
     row.appendChild(gifReplyBtn);
@@ -2029,7 +2163,7 @@ function notifyNewMessages(items) {
     // On first load, just record the known IDs & reply counts — don't notify
     isFirstSnapshot = false;
     knownIds = new Set(items.map(a => a.id));
-    items.forEach(a => { knownReplyCounts[a.id] = (a.replies || []).length; });
+    items.forEach(a => { knownReplyCounts[a.id] = countAllReplies(a.replies || []); });
     return;
     }
 
@@ -2039,13 +2173,13 @@ function notifyNewMessages(items) {
     let newReplyCount = 0;
     let newestReplyText = '';
     items.forEach(a => {
-    const currentCount = (a.replies || []).length;
+    const currentCount = countAllReplies(a.replies || []);
     const oldCount = knownReplyCounts[a.id] || 0;
     if (knownIds.has(a.id) && currentCount > oldCount) {
         const diff = currentCount - oldCount;
         newReplyCount += diff;
         // Get the newest reply text for the notification
-        const lastReply = a.replies[a.replies.length - 1];
+        const lastReply = getLatestReply(a.replies || []);
         if (lastReply) {
         newestReplyText = lastReply.text || '📷 Image reply';
         }
@@ -2128,7 +2262,7 @@ function fireNotification(count, bodyText, title, tag) {
     const valid = cachedAnswers.filter(a => now - a.ts < SIX_HOURS);
     if (valid.length) {
         knownIds = new Set(valid.map(a => a.id));
-        valid.forEach(a => { knownReplyCounts[a.id] = (a.replies || []).length; });
+        valid.forEach(a => { knownReplyCounts[a.id] = countAllReplies(a.replies || []); });
         render(valid);
     }
     }
@@ -2165,13 +2299,7 @@ function _subscribeAnswers() {
     try {
     const lite = items.map(a => ({
         ...a,
-        replies: (a.replies || []).map(r => ({
-        id: r.id ?? null,
-        name: r.name ?? '',
-        text: r.text,
-        ts: r.ts,
-        reactions: r.reactions ?? {}
-        })),
+        replies: toLiteReplies(a.replies || []),
     }));
     cacheSet('cache_answers', lite);
     } catch {}
