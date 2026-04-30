@@ -402,6 +402,18 @@ body {
     word-break: break-word;
 }
 .reply-item:last-child { border-bottom: none; }
+.replies-container > .reply-item {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.04);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+}
+.replies-container > .reply-item:first-child {
+    margin-top: 6px;
+}
 .reply-reactions {
     margin-top: 6px;
     gap: 4px;
@@ -448,7 +460,11 @@ body {
     display: block;
 }
 .reply-item.is-nested {
+    margin-top: 8px;
     padding-top: 6px;
+    border-bottom: none;
+    background: transparent;
+    box-shadow: none;
 }
 .nested-reply-input {
     margin-top: 8px;
@@ -1282,6 +1298,11 @@ body.light-theme .reply-to-reply-toggle { color: rgba(0,0,0,0.45); }
 body.light-theme .reply-to-reply-toggle:hover { color: #333; }
 body.light-theme .reply-children { border-left-color: rgba(0,0,0,0.1); }
 body.light-theme .replies-container { border-top-color: rgba(0,0,0,0.1); }
+body.light-theme .replies-container > .reply-item {
+    border-color: rgba(0,0,0,0.08);
+    background: rgba(0,0,0,0.025);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+}
 body.light-theme .reply-input-row .reply-send-btn { background: rgba(0,0,0,0.1); color: #333; }
 body.light-theme .reply-input-row .reply-send-btn:hover { background: rgba(0,0,0,0.18); }
 body.light-theme .reply-attach { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.5); }
