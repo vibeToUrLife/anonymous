@@ -153,35 +153,35 @@ function fmtRemaining(ms) {
 /* ── Emoji reactions ── */
 const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
-function getStoredReactions(storageKey, itemId) {
+function getStoredReaction(storageKey, itemId) {
     try {
     const all = JSON.parse(localStorage.getItem(storageKey) || '{}');
-    return new Set(all[itemId] || []);
-    } catch { return new Set(); }
+    const stored = all[itemId];
+    if (Array.isArray(stored)) return stored[0] || null;
+    return typeof stored === 'string' ? stored : null;
+    } catch { return null; }
 }
-function saveStoredReaction(storageKey, itemId, emoji, added) {
+function saveStoredReaction(storageKey, itemId, emoji) {
     try {
     const all = JSON.parse(localStorage.getItem(storageKey) || '{}');
-    if (!all[itemId]) all[itemId] = [];
-    const set = new Set(all[itemId]);
-    if (added) set.add(emoji); else set.delete(emoji);
-    all[itemId] = [...set];
+    if (emoji) all[itemId] = emoji;
+    else delete all[itemId];
     localStorage.setItem(storageKey, JSON.stringify(all));
     } catch {}
 }
 
 // Track which reactions this browser has toggled: { docId: Set(['👍', ...]) }
 function getMyReactions(docId) {
-    return getStoredReactions('my_reactions', docId);
+    return getStoredReaction('my_reactions', docId);
 }
-function saveMyReaction(docId, emoji, added) {
-    saveStoredReaction('my_reactions', docId, emoji, added);
+function saveMyReaction(docId, emoji) {
+    saveStoredReaction('my_reactions', docId, emoji);
 }
 function getMyReplyReactions(replyKey) {
-    return getStoredReactions('my_reply_reactions', replyKey);
+    return getStoredReaction('my_reply_reactions', replyKey);
 }
-function saveMyReplyReaction(replyKey, emoji, added) {
-    saveStoredReaction('my_reply_reactions', replyKey, emoji, added);
+function saveMyReplyReaction(replyKey, emoji) {
+    saveStoredReaction('my_reply_reactions', replyKey, emoji);
 }
 function createReplyId() {
     return 'reply_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -244,17 +244,17 @@ function toLiteReplies(replies) {
 
 async function toggleReaction(docId, emoji) {
     const mine = getMyReactions(docId);
-    const removing = mine.has(emoji);
+    const nextEmoji = mine === emoji ? null : emoji;
     // Optimistic local update
-    saveMyReaction(docId, emoji, !removing);
+    saveMyReaction(docId, nextEmoji);
     try {
-    const key = 'reactions.' + emoji;
-    await answersRef.doc(docId).update({
-        [key]: firebase.firestore.FieldValue.increment(removing ? -1 : 1)
-    });
+    const updates = {};
+    if (mine) updates['reactions.' + mine] = firebase.firestore.FieldValue.increment(-1);
+    if (nextEmoji) updates['reactions.' + nextEmoji] = firebase.firestore.FieldValue.increment(1);
+    await answersRef.doc(docId).update(updates);
     } catch {
     // Revert on failure
-    saveMyReaction(docId, emoji, removing);
+    saveMyReaction(docId, mine);
     showToast('Reaction failed', 'error');
     }
 }
@@ -284,9 +284,9 @@ async function persistReply(docId, parentReplyPath, reply) {
 async function toggleReplyReaction(docId, replyPath, emoji) {
     const storageKey = getReplyReactionStorageKey(docId, replyPath);
     const mine = getMyReplyReactions(storageKey);
-    const removing = mine.has(emoji);
+    const nextEmoji = mine === emoji ? null : emoji;
 
-    saveMyReplyReaction(storageKey, emoji, !removing);
+    saveMyReplyReaction(storageKey, nextEmoji);
     try {
     await db.runTransaction(async (tx) => {
         const ref = answersRef.doc(docId);
@@ -298,10 +298,14 @@ async function toggleReplyReaction(docId, replyPath, emoji) {
         const reply = getReplyAtPath(replies, replyPath);
         if (!reply) throw new Error('Reply not found');
         const reactions = { ...(reply.reactions || {}) };
-        const nextCount = Math.max(0, (reactions[emoji] || 0) + (removing ? -1 : 1));
-
-        if (nextCount > 0) reactions[emoji] = nextCount;
-        else delete reactions[emoji];
+        if (mine) {
+        const prevCount = Math.max(0, (reactions[mine] || 0) - 1);
+        if (prevCount > 0) reactions[mine] = prevCount;
+        else delete reactions[mine];
+        }
+        if (nextEmoji) {
+        reactions[nextEmoji] = Math.max(0, (reactions[nextEmoji] || 0) + 1);
+        }
 
         if (Object.keys(reactions).length) reply.reactions = reactions;
         else delete reply.reactions;
@@ -309,7 +313,7 @@ async function toggleReplyReaction(docId, replyPath, emoji) {
         tx.update(ref, { replies });
     });
     } catch {
-    saveMyReplyReaction(storageKey, emoji, removing);
+    saveMyReplyReaction(storageKey, mine);
     showToast('Reaction failed', 'error');
     }
 }
@@ -322,9 +326,9 @@ function buildReactionsRow(a) {
     // Show emojis that have counts > 0
     REACTION_EMOJIS.forEach(emoji => {
     const count = Math.max(0, (a.reactions && a.reactions[emoji]) || 0);
-    if (count > 0 || mine.has(emoji)) {
+    if (count > 0 || mine === emoji) {
         const btn = document.createElement('button');
-        btn.className = 'reaction-btn' + (mine.has(emoji) ? ' reacted' : '');
+        btn.className = 'reaction-btn' + (mine === emoji ? ' reacted' : '');
         btn.innerHTML = '<span class="r-emoji">' + emoji + '</span><span class="r-count">' + (count || '') + '</span>';
         btn.addEventListener('click', (e) => { e.stopPropagation(); toggleReaction(a.id, emoji); });
         row.appendChild(btn);
@@ -382,9 +386,9 @@ function buildReplyReactionsRow(docId, reply, replyPath) {
 
     REACTION_EMOJIS.forEach(emoji => {
     const count = Math.max(0, (reply.reactions && reply.reactions[emoji]) || 0);
-    if (count > 0 || mine.has(emoji)) {
+    if (count > 0 || mine === emoji) {
         const btn = document.createElement('button');
-        btn.className = 'reaction-btn reply-reaction-btn' + (mine.has(emoji) ? ' reacted' : '');
+        btn.className = 'reaction-btn reply-reaction-btn' + (mine === emoji ? ' reacted' : '');
         btn.innerHTML = '<span class="r-emoji">' + emoji + '</span><span class="r-count">' + (count || '') + '</span>';
         btn.addEventListener('click', (e) => {
         e.stopPropagation();
