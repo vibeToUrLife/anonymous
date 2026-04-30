@@ -60,6 +60,7 @@ service cloud.firestore {
 
     // ═══════════════════════════════════════
     // 2. ANSWERS — bubble board / polls
+    //    replies[] items may include: {id, ts, text, image, name, reactions}
     // ═══════════════════════════════════════
     match /answers/{docId} {
       allow read, write: if isAuth();

@@ -153,22 +153,44 @@ function fmtRemaining(ms) {
 /* ── Emoji reactions ── */
 const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
-// Track which reactions this browser has toggled: { docId: Set(['👍', ...]) }
-function getMyReactions(docId) {
+function getStoredReactions(storageKey, itemId) {
     try {
-    const all = JSON.parse(localStorage.getItem('my_reactions') || '{}');
-    return new Set(all[docId] || []);
+    const all = JSON.parse(localStorage.getItem(storageKey) || '{}');
+    return new Set(all[itemId] || []);
     } catch { return new Set(); }
 }
-function saveMyReaction(docId, emoji, added) {
+function saveStoredReaction(storageKey, itemId, emoji, added) {
     try {
-    const all = JSON.parse(localStorage.getItem('my_reactions') || '{}');
-    if (!all[docId]) all[docId] = [];
-    const set = new Set(all[docId]);
+    const all = JSON.parse(localStorage.getItem(storageKey) || '{}');
+    if (!all[itemId]) all[itemId] = [];
+    const set = new Set(all[itemId]);
     if (added) set.add(emoji); else set.delete(emoji);
-    all[docId] = [...set];
-    localStorage.setItem('my_reactions', JSON.stringify(all));
+    all[itemId] = [...set];
+    localStorage.setItem(storageKey, JSON.stringify(all));
     } catch {}
+}
+
+// Track which reactions this browser has toggled: { docId: Set(['👍', ...]) }
+function getMyReactions(docId) {
+    return getStoredReactions('my_reactions', docId);
+}
+function saveMyReaction(docId, emoji, added) {
+    saveStoredReaction('my_reactions', docId, emoji, added);
+}
+function getMyReplyReactions(replyKey) {
+    return getStoredReactions('my_reply_reactions', replyKey);
+}
+function saveMyReplyReaction(replyKey, emoji, added) {
+    saveStoredReaction('my_reply_reactions', replyKey, emoji, added);
+}
+function createReplyId() {
+    return 'reply_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+function getReplyKey(reply, replyIndex) {
+    return reply.id || ('legacy:' + replyIndex + ':' + (reply.ts || 0));
+}
+function getReplyReactionStorageKey(docId, reply, replyIndex) {
+    return docId + '::' + getReplyKey(reply, replyIndex);
 }
 
 async function toggleReaction(docId, emoji) {
@@ -184,6 +206,44 @@ async function toggleReaction(docId, emoji) {
     } catch {
     // Revert on failure
     saveMyReaction(docId, emoji, removing);
+    showToast('Reaction failed', 'error');
+    }
+}
+
+async function toggleReplyReaction(docId, replyKey, emoji) {
+    const storageKey = docId + '::' + replyKey;
+    const mine = getMyReplyReactions(storageKey);
+    const removing = mine.has(emoji);
+
+    saveMyReplyReaction(storageKey, emoji, !removing);
+    try {
+    await db.runTransaction(async (tx) => {
+        const ref = answersRef.doc(docId);
+        const snap = await tx.get(ref);
+        if (!snap.exists) throw new Error('Reply not found');
+
+        const data = snap.data() || {};
+        const replies = Array.isArray(data.replies)
+        ? data.replies.map(reply => ({ ...reply }))
+        : [];
+        const replyIndex = replies.findIndex((reply, index) => getReplyKey(reply, index) === replyKey);
+        if (replyIndex === -1) throw new Error('Reply not found');
+
+        const reply = replies[replyIndex];
+        const reactions = { ...(reply.reactions || {}) };
+        const nextCount = Math.max(0, (reactions[emoji] || 0) + (removing ? -1 : 1));
+
+        if (nextCount > 0) reactions[emoji] = nextCount;
+        else delete reactions[emoji];
+
+        if (Object.keys(reactions).length) reply.reactions = reactions;
+        else delete reply.reactions;
+
+        replies[replyIndex] = reply;
+        tx.update(ref, { replies });
+    });
+    } catch {
+    saveMyReplyReaction(storageKey, emoji, removing);
     showToast('Reaction failed', 'error');
     }
 }
@@ -246,6 +306,61 @@ function updateReactions(bubble, a) {
     if (!oldRow) return;
     const newRow = buildReactionsRow(a);
     oldRow.replaceWith(newRow);
+}
+
+function buildReplyReactionsRow(docId, reply, replyIndex) {
+    const row = document.createElement('div');
+    row.className = 'bubble-reactions reply-reactions';
+    const replyKey = getReplyKey(reply, replyIndex);
+    const storageKey = getReplyReactionStorageKey(docId, reply, replyIndex);
+    const mine = getMyReplyReactions(storageKey);
+
+    REACTION_EMOJIS.forEach(emoji => {
+    const count = Math.max(0, (reply.reactions && reply.reactions[emoji]) || 0);
+    if (count > 0 || mine.has(emoji)) {
+        const btn = document.createElement('button');
+        btn.className = 'reaction-btn reply-reaction-btn' + (mine.has(emoji) ? ' reacted' : '');
+        btn.innerHTML = '<span class="r-emoji">' + emoji + '</span><span class="r-count">' + (count || '') + '</span>';
+        btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleReplyReaction(docId, replyKey, emoji);
+        });
+        row.appendChild(btn);
+    }
+    });
+
+    const pickerWrap = document.createElement('div');
+    pickerWrap.className = 'reaction-picker reply-reaction-picker';
+    const addBtn = document.createElement('button');
+    addBtn.className = 'reaction-add reply-reaction-add';
+    addBtn.textContent = '+';
+    addBtn.title = 'React';
+
+    const popup = document.createElement('div');
+    popup.className = 'reaction-picker-popup reply-reaction-popup';
+    REACTION_EMOJIS.forEach(emoji => {
+    const btn = document.createElement('button');
+    btn.textContent = emoji;
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        popup.classList.remove('show');
+        toggleReplyReaction(docId, replyKey, emoji);
+    });
+    popup.appendChild(btn);
+    });
+
+    addBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    popup.classList.toggle('show');
+    });
+
+    document.addEventListener('click', () => popup.classList.remove('show'));
+
+    pickerWrap.appendChild(addBtn);
+    pickerWrap.appendChild(popup);
+    row.appendChild(pickerWrap);
+
+    return row;
 }
 
 /* ── Image compression (GIFs pass through as-is) ── */
@@ -948,8 +1063,8 @@ function updateReplies(bubble, a) {
     const replyItems = container.querySelectorAll('.reply-item');
     replyItems.forEach(el => el.remove());
     const inputWrapper = container.querySelector('.reply-input-row')?.parentElement;
-    a.replies.forEach(r => {
-    container.insertBefore(buildReplyItem(r), inputWrapper);
+    a.replies.forEach((r, replyIndex) => {
+    container.insertBefore(buildReplyItem(a.id, r, replyIndex), inputWrapper);
     });
 
     // Restore user's in-progress text and pending image
@@ -973,14 +1088,14 @@ function openReplies(bubble, a) {
     if (container) container.remove();
     container = document.createElement('div');
     container.className = 'replies-container';
-    a.replies.forEach(r => {
-    container.appendChild(buildReplyItem(r));
+    a.replies.forEach((r, replyIndex) => {
+    container.appendChild(buildReplyItem(a.id, r, replyIndex));
     });
     container.appendChild(buildReplyInput(a.id));
     bubble.appendChild(container);
 }
 
-function buildReplyItem(r) {
+function buildReplyItem(docId, r, replyIndex) {
     const div = document.createElement('div');
     div.className = 'reply-item';
     if (r.image) {
@@ -1011,6 +1126,7 @@ function buildReplyItem(r) {
     time.className = 'reply-time';
     time.textContent = fmtReplyTime(r.ts);
     div.appendChild(time);
+    div.appendChild(buildReplyReactionsRow(docId, r, replyIndex));
     return div;
 }
 
@@ -1115,7 +1231,7 @@ function buildReplyInput(docId) {
     if (!text && !replyPendingImage) return;
     btn.disabled = true;
     try {
-        const reply = { ts: Date.now() };
+        const reply = { id: createReplyId(), ts: Date.now() };
         if (text) reply.text = text;
         if (replyPendingImage) reply.image = replyPendingImage;
         // Include sender name when user chooses non-anonymous
@@ -2049,7 +2165,13 @@ function _subscribeAnswers() {
     try {
     const lite = items.map(a => ({
         ...a,
-        replies: (a.replies || []).map(r => ({ text: r.text, ts: r.ts })),
+        replies: (a.replies || []).map(r => ({
+        id: r.id ?? null,
+        name: r.name ?? '',
+        text: r.text,
+        ts: r.ts,
+        reactions: r.reactions ?? {}
+        })),
     }));
     cacheSet('cache_answers', lite);
     } catch {}
