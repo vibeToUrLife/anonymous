@@ -98,6 +98,9 @@
         if (!p) return;
         _dragPetId = p.id;
         _dragMoved = false;
+        // Block browser native drag & prevent the event reaching any element behind the canvas
+        e.preventDefault();
+        e.stopPropagation();
       }
 
       function onPetPointerMove(e) {
@@ -106,17 +109,18 @@
         if (!st) return;
         const pos = _canvasPos(e);
         if (!_dragMoved) {
-          // Require a small movement before it counts as a drag
           _dragMoved = true;
           st.dragging = true;
-          if (e.cancelable) e.preventDefault();
         }
+        // Always suppress scroll/native-drag while dragging a pet
+        if (e.cancelable) e.preventDefault();
+        e.stopPropagation();
         st.x = Math.max(0.02, Math.min(0.98, pos.x));
         st.y = Math.max(0.10, Math.min(0.96, pos.y));
         st.vx = 0; st.vy = 0;
       }
 
-      function onPetPointerUp() {
+      function onPetPointerUp(e) {
         if (!_dragPetId) return;
         const st = petStates[_dragPetId];
         const petInst = getPet(_dragPetId);
@@ -130,6 +134,8 @@
           st.nextWander = 0;          // pick a fresh wander target right away
           _dragSuppressClick = true;  // prevent the trailing click from feeding/status
           saveRoom();
+          if (e && e.cancelable) e.preventDefault();
+          e.stopPropagation();
         }
         _dragPetId = null;
         _dragMoved = false;
@@ -138,7 +144,8 @@
       cvs.addEventListener('mousedown', onPetPointerDown);
       window.addEventListener('mousemove', onPetPointerMove);
       window.addEventListener('mouseup', onPetPointerUp);
-      cvs.addEventListener('touchstart', onPetPointerDown, { passive: true });
+      // Use { passive: false } so preventDefault() can block native touch drag/scroll
+      cvs.addEventListener('touchstart', onPetPointerDown, { passive: false });
       window.addEventListener('touchmove', onPetPointerMove, { passive: false });
       window.addEventListener('touchend', onPetPointerUp);
       // Cleanup so a future re-init doesn't stack duplicate window listeners

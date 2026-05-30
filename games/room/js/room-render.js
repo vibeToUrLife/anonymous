@@ -71,7 +71,7 @@
         // Only recreate canvas if pet list changed
         if (petKey !== _lastPetKey) {
           _lastPetKey = petKey;
-          petSlot.innerHTML = '<canvas id="petCanvas"></canvas>';
+          petSlot.innerHTML = '<canvas id="petCanvas" draggable="false" style="user-select:none"></canvas>';
           const petInfos = activePets.map(p => ({
             id: p.id,
             type: p.type,
