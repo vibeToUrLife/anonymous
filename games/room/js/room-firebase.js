@@ -5,7 +5,7 @@
       flushLayerData();
       const data = {
         coins: roomData.coins,
-        pets: roomData.pets.map(p => ({ id: p.id, type: p.type, name: p.name, hunger: p.hunger, thirst: p.thirst, affection: p.affection, color: p.color, layer: p.layer ?? null, accessory: p.accessory || null })),
+        pets: roomData.pets.map(p => ({ id: p.id, type: p.type, name: p.name, hunger: p.hunger, thirst: p.thirst, affection: p.affection, color: p.color, layer: p.layer ?? null, accessory: p.accessory || null, posX: p.posX ?? null, posY: p.posY ?? null, parked: p.parked ?? false })),
         plant: roomData.plant,
         plantLevels: roomData.plantLevels,
         ownedPlants: roomData.ownedPlants,
@@ -16,6 +16,8 @@
         wallPattern: (roomData.layerData[1] || {}).wallPattern || roomData.wallPattern,
         ownedWindows: roomData.ownedWindows,
         windowStyle: (roomData.layerData[1] || {}).windowStyle || roomData.windowStyle,
+        ownedFloors: roomData.ownedFloors || ['floor_wood'],
+        floorStyle: (roomData.layerData[1] || {}).floorStyle || roomData.floorStyle || 'floor_wood',
         ownedAccessories: roomData.ownedAccessories || [],
         plantPosition: (roomData.layerData[1] || {}).plantPosition || null,
         displayName: getPlayerName(),
@@ -99,7 +101,9 @@
               }
               return p;
             }),
-            plantPosition: d.plantPosition ?? null
+            plantPosition: d.plantPosition ?? null,
+            plant: d.plant ?? null,
+            floorStyle: d.floorStyle ?? 'floor_wood'
           };
         }
         // Migrate any layer-specific placedDecors still in old string format
@@ -122,6 +126,10 @@
         roomData.windowStyle = activeLD.windowStyle || 'win_classic';
         roomData.placedDecors = Array.isArray(activeLD.placedDecors) ? activeLD.placedDecors : [];
         roomData.plantPosition = activeLD.plantPosition || null;
+        // Per-layer plant & floor (fall back to legacy global plant for layer 1)
+        roomData.plant = activeLD.plant != null ? activeLD.plant : (d.plant ?? null);
+        roomData.floorStyle = activeLD.floorStyle || 'floor_wood';
+        roomData.ownedFloors = d.ownedFloors ?? ['floor_wood'];
         roomData.displayName = d.displayName ?? '';
         roomData.lastCoinCollect = d.lastCoinCollect ?? d.updatedAt ?? Date.now();
         roomData.ownedAccessories = d.ownedAccessories ?? [];
@@ -141,21 +149,29 @@
         if (decay > 0) {
           let changed = false;
           for (const pet of roomData.pets) {
-            const newH = Math.max(0, pet.hunger - decay);
+            const oldH = pet.hunger ?? 100;
+            const newH = Math.max(0, oldH - decay);
             const newT = Math.max(0, (pet.thirst ?? 100) - decay);
+            // Starvation: cycles the pet spent at 0 hunger erode its affection
+            const starveCycles = Math.max(0, decay - oldH);
+            if (starveCycles > 0 && (pet.affection ?? 0) > 0) {
+              pet.affection = Math.max(0, (pet.affection ?? 0) - starveCycles * STARVE_AFFECTION_LOSS);
+              changed = true;
+            }
             if (newH !== pet.hunger || newT !== (pet.thirst ?? 100)) {
               pet.hunger = newH; pet.thirst = newT; changed = true;
             }
           }
           if (changed) saveRoom();
         }
-        // Plant passive coin generation (offline earnings, capped to 2 hours)
-        if (!_offlineCoinsCollected && roomData.plant) {
+        // Plant passive coin generation (offline earnings, capped to 2 hours).
+        // Revenue follows the single best-earning plant across all floors.
+        const bestOffline = getBestPlantIncome();
+        if (!_offlineCoinsCollected && bestOffline) {
           _offlineCoinsCollected = true;
-          const plantLvl = roomData.plantLevels[roomData.plant] || 1;
-          const plantDef = PLANTS.find(p => p.id === roomData.plant);
-          const baseRate = plantDef ? plantDef.coinRate : 1;
-          const coinsPerCycle = plantLvl * baseRate;
+          const plantLvl = bestOffline.plantLvl;
+          const plantDef = bestOffline.plantDef;
+          const coinsPerCycle = bestOffline.perCycle;
           const lastCollect = roomData.lastCoinCollect || Date.now();
           // Cap offline elapsed time to PLANT_OFFLINE_CAP_MS (2 hours)
           const rawElapsed = Date.now() - lastCollect;
@@ -199,7 +215,7 @@
       _unsubscribeRoomSnap();
       if (unsubVisitList) { unsubVisitList(); unsubVisitList = null; }
       // Reset roomData to defaults for clean account switch
-      roomData = { coins: 0, pets: [], plant: null, plantLevels: {}, plantPosition: null, ownedPlants: [], ownedDecors: [], placedDecors: [], ownedWalls: ['wall_default'], wallPattern: 'wall_default', ownedWindows: ['win_none','win_classic'], windowStyle: 'win_classic', ownedAccessories: [], displayName: getPlayerName(), lastCoinCollect: 0, loginStreak: 0, lastLoginDay: '', achievements: [], gachaPulls: 0, giftsGiven: 0, giftsReceived: 0, jukeboxTrack: null, jukeboxVol: 0.5, unlockedLayers: 1, layerData: {} };
+      roomData = { coins: 0, pets: [], plant: null, plantLevels: {}, plantPosition: null, ownedPlants: [], ownedDecors: [], placedDecors: [], ownedWalls: ['wall_default'], wallPattern: 'wall_default', ownedWindows: ['win_none','win_classic'], windowStyle: 'win_classic', ownedFloors: ['floor_wood'], floorStyle: 'floor_wood', ownedAccessories: [], displayName: getPlayerName(), lastCoinCollect: 0, loginStreak: 0, lastLoginDay: '', achievements: [], gachaPulls: 0, giftsGiven: 0, giftsReceived: 0, jukeboxTrack: null, jukeboxVol: 0.5, unlockedLayers: 1, layerData: {} };
       // Reset to floor 1 when re-initialising (e.g. account switch)
       currentLayer = 1;
       isOutsideView = false;
@@ -220,6 +236,11 @@
         let changed = false;
         for (const pet of roomData.pets) {
           if (pet.hunger > 0) { pet.hunger = pet.hunger - 1; changed = true; }
+          else if ((pet.affection ?? 0) > 0) {
+            // Pet is starving (0 hunger) — its affection slowly drops
+            pet.affection = Math.max(0, (pet.affection ?? 0) - STARVE_AFFECTION_LOSS);
+            changed = true;
+          }
           if ((pet.thirst ?? 100) > 0) { pet.thirst = (pet.thirst ?? 100) - 1; changed = true; }
         }
         if (changed) { await saveRoom(); renderAllDebounced(); }
@@ -242,11 +263,11 @@
         } else if (document.visibilityState === 'visible' && currentUid) {
           userDocRef().update({ lastSeen: Date.now() }).catch(() => {});
           // Collect plant coins earned while tab was hidden (capped at 2 hours)
-          if (viewingUid === currentUid && roomData.plant && roomData.lastCoinCollect) {
-            const plantLvl = roomData.plantLevels[roomData.plant] || 1;
-            const plantDef = PLANTS.find(p => p.id === roomData.plant);
-            const baseRate = plantDef ? plantDef.coinRate : 1;
-            const coinsPerCycle = plantLvl * baseRate;
+          const bestHidden = getBestPlantIncome();
+          if (viewingUid === currentUid && bestHidden && roomData.lastCoinCollect) {
+            const plantLvl = bestHidden.plantLvl;
+            const plantDef = bestHidden.plantDef;
+            const coinsPerCycle = bestHidden.perCycle;
             const rawElapsed = Date.now() - roomData.lastCoinCollect;
             const elapsed = Math.min(rawElapsed, PLANT_OFFLINE_CAP_MS);
             const cycles = Math.floor(elapsed / (5 * 60 * 1000));
@@ -270,11 +291,11 @@
       if (_plantCoinInterval) clearInterval(_plantCoinInterval);
       _plantCoinInterval = setInterval(async () => {
         if (document.hidden) return; // Skip when tab is hidden to reduce Firestore reads
-        if (viewingUid !== currentUid || !roomData.plant) return;
-        const plantLvl = roomData.plantLevels[roomData.plant] || 1;
-        const plantDef = PLANTS.find(p => p.id === roomData.plant);
-        const baseRate = plantDef ? plantDef.coinRate : 1;
-        const earned = plantLvl * baseRate;
+        if (viewingUid !== currentUid) return;
+        const bestOnline = getBestPlantIncome();
+        if (!bestOnline) return;
+        const plantDef = bestOnline.plantDef;
+        const earned = bestOnline.perCycle;
         roomData.coins += earned;
         roomData.lastCoinCollect = Date.now();
         await saveRoom();

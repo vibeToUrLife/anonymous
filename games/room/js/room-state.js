@@ -1,7 +1,7 @@
 ﻿    /* ═══════════════════════════════
        State
        ═══════════════════════════════ */
-    let roomData = { coins: 0, pets: [], plant: null, plantLevels: {}, plantPosition: null, ownedPlants: [], ownedDecors: [], placedDecors: [], ownedWalls: ['wall_default'], wallPattern: 'wall_default', ownedWindows: ['win_none','win_classic'], windowStyle: 'win_classic', ownedAccessories: [], displayName: '', lastCoinCollect: 0, loginStreak: 0, lastLoginDay: '', achievements: [], gachaPulls: 0, giftsGiven: 0, giftsReceived: 0, jukeboxTrack: null, jukeboxVol: 0.5, unlockedLayers: 1, layerData: {} };
+    let roomData = { coins: 0, pets: [], plant: null, plantLevels: {}, plantPosition: null, ownedPlants: [], ownedDecors: [], placedDecors: [], ownedWalls: ['wall_default'], wallPattern: 'wall_default', ownedWindows: ['win_none','win_classic'], windowStyle: 'win_classic', ownedFloors: ['floor_wood'], floorStyle: 'floor_wood', ownedAccessories: [], displayName: '', lastCoinCollect: 0, loginStreak: 0, lastLoginDay: '', achievements: [], gachaPulls: 0, giftsGiven: 0, giftsReceived: 0, jukeboxTrack: null, jukeboxVol: 0.5, unlockedLayers: 1, layerData: {} };
     // Active layer (1–3) and view mode — local UI state, NOT saved to Firestore
     let currentLayer = 1;
     let isOutsideView = false;
@@ -93,6 +93,42 @@
     function getLayerDefaultWindow(n) {
       const defaults = { 1: 'win_classic', 2: 'win_round', 3: 'win_arch' };
       return defaults[n] || 'win_classic';
+    }
+
+    /**
+     * Returns every plant currently placed across all floors as
+     * [{ plant, level, layer }]. The active layer reads the live roomData.plant
+     * (which may not yet be flushed into layerData).
+     */
+    function getAllLayerPlants() {
+      const result = [];
+      if (roomData.plant) {
+        result.push({ plant: roomData.plant, level: roomData.plantLevels[roomData.plant] || 1, layer: currentLayer });
+      }
+      const ld = roomData.layerData || {};
+      for (const k of Object.keys(ld)) {
+        if (Number(k) === currentLayer) continue; // active layer already counted above
+        const pl = ld[k] && ld[k].plant;
+        if (pl) result.push({ plant: pl, level: roomData.plantLevels[pl] || 1, layer: Number(k) });
+      }
+      return result;
+    }
+
+    /**
+     * Revenue follows the single best-earning plant across all floors.
+     * Returns { perCycle, plant, plantDef, plantLvl, layer } or null if no plants.
+     * perCycle = coins earned every 5-minute cycle (coinRate × level).
+     */
+    function getBestPlantIncome() {
+      let best = null;
+      for (const p of getAllLayerPlants()) {
+        const def = PLANTS.find(x => x.id === p.plant);
+        const perCycle = (def ? def.coinRate : 1) * p.level;
+        if (!best || perCycle > best.perCycle) {
+          best = { perCycle, plant: p.plant, plantDef: def, plantLvl: p.level, layer: p.layer };
+        }
+      }
+      return best;
     }
 
     /**

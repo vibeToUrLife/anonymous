@@ -195,6 +195,9 @@ function buildReplyPath(parentPath, reply, replyIndex) {
 function getReplyReactionStorageKey(docId, replyPath) {
     return docId + '::' + replyPath.join('>');
 }
+// Tracks which nested reply threads are currently expanded (by stable thread key)
+// so they stay open across snapshot re-renders (after reacting or replying).
+const _openReplyThreads = new Set();
 function cloneRepliesTree(replies) {
     return (replies || []).map((reply) => {
     const nextReply = { ...reply };
@@ -1213,9 +1216,15 @@ function buildReplyItem(docId, r, replyPath, depth) {
         childrenWrap.appendChild(buildReplyItem(docId, childReply, buildReplyPath(replyPath, childReply, childIndex), depth + 1));
     });
 
+    // Stable key for this thread so its open/closed state survives re-renders
+    // (e.g. after reacting or posting a nested reply). Without this the thread
+    // would collapse every time the snapshot re-renders the reply list.
+    const threadKey = getReplyReactionStorageKey(docId, replyPath);
     let threadBtn = null;
     function setChildrenOpen(open) {
         childrenWrap.classList.toggle('open', open);
+        if (open) _openReplyThreads.add(threadKey);
+        else _openReplyThreads.delete(threadKey);
         if (threadBtn) {
         threadBtn.textContent = (open ? 'Hide thread' : 'Show thread') + ' (' + childCount + ')';
         }
@@ -1224,7 +1233,7 @@ function buildReplyItem(docId, r, replyPath, depth) {
     if (childCount) {
         threadBtn = document.createElement('button');
         threadBtn.className = 'reply-to-reply-toggle';
-        setChildrenOpen(false);
+        setChildrenOpen(_openReplyThreads.has(threadKey));
         threadBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         const willOpen = !childrenWrap.classList.contains('open');

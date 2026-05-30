@@ -170,7 +170,7 @@
         return '<div class="shop-card' + (ownedCount > 0 ? ' owned' : '') + '">' +
           '<canvas class="shop-preview" data-preview="pet" data-pid="' + item.id + '"></canvas>' +
           '<div class="shop-name">' + item.name + '</div>' +
-          (ownedCount > 0 ? '<div style="font-size:11px;color:#34d399">Owned: ' + ownedCount + ' / 2</div>' : '') +
+          (ownedCount > 0 ? '<div style="font-size:11px;color:#34d399">Owned: ' + ownedCount + (typeMaxed ? ' (max)' : '') + '</div>' : '') +
           (placementInfo ? '<div style="font-size:10px;color:rgba(255,255,255,0.5);margin-top:2px">' + placementInfo + '</div>' : '') +
           '<div class="shop-price">' + coinSVG(14) + ' ' + item.cost + '</div>' +
           '<button class="shop-btn buy" onclick="buyItem(\'pet\',\'' + item.id + '\')" ' +
@@ -331,6 +331,14 @@
         ctx.strokeStyle = 'rgba(180,170,155,0.08)'; ctx.lineWidth = 0.8;
         for (let y = 0; y < h; y += 10) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
       }
+    }
+
+    // Floor preview reuses the same renderer as the room background.
+    function drawFloorPreview(cvs, floorId) {
+      const w = cvs.width = 64, h = cvs.height = 52;
+      const ctx = cvs.getContext('2d');
+      // floorY = -6 so the floor area (floorY + 6) starts at the top of the thumbnail
+      drawFloorPattern(ctx, floorId, w, h, -6, h / 7);
     }
 
     function drawWindowPreview(cvs, winId) {
@@ -1397,6 +1405,7 @@
             _previewObserver.unobserve(c);
             const pid = c.dataset.pid;
             if (c.dataset.preview === 'wall') drawWallPreview(c, pid);
+            else if (c.dataset.preview === 'floor') drawFloorPreview(c, pid);
             else if (c.dataset.preview === 'window') drawWindowPreview(c, pid);
             else if (c.dataset.preview === 'decor') drawDecorPreview(c, pid, c.dataset.cat);
             else if (c.dataset.preview === 'pet') drawPetPreview(c, pid);
@@ -1437,6 +1446,32 @@
           btnHtml + '</div>';
       }).join('');
       wallEl.querySelectorAll('canvas[data-preview="wall"]').forEach(c => _lazyDrawPreview(c, 'wall'));
+
+      } else if (cat === 'floor') {
+      // ── Floor Patterns ──
+      const floorEl = document.getElementById('floorShop');
+      if (!Array.isArray(roomData.ownedFloors)) roomData.ownedFloors = ['floor_wood'];
+      floorEl.innerHTML = FLOOR_PATTERNS.map(item => {
+        const isOwned = roomData.ownedFloors.includes(item.id);
+        const isActive = (roomData.floorStyle || 'floor_wood') === item.id;
+        const canAfford = roomData.coins >= item.cost;
+        let btnHtml = '';
+        if (isActive) {
+          btnHtml = '<button class="shop-btn equipped-btn" disabled>✓ Active</button>';
+        } else if (isOwned || item.cost === 0) {
+          btnHtml = '<button class="shop-btn equip" onclick="equipFloor(\'' + item.id + '\')">Use</button>';
+        } else {
+          btnHtml = '<button class="shop-btn buy" onclick="buyFloor(\'' + item.id + '\')" ' +
+            (canAfford ? '' : 'disabled') + '>Buy</button>';
+        }
+        return '<div class="shop-card' + (isActive ? ' equipped' : isOwned ? ' owned' : '') + '">' +
+          '<canvas class="shop-preview" data-preview="floor" data-pid="' + item.id + '"></canvas>' +
+          '<div class="shop-name">' + item.name + '</div>' +
+          (isOwned || item.cost === 0 ? '<div style="font-size:11px;color:#34d399">Owned ✓</div>' :
+            '<div class="shop-price">' + coinSVG(14) + ' ' + item.cost + '</div>') +
+          btnHtml + '</div>';
+      }).join('');
+      floorEl.querySelectorAll('canvas[data-preview="floor"]').forEach(c => _lazyDrawPreview(c, 'floor'));
 
       } else if (cat === 'window') {
       // ── Windows ──
@@ -1598,9 +1633,18 @@
         const nextDef = PLANT_LEVELS[lvl];
         const scaledCost = getPlantUpgradeCost(roomData.plant, lvl);
         const coinsPerCycle = lvl * (plantDef ? plantDef.coinRate : 1);
-        plantHtml += '<div class="shop-section"><div class="shop-section-title">🌱 ' + (plantDef?.name || 'Plant') + ' — Lv.' + lvl + '</div>';
-        plantHtml += '<div style="text-align:center;font-size:11px;color:#98e4b0;padding:4px 0 8px">' +
-          '💰 Earning ' + coinSVG(12) + ' ' + coinsPerCycle + ' coins every 5 min (offline up to 2 hrs)</div>';
+        const best = getBestPlantIncome();
+        const isBest = best && best.layer === currentLayer && best.plant === roomData.plant;
+        plantHtml += '<div class="shop-section"><div class="shop-section-title">🌱 ' + (plantDef?.name || 'Plant') + ' — Lv.' + lvl + ' (Floor ' + currentLayer + ')</div>';
+        plantHtml += '<div style="text-align:center;font-size:11px;color:#98e4b0;padding:4px 0 4px">' +
+          '🌿 This plant produces ' + coinSVG(12) + ' ' + coinsPerCycle + ' / 5 min</div>';
+        // Revenue follows the single best-earning plant across all floors
+        plantHtml += '<div style="text-align:center;font-size:11px;padding:0 0 8px;color:' + (isBest ? '#fbbf24' : 'rgba(255,255,255,0.55)') + '">' +
+          (best
+            ? (isBest
+                ? '⭐ Best on all floors — your room earns ' + coinSVG(12) + ' ' + best.perCycle + ' / 5 min'
+                : '💰 Room earns ' + coinSVG(12) + ' ' + best.perCycle + ' / 5 min (from Floor ' + best.layer + ')')
+            : '') + '</div>';
         if (nextDef && scaledCost !== null) {
           const nextCoins = nextDef.level * (plantDef ? plantDef.coinRate : 1);
           plantHtml += '<div class="shop-card" style="text-align:center">' +

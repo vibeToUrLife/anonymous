@@ -4,18 +4,24 @@
     let petAnimFrame = null;
     let petStates = {};
     let _selectedPetId = null; // Currently selected pet for status bar
+    let _petDragCleanup = null; // Removes window drag listeners from a previous init
 
-    function getPetState(id, idx) {
+    function getPetState(id, idx, petInst) {
       if (!petStates[id]) {
+        // Start from the last dropped position if the pet was dragged before,
+        // but the pet still wanders freely afterwards (no permanent parking).
+        const hasDropPos = petInst && petInst.posX != null && petInst.posY != null;
         petStates[id] = {
-          x: 0.15 + idx * 0.25, y: 0.75 + Math.random() * 0.08,
+          x: hasDropPos ? petInst.posX : 0.15 + idx * 0.25,
+          y: hasDropPos ? petInst.posY : 0.75 + Math.random() * 0.08,
           tx: 0.5, ty: 0.78,
           speed: 0.0004, nextWander: 0, facingRight: true,
           action: null, actionEnd: 0, actionCooldown: 0,
           vx: 0, vy: 0,
           pauseUntil: 0,
           idlePhase: Math.random() * Math.PI * 2,
-          stopped: false // When true, pet stops for status bar
+          stopped: false, // When true, pet stops for status bar
+          parked: false   // Dragging only repositions; pet keeps walking after drop
         };
       }
       return petStates[id];
@@ -27,7 +33,8 @@
       bunny:   ['sniff', 'hop', 'standup', 'eartwitch', 'sleep', 'nosewiggle', 'binky', 'flop', 'groom'],
       hamster: ['stuff', 'groom', 'spin', 'sleep', 'wash', 'peek', 'dig', 'stretch'],
       fox:     ['pounce', 'yawn', 'crouch', 'sneak', 'sleep', 'tailflick', 'headtilt', 'stretch', 'dig'],
-      panda:   ['eat', 'roll', 'wave', 'sit', 'sleep', 'stretch', 'yawn', 'headtilt', 'tumble']
+      panda:   ['eat', 'roll', 'wave', 'sit', 'sleep', 'stretch', 'yawn', 'headtilt', 'tumble'],
+      goose:   ['sleep', 'stretch', 'yawn', 'headtilt', 'groom', 'sit']
     };
 
     let _lastPetAction = {};
@@ -50,11 +57,101 @@
       cvs.width = rw; cvs.height = rh;
       const ctx = cvs.getContext('2d');
 
-      // Ensure each pet has a state (keyed by instance ID)
-      pets.forEach((p, i) => getPetState(p.id, i));
+      // Ensure each pet has a state (keyed by instance ID).
+      // Look up the real pet instance so a previously dropped position is restored.
+      pets.forEach((p, i) => getPetState(p.id, i, getPet(p.id)));
+
+      // Remove drag listeners from a previous animation init (avoids leaks)
+      if (_petDragCleanup) { _petDragCleanup(); _petDragCleanup = null; }
+
+      // ── Drag-and-drop: let the owner pick up a pet and drop it anywhere ──
+      let _dragPetId = null;      // pet currently being dragged
+      let _dragMoved = false;     // became a real drag (vs a click)
+      let _dragSuppressClick = false;
+
+      function _canvasPos(e) {
+        const rect = cvs.getBoundingClientRect();
+        const src = e.touches && e.touches[0] ? e.touches[0] : e;
+        return {
+          x: (src.clientX - rect.left) / rect.width,
+          y: (src.clientY - rect.top) / rect.height
+        };
+      }
+
+      function _petAt(nx, ny) {
+        let closest = null, closestDist = Infinity;
+        for (const p of pets) {
+          const st = petStates[p.id];
+          if (!st) continue;
+          const dx = st.x - nx, dy = (st.y - 0.04) - ny;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 0.13 && dist < closestDist) { closestDist = dist; closest = p; }
+        }
+        return closest;
+      }
+
+      function onPetPointerDown(e) {
+        if (viewingUid !== currentUid) return; // can only drag your own pets
+        if (selectedFood || selectedToy || selectedDrink) return; // feeding mode
+        const pos = _canvasPos(e);
+        const p = _petAt(pos.x, pos.y);
+        if (!p) return;
+        _dragPetId = p.id;
+        _dragMoved = false;
+      }
+
+      function onPetPointerMove(e) {
+        if (!_dragPetId) return;
+        const st = petStates[_dragPetId];
+        if (!st) return;
+        const pos = _canvasPos(e);
+        if (!_dragMoved) {
+          // Require a small movement before it counts as a drag
+          _dragMoved = true;
+          st.dragging = true;
+          if (e.cancelable) e.preventDefault();
+        }
+        st.x = Math.max(0.02, Math.min(0.98, pos.x));
+        st.y = Math.max(0.10, Math.min(0.96, pos.y));
+        st.vx = 0; st.vy = 0;
+      }
+
+      function onPetPointerUp() {
+        if (!_dragPetId) return;
+        const st = petStates[_dragPetId];
+        const petInst = getPet(_dragPetId);
+        if (_dragMoved && st && petInst && viewingUid === currentUid) {
+          // Move the pet to the dropped spot, then let it keep wandering from there.
+          petInst.posX = st.x;
+          petInst.posY = st.y;
+          petInst.parked = false;
+          st.parked = false;
+          st.dragging = false;
+          st.nextWander = 0;          // pick a fresh wander target right away
+          _dragSuppressClick = true;  // prevent the trailing click from feeding/status
+          saveRoom();
+        }
+        _dragPetId = null;
+        _dragMoved = false;
+      }
+
+      cvs.addEventListener('mousedown', onPetPointerDown);
+      window.addEventListener('mousemove', onPetPointerMove);
+      window.addEventListener('mouseup', onPetPointerUp);
+      cvs.addEventListener('touchstart', onPetPointerDown, { passive: true });
+      window.addEventListener('touchmove', onPetPointerMove, { passive: false });
+      window.addEventListener('touchend', onPetPointerUp);
+      // Cleanup so a future re-init doesn't stack duplicate window listeners
+      _petDragCleanup = function() {
+        window.removeEventListener('mousemove', onPetPointerMove);
+        window.removeEventListener('mouseup', onPetPointerUp);
+        window.removeEventListener('touchmove', onPetPointerMove);
+        window.removeEventListener('touchend', onPetPointerUp);
+      };
 
       // Pet click handler — feed/play if item selected, otherwise show status bar
       cvs.onclick = function(e) {
+        if (_dragSuppressClick) { _dragSuppressClick = false; return; } // ignore click right after a drag
         const rect = cvs.getBoundingClientRect();
         const clickX = (e.clientX - rect.left) / rect.width;
         const clickY = (e.clientY - rect.top) / rect.height;
@@ -130,8 +227,8 @@
           let currentAction = null;
           const color = petInst ? petInst.color : p.color;
 
-          // If pet is stopped (status bar open), don't wander or act
-          if (st.stopped) {
+          // If pet is stopped (status bar open) or being dragged, don't wander or act
+          if (st.stopped || st.dragging) {
             moving = false;
             st.vx = 0; st.vy = 0;
           } else {
@@ -203,12 +300,18 @@
             }
           }
 
-          st.x = Math.max(0.04, Math.min(0.70, st.x));
-          st.y = Math.max(0.70, Math.min(0.92, st.y));
+          // Parked/dragged pets may be placed anywhere; others stay on the floor
+          if (st.parked || st.dragging) {
+            st.x = Math.max(0.02, Math.min(0.98, st.x));
+            st.y = Math.max(0.10, Math.min(0.96, st.y));
+          } else {
+            st.x = Math.max(0.04, Math.min(0.70, st.x));
+            st.y = Math.max(0.70, Math.min(0.92, st.y));
+          }
 
           const px = st.x * rw;
           const py = st.y * rh;
-          const depthScale = 0.6 + (st.y - 0.6) * 2.0;
+          const depthScale = Math.max(0.4, 0.6 + (st.y - 0.6) * 2.0);
           const baseSize = PET_SIZES[p.type] || 44;
           const size = baseSize * depthScale;
 
@@ -356,6 +459,28 @@
           ).join('');
         } else {
           colorsEl.innerHTML = '';
+        }
+      }
+
+      // Pet tricks — show unlocked tricks right inside the status panel
+      const tricksWrap = document.getElementById('petStatusTricks');
+      const tricksBtns = document.getElementById('petStatusTricksBtns');
+      if (tricksWrap && tricksBtns) {
+        const tricks = (typeof PET_TRICKS !== 'undefined' && PET_TRICKS[pet.type]) || [];
+        if (tricks.length) {
+          tricksWrap.style.display = 'block';
+          tricksBtns.innerHTML = tricks.map(tr => {
+            const unlocked = aff >= tr.minAffection;
+            return '<button onclick="triggerPetTrick(\'' + pet.id + '\',\'' + tr.id + '\')" ' +
+              (unlocked ? '' : 'disabled') + ' style="font-size:10px;padding:5px 9px;border-radius:8px;cursor:' +
+              (unlocked ? 'pointer' : 'not-allowed') + ';border:1px solid rgba(255,255,255,0.15);' +
+              'background:' + (unlocked ? 'rgba(255,138,171,0.18)' : 'rgba(255,255,255,0.05)') + ';' +
+              'color:' + (unlocked ? '#ff8aab' : 'rgba(255,255,255,0.35)') + '">' +
+              tr.name + (unlocked ? '' : ' ♥' + tr.minAffection) + '</button>';
+          }).join('');
+        } else {
+          tricksWrap.style.display = 'none';
+          tricksBtns.innerHTML = '';
         }
       }
     }
@@ -833,6 +958,7 @@
         case 'hamster':drawHamsterPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
         case 'fox':    drawFoxPet(ctx, size, legPhase, moving, hunger, action, ap, t); break;
         case 'panda':  drawPandaPet(ctx, size, legPhase, moving, hunger, action, ap, t); break;
+        case 'goose':  drawGoosePet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
         default:       drawCatPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal);
       }
     }

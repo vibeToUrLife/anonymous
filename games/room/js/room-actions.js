@@ -6,8 +6,7 @@
       if (type === 'pet') {
         // Adopt a new pet instance (inactive � not placed in room yet)
         const petDef = PETS.find(p => p.id === id);
-        if (roomData.pets.length >= 10) return showToast('Max 10 pets! Remove one first.', 'error');
-        // Per-type limit: max 2 of each pet type
+        // Per-type limit: max 2 of each pet type (no total cap)
         const typeCount = roomData.pets.filter(p => p.type === id).length;
         if (typeCount >= 2) return showToast('Already adopted 2 ' + (petDef ? petDef.name : id) + 's!', 'error');
         if (!petDef || roomData.coins < petDef.cost) return showToast('Not enough coins!', 'error');
@@ -282,6 +281,30 @@
       await saveRoom();
       renderDecorShop();
       showToast('Wall pattern changed!', 'success');
+    }
+
+    async function buyFloor(id) {
+      if (viewingUid !== currentUid) return;
+      const item = FLOOR_PATTERNS.find(f => f.id === id);
+      if (!item || roomData.coins < item.cost) return showToast('Not enough coins!', 'error');
+      if (!Array.isArray(roomData.ownedFloors)) roomData.ownedFloors = ['floor_wood'];
+      if (roomData.ownedFloors.includes(id)) return;
+      roomData.coins -= item.cost;
+      roomData.ownedFloors.push(id);
+      roomData.floorStyle = id;
+      _forceRedrawBg();
+      await saveRoom();
+      renderDecorShop();
+      showToast('Bought ' + item.emoji + ' ' + item.name + '!', 'success');
+    }
+
+    async function equipFloor(id) {
+      if (viewingUid !== currentUid) return;
+      roomData.floorStyle = id;
+      _forceRedrawBg();
+      await saveRoom();
+      renderDecorShop();
+      showToast('Floor changed!', 'success');
     }
 
     async function buyWindow(id) {
@@ -841,7 +864,9 @@
             }
             return pd;
           }),
-          plantPosition: d.plantPosition ?? null
+          plantPosition: d.plantPosition ?? null,
+          plant: d.plant ?? null,
+          floorStyle: d.floorStyle ?? 'floor_wood'
         };
       }
       roomData.layerData = rawLayerData;
@@ -854,6 +879,9 @@
       roomData.windowStyle = visitLD.windowStyle || 'win_classic';
       roomData.placedDecors = Array.isArray(visitLD.placedDecors) ? visitLD.placedDecors : [];
       roomData.plantPosition = visitLD.plantPosition || null;
+      roomData.plant = visitLD.plant != null ? visitLD.plant : (d.plant ?? null);
+      roomData.floorStyle = visitLD.floorStyle || 'floor_wood';
+      roomData.ownedFloors = d.ownedFloors ?? ['floor_wood'];
       // Reset render keys so room fully redraws for visited user
       _lastPetKey = '';
       _lastPlantKey = '';

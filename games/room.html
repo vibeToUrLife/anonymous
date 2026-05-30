@@ -77,6 +77,10 @@
             </div>
           </div>
           <div id="petStatusColors" style="display:flex;gap:5px;justify-content:center;margin-top:8px;flex-wrap:wrap"></div>
+          <div id="petStatusTricks" style="display:none;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.1)">
+            <div style="font-size:10px;color:rgba(255,255,255,0.5);margin-bottom:6px;text-align:center">🎪 Tricks</div>
+            <div id="petStatusTricksBtns" style="display:flex;gap:5px;justify-content:center;flex-wrap:wrap"></div>
+          </div>
         </div>
         <!-- Floor badge: click to view building exterior -->
         <div id="layerBadge" class="layer-badge" onclick="goOutside()" title="Outside View">🏠 My Room</div>
@@ -125,6 +129,7 @@
     <div class="sub-panel" id="decorShopWrap">
       <div class="decor-tabs">
         <button class="decor-tab active" data-dcategory="wallpaper">🏠 Wall</button>
+        <button class="decor-tab" data-dcategory="floor">🪵 Floor</button>
         <button class="decor-tab" data-dcategory="window">🪟 Window</button>
         <button class="decor-tab" data-dcategory="wallart">🖼️ Art</button>
         <button class="decor-tab" data-dcategory="furniture">🪑 Furniture</button>
@@ -135,6 +140,13 @@
           <div class="shop-section-title">🏠 Wall Pattern</div>
           <div style="font-size:11px;color:rgba(255,255,255,0.4);padding:0 12px 8px;text-align:center">Change the look of your walls</div>
           <div class="shop-grid" id="wallShop"></div>
+        </div>
+      </div>
+      <div class="decor-panel" id="dp-floor">
+        <div class="shop-section">
+          <div class="shop-section-title">🪵 Floor Pattern</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.4);padding:0 12px 8px;text-align:center">Change the floor of this room</div>
+          <div class="shop-grid" id="floorShop"></div>
         </div>
       </div>
       <div class="decor-panel" id="dp-window">
@@ -326,6 +338,7 @@
   <script src="pets/hamster.js"></script>
   <script src="pets/fox.js"></script>
   <script src="pets/panda.js"></script>
+  <script src="pets/goose.js"></script>
 
   <!-- Room JS modules -->
   <script src="room/js/room-base.js"></script>

@@ -4,7 +4,9 @@
         wallPattern:   roomData.wallPattern,
         windowStyle:   roomData.windowStyle,
         placedDecors:  roomData.placedDecors,
-        plantPosition: roomData.plantPosition || null
+        plantPosition: roomData.plantPosition || null,
+        plant:         roomData.plant || null,
+        floorStyle:    roomData.floorStyle || 'floor_wood'
       };
     }
 
@@ -28,6 +30,8 @@
       roomData.windowStyle   = ld.windowStyle  || getLayerDefaultWindow(n);
       roomData.placedDecors  = Array.isArray(ld.placedDecors) ? ld.placedDecors : [];
       roomData.plantPosition = ld.plantPosition || null;
+      roomData.plant         = ld.plant != null ? ld.plant : null;
+      roomData.floorStyle    = ld.floorStyle || 'floor_wood';
       // Hide outside view and stop its animation loop
       isOutsideView = false;
       document.getElementById('outsideView')?.classList.remove('visible');

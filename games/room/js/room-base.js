@@ -85,6 +85,7 @@
       { id: 'hamster',emoji: '🐹', name: 'Hamster',   cost: 800 },
       { id: 'fox',    emoji: '🦊', name: 'Fox',       cost: 1200 },
       { id: 'panda',  emoji: '🐼', name: 'Panda',     cost: 2000 },
+      { id: 'goose',  emoji: '🦢', name: 'Goose',     cost: 1500 },
     ];
 
     const PLANTS = [
@@ -100,7 +101,7 @@
     const PLANT_OFFLINE_CAP_MS = 2 * 60 * 60 * 1000;
 
     const PET_SIZES = {
-      cat: 72, dog: 80, bunny: 64, hamster: 58, fox: 76, panda: 86
+      cat: 72, dog: 80, bunny: 64, hamster: 58, fox: 76, panda: 86, goose: 74
     };
 
     const PET_COLORS = {
@@ -132,6 +133,12 @@
         { key: 'gray',   name: 'Gray',   body: '#999999', cheek: '#bbbbbb', tummy: '#cccccc', ear: '#777777' },
         { key: 'golden', name: 'Golden', body: '#d4a030', cheek: '#f0d090', tummy: '#f5e8c0', ear: '#b08828' },
       ],
+      goose: [
+        { key: 'white',  name: 'White',  body: '#f7f7f7', wing: '#e2e2e2', beak: '#f2a13c', leg: '#e08a2c' },
+        { key: 'gray',   name: 'Gray',   body: '#b8bcc2', wing: '#9aa0a8', beak: '#3a3a3a', leg: '#d08a2c' },
+        { key: 'brown',  name: 'Brown',  body: '#c8a878', wing: '#a8884e', beak: '#3a3a3a', leg: '#caa040' },
+        { key: 'swan',   name: 'Swan',   body: '#ffffff', wing: '#f0f0f0', beak: '#e8682c', leg: '#2a2a2a' },
+      ],
     };
 
     function getPetPalette(type, colorKey) {
@@ -156,6 +163,10 @@
       { id: 'feather', emoji: '🪶', name: 'Feather',    cost: 100, affection: 25 },
       { id: 'yarn',    emoji: '🧶', name: 'Yarn Ball',  cost: 150, affection: 35 },
       { id: 'frisbee', emoji: '🥏', name: 'Frisbee',    cost: 250, affection: 50 },
+      { id: 'bell',    emoji: '🔔', name: 'Jingle Bell', cost: 400, affection: 75 },
+      { id: 'puzzle',  emoji: '🧩', name: 'Puzzle Toy',  cost: 600, affection: 110 },
+      { id: 'kite',    emoji: '🪁', name: 'Kite',        cost: 850, affection: 160 },
+      { id: 'wand',    emoji: '🪄', name: 'Magic Wand',  cost: 1200, affection: 240 },
     ];
 
     const DRINKS = [
@@ -176,7 +187,14 @@
       { min: 800,  title: 'Soul Mate',     reward: 350 },
       { min: 1200, title: 'Inseparable',   reward: 500 },
       { min: 2000, title: 'Legendary Bond', reward: 800 },
+      { min: 3000, title: 'Eternal Companion', reward: 1200 },
+      { min: 4500, title: 'Heart Guardian',    reward: 1800 },
+      { min: 6500, title: 'Mythic Bond',        reward: 2600 },
+      { min: 9000, title: 'Divine Connection',  reward: 4000 },
     ];
+
+    // Affection points lost per 10-min decay cycle while a pet is starving (hunger = 0)
+    const STARVE_AFFECTION_LOSS = 2;
 
     function getAffectionTitle(aff) {
       for (let i = AFFECTION_MILESTONES.length - 1; i >= 0; i--) {
@@ -295,6 +313,19 @@
       { id: 'win_skylight',  emoji: '☀️', name: 'Skylight',        cost: 700 },
       { id: 'win_stained',   emoji: '🎨', name: 'Stained Glass',   cost: 900 },
       { id: 'win_porthole',  emoji: '🚢', name: 'Porthole',        cost: 350 },
+    ];
+
+    const FLOOR_PATTERNS = [
+      { id: 'floor_wood',   emoji: '🪵', name: 'Wood Planks',    cost: 0 },
+      { id: 'floor_tile',   emoji: '◻️', name: 'Checker Tile',   cost: 300 },
+      { id: 'floor_marble', emoji: '🪨', name: 'Marble Floor',   cost: 500 },
+      { id: 'floor_carpet', emoji: '🟥', name: 'Red Carpet',     cost: 350 },
+      { id: 'floor_stone',  emoji: '⬜', name: 'Stone Slabs',    cost: 400 },
+      { id: 'floor_grass',  emoji: '🌿', name: 'Grass Lawn',     cost: 450 },
+      { id: 'floor_sand',   emoji: '🏖️', name: 'Beach Sand',     cost: 400 },
+      { id: 'floor_galaxy', emoji: '🌌', name: 'Galaxy Floor',   cost: 800 },
+      { id: 'floor_lava',   emoji: '🌋', name: 'Lava Rock',      cost: 700 },
+      { id: 'floor_ice',    emoji: '🧊', name: 'Ice Floor',      cost: 600 },
     ];
 
     const PLANT_LEVELS = [

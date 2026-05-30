@@ -203,10 +203,146 @@
     let _bgWallCanvas = null;
     let _bgWallCacheKey = '';
     let _bgFloorCanvas = null;
+    let _bgFloorCacheKey = '';
     let _lastBgFrame = 0;
     let _galaxyStars = [];
     let _marbleVeins = [];
     let _cherryBlossoms = [];
+
+    /**
+     * Renders the chosen floor pattern onto a context. Shared by the room
+     * background and by shop preview thumbnails.
+     * @param {CanvasRenderingContext2D} fc
+     * @param {string} fp     floor pattern id (FLOOR_PATTERNS)
+     * @param {number} rw,rh  canvas size
+     * @param {number} floorY top of the floor area
+     * @param {number} plankH plank height (used by the wood pattern)
+     */
+    function drawFloorPattern(fc, fp, rw, rh, floorY, plankH) {
+      const top = floorY + 6, fh = rh - floorY - 6;
+      const ph = plankH || fh / 7;
+      if (fp === 'floor_tile') {
+        const ts = Math.max(14, rw / 14);
+        for (let y = top, r = 0; y < rh; y += ts, r++) {
+          for (let x = 0, c = 0; x < rw; x += ts, c++) {
+            fc.fillStyle = (r + c) % 2 === 0 ? '#e8e0d4' : '#b8a890';
+            fc.fillRect(x, y, ts, ts);
+          }
+        }
+        fc.strokeStyle = 'rgba(120,110,95,0.25)'; fc.lineWidth = 1;
+        for (let y = top; y < rh; y += ts) { fc.beginPath(); fc.moveTo(0, y); fc.lineTo(rw, y); fc.stroke(); }
+        for (let x = 0; x < rw; x += ts) { fc.beginPath(); fc.moveTo(x, top); fc.lineTo(x, rh); fc.stroke(); }
+      } else if (fp === 'floor_marble') {
+        const g = fc.createLinearGradient(0, top, rw, rh);
+        g.addColorStop(0, '#eceaf0'); g.addColorStop(0.5, '#dcd8e2'); g.addColorStop(1, '#c8c4d2');
+        fc.fillStyle = g; fc.fillRect(0, top, rw, fh);
+        fc.strokeStyle = 'rgba(150,140,160,0.3)'; fc.lineWidth = 1;
+        for (let i = 0; i < 14; i++) {
+          const x1 = (i * rw / 14); const y1 = top + (i * 23) % fh;
+          fc.beginPath(); fc.moveTo(x1, y1);
+          fc.bezierCurveTo(x1 + 40, y1 + 10, x1 + 80, y1 - 14, x1 + 130, y1 + 6); fc.stroke();
+        }
+      } else if (fp === 'floor_carpet') {
+        const g = fc.createLinearGradient(0, top, 0, rh);
+        g.addColorStop(0, '#c0392b'); g.addColorStop(1, '#922b21');
+        fc.fillStyle = g; fc.fillRect(0, top, rw, fh);
+        fc.strokeStyle = 'rgba(255,215,120,0.25)'; fc.lineWidth = 3;
+        fc.strokeRect(8, top + 8, rw - 16, fh - 16);
+        fc.strokeStyle = 'rgba(0,0,0,0.08)'; fc.lineWidth = 1;
+        for (let y = top; y < rh; y += 4) { fc.beginPath(); fc.moveTo(0, y); fc.lineTo(rw, y); fc.stroke(); }
+      } else if (fp === 'floor_stone') {
+        fc.fillStyle = '#9a958c'; fc.fillRect(0, top, rw, fh);
+        fc.strokeStyle = 'rgba(70,66,60,0.35)'; fc.lineWidth = 1.5;
+        const ss = Math.max(26, rw / 8);
+        for (let y = top, r = 0; y < rh; y += ss * 0.6, r++) {
+          const off = (r % 2) * ss / 2;
+          for (let x = -ss + off; x < rw; x += ss) {
+            fc.strokeRect(x, y, ss - 2, ss * 0.6 - 2);
+          }
+        }
+      } else if (fp === 'floor_grass') {
+        const g = fc.createLinearGradient(0, top, 0, rh);
+        g.addColorStop(0, '#6cae4a'); g.addColorStop(1, '#4e8c34');
+        fc.fillStyle = g; fc.fillRect(0, top, rw, fh);
+        fc.strokeStyle = 'rgba(40,90,30,0.4)'; fc.lineWidth = 1;
+        for (let i = 0; i < rw; i += 7) {
+          const gy = top + ((i * 13) % fh);
+          fc.beginPath(); fc.moveTo(i, gy); fc.lineTo(i + 2, gy - 6); fc.stroke();
+        }
+      } else if (fp === 'floor_sand') {
+        const g = fc.createLinearGradient(0, top, 0, rh);
+        g.addColorStop(0, '#ecd9a8'); g.addColorStop(1, '#d8c089');
+        fc.fillStyle = g; fc.fillRect(0, top, rw, fh);
+        fc.strokeStyle = 'rgba(180,160,110,0.4)'; fc.lineWidth = 1;
+        for (let y = top + 6; y < rh; y += 10) {
+          fc.beginPath();
+          for (let x = 0; x <= rw; x += 6) fc.lineTo(x, y + Math.sin(x * 0.08) * 3);
+          fc.stroke();
+        }
+      } else if (fp === 'floor_galaxy') {
+        const g = fc.createLinearGradient(0, top, rw, rh);
+        g.addColorStop(0, '#0a0a2a'); g.addColorStop(0.5, '#1a1040'); g.addColorStop(1, '#0a0a2a');
+        fc.fillStyle = g; fc.fillRect(0, top, rw, fh);
+        fc.fillStyle = '#fff';
+        for (let i = 0; i < 70; i++) {
+          fc.globalAlpha = 0.3 + ((i * 37) % 70) / 100;
+          fc.beginPath(); fc.arc((i * 53) % rw, top + (i * 29) % fh, ((i % 3) * 0.5) + 0.5, 0, Math.PI * 2); fc.fill();
+        }
+        fc.globalAlpha = 1;
+      } else if (fp === 'floor_lava') {
+        fc.fillStyle = '#2a1410'; fc.fillRect(0, top, rw, fh);
+        fc.strokeStyle = 'rgba(255,90,20,0.6)'; fc.lineWidth = 2;
+        const ls = Math.max(28, rw / 8);
+        for (let y = top, r = 0; y < rh; y += ls * 0.6, r++) {
+          const off = (r % 2) * ls / 2;
+          for (let x = -ls + off; x < rw; x += ls) {
+            fc.strokeRect(x, y, ls - 2, ls * 0.6 - 2);
+          }
+        }
+      } else if (fp === 'floor_ice') {
+        const g = fc.createLinearGradient(0, top, 0, rh);
+        g.addColorStop(0, '#cfeaf5'); g.addColorStop(1, '#a8d4e8');
+        fc.fillStyle = g; fc.fillRect(0, top, rw, fh);
+        fc.strokeStyle = 'rgba(255,255,255,0.5)'; fc.lineWidth = 1;
+        for (let i = 0; i < 16; i++) {
+          const x1 = (i * rw / 16), y1 = top + (i * 19) % fh;
+          fc.beginPath(); fc.moveTo(x1, y1); fc.lineTo(x1 + 24, y1 - 12); fc.moveTo(x1, y1); fc.lineTo(x1 - 18, y1 - 8); fc.stroke();
+        }
+      } else {
+        // Default wood planks
+        const floorGrad = fc.createLinearGradient(0, top, 0, rh);
+        floorGrad.addColorStop(0, '#b89a6e');
+        floorGrad.addColorStop(0.3, '#a68a5e');
+        floorGrad.addColorStop(1, '#8B7355');
+        fc.fillStyle = floorGrad;
+        fc.fillRect(0, top, rw, fh);
+        fc.strokeStyle = 'rgba(90,70,48,0.25)';
+        fc.lineWidth = 1;
+        for (let i = 1; i < 7; i++) {
+          const py = top + i * ph;
+          fc.beginPath(); fc.moveTo(0, py); fc.lineTo(rw, py); fc.stroke();
+        }
+        for (let i = 0; i < 7; i++) {
+          const off = (i % 2) * rw * 0.15;
+          for (let x = off; x < rw; x += rw * 0.22) {
+            fc.beginPath();
+            fc.moveTo(x, top + i * ph);
+            fc.lineTo(x, top + (i + 1) * ph);
+            fc.stroke();
+          }
+        }
+        fc.strokeStyle = 'rgba(120,90,55,0.06)';
+        fc.lineWidth = 0.5;
+        for (let i = 0; i < 30; i++) {
+          const gx = (i * rw / 30) + 5;
+          const gy = top + 4 + (i * 17) % Math.max(1, fh - 14);
+          fc.beginPath();
+          fc.moveTo(gx, gy);
+          fc.quadraticCurveTo(gx + 15, gy + 3, gx + 30, gy - 1);
+          fc.stroke();
+        }
+      }
+    }
 
     function startRoomBgAnimation() {
       cancelAnimationFrame(bgAnimFrame);
@@ -232,6 +368,7 @@
       // Invalidate wall and floor cache on resize/init
       _bgWallCacheKey = '';
       _bgFloorCanvas = null;
+      _bgFloorCacheKey = '';
 
       function frame(t) {
         // Throttle to ~30fps to save CPU
@@ -601,47 +738,21 @@
         /* ── Wall Decorations (drawn over wall, before baseboard) ── */
         drawWallDecorations(ctx, rw, rh, floorY, t);
 
-        /* ── Baseboard + Floor (cached) ── */
-        if (!_bgFloorCanvas) {
+        /* ── Baseboard + Floor (cached, keyed by floor style) ── */
+        const fp = roomData.floorStyle || 'floor_wood';
+        const _floorCK = fp + ':' + rw + ':' + Math.round(rh) + ':' + Math.round(floorY);
+        if (_floorCK !== _bgFloorCacheKey) {
           _bgFloorCanvas = document.createElement('canvas');
           _bgFloorCanvas.width = rw;
           _bgFloorCanvas.height = rh;
           const fc = _bgFloorCanvas.getContext('2d');
+          // Baseboard strip
           fc.fillStyle = '#6d5a42';
           fc.fillRect(0, floorY - 2, rw, 8);
           fc.fillStyle = 'rgba(255,255,255,0.06)';
           fc.fillRect(0, floorY - 2, rw, 2);
-          const floorGrad = fc.createLinearGradient(0, floorY + 6, 0, rh);
-          floorGrad.addColorStop(0, '#b89a6e');
-          floorGrad.addColorStop(0.3, '#a68a5e');
-          floorGrad.addColorStop(1, '#8B7355');
-          fc.fillStyle = floorGrad;
-          fc.fillRect(0, floorY + 6, rw, rh - floorY - 6);
-          fc.strokeStyle = 'rgba(90,70,48,0.25)';
-          fc.lineWidth = 1;
-          for (let i = 1; i < 7; i++) {
-            const py = floorY + 6 + i * plankH;
-            fc.beginPath(); fc.moveTo(0, py); fc.lineTo(rw, py); fc.stroke();
-          }
-          for (let i = 0; i < 7; i++) {
-            const off = (i % 2) * rw * 0.15;
-            for (let x = off; x < rw; x += rw * 0.22) {
-              fc.beginPath();
-              fc.moveTo(x, floorY + 6 + i * plankH);
-              fc.lineTo(x, floorY + 6 + (i + 1) * plankH);
-              fc.stroke();
-            }
-          }
-          fc.strokeStyle = 'rgba(120,90,55,0.06)';
-          fc.lineWidth = 0.5;
-          for (let i = 0; i < 30; i++) {
-            const gx = (i * rw / 30) + 5;
-            const gy = floorY + 10 + (i * 17) % (rh - floorY - 20);
-            fc.beginPath();
-            fc.moveTo(gx, gy);
-            fc.quadraticCurveTo(gx + 15, gy + 3, gx + 30, gy - 1);
-            fc.stroke();
-          }
+          drawFloorPattern(fc, fp, rw, rh, floorY, plankH);
+          _bgFloorCacheKey = _floorCK;
         }
         ctx.drawImage(_bgFloorCanvas, 0, 0);
 

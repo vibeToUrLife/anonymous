@@ -10,20 +10,28 @@
       panda:   [{ id: 'trick_wave', name: 'Wave', minAffection: 100 }, { id: 'trick_roll', name: 'Roll', minAffection: 300 }, { id: 'trick_dance', name: 'Dance', minAffection: 700 }],
     };
 
-    function triggerPetTrick(petType, trickId) {
-      const st = petStates[petType];
+    function triggerPetTrick(petId, trickId) {
+      // petStates is keyed by pet INSTANCE id (not pet type)
+      const st = petStates[petId];
       if (!st) return;
-      // Map trick to action transform
+      // Don't let an open status bar / drag freeze the trick animation
+      st.stopped = false;
+      st.dragging = false;
+      const pet = getPet(petId);
+      // Map trick to a drawing action the pets actually support.
+      // dance/backflip have no dedicated pose, so reuse lively existing ones.
       const trickActionMap = {
         'trick_sit': 'sit', 'trick_roll': 'roll', 'trick_spin': 'spin',
-        'trick_dance': 'dance', 'trick_backflip': 'backflip',
+        'trick_dance': 'spin', 'trick_backflip': 'hop',
         'trick_stand': 'standup', 'trick_pounce': 'pounce',
         'trick_binky': 'hop', 'trick_wave': 'wave'
       };
       st.action = trickActionMap[trickId] || 'sit';
       st.actionDur = 3000;
       st.actionEnd = Date.now() + 3000;
-      showToast('🎪 ' + (PETS.find(p => p.id === petType)?.name || petType) + ' does a trick!', 'success');
+      st.actionCooldown = st.actionEnd + 2000; // don't override with a random idle action
+      const petName = pet ? pet.name : '';
+      showToast('🎪 ' + (petName || 'Pet') + ' does a trick!', 'success');
     }
 
     /* ═══════════════════════════════
@@ -81,7 +89,7 @@
           tricks.forEach(tr => {
             const unlocked = affection >= tr.minAffection;
             html += '<button class="food-btn" style="font-size:10px;' + (unlocked ? '' : 'opacity:.4;cursor:not-allowed') + '" ' +
-              (unlocked ? 'onclick="window.triggerPetTrick(\'' + pet.type + '\',\'' + tr.id + '\');return false;"' : 'disabled') +
+              (unlocked ? 'onclick="window.triggerPetTrick(\'' + pet.id + '\',\'' + tr.id + '\');return false;"' : 'disabled') +
               '>' + tr.name + (unlocked ? '' : ' (❤️' + tr.minAffection + ')') + '</button>';
           });
           html += '</div></div>';
