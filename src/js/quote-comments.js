@@ -1,5 +1,5 @@
 /**
- * Quote Comments — lets users comment on the daily 毒鸡汤 quote.
+ * Quote Comments — lets users comment on the daily 正能量 (motivational) quote.
  *
  * Firestore path: quote_comments/{YYYY-MM-DD}/comments/{autoId}
  * Each comment: { uid, displayName, text, createdAt }
