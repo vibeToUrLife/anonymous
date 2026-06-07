@@ -6,6 +6,7 @@
   <title>Anonymous Bubble Answers</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
   <link rel="stylesheet" href="./src/css/style.css?v=3">
+  <link rel="stylesheet" href="./src/css/interactive.css?v=1">
   <style>
     body.light-theme .sidebar-section a[href] { background: rgba(0,0,0,0.04) !important; color: #333 !important; }
     body.light-theme .sidebar-section a[href]:hover { background: rgba(0,0,0,0.08) !important; }
@@ -615,6 +616,19 @@
   </div>
   <p class="page-subtitle">Answers disappear after 6 hours &#8987;</p>
 
+  <!-- Live, interactive board bar: presence + typing + reactions + playground.
+       Buttons are injected by live-reactions.js; counts driven by presence.js. -->
+  <div class="live-bar" id="liveBar">
+    <span class="live-presence" id="livePresence" title="People viewing the board right now">
+      👀 <b id="liveOnlineCount">1</b> online
+    </span>
+    <span class="live-typing" id="liveTyping" hidden>
+      <span class="live-typing-dots"><i></i><i></i><i></i></span> someone is typing…
+    </span>
+    <span class="reaction-bar" id="reactionBar" aria-label="Send a live reaction"></span>
+    <button class="pg-toggle" id="pgToggle" type="button" title="Bubble Playground — fling &amp; pop the bubbles">🫧 Playground</button>
+  </div>
+
   <!-- Daily 毒鸡汤 quote banner -->
   <div class="daily-quote-banner" id="dailyQuoteBanner">
     <div class="daily-quote-label">🐔 每日毒鸡汤</div>
@@ -812,6 +826,11 @@
   <script src="./src/js/daily-quotes.js"></script>
   <script src="./src/js/quote-comments.js"></script>
   <script src="./src/js/app.js"></script>
+  <!-- Live, interactive board features (load after app.js for shared db/auth) -->
+  <script src="./src/js/board-live-logic.js"></script>
+  <script src="./src/js/presence.js"></script>
+  <script src="./src/js/live-reactions.js"></script>
+  <script src="./src/js/bubble-playground.js"></script>
   <script>
     // Initialize daily quote banner
     (function() {

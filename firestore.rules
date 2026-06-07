@@ -237,6 +237,26 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════
+    // 14. LIVE BOARD — presence, typing & floating reactions
+    //     Powers the interactive bubble board (presence.js, live-reactions.js).
+    // ═══════════════════════════════════════
+    // Per-user heartbeat for "who's online" + "someone is typing".
+    //   Fields: lastSeen (ms), typing (bool). Anonymous — no personal data.
+    //   Owner-only writes; any signed-in user may read to derive the live count.
+    match /board_presence/{uid} {
+      allow read: if isAuth();
+      allow write: if isOwner(uid);
+    }
+    // Single shared doc (board_reactions/live) holding a short rolling list of
+    // recent reaction events {id, i}. Any signed-in user may append (arrayUnion)
+    // or trim it; it is ephemeral confetti, not durable data.
+    //   NOTE: Bubble Playground pops award coins to the popper's OWN rooms doc
+    //   (covered by the rooms isOwner update rule); no separate collection.
+    match /board_reactions/{docId} {
+      allow read, write: if isAuth();
+    }
+
+    // ═══════════════════════════════════════
     // DEFAULT — deny everything else
     // ═══════════════════════════════════════
     match /{document=**} {

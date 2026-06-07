@@ -1,0 +1,218 @@
+/* ════════════════════════════════════════════════════════════
+   interactive.css — Styles for the live, interactive board features:
+     1. Live presence & typing bar
+     2. Floating live reactions
+     3. Bubble Playground (physics overlay)
+   Loaded after style.css; includes light-theme overrides.
+   ════════════════════════════════════════════════════════════ */
+
+/* ── 1. Live bar (presence + typing + reactions + playground) ── */
+.live-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: -8px auto 16px;
+  padding: 0 16px;
+}
+
+.live-presence {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 5px 12px;
+  border-radius: 20px;
+}
+.live-presence b { color: #a0e7e5; font-weight: 700; }
+
+.live-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.55);
+}
+/* The `hidden` attribute must win over the inline-flex display above. */
+.live-typing[hidden] { display: none !important; }
+
+.live-typing-dots { display: inline-flex; gap: 3px; }
+.live-typing-dots i {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: typingBlink 1.2s infinite;
+}
+.live-typing-dots i:nth-child(2) { animation-delay: 0.2s; }
+.live-typing-dots i:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typingBlink {
+  0%, 60%, 100% { opacity: 0.25; }
+  30%           { opacity: 1; }
+}
+
+/* ── 2. Reaction bar (buttons in the live bar) ── */
+.reaction-bar { display: inline-flex; gap: 4px; }
+.reaction-btn {
+  border: none;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 50%;
+  width: 34px; height: 34px;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.12s, background 0.12s;
+}
+.reaction-btn:hover { background: rgba(255, 255, 255, 0.16); transform: translateY(-2px) scale(1.12); }
+.reaction-btn:active { transform: scale(0.9); }
+
+/* Floating emojis rise in a full-screen, click-through layer. */
+#reactionLayer {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  pointer-events: none;
+  overflow: hidden;
+}
+.reaction-float {
+  position: absolute;
+  bottom: 72px;
+  pointer-events: none;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  animation: reactionRise var(--dur, 3s) ease-out forwards;
+}
+@keyframes reactionRise {
+  0%   { opacity: 0;  transform: translateY(0)     translateX(0)            scale(0.6); }
+  12%  { opacity: 1;  transform: translateY(-8vh)  translateX(0)            scale(1); }
+  100% { opacity: 0;  transform: translateY(-92vh) translateX(var(--drift)) scale(1); }
+}
+
+/* ── 3. Playground toggle button ── */
+.pg-toggle {
+  border: 1px solid rgba(200, 182, 255, 0.4);
+  background: rgba(200, 182, 255, 0.12);
+  color: #d8ccff;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.12s;
+}
+.pg-toggle:hover { background: rgba(200, 182, 255, 0.22); transform: translateY(-1px); }
+.pg-toggle.active { background: #c8b6ff; color: #2a1f4a; }
+
+/* ── 3. Playground overlay ── */
+#pgOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(circle at 50% 28%, rgba(42, 32, 84, 0.92), rgba(10, 8, 25, 0.96));
+  backdrop-filter: blur(6px);
+  animation: pgFadeIn 0.25s ease;
+}
+@keyframes pgFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.pg-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px 6px;
+  color: #fff;
+}
+.pg-title { font-size: 18px; font-weight: 700; }
+.pg-coins {
+  margin-left: auto;
+  font-size: 15px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.12);
+  padding: 5px 12px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.pg-close {
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.pg-close:hover { background: rgba(255, 80, 80, 0.55); }
+
+.pg-hint {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  padding-bottom: 4px;
+}
+
+.pg-field {
+  position: relative;
+  flex: 1;
+  margin: 8px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* The draggable, poppable message balls. */
+.pg-ball {
+  position: absolute;
+  top: 0; left: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #3a2b5f;
+  line-height: 1.15;
+  word-break: break-word;
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;   /* pointer events drive dragging instead of scrolling */
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.25),
+    inset 0 -6px 12px rgba(0, 0, 0, 0.08),
+    inset 0 6px 10px rgba(255, 255, 255, 0.5);
+  transition: box-shadow 0.15s;
+}
+.pg-ball.grabbed { cursor: grabbing; box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4); }
+
+/* Pop confetti particles. */
+.pg-pop {
+  position: absolute;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: pgPop 0.6s ease-out forwards;
+}
+@keyframes pgPop {
+  0%   { opacity: 1; transform: translate(-50%, -50%) translate(0, 0)                       scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) translate(var(--px), var(--py))       scale(0.3); }
+}
+
+/* ── Light-theme overrides ── */
+body.light-theme .live-presence { background: rgba(0, 0, 0, 0.05); color: #555; }
+body.light-theme .live-presence b { color: #0a9396; }
+body.light-theme .live-typing { color: rgba(0, 0, 0, 0.5); }
+body.light-theme .reaction-btn { background: rgba(0, 0, 0, 0.05); }
+body.light-theme .reaction-btn:hover { background: rgba(0, 0, 0, 0.1); }
+body.light-theme .pg-toggle {
+  color: #6b4fa0;
+  border-color: rgba(120, 90, 200, 0.4);
+  background: rgba(120, 90, 200, 0.1);
+}
+body.light-theme .pg-toggle.active { background: #c8b6ff; color: #2a1f4a; }
