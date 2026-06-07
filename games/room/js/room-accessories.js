@@ -8,6 +8,7 @@
       hamster: [{ id: 'trick_spin', name: 'Spin', minAffection: 60 }, { id: 'trick_stand', name: 'Stand Up', minAffection: 200 }, { id: 'trick_roll', name: 'Roll', minAffection: 500 }],
       fox:     [{ id: 'trick_pounce', name: 'Pounce', minAffection: 150 }, { id: 'trick_spin', name: 'Spin', minAffection: 400 }, { id: 'trick_dance', name: 'Dance', minAffection: 800 }],
       panda:   [{ id: 'trick_wave', name: 'Wave', minAffection: 100 }, { id: 'trick_roll', name: 'Roll', minAffection: 300 }, { id: 'trick_dance', name: 'Dance', minAffection: 700 }],
+      goose:   [{ id: 'trick_sit', name: 'Sit', minAffection: 80 }, { id: 'trick_spin', name: 'Spin', minAffection: 250 }, { id: 'trick_flap', name: 'Flap', minAffection: 600 }],
     };
 
     function triggerPetTrick(petId, trickId) {
@@ -24,7 +25,7 @@
         'trick_sit': 'sit', 'trick_roll': 'roll', 'trick_spin': 'spin',
         'trick_dance': 'spin', 'trick_backflip': 'hop',
         'trick_stand': 'standup', 'trick_pounce': 'pounce',
-        'trick_binky': 'hop', 'trick_wave': 'wave'
+        'trick_binky': 'hop', 'trick_wave': 'wave', 'trick_flap': 'hop'
       };
       st.action = trickActionMap[trickId] || 'sit';
       st.actionDur = 3000;

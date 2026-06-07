@@ -98,9 +98,12 @@
         if (!p) return;
         _dragPetId = p.id;
         _dragMoved = false;
-        // Block browser native drag & prevent the event reaching any element behind the canvas
-        e.preventDefault();
+        // Keep the event off elements behind the canvas, but do NOT preventDefault
+        // on touchstart — that cancels the synthetic 'click' we rely on for
+        // tap-to-open-status on mobile. Native scroll/drag during an actual drag is
+        // blocked in onPetPointerMove instead. (Mouse only: block text selection.)
         e.stopPropagation();
+        if (e.type === 'mousedown') e.preventDefault();
       }
 
       function onPetPointerMove(e) {

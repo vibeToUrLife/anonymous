@@ -9,8 +9,8 @@
  *   3. Bubble Playground — fling & pop the message bubbles; popping pays a few
  *      coins, capped per day so the economy can't be farmed.
  *
- * Everything here is deterministic and DOM/Firebase-free so it can be unit
- * tested in isolation (see tests/test-board-live.html). The browser modules
+ * Everything here is deterministic and DOM/Firebase-free so it stays easy to
+ * reason about in isolation. The browser modules
  * (presence.js, live-reactions.js, bubble-playground.js) handle the DOM,
  * Firestore wiring and animation; this file owns the rules and the tunables so
  * there are no magic numbers scattered across the UI.
@@ -160,7 +160,7 @@
     return { granted: granted, state: { day: today, count: count } };
   };
 
-  // Export for both browser (window.BoardLive) and Node/CommonJS (tests/tools).
+  // Export for both browser (window.BoardLive) and Node/CommonJS.
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = BoardLive;
   }

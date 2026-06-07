@@ -7,8 +7,8 @@
  * ROLLING under high barriers. Trains (tall blocks) can only be dodged by a lane
  * change.
  *
- * Everything here is deterministic (or accepts an injectable RNG) so it can be
- * unit-tested in isolation (see tests/test-subway.html). The HTML game shell
+ * Everything here is deterministic (or accepts an injectable RNG) so it stays
+ * easy to reason about in isolation. The HTML game shell
  * (games/subway-dash.html) only handles rendering, input, audio and Firebase.
  *
  * All tunable values (speeds, prices, catalogs, obstacle odds) live here as named
@@ -230,7 +230,7 @@
     return { ok: true, coins: coins - cost, qty: q };
   };
 
-  // Export for both browser (window.SubwayLogic) and Node/CommonJS (tests/tools).
+  // Export for both browser (window.SubwayLogic) and Node/CommonJS.
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = SubwayLogic;
   }
