@@ -216,3 +216,173 @@ body.light-theme .pg-toggle {
   background: rgba(120, 90, 200, 0.1);
 }
 body.light-theme .pg-toggle.active { background: #c8b6ff; color: #2a1f4a; }
+
+/* ════════════════════════════════════════════════════════════
+   4. Daily 脑筋急转弯 (brain teaser) — FAB + overlay
+   ════════════════════════════════════════════════════════════ */
+.riddle-fab {
+  position: fixed;
+  bottom: 206px;            /* stacked directly above the feedback button (148px) */
+  right: 18px;
+  z-index: 310;
+  width: 48px; height: 48px;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #fff;
+  font-size: 22px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.45);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.riddle-fab:hover { transform: scale(1.1); box-shadow: 0 6px 24px rgba(245, 158, 11, 0.55); }
+/* Gentle attention pulse + a "new" dot when today's teaser is untried. */
+.riddle-fab.has-new { animation: riddlePulse 1.8s ease-in-out infinite; }
+.riddle-fab.has-new::after {
+  content: '';
+  position: absolute;
+  top: 2px; right: 2px;
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: #ef4444;
+  border: 2px solid #1a1a2e;
+}
+@keyframes riddlePulse {
+  0%, 100% { box-shadow: 0 4px 16px rgba(245, 158, 11, 0.45); }
+  50%      { box-shadow: 0 4px 22px rgba(245, 158, 11, 0.8); }
+}
+
+.riddle-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(10, 8, 25, 0.7);
+  backdrop-filter: blur(4px);
+}
+.riddle-overlay.show { display: flex; animation: pgFadeIn 0.2s ease; }
+
+.riddle-card {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  background: linear-gradient(160deg, #2a2150 0%, #1e1645 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  padding: 24px 22px 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+.riddle-close {
+  position: absolute;
+  top: 12px; right: 12px;
+  width: 30px; height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.riddle-close:hover { background: rgba(255, 80, 80, 0.5); }
+
+.riddle-head {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #fbbf24;
+  margin-bottom: 14px;
+}
+.riddle-q {
+  font-size: 18px;
+  line-height: 1.6;
+  color: #fff;
+  font-weight: 600;
+  margin-bottom: 14px;
+  min-height: 48px;
+}
+.riddle-hint {
+  font-size: 13px;
+  color: #a5b4fc;
+  background: rgba(165, 180, 252, 0.1);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+}
+.riddle-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 15px;
+  text-align: center;
+  outline: none;
+  margin-bottom: 12px;
+}
+.riddle-input:focus { border-color: #fbbf24; }
+.riddle-input::placeholder { color: rgba(255, 255, 255, 0.35); }
+.riddle-input.shake { animation: riddleShake 0.4s; }
+@keyframes riddleShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-7px); }
+  40%, 80% { transform: translateX(7px); }
+}
+
+.riddle-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.riddle-btn {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.12s, background 0.15s, opacity 0.15s;
+}
+.riddle-btn:hover { transform: translateY(-1px); background: rgba(255, 255, 255, 0.16); }
+.riddle-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+.riddle-btn.primary { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border-color: transparent; color: #2a1f4a; }
+.riddle-btn.ghost { background: transparent; color: rgba(255, 255, 255, 0.55); }
+
+.riddle-feedback { min-height: 20px; font-size: 14px; font-weight: 600; margin-bottom: 6px; color: rgba(255, 255, 255, 0.8); }
+.riddle-feedback.ok { color: #34d399; }
+.riddle-feedback.wrong { color: #f87171; }
+.riddle-answer {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.12);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+.riddle-reward { font-size: 12px; color: rgba(255, 255, 255, 0.5); }
+
+/* Light theme */
+body.light-theme .riddle-fab.has-new::after { border-color: #f5f3fa; }
+body.light-theme .riddle-card { background: linear-gradient(160deg, #ffffff 0%, #f5f3fa 100%); border-color: rgba(0, 0, 0, 0.08); }
+body.light-theme .riddle-close { background: rgba(0, 0, 0, 0.06); color: #555; }
+body.light-theme .riddle-q { color: #2a2150; }
+body.light-theme .riddle-hint { color: #6b4fa0; background: rgba(120, 90, 200, 0.08); }
+body.light-theme .riddle-input { background: rgba(0, 0, 0, 0.04); color: #333; border-color: rgba(0, 0, 0, 0.12); }
+body.light-theme .riddle-input::placeholder { color: rgba(0, 0, 0, 0.35); }
+body.light-theme .riddle-btn { background: rgba(0, 0, 0, 0.05); color: #333; border-color: rgba(0, 0, 0, 0.1); }
+body.light-theme .riddle-btn.primary { color: #2a1f4a; }
+body.light-theme .riddle-btn.ghost { color: rgba(0, 0, 0, 0.45); }
+body.light-theme .riddle-feedback { color: rgba(0, 0, 0, 0.7); }
+body.light-theme .riddle-answer { color: #b45309; background: rgba(245, 158, 11, 0.14); }
+body.light-theme .riddle-reward { color: rgba(0, 0, 0, 0.45); }

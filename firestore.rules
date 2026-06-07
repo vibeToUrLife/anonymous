@@ -36,6 +36,9 @@ service cloud.firestore {
     //          subwayOwnedEffects[] (string ids), subwaySelectedEffect (string),
     //          subwayItems: {shield,slowmo,magnet} (consumable counts). All owner-only writes;
     //          coins are spent on purchases and earned on game over via transaction.
+    //    NOTE: Daily 脑筋急转弯 (brain teaser) — riddleLastSolvedDay (string YYYY-MM-DD).
+    //          Solving the day's riddle awards a flat 100 coins ONCE per day via an
+    //          owner-only transaction that increments coins + sets riddleLastSolvedDay.
     // ═══════════════════════════════════════
     match /rooms/{uid} {
       allow read: if isAuth();

@@ -767,6 +767,26 @@
   <!-- Feedback Corner FAB -->
   <a class="feedback-fab" id="feedbackFab" href="./games/feedback.html" title="Feedback Corner">💬</a>
 
+  <!-- Daily 脑筋急转弯 (brain teaser) — button stacked above the feedback button -->
+  <button class="riddle-fab" id="riddleFab" title="每日脑筋急转弯 · 答对得100金币">🧠</button>
+  <div class="riddle-overlay" id="riddleOverlay">
+    <div class="riddle-card">
+      <button class="riddle-close" id="riddleClose" title="关闭">✕</button>
+      <div class="riddle-head">🧠 每日脑筋急转弯</div>
+      <div class="riddle-q" id="riddleQ"></div>
+      <div class="riddle-hint" id="riddleHint" hidden></div>
+      <input class="riddle-input" id="riddleInput" type="text" maxlength="40" placeholder="输入你的答案…" autocomplete="off">
+      <div class="riddle-actions">
+        <button class="riddle-btn primary" id="riddleSubmit">提交</button>
+        <button class="riddle-btn" id="riddleHintBtn">💡 提示</button>
+        <button class="riddle-btn ghost" id="riddleRevealBtn">查看答案</button>
+      </div>
+      <div class="riddle-feedback" id="riddleFeedback"></div>
+      <div class="riddle-answer" id="riddleAnswer" hidden></div>
+      <div class="riddle-reward" id="riddleReward">🪙 答对奖励 100 金币（每天一次）</div>
+    </div>
+  </div>
+
   <!-- Mood Check-in Widget -->
   <button class="mood-fab" id="moodFab" title="How are you feeling today?">😊</button>
   <div class="mood-panel" id="moodPanel">
@@ -831,6 +851,9 @@
   <script src="./src/js/presence.js"></script>
   <script src="./src/js/live-reactions.js"></script>
   <script src="./src/js/bubble-playground.js"></script>
+  <!-- Daily brain-teaser (脑筋急转弯) -->
+  <script src="./src/js/riddles-data.js"></script>
+  <script src="./src/js/daily-riddle.js"></script>
   <script>
     // Initialize daily quote banner
     (function() {
