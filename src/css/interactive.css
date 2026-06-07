@@ -386,3 +386,165 @@ body.light-theme .riddle-btn.ghost { color: rgba(0, 0, 0, 0.45); }
 body.light-theme .riddle-feedback { color: rgba(0, 0, 0, 0.7); }
 body.light-theme .riddle-answer { color: #b45309; background: rgba(245, 158, 11, 0.14); }
 body.light-theme .riddle-reward { color: rgba(0, 0, 0, 0.45); }
+
+/* ════════════════════════════════════════════════════════════
+   5. 金币乐园 Coin Center (shop / gacha / slot) + boost + cosmetics
+   ════════════════════════════════════════════════════════════ */
+.cc-overlay {
+  position: fixed; inset: 0; z-index: 600;
+  display: none; align-items: center; justify-content: center;
+  padding: 18px;
+  background: rgba(10, 8, 25, 0.72);
+  backdrop-filter: blur(4px);
+}
+.cc-overlay.show { display: flex; animation: pgFadeIn 0.2s ease; }
+.cc-card {
+  position: relative;
+  width: 100%; max-width: 460px;
+  max-height: 84vh;
+  display: flex; flex-direction: column;
+  background: linear-gradient(160deg, #2a2150 0%, #1a1340 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.cc-close {
+  position: absolute; top: 12px; right: 12px; z-index: 2;
+  width: 30px; height: 30px; border: none; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1); color: #fff; font-size: 14px; cursor: pointer;
+}
+.cc-close:hover { background: rgba(255, 80, 80, 0.5); }
+.cc-header { display: flex; align-items: center; gap: 10px; padding: 16px 18px 10px; }
+.cc-title { font-size: 17px; font-weight: 700; color: #fff; }
+.cc-coins { margin-left: auto; margin-right: 34px; font-size: 14px; font-weight: 700; color: #fde68a; background: rgba(245, 158, 11, 0.15); padding: 4px 12px; border-radius: 20px; }
+.cc-tabs { display: flex; gap: 6px; padding: 0 14px 10px; }
+.cc-tab {
+  flex: 1; border: none; border-radius: 10px; padding: 9px 4px;
+  background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.7);
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s, color 0.15s;
+}
+.cc-tab.active { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #2a1f4a; }
+.cc-body { padding: 6px 16px 18px; overflow-y: auto; }
+.cc-hint { font-size: 12px; color: rgba(255, 255, 255, 0.5); text-align: center; margin-bottom: 10px; }
+.cc-note { font-size: 11px; color: rgba(255, 255, 255, 0.4); text-align: center; margin-top: 10px; }
+.cc-sec { font-size: 13px; font-weight: 700; color: #a5b4fc; margin: 14px 0 8px; }
+
+/* Shop / pull grid */
+.cc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.cc-item, .cc-pull {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px; padding: 10px 6px; text-align: center;
+}
+.cc-prev { height: 30px; display: flex; align-items: center; justify-content: center; margin-bottom: 6px; }
+.cc-name { font-size: 11px; color: #fff; margin-bottom: 3px; line-height: 1.2; }
+.cc-rar { font-size: 10px; font-weight: 700; }
+.r-N { color: #9ca3af; } .r-R { color: #3b82f6; } .r-SR { color: #a855f7; } .r-SSR { color: #f5b301; }
+.rarity-N { border-color: rgba(156,163,175,0.5); }
+.rarity-R { border-color: rgba(59,130,246,0.6); }
+.rarity-SR { border-color: rgba(168,85,247,0.7); box-shadow: 0 0 10px rgba(168,85,247,0.25); }
+.rarity-SSR { border-color: rgba(245,179,1,0.85); box-shadow: 0 0 14px rgba(245,179,1,0.4); }
+.cc-btn {
+  margin-top: 6px; width: 100%;
+  border: none; border-radius: 8px; padding: 6px 4px;
+  font-size: 11px; font-weight: 700; cursor: pointer; transition: transform 0.12s, opacity 0.15s;
+}
+.cc-btn:hover { transform: translateY(-1px); }
+.cc-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.cc-btn.buy { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #2a1f4a; }
+.cc-btn.own { background: rgba(255,255,255,0.12); color: #fff; }
+.cc-btn.eq { background: #34d399; color: #06302a; }
+.cc-frame-prev { padding: 2px 8px; font-size: 11px; color: #fff; border-radius: 8px; }
+
+/* Gacha */
+.cc-gacha { text-align: center; }
+.cc-machine { font-size: 64px; margin: 8px 0; animation: ccBob 2.4s ease-in-out infinite; }
+@keyframes ccBob { 0%,100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-6px) rotate(3deg); } }
+.cc-odds { font-size: 12px; color: rgba(255,255,255,0.6); margin-bottom: 12px; }
+.cc-gacha-btns { display: flex; gap: 10px; justify-content: center; margin-bottom: 14px; }
+.cc-gacha-btns .cc-btn { width: auto; padding: 10px 18px; font-size: 13px; }
+.cc-gacha-result { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.cc-pull { padding: 8px 4px; animation: pgFadeIn 0.3s ease; }
+.cc-dup { font-size: 9px; color: #fca5a5; margin-top: 3px; }
+.cc-new { font-size: 9px; font-weight: 800; color: #fde047; margin-top: 3px; }
+
+/* Slot */
+.cc-slot { text-align: center; }
+.cc-reels {
+  display: flex; gap: 10px; justify-content: center; margin: 10px 0 16px;
+  font-size: 46px; background: rgba(0,0,0,0.3); border-radius: 14px; padding: 14px;
+  border: 2px solid rgba(245,179,1,0.5);
+}
+.cc-reels span { width: 56px; }
+.cc-bets { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; }
+.cc-bet { border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.06); color: #fff; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.cc-bet.active { background: linear-gradient(135deg,#fbbf24,#f59e0b); color: #2a1f4a; border-color: transparent; }
+.cc-slot .cc-btn.buy { width: auto; padding: 11px 28px; font-size: 15px; }
+.cc-slot-result { min-height: 24px; margin-top: 12px; font-size: 15px; font-weight: 700; }
+.cc-slot-result.win { color: #34d399; }
+.cc-slot-result.lose { color: rgba(255,255,255,0.55); }
+
+/* Boost popup */
+.cc-boost { max-width: 320px; padding: 22px 20px; text-align: center; }
+.cc-boost .cc-title { display: block; margin-bottom: 8px; }
+.cc-boost-opts { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.cc-boost-opts .cc-btn { width: 100%; padding: 11px; font-size: 14px; }
+
+/* ── Cosmetics shown on the board bubbles ── */
+.cos-badge { margin-right: 4px; }
+.cos-title { font-size: 10px; font-weight: 700; color: #fde68a; background: rgba(245,158,11,0.22); padding: 1px 7px; border-radius: 8px; margin-left: 6px; vertical-align: middle; }
+.cos-name-rainbow {
+  background: linear-gradient(90deg, #ff5f6d, #ffc371, #5ee7df, #b490ca, #ff5f6d);
+  background-size: 300% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent; -webkit-text-fill-color: transparent;
+  font-weight: 700; animation: cosRainbow 4s linear infinite;
+}
+@keyframes cosRainbow { to { background-position: 300% 0; } }
+.bubble.cos-frame-simple { border: 2px solid rgba(255,255,255,0.55); }
+.bubble.cos-frame-gold   { border: 2px solid #f5b301; box-shadow: 0 0 14px rgba(245,179,1,0.45); }
+.bubble.cos-frame-neon   { border: 2px solid #22d3ee; box-shadow: 0 0 14px rgba(34,211,238,0.5); }
+.bubble.cos-frame-star   { border: 2px solid #c084fc; box-shadow: 0 0 16px rgba(192,132,252,0.55); }
+
+/* ── Boosted (pinned) bubble ── */
+.bubble.boosted {
+  border: 2px solid #f5b301 !important;
+  box-shadow: 0 0 0 2px rgba(245,179,1,0.25), 0 8px 28px rgba(245,179,1,0.35) !important;
+}
+.bubble.boosted::before {
+  content: '📌 置顶';
+  position: absolute; top: -10px; left: 12px;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #2a1f4a; font-size: 10px; font-weight: 800;
+  padding: 2px 8px; border-radius: 10px; z-index: 3;
+}
+
+/* The 置顶 button in a bubble footer */
+.boost-toggle {
+  background: none; border: none; cursor: pointer;
+  color: #f5b301; font-size: 12px; font-weight: 600; padding: 2px 4px;
+}
+.boost-toggle:hover { text-decoration: underline; }
+
+/* Light theme */
+body.light-theme .cc-card { background: linear-gradient(160deg, #ffffff, #f3f0fb); border-color: rgba(0,0,0,0.08); }
+body.light-theme .cc-title { color: #2a2150; }
+body.light-theme .cc-tab { background: rgba(0,0,0,0.05); color: #555; }
+body.light-theme .cc-item, body.light-theme .cc-pull { background: rgba(0,0,0,0.03); }
+body.light-theme .cc-name { color: #333; }
+body.light-theme .cc-hint, body.light-theme .cc-note, body.light-theme .cc-odds { color: rgba(0,0,0,0.5); }
+body.light-theme .cc-btn.own { background: rgba(0,0,0,0.1); color: #333; }
+body.light-theme .cc-bet { background: rgba(0,0,0,0.05); color: #333; border-color: rgba(0,0,0,0.12); }
+
+/* Gacha prize-pool popup */
+.cc-pool-btn { width: auto !important; padding: 7px 16px !important; margin: 0 auto 12px; display: block; }
+.cc-pool { max-width: 380px; padding: 20px 18px; max-height: 84vh; }
+.cc-pool .cc-title { display: block; margin-bottom: 6px; }
+.cc-pool-list { overflow-y: auto; max-height: 62vh; margin-top: 8px; }
+.cc-pool-row { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 6px; }
+.cc-pool-prev { width: 52px; flex-shrink: 0; text-align: center; }
+.cc-pool-name { flex: 1; font-size: 12px; color: #fff; text-align: left; }
+.cc-pool-pct { font-size: 12px; font-weight: 700; color: #fde68a; flex-shrink: 0; }
+body.light-theme .cc-pool-name { color: #333; }
+body.light-theme .cc-pool-pct { color: #b45309; }

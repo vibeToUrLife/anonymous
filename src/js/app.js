@@ -923,6 +923,19 @@ function buildPollContent(a) {
 /* ── Render bubbles ── */
 let knownIds = new Set();
 
+/* ── Bubble HP / pin status ── */
+function hpInfo(a, now) {
+    // A pinned (boosted) bubble survives until its pin expires — show the pin
+    // time remaining instead of the normal 6-hour HP decay.
+    if (a.boostUntil && a.boostUntil > now) {
+    const mins = Math.ceil((a.boostUntil - now) / 60000);
+    const label = mins >= 60 ? ('置顶 ' + Math.round(mins / 60) + 'h') : ('置顶 ' + mins + 'm');
+    return { pct: 100, label: '📌 ' + label, color: '#f5b301' };
+    }
+    const pct = Math.max(0, Math.min(100, ((SIX_HOURS - (now - a.ts)) / SIX_HOURS) * 100));
+    return { pct: pct, label: 'HP ' + Math.round(pct) + '%', color: pct > 50 ? '#58c5b5' : pct > 20 ? '#f2a154' : '#e06377' };
+}
+
 function render(items) {
     if (!items.length) {
     wrap.innerHTML =
@@ -944,11 +957,11 @@ function render(items) {
         // Update HP bar, replies, and reactions
         const hpFill = existing.querySelector('.bubble-hp-fill');
         if (hpFill) {
-        const pct = Math.max(0, Math.min(100, ((SIX_HOURS - (now - a.ts)) / SIX_HOURS) * 100));
-        hpFill.style.width = pct + '%';
-        hpFill.style.background = pct > 50 ? '#58c5b5' : pct > 20 ? '#f2a154' : '#e06377';
+        const hp = hpInfo(a, now);
+        hpFill.style.width = hp.pct + '%';
+        hpFill.style.background = hp.color;
         const hpLabel = existing.querySelector('.bubble-hp-label');
-        if (hpLabel) hpLabel.textContent = 'HP ' + Math.round(pct) + '%';
+        if (hpLabel) hpLabel.textContent = hp.label;
         }
         // Update poll content live
         if (a.type === 'poll') {
@@ -1008,20 +1021,22 @@ function render(items) {
             <div><span class="answer-sender">${a.name || ''}</span></div>
         `);
     }
+    // Apply the poster's equipped cosmetics (colour / frame / badge / title)
+    applyBubbleCos(bubble, a);
 
     // HP bar (game-style)
     const hpWrapper = document.createElement('div');
     hpWrapper.className = 'bubble-hp-wrapper';
     const hpLabel = document.createElement('span');
     hpLabel.className = 'bubble-hp-label';
-    const pct = Math.max(0, Math.min(100, ((SIX_HOURS - (now - a.ts)) / SIX_HOURS) * 100));
-    hpLabel.textContent = 'HP ' + Math.round(pct) + '%';
+    const hp = hpInfo(a, now);
+    hpLabel.textContent = hp.label;
     const hpBar = document.createElement('div');
     hpBar.className = 'bubble-hp';
     const hpFill = document.createElement('div');
     hpFill.className = 'bubble-hp-fill';
-    hpFill.style.width = pct + '%';
-    hpFill.style.background = pct > 50 ? '#58c5b5' : pct > 20 ? '#f2a154' : '#e06377';
+    hpFill.style.width = hp.pct + '%';
+    hpFill.style.background = hp.color;
     hpBar.appendChild(hpFill);
     hpWrapper.appendChild(hpLabel);
     hpWrapper.appendChild(hpBar);
@@ -1076,11 +1091,31 @@ function render(items) {
     });
     footer.appendChild(replyBtn);
 
+    // Pay-to-pin: anyone can spend coins to boost any bubble to the top.
+    const boostBtn = document.createElement('button');
+    boostBtn.className = 'boost-toggle';
+    boostBtn.textContent = '⭐ 置顶';
+    boostBtn.title = '花金币把这条留言置顶';
+    boostBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (typeof window.openBoost === 'function') window.openBoost(a.id);
+    });
+    footer.appendChild(boostBtn);
+
     bubble.appendChild(footer);
 
     wrap.appendChild(bubble);
     });
     knownIds = newIds;
+
+    // Boosted (pinned) bubbles float to the top + get a highlight ribbon.
+    items.forEach(a => {
+    const el = wrap.querySelector('[data-id="' + a.id + '"]');
+    if (!el) return;
+    const boosted = a.boostUntil && a.boostUntil > now;
+    el.classList.toggle('boosted', !!boosted);
+    el.style.order = boosted ? '-1' : '';
+    });
 
     // Auto-scroll to bottom on first load or after user sends a message
     if (shouldScrollToBottom) {
@@ -1100,6 +1135,32 @@ function render(items) {
         window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' });
         }, 600);
     }
+    }
+}
+
+/* ── Apply a poster's equipped cosmetics to their bubble ── */
+function applyBubbleCos(bubble, a) {
+    const cos = a.cos;
+    if (!cos) return;
+    if (cos.f) bubble.classList.add('cos-frame-' + cos.f);   // bubble frame
+    const senderEl = bubble.querySelector('.answer-sender');
+    if (!senderEl) return;
+    // Name colour — rainbow is an animated CSS class; others a plain colour.
+    if (cos.c === 'rainbow') senderEl.classList.add('cos-name-rainbow');
+    else if (cos.c) senderEl.style.color = cos.c;
+    // Badge before the name.
+    if (cos.b) {
+    const badge = document.createElement('span');
+    badge.className = 'cos-badge';
+    badge.textContent = cos.b;
+    senderEl.parentNode.insertBefore(badge, senderEl);
+    }
+    // Title after the name.
+    if (cos.t) {
+    const title = document.createElement('span');
+    title.className = 'cos-title';
+    title.textContent = cos.t;
+    senderEl.parentNode.appendChild(title);
     }
 }
 
@@ -1461,6 +1522,12 @@ async function submit() {
     if (pendingImage) doc.image = pendingImage;
     if (!ansAnonCheckbox.checked) {
         doc.name = localStorage.getItem('flappy_name') || auth.currentUser?.displayName || 'User';
+        // Stamp the poster's equipped bubble cosmetics so everyone can render them
+        // (the board is anonymous, so we can't look them up from the viewer side).
+        if (typeof getEquippedCos === 'function') {
+            const cos = getEquippedCos();
+            if (cos) doc.cos = cos;
+        }
     }
     suppressNextNotif = true;
     shouldScrollToBottom = true;
@@ -2270,9 +2337,9 @@ function fireNotification(count, bodyText, title, tag) {
 (function loadCache() {
     const cachedAnswers = cacheGet('cache_answers');
     if (cachedAnswers && cachedAnswers.length) {
-    // Filter out expired items
+    // Filter out expired items (keep pinned ones alive while the pin lasts)
     const now = Date.now();
-    const valid = cachedAnswers.filter(a => now - a.ts < SIX_HOURS);
+    const valid = cachedAnswers.filter(a => now - a.ts < SIX_HOURS || (a.boostUntil && a.boostUntil > now));
     if (valid.length) {
         knownIds = new Set(valid.map(a => a.id));
         valid.forEach(a => { knownReplyCounts[a.id] = countAllReplies(a.replies || []); });
@@ -2300,8 +2367,9 @@ function _subscribeAnswers() {
     const items = [];
     snapshot.forEach((doc) => {
     const d = doc.data();
-    if (now - d.ts < SIX_HOURS) {
-        temp = { id: doc.id, text: d.text ?? '', ts: d.ts, image: d.image ?? null, replies: d.replies ?? [], reactions: d.reactions ?? {}, type: d.type ?? null, pollOptions: d.pollOptions ?? null, pollVotes: d.pollVotes ?? {} };
+    // Normally messages live 6 hours; a paid pin keeps it alive until the pin expires.
+    if (now - d.ts < SIX_HOURS || (d.boostUntil && d.boostUntil > now)) {
+        temp = { id: doc.id, text: d.text ?? '', ts: d.ts, image: d.image ?? null, replies: d.replies ?? [], reactions: d.reactions ?? {}, type: d.type ?? null, pollOptions: d.pollOptions ?? null, pollVotes: d.pollVotes ?? {}, cos: d.cos ?? null, boostUntil: d.boostUntil ?? 0 };
         if (d.name) temp.name = d.name ?? '';
         items.push(temp);
     }
