@@ -1,14 +1,24 @@
 ﻿    /* ═══════════════════════════════
        5. PET TRICKS (extends PET_ACTIONS)
        ═══════════════════════════════ */
+    // Each pet's tricks are chosen to FIT the animal, and every trick id maps
+    // 1:1 to a dedicated, recognizable body animation (see trickActionMap +
+    // applyActionTransform). Thresholds rise so harder tricks unlock later.
     const PET_TRICKS = {
+      // Agile cat: sit → spin → dance → a real backflip.
       cat:     [{ id: 'trick_sit', name: 'Sit', minAffection: 100 }, { id: 'trick_spin', name: 'Spin', minAffection: 300 }, { id: 'trick_dance', name: 'Dance', minAffection: 600 }, { id: 'trick_backflip', name: 'Backflip', minAffection: 1200 }],
-      dog:     [{ id: 'trick_sit', name: 'Sit', minAffection: 50 },  { id: 'trick_roll', name: 'Roll Over', minAffection: 200 }, { id: 'trick_dance', name: 'Dance', minAffection: 500 }, { id: 'trick_backflip', name: 'Backflip', minAffection: 1000 }],
+      // Classic dog repertoire: sit → shake a paw → roll over → dance.
+      dog:     [{ id: 'trick_sit', name: 'Sit', minAffection: 50 },  { id: 'trick_shake', name: 'Shake', minAffection: 200 }, { id: 'trick_roll', name: 'Roll Over', minAffection: 500 }, { id: 'trick_dance', name: 'Dance', minAffection: 1000 }],
+      // Bunny: stand up → spin → the signature happy binky jump.
       bunny:   [{ id: 'trick_stand', name: 'Stand Up', minAffection: 80 }, { id: 'trick_spin', name: 'Spin', minAffection: 250 }, { id: 'trick_binky', name: 'Binky Jump', minAffection: 600 }],
+      // Hamster: spin (like a wheel) → stand up → roll.
       hamster: [{ id: 'trick_spin', name: 'Spin', minAffection: 60 }, { id: 'trick_stand', name: 'Stand Up', minAffection: 200 }, { id: 'trick_roll', name: 'Roll', minAffection: 500 }],
+      // Fox: a quick pounce → spin → dance.
       fox:     [{ id: 'trick_pounce', name: 'Pounce', minAffection: 150 }, { id: 'trick_spin', name: 'Spin', minAffection: 400 }, { id: 'trick_dance', name: 'Dance', minAffection: 800 }],
+      // Panda: a friendly wave → roll → dance.
       panda:   [{ id: 'trick_wave', name: 'Wave', minAffection: 100 }, { id: 'trick_roll', name: 'Roll', minAffection: 300 }, { id: 'trick_dance', name: 'Dance', minAffection: 700 }],
-      goose:   [{ id: 'trick_sit', name: 'Sit', minAffection: 80 }, { id: 'trick_spin', name: 'Spin', minAffection: 250 }, { id: 'trick_flap', name: 'Flap', minAffection: 600 }],
+      // Goose: flap its wings → spin → waddle-dance.
+      goose:   [{ id: 'trick_flap', name: 'Flap', minAffection: 80 }, { id: 'trick_spin', name: 'Spin', minAffection: 250 }, { id: 'trick_dance', name: 'Dance', minAffection: 600 }],
     };
 
     function triggerPetTrick(petId, trickId) {
@@ -19,13 +29,13 @@
       st.stopped = false;
       st.dragging = false;
       const pet = getPet(petId);
-      // Map trick to a drawing action the pets actually support.
-      // dance/backflip have no dedicated pose, so reuse lively existing ones.
+      // Each trick maps 1:1 to its own dedicated, recognizable animation
+      // (defined in applyActionTransform), so the move always matches its name.
       const trickActionMap = {
-        'trick_sit': 'sit', 'trick_roll': 'roll', 'trick_spin': 'spin',
-        'trick_dance': 'spin', 'trick_backflip': 'hop',
-        'trick_stand': 'standup', 'trick_pounce': 'pounce',
-        'trick_binky': 'hop', 'trick_wave': 'wave', 'trick_flap': 'hop'
+        'trick_sit': 'sit', 'trick_shake': 'shake', 'trick_roll': 'roll',
+        'trick_spin': 'spin', 'trick_dance': 'dance', 'trick_backflip': 'backflip',
+        'trick_stand': 'standup', 'trick_pounce': 'pounce', 'trick_binky': 'binky',
+        'trick_wave': 'wave', 'trick_flap': 'flap'
       };
       st.action = trickActionMap[trickId] || 'sit';
       st.actionDur = 3000;

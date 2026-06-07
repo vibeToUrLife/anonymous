@@ -550,9 +550,39 @@
         case 'hop':
           ctx.translate(0, -s * 0.35 * Math.sin(ap * Math.PI));
           break;
-        case 'spin': case 'roll':
+        case 'spin':
+          // Spin in place — one full turn.
           ctx.rotate(ap * Math.PI * 2);
           break;
+        case 'roll': {
+          // Roll over: a full rotation while rolling sideways and staying low,
+          // so it reads as rolling on the ground rather than spinning upright.
+          ctx.translate(Math.sin(ap * Math.PI) * s * 0.25, s * 0.05 * ease);
+          ctx.rotate(ap * Math.PI * 2);
+          break;
+        }
+        case 'backflip': {
+          // Leap up and turn one full BACKWARD flip in the first ~40%, then land.
+          const fp = Math.min(1, ap / 0.4);
+          ctx.translate(0, -s * 0.55 * Math.sin(fp * Math.PI));
+          ctx.rotate(-fp * Math.PI * 2);
+          break;
+        }
+        case 'dance': {
+          // Rhythmic side-to-side sway with a happy bob — clearly "dancing".
+          const sway = Math.sin(t / 160);
+          ctx.translate(sway * s * 0.10 * ease, -Math.abs(sway) * s * 0.07 * ease);
+          ctx.rotate(sway * 0.16 * ease);
+          break;
+        }
+        case 'flap': {
+          // Flap wings: quick vertical stretch with little lift-offs — bird-like.
+          const flap = Math.sin(t / 85);
+          ctx.translate(0, -Math.abs(flap) * s * 0.13 * ease);
+          ctx.scale(1, 1 + 0.10 * Math.abs(flap) * ease);
+          ctx.rotate(flap * 0.05 * ease);
+          break;
+        }
         case 'pounce':
           if (ap < 0.4) {
             ctx.translate(0, s * 0.1 * (ap / 0.4));
@@ -589,9 +619,12 @@
           ctx.translate(0, s * 0.06 * ease);
           ctx.scale(1 + 0.08 * ease, 1 - 0.12 * ease);
           break;
-        case 'wave':
-          ctx.rotate(Math.sin(t / 150) * 0.06 * ease);
+        case 'wave': {
+          // Wave hello: rise up a touch and rock side to side, clearly visible.
+          ctx.translate(0, -s * 0.05 * ease);
+          ctx.rotate(Math.sin(t / 130) * 0.16 * ease);
           break;
+        }
         case 'eat':
           ctx.translate(Math.sin(t / 200) * s * 0.01, 0);
           break;
