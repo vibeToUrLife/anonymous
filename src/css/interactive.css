@@ -73,7 +73,7 @@
 #reactionLayer {
   position: fixed;
   inset: 0;
-  z-index: 130;
+  z-index: 350;   /* above the FABs so super effects are fully visible */
   pointer-events: none;
   overflow: hidden;
 }
@@ -548,3 +548,122 @@ body.light-theme .cc-bet { background: rgba(0,0,0,0.05); color: #333; border-col
 .cc-pool-pct { font-size: 12px; font-weight: 700; color: #fde68a; flex-shrink: 0; }
 body.light-theme .cc-pool-name { color: #333; }
 body.light-theme .cc-pool-pct { color: #b45309; }
+
+/* ════════════════════════════════════════════════════════════
+   6. More coin sinks: 土豪榜 / 全屏特效 / 求签 / Bubble Awards
+   ════════════════════════════════════════════════════════════ */
+/* Tab bar now holds 6 tabs — let it wrap to 2 rows. */
+.cc-tabs { flex-wrap: wrap; }
+.cc-tab { flex: 1 1 28%; }
+
+/* 土豪榜 leaderboard */
+.cc-lb { margin: 4px 0 10px; }
+.cc-lb-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,0.05); margin-bottom: 5px; }
+.cc-lb-row.me { background: rgba(245,179,1,0.18); border: 1px solid rgba(245,179,1,0.5); }
+.cc-lb-rank { width: 28px; text-align: center; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+.cc-lb-name { flex: 1; font-size: 13px; color: #fff; text-align: left; }
+.cc-lb-spent { font-size: 12px; font-weight: 700; color: #fde68a; flex-shrink: 0; }
+.cc-burn-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.cc-burn-btns .cc-btn { width: auto; padding: 9px 16px; }
+
+/* 全屏特效 super reaction */
+.cc-super-btns { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.cc-super-btn { width: 100%; padding: 14px; font-size: 15px; }
+
+/* 求签 fortune */
+.cc-fortune { text-align: center; }
+.cc-fortune-icon { font-size: 56px; margin: 8px 0; animation: ccBob 2.4s ease-in-out infinite; }
+.cc-fortune .cc-btn.buy { width: auto; padding: 11px 28px; font-size: 15px; }
+.cc-fortune-result { margin-top: 16px; }
+.cc-fortune-card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 14px; padding: 18px; animation: pgFadeIn 0.3s ease; }
+.cc-fortune-card.rare { border-color: #f5b301; box-shadow: 0 0 18px rgba(245,179,1,0.4); }
+.cc-fortune-tier { font-size: 26px; font-weight: 800; color: #fde68a; margin-bottom: 8px; }
+.cc-fortune-line { font-size: 14px; color: #fff; }
+.cc-fortune-bonus { margin-top: 8px; font-size: 13px; color: #34d399; font-weight: 700; }
+
+/* 求签 draw animation: shaking 签筒 → reveal */
+.cc-fortune-draw { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 14px 0; }
+.cc-fortune-shake { font-size: 70px; transform-origin: 50% 80%; animation: fortuneShake 0.42s ease-in-out infinite; }
+@keyframes fortuneShake {
+  0%, 100% { transform: rotate(-14deg); }
+  50%      { transform: rotate(14deg); }
+}
+.cc-fortune-shaking { font-size: 14px; color: #fde68a; display: inline-flex; align-items: center; gap: 4px; }
+.cc-dots { display: inline-flex; gap: 3px; }
+.cc-dots i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; animation: typingBlink 1.2s infinite; }
+.cc-dots i:nth-child(2) { animation-delay: 0.2s; }
+.cc-dots i:nth-child(3) { animation-delay: 0.4s; }
+.cc-fortune-card.reveal { animation: fortuneReveal 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.35); }
+@keyframes fortuneReveal {
+  0%   { opacity: 0; transform: scale(0.5) rotate(-6deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+
+/* Awards shown on a bubble + the 打赏 button */
+.bubble-awards-row { display: inline-block; font-size: 15px; line-height: 1.4; margin: 2px 0 3px; padding: 2px 8px; border-radius: 10px; background: rgba(245,179,1,0.14); }
+.bubble-awards-row:empty { display: none; }
+.bubble-award-givers { font-size: 11px; color: #fbbf24; margin: 0 0 4px; line-height: 1.3; }
+.bubble-award-givers:empty { display: none; }
+.award-toggle { color: #fbbf24; }
+.award-pop { animation: awardPop 0.5s cubic-bezier(0.2,0.9,0.3,1.5); }
+@keyframes awardPop { 0% { transform: scale(0.6); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+
+/* 打赏 popup — attractive award cards */
+.cc-award-pop { max-width: 360px; padding: 22px 18px; text-align: center; }
+.cc-award-pop .cc-title { display: block; margin-bottom: 6px; }
+.cc-award-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+.cc-award-card {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  border: 1.5px solid rgba(245,179,1,0.35);
+  background: rgba(245,179,1,0.08);
+  border-radius: 14px; padding: 12px 4px; cursor: pointer;
+  transition: transform 0.12s, background 0.15s, box-shadow 0.15s;
+}
+.cc-award-card:hover { transform: translateY(-3px) scale(1.04); background: rgba(245,179,1,0.18); box-shadow: 0 6px 18px rgba(245,179,1,0.3); }
+.cc-award-card:active { transform: scale(0.95); }
+.cc-award-card:disabled { opacity: 0.5; cursor: not-allowed; }
+.cc-award-emoji { font-size: 30px; }
+.cc-award-name { font-size: 12px; color: #fff; }
+.cc-award-price { font-size: 11px; font-weight: 700; color: #fde68a; }
+.cc-award-note { font-size: 11px; color: rgba(255,255,255,0.55); line-height: 1.6; background: rgba(255,255,255,0.05); border-radius: 10px; padding: 8px 10px; margin-top: 6px; }
+body.light-theme .cc-award-name { color: #333; }
+body.light-theme .cc-award-note { color: rgba(0,0,0,0.5); }
+
+/* Full-screen super-reaction effects (rendered in #reactionLayer) */
+.super-flash { position: absolute; inset: 0; will-change: opacity; animation: superFlash 0.75s ease-out forwards; }
+@keyframes superFlash { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
+
+/* Fireworks: rocket → flash → glowing gravity sparks */
+.fw-rocket { position: absolute; width: 4px; height: 16px; border-radius: 3px; will-change: transform; animation: fwRocket 0.48s ease-out forwards; }
+@keyframes fwRocket { from { transform: translateY(55vh); opacity: 1; } to { transform: translateY(0); opacity: 0.7; } }
+.fw-flash { position: absolute; width: 34px; height: 34px; border-radius: 50%; transform: translate(-50%,-50%); filter: blur(6px); will-change: transform, opacity; animation: fwFlash 0.5s ease-out forwards; }
+@keyframes fwFlash { 0% { opacity: 0.9; transform: translate(-50%,-50%) scale(0.4); } 100% { opacity: 0; transform: translate(-50%,-50%) scale(2.6); } }
+.fw-spark { position: absolute; width: 7px; height: 7px; border-radius: 50%; transform: translate(-50%,-50%); will-change: transform, opacity; animation: fwSpark var(--dur, 1.2s) ease-out forwards; }
+@keyframes fwSpark { 0% { transform: translate(-50%,-50%) scale(1.3); opacity: 1; } 70% { opacity: 1; } 100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy) + 60px)) scale(0.2); opacity: 0; } }
+
+/* Hearts: a giant pulse + a rising heart fountain */
+.super-heart { position: absolute; bottom: -42px; will-change: transform, opacity; filter: drop-shadow(0 0 6px rgba(255,80,120,0.6)); animation: superHeart var(--dur, 3s) ease-in forwards; }
+@keyframes superHeart { 0% { transform: translateY(0) translateX(0) scale(0.5); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-108vh) translateX(var(--sway, 0)) scale(1.2); opacity: 0; } }
+.super-bigheart { position: absolute; left: 50%; top: 42%; font-size: 92px; transform: translate(-50%,-50%); filter: drop-shadow(0 0 26px rgba(255,60,110,0.85)); will-change: transform, opacity; animation: bigHeart 1.5s ease-out forwards; }
+@keyframes bigHeart { 0% { opacity: 0; transform: translate(-50%,-50%) scale(0.2); } 25% { opacity: 1; transform: translate(-50%,-50%) scale(1.3); } 50% { transform: translate(-50%,-50%) scale(1); } 75% { transform: translate(-50%,-50%) scale(1.15); } 100% { opacity: 0; transform: translate(-50%,-50%) scale(1.6); } }
+
+/* Confetti + emoji rain (spin + sway as it falls) */
+.super-fall { position: absolute; top: -8vh; will-change: transform; animation: superFall var(--dur, 3s) linear forwards; }
+.super-confetti { position: absolute; top: -8vh; width: 10px; height: 14px; border-radius: 2px; will-change: transform; animation: superFall var(--dur, 3s) linear forwards; }
+@keyframes superFall { to { transform: translateY(122vh) translateX(var(--sway, 0)) rotate(var(--rot, 360deg)); opacity: 0.25; } }
+
+/* Light theme */
+body.light-theme .cc-lb-row { background: rgba(0,0,0,0.03); }
+body.light-theme .cc-lb-name, body.light-theme .cc-fortune-line { color: #333; }
+body.light-theme .cc-fortune-card { background: rgba(0,0,0,0.03); }
+
+/* Confirm dialog (e.g. 烧钱冲榜) */
+.cc-confirm-msg { font-size: 14px; color: #fff; margin: 12px 0 18px; line-height: 1.7; }
+.cc-confirm-msg b { color: #fde68a; }
+.cc-warn { color: #f87171; font-size: 12px; }
+.cc-confirm-btns { display: flex; gap: 10px; }
+.cc-confirm-btns .cc-btn { flex: 1; padding: 11px; }
+body.light-theme .cc-confirm-msg { color: #333; }
+
+/* 土豪榜 "this page only" reminder */
+.cc-board-note { margin: 4px 0 12px; padding: 8px 10px; background: rgba(245,179,1,0.1); border-radius: 8px; line-height: 1.5; }

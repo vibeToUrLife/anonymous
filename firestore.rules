@@ -40,9 +40,12 @@ service cloud.firestore {
     //          Solving the day's riddle awards a flat 100 coins ONCE per day via an
     //          owner-only transaction that increments coins + sets riddleLastSolvedDay.
     //    NOTE: Board cosmetics & coin sinks (金币乐园) — boardCosOwned[] (cosmetic ids),
-    //          boardCosEquip {color,frame,badge,title} (equipped ids). Coins are spent
-    //          on the shop / gacha / slot / boost via owner-only transactions; the slot
-    //          paytable has a built-in house edge so it nets a coin sink.
+    //          boardCosEquip {color,frame,badge,title} (equipped ids), coinsSpent (number —
+    //          lifetime coins burned, powers the 土豪榜 leaderboard via orderBy). Coins are
+    //          spent on shop / gacha / slot / boost / awards / super-effects / fortune / burn
+    //          via owner-only transactions; slot + fortune carry a house edge (coin sink).
+    //          每日求签: fortuneDay (YYYY-MM-DD) + fortuneResult {tier,line,bonus} — once/day,
+    //          owner-only; the stored result is shown for the rest of the day.
     // ═══════════════════════════════════════
     match /rooms/{uid} {
       allow read: if isAuth();
@@ -75,8 +78,9 @@ service cloud.firestore {
     // 2. ANSWERS — bubble board / polls
     //    replies[] items may include: {id, ts, text, image, name, reactions, replies}
     //    Optional: cos {c,f,b,t} — poster's equipped bubble cosmetics snapshot;
-    //              boostUntil (ms) — paid "pin to top", any signed-in user may set it
-    //              (the board is anonymous, so boosting is not restricted to an owner).
+    //              boostUntil (ms) — paid "pin to top", any signed-in user may set it;
+    //              awards {awardId: count} — paid 🏆 awards stamped on a message.
+    //              (The board is anonymous, so boosting/awarding is not owner-restricted.)
     // ═══════════════════════════════════════
     match /answers/{docId} {
       allow read, write: if isAuth();

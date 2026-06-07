@@ -166,6 +166,61 @@
     { hours: 24, price: 1500, label: '24 小时' }
   ];
 
+  /* ─────────────────────────────────────────────────────────────
+     Bubble Awards 🏆 — pay coins to stamp an award on any message
+     ───────────────────────────────────────────────────────────── */
+  CoinSpend.AWARDS = [
+    { id: 'a_fire',   emoji: '🔥', name: '热议', price: 100  },
+    { id: 'a_star',   emoji: '🌟', name: '点赞', price: 200  },
+    { id: 'a_heart',  emoji: '💖', name: '爱心', price: 300  },
+    { id: 'a_trophy', emoji: '🏆', name: '奖杯', price: 500  },
+    { id: 'a_gem',    emoji: '💎', name: '钻石', price: 1000 }
+  ];
+  CoinSpend.getAward = function (id) { return CoinSpend.AWARDS.find(function (a) { return a.id === id; }) || null; };
+
+  /* ─────────────────────────────────────────────────────────────
+     全屏特效 Super Reaction — broadcast a screen-wide effect to all
+     ───────────────────────────────────────────────────────────── */
+  CoinSpend.SUPER_EFFECTS = [
+    { id: 'hearts',    emoji: '❤️', name: '爱心刷屏', price: 1000 },
+    { id: 'rain',      emoji: '🌧️', name: 'Emoji 雨', price: 1500 },
+    { id: 'fireworks', emoji: '🎆', name: '满屏烟花', price: 2000 }
+  ];
+  CoinSpend.getSuper = function (id) { return CoinSpend.SUPER_EFFECTS.find(function (e) { return e.id === id; }) || null; };
+
+  /* ─────────────────────────────────────────────────────────────
+     土豪榜 Big-Spender — coinsSpent is tracked on every purchase;
+     these are quick "burn to climb" amounts.
+     ───────────────────────────────────────────────────────────── */
+  CoinSpend.BURN_OPTIONS = [10000, 50000, 100000];
+
+  /* ─────────────────────────────────────────────────────────────
+     每日求签 Fortune — pay to draw; rare tiers refund a little, but the
+     average bonus is far below the cost, so it nets a coin sink.
+     ───────────────────────────────────────────────────────────── */
+  CoinSpend.FORTUNE_COST = 500;
+  CoinSpend.FORTUNES = [
+    { tier: '上上签', weight: 5,  bonus: 300, lines: ['鸿运当头，万事大吉！', '心想事成，好运连连~', '今日宜：大胆表白 💘'] },
+    { tier: '上签',   weight: 15, bonus: 100, lines: ['诸事顺遂，宜把握良机。', '贵人相助，前路光明。', '今日宜：投资自己 📈'] },
+    { tier: '中签',   weight: 40, bonus: 0,   lines: ['平稳安顺，宜守不宜攻。', '顺其自然，静待花开。', '今日宜：多喝热水 ☕'] },
+    { tier: '下签',   weight: 30, bonus: 0,   lines: ['小有波折，凡事三思。', '宜低调，避免冲动消费。', '今日忌：熬夜 😪'] },
+    { tier: '下下签', weight: 10, bonus: 0,   lines: ['诸事不顺，宜静养待时。', '破财消灾，明天会更好。', '今日忌：和老板顶嘴 🙊'] }
+  ];
+
+  /** Draw a fortune with an injectable rng → {tier, bonus, line}. */
+  CoinSpend.drawFortune = function (rng) {
+    const total = CoinSpend.FORTUNES.reduce(function (s, f) { return s + f.weight; }, 0);
+    let r = rng() * total;
+    for (let i = 0; i < CoinSpend.FORTUNES.length; i++) {
+      const f = CoinSpend.FORTUNES[i];
+      if ((r -= f.weight) < 0) {
+        return { tier: f.tier, bonus: f.bonus, line: f.lines[Math.floor(rng() * f.lines.length)] };
+      }
+    }
+    const last = CoinSpend.FORTUNES[CoinSpend.FORTUNES.length - 1];
+    return { tier: last.tier, bonus: last.bonus, line: last.lines[0] };
+  };
+
   /* ── Shared helpers ── */
   CoinSpend.canAfford = function (coins, price) { return (coins || 0) >= price; };
 

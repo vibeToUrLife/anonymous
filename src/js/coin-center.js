@@ -18,6 +18,7 @@
   const C = (typeof CoinSpend !== 'undefined') ? CoinSpend : null;
   if (!C) return;
   const hasFB = (typeof db !== 'undefined' && typeof auth !== 'undefined' && typeof firebase !== 'undefined');
+  const FieldValue = hasFB ? firebase.firestore.FieldValue : null;
 
   // ── State ──
   let coins = 0;
@@ -26,9 +27,11 @@
   let overlay = null, body = null, coinsEl = null, built = false, curTab = 'shop';
   let curBet = C.SLOT_BETS[0];
   let spinning = false;
+  let fortuneToday = null;   // today's drawn fortune (locked once drawn)
 
   function toast(msg, type) { if (typeof showToast === 'function') showToast(msg, type || ''); }
   function roomRef() { return db.collection('rooms').doc(auth.currentUser.uid); }
+  function todayKey() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
 
   /* ── Equipped-cosmetics mirror for app.js (zero extra reads on post) ── */
@@ -48,6 +51,8 @@
       coins = d.coins || 0;
       owned = Array.isArray(d.boardCosOwned) ? d.boardCosOwned : [];
       equip = Object.assign({ color: null, frame: null, badge: null, title: null }, d.boardCosEquip || {});
+      const today = todayKey();
+      fortuneToday = (d.fortuneDay === today && d.fortuneResult) ? d.fortuneResult : null;
       saveEquipLocal();
     } catch (e) {}
   }
@@ -62,7 +67,7 @@
         if (own.indexOf(id) !== -1) return { ok: false, reason: 'owned' };
         if (cur < it.price) return { ok: false, reason: 'insufficient' };
         own.push(id);
-        tx.set(ref, { coins: cur - it.price, boardCosOwned: own }, { merge: true });
+        tx.set(ref, { coins: cur - it.price, boardCosOwned: own, coinsSpent: (d.coinsSpent || 0) + it.price }, { merge: true });
         return { ok: true, coins: cur - it.price, owned: own };
       });
     } catch (e) { return { ok: false, reason: 'error' }; }
@@ -83,7 +88,7 @@
           results.push({ id: it.id, dup: dup });
         });
         const newCoins = cur - cost + refund;
-        tx.set(ref, { coins: newCoins, boardCosOwned: own }, { merge: true });
+        tx.set(ref, { coins: newCoins, boardCosOwned: own, coinsSpent: (d.coinsSpent || 0) + cost }, { merge: true });
         return { ok: true, results: results, coins: newCoins, owned: own, refund: refund };
       });
     } catch (e) { return { ok: false, reason: 'error' }; }
@@ -97,7 +102,7 @@
         const ref = roomRef(); const doc = await tx.get(ref); const d = doc.exists ? doc.data() : {};
         const cur = d.coins || 0; if (cur < bet) return { ok: false, reason: 'insufficient' };
         const newCoins = cur - bet + payout;
-        tx.set(ref, { coins: newCoins }, { merge: true });
+        tx.set(ref, { coins: newCoins, coinsSpent: (d.coinsSpent || 0) + bet }, { merge: true });
         return { ok: true, coins: newCoins };
       });
       if (!res.ok) return res;
@@ -110,7 +115,7 @@
       const res = await db.runTransaction(async function (tx) {
         const ref = roomRef(); const doc = await tx.get(ref); const d = doc.exists ? doc.data() : {};
         const cur = d.coins || 0; if (cur < price) return { ok: false, reason: 'insufficient' };
-        tx.set(ref, { coins: cur - price }, { merge: true });
+        tx.set(ref, { coins: cur - price, coinsSpent: (d.coinsSpent || 0) + price }, { merge: true });
         return { ok: true, coins: cur - price };
       });
       if (!res.ok) return res;
@@ -128,6 +133,229 @@
     saveEquipLocal();
     if (hasFB && auth.currentUser) roomRef().set({ boardCosEquip: equip }, { merge: true }).catch(function () {});
   }
+
+  /* ── 土豪榜 (big-spender leaderboard) ── */
+  function renderBoard() {
+    body.innerHTML =
+      '<div class="cc-hint">按累计消费金币排名 · 烧得越多越靠前 💸</div>'
+      + '<div class="cc-note cc-board-note">📌 本榜单仅统计「本页面（金币乐园）」的消费，房间 / 地铁等其他页面的消费不计入</div>'
+      + '<div class="cc-lb" id="ccLb">加载中…</div>'
+      + '<div class="cc-sec">🔥 烧钱冲榜</div>'
+      + '<div class="cc-burn-btns">'
+      + C.BURN_OPTIONS.map(function (b) { return '<button class="cc-btn buy" data-act="burn" data-b="' + b + '">烧 ' + (b / 1000) + 'k</button>'; }).join('')
+      + '</div>';
+    loadBoard();
+  }
+  async function loadBoard() {
+    const lb = document.getElementById('ccLb'); if (!lb) return;
+    try {
+      const snap = await db.collection('rooms').orderBy('coinsSpent', 'desc').limit(15).get();
+      const me = auth.currentUser && auth.currentUser.uid;
+      const rows = []; let rank = 0;
+      snap.forEach(function (d) {
+        const x = d.data(); const spent = x.coinsSpent || 0;
+        if (spent <= 0) return;
+        rank++;
+        rows.push({ rank: rank, name: x.displayName || '匿名', spent: spent, me: d.id === me });
+      });
+      if (!rows.length) { lb.innerHTML = '<div class="cc-hint">还没有人消费，快来当第一个土豪！</div>'; return; }
+      const medal = ['🥇', '🥈', '🥉'];
+      lb.innerHTML = rows.map(function (r) {
+        return '<div class="cc-lb-row' + (r.me ? ' me' : '') + '">'
+          + '<span class="cc-lb-rank">' + (medal[r.rank - 1] || r.rank) + '</span>'
+          + '<span class="cc-lb-name">' + esc(r.name) + (r.me ? ' (你)' : '') + '</span>'
+          + '<span class="cc-lb-spent">🪙 ' + r.spent.toLocaleString() + '</span></div>';
+      }).join('');
+    } catch (e) { lb.innerHTML = '<div class="cc-hint">排行榜加载失败</div>'; }
+  }
+  async function burnTx(amount) {
+    try {
+      return await db.runTransaction(async function (tx) {
+        const ref = roomRef(); const doc = await tx.get(ref); const d = doc.exists ? doc.data() : {};
+        const cur = d.coins || 0; if (cur < amount) return { ok: false, reason: 'insufficient' };
+        tx.set(ref, { coins: cur - amount, coinsSpent: (d.coinsSpent || 0) + amount }, { merge: true });
+        return { ok: true, coins: cur - amount };
+      });
+    } catch (e) { return { ok: false, reason: 'error' }; }
+  }
+  // Burning coins is irreversible, so always confirm first.
+  function onBurn(amount) {
+    const pop = document.createElement('div');
+    pop.className = 'cc-overlay show';
+    pop.innerHTML =
+      '<div class="cc-card cc-boost cc-confirm">'
+      + '<button class="cc-close" title="关闭">✕</button>'
+      + '<div class="cc-title">🔥 烧钱冲榜</div>'
+      + '<div class="cc-confirm-msg">确定要烧掉 <b>🪙 ' + amount.toLocaleString() + '</b> 金币来冲榜吗？'
+      + '<br><span class="cc-warn">⚠️ 金币将永久消耗，不会退还！</span></div>'
+      + '<div class="cc-confirm-btns">'
+      + '<button class="cc-btn own" data-cancel>取消</button>'
+      + '<button class="cc-btn buy" data-confirm>确定烧掉</button>'
+      + '</div></div>';
+    document.body.appendChild(pop);
+    function destroy() { pop.remove(); }
+    pop.addEventListener('click', function (e) { if (e.target === pop) destroy(); });
+    pop.querySelector('.cc-close').addEventListener('click', destroy);
+    pop.querySelector('[data-cancel]').addEventListener('click', destroy);
+    pop.querySelector('[data-confirm]').addEventListener('click', async function (e) {
+      e.target.disabled = true;
+      const res = await burnTx(amount);
+      if (!res.ok) { toast(res.reason === 'insufficient' ? '金币不足' : '出错了', 'error'); e.target.disabled = false; return; }
+      coins = res.coins; updateCoins(); loadBoard();
+      toast('🔥 烧掉 ' + amount.toLocaleString() + ' 金币，冲榜！', 'success');
+      destroy();
+    });
+  }
+
+  /* ── 全屏特效 (super reaction, broadcast to everyone) ── */
+  function renderSuper() {
+    body.innerHTML =
+      '<div class="cc-hint">放一个全屏特效，所有在线的人都能看到！🎆</div>'
+      + '<div class="cc-super-btns">'
+      + C.SUPER_EFFECTS.map(function (e) { return '<button class="cc-btn buy cc-super-btn" data-act="super" data-id="' + e.id + '">' + e.emoji + ' ' + e.name + ' 🪙' + e.price + '</button>'; }).join('')
+      + '</div>';
+  }
+  async function superTx(id) {
+    const e = C.getSuper(id); if (!e) return { ok: false, reason: 'not_found' };
+    try {
+      return await db.runTransaction(async function (tx) {
+        const ref = roomRef(); const doc = await tx.get(ref); const d = doc.exists ? doc.data() : {};
+        const cur = d.coins || 0; if (cur < e.price) return { ok: false, reason: 'insufficient' };
+        tx.set(ref, { coins: cur - e.price, coinsSpent: (d.coinsSpent || 0) + e.price }, { merge: true });
+        return { ok: true, coins: cur - e.price };
+      });
+    } catch (err) { return { ok: false, reason: 'error' }; }
+  }
+  async function onSuper(id) {
+    const res = await superTx(id);
+    if (!res.ok) { toast(res.reason === 'insufficient' ? '金币不足' : '出错了', 'error'); return; }
+    coins = res.coins; updateCoins();
+    close();   // return to the board so the full-screen effect is actually visible
+    if (typeof window.fireSuperReaction === 'function') window.fireSuperReaction(id);
+    toast('🎆 特效已发射！', 'success');
+  }
+
+  /* ── 每日求签 (fortune draw — once per day, result locked for the day) ── */
+  function fortuneCardHtml(draw, reveal) {
+    const rare = draw.tier === '上上签' || draw.tier === '上签';
+    return '<div class="cc-fortune-card' + (reveal ? ' reveal' : '') + (rare ? ' rare' : '') + '">'
+      + '<div class="cc-fortune-tier">' + draw.tier + '</div>'
+      + '<div class="cc-fortune-line">' + esc(draw.line) + '</div>'
+      + (draw.bonus > 0 ? '<div class="cc-fortune-bonus">🪙 返还 ' + draw.bonus + '</div>' : '')
+      + '</div>';
+  }
+  function renderFortune() {
+    if (fortuneToday) {
+      // Already drawn today — always show today's locked result.
+      body.innerHTML = '<div class="cc-fortune"><div class="cc-fortune-icon">🎋</div>'
+        + '<div class="cc-hint">今天已经求过签啦，明天再来～</div>'
+        + '<div class="cc-fortune-result">' + fortuneCardHtml(fortuneToday, false) + '</div></div>';
+    } else {
+      body.innerHTML = '<div class="cc-fortune"><div class="cc-fortune-icon">🎋</div>'
+        + '<div class="cc-hint">每天可求一签 🪙' + C.FORTUNE_COST + ' · 抽中稀有签返还金币</div>'
+        + '<button class="cc-btn buy" data-act="fortune">🎋 求一签</button>'
+        + '<div class="cc-fortune-result" id="ccFortune"></div></div>';
+    }
+  }
+  async function fortuneTx() {
+    const today = todayKey();
+    const rolled = C.drawFortune(Math.random);
+    try {
+      return await db.runTransaction(async function (tx) {
+        const ref = roomRef(); const doc = await tx.get(ref); const d = doc.exists ? doc.data() : {};
+        // Already drawn today → return the stored result, no charge.
+        if (d.fortuneDay === today && d.fortuneResult) {
+          return { ok: true, coins: d.coins || 0, draw: d.fortuneResult, already: true };
+        }
+        const cur = d.coins || 0; if (cur < C.FORTUNE_COST) return { ok: false, reason: 'insufficient' };
+        const newCoins = cur - C.FORTUNE_COST + rolled.bonus;
+        tx.set(ref, { coins: newCoins, coinsSpent: (d.coinsSpent || 0) + C.FORTUNE_COST, fortuneDay: today, fortuneResult: rolled }, { merge: true });
+        return { ok: true, coins: newCoins, draw: rolled, already: false };
+      });
+    } catch (e) { return { ok: false, reason: 'error' }; }
+  }
+  async function onFortune() {
+    const el = document.getElementById('ccFortune'); if (!el) return;
+    const btn = body.querySelector('[data-act="fortune"]');
+    if (btn && btn.disabled) return;       // already drawing
+    if (btn) btn.disabled = true;
+    // Suspense: shake the 签筒 while the draw resolves (min ~1.5s).
+    el.innerHTML = '<div class="cc-fortune-draw"><div class="cc-fortune-shake">🎋</div>'
+      + '<div class="cc-fortune-shaking">求签中<span class="cc-dots"><i></i><i></i><i></i></span></div></div>';
+    const results = await Promise.all([fortuneTx(), new Promise(function (r) { setTimeout(r, 1500); })]);
+    const res = results[0];
+    if (!res.ok) { if (btn) btn.disabled = false; el.innerHTML = ''; toast(res.reason === 'insufficient' ? '金币不足' : '出错了', 'error'); return; }
+    coins = res.coins; updateCoins();
+    fortuneToday = res.draw;                              // lock today's result
+    el.innerHTML = fortuneCardHtml(res.draw, true);
+    if (btn) btn.style.display = 'none';                  // used up for today
+    const hintEl = body.querySelector('.cc-fortune .cc-hint');
+    if (hintEl) hintEl.textContent = '今天已经求过签啦，明天再来～';
+    const rare = res.draw.tier === '上上签' || res.draw.tier === '上签';
+    if (res.already) toast('今天已经求过签啦～', '');
+    else if (rare && typeof showToast === 'function') showToast('🎉 抽中 ' + res.draw.tier + '！', 'success');
+  }
+
+  /* ── Bubble Awards 🏆 (called from each bubble's 打赏 button) ── */
+  async function awardTx(answerId, awardId) {
+    const a = C.getAward(awardId); if (!a) return { ok: false, reason: 'not_found' };
+    try {
+      const res = await db.runTransaction(async function (tx) {
+        const ref = roomRef(); const doc = await tx.get(ref); const d = doc.exists ? doc.data() : {};
+        const cur = d.coins || 0; if (cur < a.price) return { ok: false, reason: 'insufficient' };
+        tx.set(ref, { coins: cur - a.price, coinsSpent: (d.coinsSpent || 0) + a.price }, { merge: true });
+        return { ok: true, coins: cur - a.price };
+      });
+      if (!res.ok) return res;
+      try {
+        const giver = localStorage.getItem('flappy_name') || (auth.currentUser && auth.currentUser.displayName) || '匿名';
+        const patch = { awards: {}, awardGivers: FieldValue.arrayUnion({ n: String(giver).slice(0, 20), a: awardId }) };
+        patch.awards[awardId] = FieldValue.increment(1);
+        await db.collection('answers').doc(answerId).set(patch, { merge: true });
+      } catch (e) {
+        // Refund if stamping the award failed.
+        roomRef().set({ coins: res.coins + a.price, coinsSpent: FieldValue.increment(-a.price) }, { merge: true }).catch(function () {});
+        return { ok: false, reason: 'error' };
+      }
+      coins = res.coins;
+      return { ok: true, coins: res.coins };
+    } catch (e) { return { ok: false, reason: 'error' }; }
+  }
+  function buildAwardPopup(answerId) {
+    const pop = document.createElement('div');
+    pop.className = 'cc-overlay show';
+    pop.innerHTML =
+      '<div class="cc-card cc-award-pop"><button class="cc-close" title="关闭">✕</button>'
+      + '<div class="cc-title">🏆 打赏这条留言</div>'
+      + '<div class="cc-hint">为喜欢的留言点亮一枚奖章，让大家看到你的支持 ✨</div>'
+      + '<div class="cc-award-grid">'
+      + C.AWARDS.map(function (a) {
+          return '<button class="cc-award-card" data-aid="' + a.id + '">'
+            + '<span class="cc-award-emoji">' + a.emoji + '</span>'
+            + '<span class="cc-award-name">' + a.name + '</span>'
+            + '<span class="cc-award-price">🪙 ' + a.price + '</span></button>';
+        }).join('')
+      + '</div>'
+      + '<div class="cc-award-note">💡 打赏仅用于支持这条留言，会显示你的名字；金币不会退还，也不会获得任何回报哦～</div>'
+      + '</div>';
+    document.body.appendChild(pop);
+    function destroy() { pop.remove(); }
+    pop.addEventListener('click', function (e) { if (e.target === pop) destroy(); });
+    pop.querySelector('.cc-close').addEventListener('click', destroy);
+    pop.querySelectorAll('[data-aid]').forEach(function (b) {
+      b.addEventListener('click', async function () {
+        b.disabled = true;
+        const res = await awardTx(answerId, b.getAttribute('data-aid'));
+        if (res.ok) { toast('🏆 打赏成功！', 'success'); destroy(); }
+        else { toast(res.reason === 'insufficient' ? '金币不足' : '出错了', 'error'); b.disabled = false; }
+      });
+    });
+  }
+  window.openAward = function (answerId) {
+    if (!hasFB || !auth.currentUser) { toast('请先登录', 'error'); return; }
+    if (!answerId) return;
+    buildAwardPopup(answerId);
+  };
 
   /* ── Rendering ────────────────────────────────────────────── */
   function updateCoins() { if (coinsEl) coinsEl.textContent = coins; }
@@ -207,7 +435,10 @@
   function renderTab() {
     if (curTab === 'shop') renderShop();
     else if (curTab === 'gacha') renderGacha();
-    else renderSlot();
+    else if (curTab === 'slot') renderSlot();
+    else if (curTab === 'board') renderBoard();
+    else if (curTab === 'super') renderSuper();
+    else if (curTab === 'fortune') renderFortune();
   }
 
   /* ── Actions ──────────────────────────────────────────────── */
@@ -268,6 +499,9 @@
       + '<button class="cc-tab active" data-tab="shop">🛍️ 商店</button>'
       + '<button class="cc-tab" data-tab="gacha">🎁 扭蛋</button>'
       + '<button class="cc-tab" data-tab="slot">🎰 老虎机</button>'
+      + '<button class="cc-tab" data-tab="board">💰 土豪榜</button>'
+      + '<button class="cc-tab" data-tab="super">🎆 特效</button>'
+      + '<button class="cc-tab" data-tab="fortune">🎋 求签</button>'
       + '</div><div class="cc-body" id="ccBody"></div>'
       + '</div>';
     document.body.appendChild(overlay);
@@ -292,6 +526,9 @@
       else if (act === 'pull') onPull(parseInt(btn.getAttribute('data-n'), 10));
       else if (act === 'pool') buildPoolPopup();
       else if (act === 'spin') onSpin();
+      else if (act === 'burn') onBurn(parseInt(btn.getAttribute('data-b'), 10));
+      else if (act === 'super') onSuper(btn.getAttribute('data-id'));
+      else if (act === 'fortune') onFortune();
       else if (btn.hasAttribute('data-bet')) {
         curBet = parseInt(btn.getAttribute('data-bet'), 10);
         body.querySelectorAll('.cc-bet').forEach(function (x) { x.classList.toggle('active', x === btn); });

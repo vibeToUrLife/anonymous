@@ -963,6 +963,17 @@ function render(items) {
         const hpLabel = existing.querySelector('.bubble-hp-label');
         if (hpLabel) hpLabel.textContent = hp.label;
         }
+        // Keep awards (and who gave them) in sync as people stamp them.
+        const awEl = existing.querySelector('.bubble-awards-row');
+        if (awEl) {
+        const next = awardsHtml(a);
+        if (next && next !== awEl.textContent) {   // a new award just landed → pop
+            awEl.classList.remove('award-pop'); void awEl.offsetWidth; awEl.classList.add('award-pop');
+        }
+        awEl.textContent = next;
+        }
+        const agEl = existing.querySelector('.bubble-award-givers');
+        if (agEl) agEl.textContent = awardGiversHtml(a);
         // Update poll content live
         if (a.type === 'poll') {
         const oldPoll = existing.querySelector('.poll-content');
@@ -1023,6 +1034,17 @@ function render(items) {
     }
     // Apply the poster's equipped cosmetics (colour / frame / badge / title)
     applyBubbleCos(bubble, a);
+
+    // Awards stamped on this bubble (🏆 etc.) — hidden via CSS when empty.
+    const awardsRowEl = document.createElement('div');
+    awardsRowEl.className = 'bubble-awards-row';
+    awardsRowEl.textContent = awardsHtml(a);
+    bubble.appendChild(awardsRowEl);
+
+    const awardGiversEl = document.createElement('div');
+    awardGiversEl.className = 'bubble-award-givers';
+    awardGiversEl.textContent = awardGiversHtml(a);
+    bubble.appendChild(awardGiversEl);
 
     // HP bar (game-style)
     const hpWrapper = document.createElement('div');
@@ -1102,6 +1124,17 @@ function render(items) {
     });
     footer.appendChild(boostBtn);
 
+    // Pay-to-award: stamp an award (🏆/🌟/…) on any bubble.
+    const awardBtn = document.createElement('button');
+    awardBtn.className = 'boost-toggle award-toggle';
+    awardBtn.textContent = '🏆 打赏';
+    awardBtn.title = '花金币给这条留言一个奖章';
+    awardBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (typeof window.openAward === 'function') window.openAward(a.id);
+    });
+    footer.appendChild(awardBtn);
+
     bubble.appendChild(footer);
 
     wrap.appendChild(bubble);
@@ -1162,6 +1195,32 @@ function applyBubbleCos(bubble, a) {
     title.textContent = cos.t;
     senderEl.parentNode.appendChild(title);
     }
+}
+
+/* ── Awards stamped on a bubble (🏆 etc.) ── */
+function awardsHtml(a) {
+    if (!a.awards || typeof CoinSpend === 'undefined') return '';
+    const parts = [];
+    Object.keys(a.awards).forEach(function (id) {
+    const n = a.awards[id];
+    if (!n) return;
+    const aw = CoinSpend.getAward(id);
+    if (aw) parts.push(aw.emoji + (n > 1 ? '×' + n : ''));
+    });
+    return parts.join(' ');
+}
+
+/* ── "who awarded this" line ── */
+function awardGiversHtml(a) {
+    if (!a.awardGivers || !a.awardGivers.length) return '';
+    const names = [];
+    a.awardGivers.forEach(function (g) {
+    if (g && g.n && names.indexOf(g.n) === -1) names.push(g.n);
+    });
+    if (!names.length) return '';
+    const shown = names.slice(0, 5).join('、');
+    const extra = names.length > 5 ? ' 等' + names.length + '人' : '';
+    return '🎉 ' + shown + extra + ' 打赏了';
 }
 
 /* ── Safe text with line-break rendering ── */
@@ -2369,7 +2428,7 @@ function _subscribeAnswers() {
     const d = doc.data();
     // Normally messages live 6 hours; a paid pin keeps it alive until the pin expires.
     if (now - d.ts < SIX_HOURS || (d.boostUntil && d.boostUntil > now)) {
-        temp = { id: doc.id, text: d.text ?? '', ts: d.ts, image: d.image ?? null, replies: d.replies ?? [], reactions: d.reactions ?? {}, type: d.type ?? null, pollOptions: d.pollOptions ?? null, pollVotes: d.pollVotes ?? {}, cos: d.cos ?? null, boostUntil: d.boostUntil ?? 0 };
+        temp = { id: doc.id, text: d.text ?? '', ts: d.ts, image: d.image ?? null, replies: d.replies ?? [], reactions: d.reactions ?? {}, type: d.type ?? null, pollOptions: d.pollOptions ?? null, pollVotes: d.pollVotes ?? {}, cos: d.cos ?? null, boostUntil: d.boostUntil ?? 0, awards: d.awards ?? null, awardGivers: d.awardGivers ?? null };
         if (d.name) temp.name = d.name ?? '';
         items.push(temp);
     }
