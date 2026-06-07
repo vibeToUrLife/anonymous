@@ -32,9 +32,9 @@ service cloud.firestore {
     //          totoDrawDate: string (YYYY-MM-DD) — flat field for Firestore query in purchases list
     //          totoHistory: [{date,picks[],totalBet,totalWinnings}] — capped to recent entries
     //          coins are deducted on bet and added on win (owner write rules cover this)
-    //    NOTE: Lane Racer (car game) — carOwnedSkins[] (string ids), carSelectedSkin (string),
-    //          carOwnedEffects[] (string ids), carSelectedEffect (string),
-    //          carItems: {shield,slowmo,magnet} (consumable counts). All owner-only writes;
+    //    NOTE: Subway Dash (endless runner) — subwayOwnedSkins[] (string ids), subwaySelectedSkin (string),
+    //          subwayOwnedEffects[] (string ids), subwaySelectedEffect (string),
+    //          subwayItems: {shield,slowmo,magnet} (consumable counts). All owner-only writes;
     //          coins are spent on purchases and earned on game over via transaction.
     // ═══════════════════════════════════════
     match /rooms/{uid} {
@@ -98,7 +98,7 @@ service cloud.firestore {
       allow read: if isAuth();
       allow write: if isOwner(uid);
     }
-    // Lane Racer (car game) — UID-keyed, owner-only writes.
+    // Subway Dash (endless runner) — UID-keyed, owner-only writes.
     match /leaderboard_carrace/{uid} {
       allow read: if isAuth();
       allow write: if isOwner(uid);

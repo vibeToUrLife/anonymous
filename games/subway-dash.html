@@ -5,7 +5,7 @@
   <script>if(localStorage.getItem('access_code_verified')!=='true'){document.documentElement.style.display='none';window.location.replace('../index.html');}</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Lane Racer — Mini Games</title>
+  <title>Subway Dash — Mini Games</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -68,20 +68,37 @@
     }
 
     /* ── Touch controls ── */
-    .touch-controls { display: flex; gap: 12px; justify-content: center; align-items: center; padding: 12px; flex-wrap: wrap; z-index: 20; }
+    .touch-controls { display: flex; gap: 10px; justify-content: center; align-items: center; padding: 12px; flex-wrap: wrap; z-index: 20; }
     .touch-btn {
-      width: 64px; height: 64px; border-radius: 18px;
+      width: 60px; height: 60px; border-radius: 18px;
       border: 1px solid rgba(255,255,255,0.15);
       background: rgba(255,255,255,0.08); color: #fff; font-size: 22px;
       cursor: pointer; transition: background 0.15s, transform 0.1s; user-select: none;
     }
     .touch-btn:active { background: rgba(255,255,255,0.2); transform: scale(0.93); }
+    .touch-btn.jump { background: linear-gradient(135deg, #34d399, #059669); }
+    .touch-btn.roll { background: linear-gradient(135deg, #fbbf24, #d97706); }
     .touch-btn.item  { background: linear-gradient(135deg, #4cc9f0, #4361ee); position: relative; }
     .touch-btn.item .item-badge {
       position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px;
       border-radius: 10px; background: #f7c97e; color: #111; font-size: 11px; font-weight: 800;
       display: flex; align-items: center; justify-content: center; padding: 0 5px;
     }
+
+    /* ── Item bar (numbered power-up slots) ── */
+    .item-bar { display: flex; gap: 8px; justify-content: center; align-items: center; padding: 0 12px 12px; flex-wrap: wrap; z-index: 20; }
+    .item-slot {
+      position: relative; width: 56px; height: 56px; border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.07);
+      color: #fff; font-size: 24px; cursor: pointer; user-select: none;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+    }
+    .item-slot:active { transform: scale(0.92); }
+    .item-slot.empty { opacity: 0.35; }
+    .item-slot.active { box-shadow: 0 0 0 2px #34d399 inset, 0 0 12px rgba(52,211,153,0.5); }
+    .item-slot .num { position: absolute; top: 2px; left: 6px; font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.45); }
+    .item-slot .cnt { position: absolute; bottom: 1px; right: 6px; font-size: 12px; font-weight: 800; color: #f7c97e; }
 
     /* ── Overlays ── */
     .overlay {
@@ -162,6 +179,7 @@
       background: rgba(255,255,255,0.04);
     }
     .shop-card .swatch { width: 100%; height: 46px; border-radius: 10px; margin-bottom: 8px; }
+    .shop-card .char-prev { width: 100%; height: auto; border-radius: 10px; margin-bottom: 8px; display: block; background: rgba(255,255,255,0.04); }
     .shop-card .name { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
     .shop-card .price { font-size: 12px; color: #f7c97e; margin-bottom: 8px; }
     .shop-card button {
@@ -214,8 +232,8 @@
   </div>
 
   <div class="game-header">
-    <h1>🏎️ Lane Racer</h1>
-    <p>Dodge the blocks — one lane is always open!</p>
+    <h1>🚇 Subway Dash</h1>
+    <p>Run! Jump barriers, roll under signs, ride up onto the trains.</p>
   </div>
 
   <div class="hud">
@@ -232,14 +250,18 @@
   <!-- Touch / action controls -->
   <div class="touch-controls">
     <button class="touch-btn" id="btnLeft">◀</button>
-    <button class="touch-btn item" id="btnItem">🛡️<span class="item-badge" id="itemBadge">0</span></button>
+    <button class="touch-btn jump" id="btnJump">⬆</button>
+    <button class="touch-btn roll" id="btnRoll">⬇</button>
     <button class="touch-btn" id="btnRight">▶</button>
   </div>
+
+  <!-- Item bar: tap a slot, or press 1/2/3/4, to use that power-up -->
+  <div class="item-bar" id="itemBar"></div>
 
   <!-- Login overlay -->
   <div class="overlay loading" id="loginOverlay">
     <div class="login-box">
-      <div class="login-title">🏎️ Lane Racer</div>
+      <div class="login-title">🚇 Subway Dash</div>
       <div class="login-sub">Sign in to save scores &amp; earn coins</div>
       <button class="google-btn" id="googleLoginBtn">
         <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59A14.5 14.5 0 019.5 24c0-1.59.28-3.14.76-4.59l-7.98-6.19A23.998 23.998 0 000 24c0 3.77.87 7.34 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
@@ -251,7 +273,7 @@
 
   <!-- Start screen -->
   <div class="overlay hidden" id="startScreen">
-    <h2>🏎️ Lane Racer</h2>
+    <h2>🚇 Subway Dash</h2>
     <div class="player-row">
       <span id="playerDisplayName"></span>
       <span class="coin-pill">🪙 <span id="startCoins">0</span></span>
@@ -264,9 +286,9 @@
     </div>
     <div id="diffInfo" style="font-size:11px;color:rgba(255,255,255,0.55);margin-top:6px;max-width:300px;text-align:center;line-height:1.45"></div>
     <button class="play-btn" id="playBtn">▶ Play</button>
-    <button class="secondary-link" id="openShopBtn">🛒 Garage &amp; Shop</button>
+    <button class="secondary-link" id="openShopBtn">🛒 Characters &amp; Shop</button>
     <a href="../index.html" class="secondary-link">← Back to Lobby</a>
-    <div style="font-size:12px;color:rgba(255,255,255,0.35);margin-top:10px">◀ ▶ move &nbsp;·&nbsp; Space use item</div>
+    <div style="font-size:12px;color:rgba(255,255,255,0.35);margin-top:10px">◀ ▶ move &nbsp;·&nbsp; Space jump &nbsp;·&nbsp; ⬇ roll &nbsp;·&nbsp; 1 2 3 4 use item</div>
     <div class="leaderboard" id="startLeaderboard">
       <div class="lb-title">🏆 Leaderboard</div>
       <div id="startLbBody"></div>
@@ -275,7 +297,7 @@
 
   <!-- Game over screen -->
   <div class="overlay hidden" id="gameOverScreen">
-    <h2>💥 Crashed!</h2>
+    <h2>💥 Wiped Out!</h2>
     <div class="final-score" id="finalScore">0</div>
     <div class="best-score" id="bestScore"></div>
     <div class="new-best hidden" id="newBestLabel">⭐ New personal best!</div>
@@ -284,7 +306,7 @@
       <span>Coins: <strong id="finalCoins">0</strong></span>
     </div>
     <button class="play-btn" id="retryBtn">↻ Play Again</button>
-    <button class="secondary-link" id="overShopBtn">🛒 Garage &amp; Shop</button>
+    <button class="secondary-link" id="overShopBtn">🛒 Characters &amp; Shop</button>
     <a href="../index.html" class="secondary-link">← Back to Lobby</a>
     <div class="leaderboard" id="overLeaderboard">
       <div class="lb-title">🏆 Leaderboard</div>
@@ -292,15 +314,15 @@
     </div>
   </div>
 
-  <!-- Shop / Garage modal -->
+  <!-- Shop / Characters modal -->
   <div class="overlay hidden" id="shopOverlay">
     <div class="shop-box">
-      <h3>🛒 Garage &amp; Shop</h3>
+      <h3>🛒 Characters &amp; Shop</h3>
       <div class="shop-coins">🪙 Coins: <span id="shopCoins">0</span></div>
       <div class="shop-tabs">
-        <button class="shop-tab active" data-panel="skins">🚗 Skins</button>
+        <button class="shop-tab active" data-panel="skins">🏃 Runners</button>
         <button class="shop-tab" data-panel="effects">✨ Trails</button>
-        <button class="shop-tab" data-panel="items">🛡️ Power-ups</button>
+        <button class="shop-tab" data-panel="items">🛹 Power-ups</button>
       </div>
       <div class="shop-panel active" id="panel-skins"><div class="shop-grid" id="skinGrid"></div></div>
       <div class="shop-panel" id="panel-effects"><div class="shop-grid" id="effectGrid"></div></div>
@@ -317,12 +339,13 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="../src/js/firebase-config.js"></script>
-  <script src="./car/car-logic.js"></script>
+  <script src="./subway/subway-logic.js"></script>
 
   <script>
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db   = firebase.firestore();
+    // Reuses the long-standing endless-runner leaderboard collection.
     const lbRef = db.collection('leaderboard_carrace');
 
     /* ═══════════════════════════════════════════════════════════
@@ -340,7 +363,7 @@
       selectedSkin: DEFAULT_SKIN,
       ownedEffects: [DEFAULT_EFFECT],
       selectedEffect: DEFAULT_EFFECT,
-      items: { shield: 0, slowmo: 0, magnet: 0 }
+      items: { shield: 0, slowmo: 0, magnet: 0, doubler: 0 }
     };
 
     /* ───── DOM refs ───── */
@@ -419,33 +442,37 @@
         const snap = await db.collection('rooms').doc(uid).get();
         const d = snap.exists ? snap.data() : {};
         player.coins          = d.coins || 0;
-        player.ownedSkins     = Array.isArray(d.carOwnedSkins) && d.carOwnedSkins.length ? d.carOwnedSkins : [DEFAULT_SKIN];
-        player.selectedSkin   = d.carSelectedSkin || DEFAULT_SKIN;
-        player.ownedEffects   = Array.isArray(d.carOwnedEffects) && d.carOwnedEffects.length ? d.carOwnedEffects : [DEFAULT_EFFECT];
-        player.selectedEffect = d.carSelectedEffect || DEFAULT_EFFECT;
-        const it = d.carItems || {};
-        player.items = { shield: it.shield || 0, slowmo: it.slowmo || 0, magnet: it.magnet || 0 };
+        player.ownedSkins     = Array.isArray(d.subwayOwnedSkins) && d.subwayOwnedSkins.length ? d.subwayOwnedSkins : [DEFAULT_SKIN];
+        player.selectedSkin   = d.subwaySelectedSkin || DEFAULT_SKIN;
+        player.ownedEffects   = Array.isArray(d.subwayOwnedEffects) && d.subwayOwnedEffects.length ? d.subwayOwnedEffects : [DEFAULT_EFFECT];
+        player.selectedEffect = d.subwaySelectedEffect || DEFAULT_EFFECT;
+        const it = d.subwayItems || {};
+        player.items = { shield: it.shield || 0, slowmo: it.slowmo || 0, magnet: it.magnet || 0, doubler: it.doubler || 0 };
         // Guarantee defaults are always owned even if doc was partial.
         if (!player.ownedSkins.includes(DEFAULT_SKIN)) player.ownedSkins.push(DEFAULT_SKIN);
         if (!player.ownedEffects.includes(DEFAULT_EFFECT)) player.ownedEffects.push(DEFAULT_EFFECT);
+        // If a previously-equipped item is no longer in the (refreshed) catalog, fall
+        // back to the default so the runner renders and the shop shows it as equipped.
+        if (!SubwayLogic.SKINS.some(s => s.id === player.selectedSkin)) player.selectedSkin = DEFAULT_SKIN;
+        if (!SubwayLogic.EFFECTS.some(e => e.id === player.selectedEffect)) player.selectedEffect = DEFAULT_EFFECT;
         roomLoaded = true;
       } catch (e) { console.error('Room load error:', e); roomLoaded = true; }
       refreshShopUI();
       refreshHud();
     }
 
-    /** Persist only the car-related fields (merge) — avoids clobbering room data. */
-    function saveCarState() {
+    /** Persist only the subway-related fields (merge) — avoids clobbering room data. */
+    function saveState() {
       const user = auth.currentUser;
       if (!user) return Promise.resolve();
       return db.collection('rooms').doc(user.uid).set({
-        carOwnedSkins: player.ownedSkins,
-        carSelectedSkin: player.selectedSkin,
-        carOwnedEffects: player.ownedEffects,
-        carSelectedEffect: player.selectedEffect,
-        carItems: player.items,
+        subwayOwnedSkins: player.ownedSkins,
+        subwaySelectedSkin: player.selectedSkin,
+        subwayOwnedEffects: player.ownedEffects,
+        subwaySelectedEffect: player.selectedEffect,
+        subwayItems: player.items,
         updatedAt: Date.now()
-      }, { merge: true }).catch(e => console.error('Save car state error:', e));
+      }, { merge: true }).catch(e => console.error('Save state error:', e));
     }
 
     /** Add coins atomically to the shared room doc (single transaction). */
@@ -514,7 +541,7 @@
     function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
     /* ═══════════════════════════════════════════════════════════
-       Canvas setup & perspective road
+       Canvas setup & perspective track
        ═══════════════════════════════════════════════════════════ */
     const canvas = $('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -532,73 +559,121 @@
     window.addEventListener('resize', () => { resizeCanvas(); if (!running) drawIdle(); });
 
     // Perspective constants (fractions of canvas height/width).
-    const HORIZON_Y = 0.16;     // road top
-    const CAR_PROGRESS = 0.86;  // where the player's car sits (0 far → 1 near)
-    const ROAD_TOP_HALF = 0.07; // half road width at horizon (fraction of W)
-    const ROAD_BOT_HALF = 0.46; // half road width at bottom (fraction of W)
+    const HORIZON_Y = 0.16;     // track top
+    const CAR_PROGRESS = 0.95;  // where the runner sits (0 far → 1 near); high so it's near the bottom
+    const ROAD_TOP_HALF = 0.07; // half track width at horizon (fraction of W)
+    const ROAD_BOT_HALF = 0.46; // half track width at bottom (fraction of W)
+    // True perspective: a point at depth-progress p (0 far → 1 near) sits at camera
+    // distance z. Equal progress steps compress near the horizon and spread out near
+    // the camera, so a fixed-length train foreshortens naturally (short far, long near)
+    // instead of the old linear mapping that made it lurch short→long→short.
+    const Z_NEAR = 1, Z_FAR = 3.2;
+    const _PROJ_FAR = 1 / Z_FAR, _PROJ_NEAR = 1 / Z_NEAR;
 
     function lerp(a, b, t) { return a + (b - a) * t; }
 
+    /** Screen-height fraction (0 at horizon → 1 at bottom) for a depth progress. */
+    function yFrac(progress) {
+      const z = Z_FAR + (Z_NEAR - Z_FAR) * progress;
+      return (1 / z - _PROJ_FAR) / (_PROJ_NEAR - _PROJ_FAR);
+    }
     /** Map a depth progress (0 far → 1 near) to a screen Y. */
-    function screenY(progress) { return lerp(HORIZON_Y * H, H, progress); }
-    /** Road half-width (px) at a given progress. */
-    function roadHalf(progress) { return lerp(ROAD_TOP_HALF * W, ROAD_BOT_HALF * W, progress); }
+    function screenY(progress) { return lerp(HORIZON_Y * H, H, yFrac(progress)); }
+    /** Track half-width (px) at a given progress (linear in screen-Y → straight edges). */
+    function roadHalf(progress) { return lerp(ROAD_TOP_HALF * W, ROAD_BOT_HALF * W, yFrac(progress)); }
     /** Center X of a lane (0..2) at a given progress. */
     function laneX(lane, progress) {
       const half = roadHalf(progress);
-      const laneSpacing = (half * 2) / CarLogic.LANES;
-      return W / 2 + (lane - (CarLogic.LANES - 1) / 2) * laneSpacing;
+      const laneSpacing = (half * 2) / SubwayLogic.LANES;
+      return W / 2 + (lane - (SubwayLogic.LANES - 1) / 2) * laneSpacing;
     }
-    /** Perspective scale for object sizes at a given progress. */
-    function depthScale(progress) { return lerp(0.35, 1.25, progress); }
+    /** Perspective scale for object sizes (matches the on-screen depth). */
+    function depthScale(progress) { return lerp(0.35, 1.25, yFrac(progress)); }
 
     /* ═══════════════════════════════════════════════════════════
        Game state
        ═══════════════════════════════════════════════════════════ */
     let running = false;
-    let difficulty = localStorage.getItem('carrace_diff') || 'normal';
+    let difficulty = localStorage.getItem('subway_diff') || 'normal';
     let elapsed = 0;            // seconds survived
     let distance = 0;          // metres travelled (score basis)
     let score = 0;
     let coinsEarned = 0;
-    let carLane = 1;           // 0..2, start middle
-    let rows = [];             // obstacle rows: {progress, openLane, blocked, scored}
-    let pickups = [];          // {progress, lane, kind:'coin'|'shield'|'slowmo'|'magnet'}
+    let lane = 1;              // 0..2, start middle
+    let rows = [];            // obstacle rows: {progress, cells, safeLane, scored}
+    let pickups = [];         // {progress, lane, kind:'coin'|'shield'|'slowmo'|'magnet'}
     let lastTs = 0;
+
+    // Vertical motion (jump / roll). Durations are gameplay-time seconds.
+    const JUMP_DUR = 0.78;     // total airborne window (long enough to clear a train)
+    const JUMP_PEAK = 100;     // px apex (scaled by depth)
+    const ROLL_DUR = 0.55;     // roll/duck window
+    // Trains are carriages spanning this much depth (progress units) — kept below the
+    // smallest row spacing (0.30) so they never overlap the next row. Perspective makes
+    // them look long as they near. You ride ON TOP: up the front ramp, along the roof,
+    // down the back slope.
+    const TRAIN_LEN = 0.27;
+    const RAMP_FRAC = 0.2;     // front & back fraction of the carriage that is a slope
+    // Each obstacle's hitbox length along the track. Barriers are short (almost an
+    // instant); a train is the full carriage. Collision uses these so the hitbox
+    // matches what is drawn — clear an obstacle for its WHOLE length, not one frame.
+    const OBS_LEN = { low: 0.07, high: 0.07, train: TRAIN_LEN };
+    let airTimeLeft = 0;       // > 0 ⇒ airborne (clears LOW barriers)
+    let rollTimeLeft = 0;      // > 0 ⇒ rolling (clears HIGH barriers)
+    let elevation = 0;         // px the runner is raised off the ground (riding a train roof)
+    let onTrain = false;       // true while running on top of a carriage
+    function roofHeightPx() { return 64 * depthScale(CAR_PROGRESS); }
 
     // Active effects/timers
     let shieldFlash = 0;
     let slowmoSec = 0;
     let magnetSec = 0;
+    let doublerSec = 0;        // 2× coins while > 0
+    let hoverSec = 0;          // hoverboard deployed: rides over one crash, then breaks
+    let hoverBreakSec = 0;     // brief stumble animation right after a board absorbs a hit
+    const HOVER_DUR = 15;      // seconds a deployed hoverboard lasts
     let crashAnimSec = 0;      // crash slow-motion timer
     let pendingGameOver = false;
     let trailParticles = [];
 
+    function isAirborne() { return airTimeLeft > 0; }
+    function isRolling()  { return rollTimeLeft > 0; }
+
     function resetGame() {
       elapsed = 0; distance = 0; score = 0; coinsEarned = 0;
-      carLane = 1; rows = []; pickups = [];
+      lane = 1; rows = []; pickups = [];
+      airTimeLeft = 0; rollTimeLeft = 0; elevation = 0; onTrain = false;
       shieldFlash = 0;
-      slowmoSec = 0; magnetSec = 0; crashAnimSec = 0; pendingGameOver = false;
+      slowmoSec = 0; magnetSec = 0; doublerSec = 0; hoverSec = 0; hoverBreakSec = 0; crashAnimSec = 0; pendingGameOver = false;
       trailParticles = [];
-      // Seed rows above the horizon, spaced exactly one `gap` apart. The chained
-      // open lane keeps the corridor reachable (within 1 lane each step).
-      lastOpenLane = carLane; // start corridor aligned with the car
+      // Seed rows above the horizon, spaced one `gap` apart. The chained safe lane
+      // keeps a continuous reachable corridor (within 1 lane each step).
+      lastSafeLane = lane; // start corridor aligned with the runner
       const gap = baseRowGap();
-      let p = -gap;
-      for (let i = 0; i < 4; i++) { rows.push(makeRow(p)); p -= gap; }
+      // Seed a field stretching up past the horizon, but keep the near stretch CLEAR so
+      // the player gets a runway — obstacles only begin past the horizon and stream in a
+      // few seconds after the start. Coins are laid even on the runway.
+      let p = 0.9;
+      for (let i = 0; i < 18; i++) {
+        const row = makeRow(p);
+        if (p > -0.4) row.cells = [null, null, null]; // grace: clear the opening stretch
+        rows.push(row);
+        maybeSpawnPickup(row.safeLane, row.progress);
+        p -= gap;
+      }
       refreshHud();
     }
 
-    function baseRowGap() { return CarLogic.getDifficulty(difficulty).rowGap; }
+    function baseRowGap() { return SubwayLogic.getDifficulty(difficulty).rowGap; }
 
-    // Tracks the most recently spawned row's open lane so the next row's open lane
-    // stays within ±1 of it — guarantees a continuous, reachable corridor.
-    let lastOpenLane = 1;
+    // Tracks the most recently spawned row's safe lane so the next stays within ±1.
+    let lastSafeLane = 1;
 
-    function makeRow(progress, prevOpen) {
-      const r = CarLogic.makeObstacleRow(undefined, typeof prevOpen === 'number' ? prevOpen : lastOpenLane);
-      lastOpenLane = r.openLane;
-      return { progress, openLane: r.openLane, blocked: r.blocked, scored: false };
+    function makeRow(progress, prevSafe) {
+      const cfg = SubwayLogic.getDifficulty(difficulty);
+      const r = SubwayLogic.makeObstacleRow(undefined, typeof prevSafe === 'number' ? prevSafe : lastSafeLane, cfg);
+      lastSafeLane = r.safeLane;
+      return { progress, cells: r.cells, safeLane: r.safeLane, scored: false };
     }
 
     /* ═══════════════════════════════════════════════════════════
@@ -628,12 +703,21 @@
       let timeScale = 1;
       if (slowmoSec > 0) { slowmoSec -= dt; timeScale *= 0.5; }
       if (magnetSec > 0) magnetSec -= dt;
+      if (doublerSec > 0) doublerSec -= dt;
+      if (hoverSec > 0) hoverSec -= dt;
+      if (hoverBreakSec > 0) hoverBreakSec -= dt;
+
+      // Advance vertical motion in gameplay-time so jump/roll stay in sync with the
+      // world even under slow-mo (slow-mo just buys reaction time, not free clears).
+      const gdt = dt * timeScale;
+      if (airTimeLeft > 0)  airTimeLeft  = Math.max(0, airTimeLeft - gdt);
+      if (rollTimeLeft > 0) rollTimeLeft = Math.max(0, rollTimeLeft - gdt);
 
       elapsed += dt;
-      const speedPx = CarLogic.speedAt(difficulty, elapsed) * timeScale; // px/sec
+      const speedPx = SubwayLogic.speedAt(difficulty, elapsed) * timeScale; // px/sec
       distance += speedPx * dt * 0.05; // metres (tuned scaling)
 
-      // Convert px/sec to progress/sec across the visible road band.
+      // Convert px/sec to progress/sec across the visible track band.
       const bandPx = H - HORIZON_Y * H;
       const dProgress = (speedPx / bandPx) * dt;
 
@@ -641,56 +725,99 @@
       rows.forEach(r => r.progress += dProgress);
       pickups.forEach(pk => pk.progress += dProgress);
 
-      // Spawn rows so they are ALWAYS spaced exactly one `gap` apart, measured from
-      // the topmost existing row. This prevents two rows ever overlapping (which
-      // previously made it look like all 3 lanes were blocked).
+      // Keep rows spaced exactly one `gap` apart, measured from the topmost row.
+      // Spawn well past the horizon (fixed lookahead) so the field stays full ahead.
       const gap = baseRowGap();
       let topP = rows.length ? Math.min.apply(null, rows.map(r => r.progress)) : 0;
-      while (topP > -gap * 3) {
+      while (topP > -1.5) {
         const row = makeRow(topP - gap);
         rows.push(row);
-        // Occasionally drop a coin/power-up in the OPEN lane of this row.
-        maybeSpawnPickup(row.openLane, row.progress);
+        // Occasionally drop a coin/power-up in the SAFE lane of this row.
+        maybeSpawnPickup(row.safeLane, row.progress);
         topP -= gap;
       }
 
-      // Collision & scoring when a row crosses the car band.
+      // Collision & scoring. Every obstacle has a DEPTH (a hitbox length along the
+      // track); the runner collides while that body overlaps its position AND it is
+      // in the same lane.
+      //   low   → jump over            high → roll under OR jump over
+      //   train → board the FRONT (jump on or run up the ramp) and ride the roof;
+      //           you only crash if you slide into the SIDE of a moving carriage.
+      // Trains are stateful, so we work out the runner's roof elevation this frame.
+      let elevTarget = 0;       // px the runner should be raised to (0 = ground)
+      let ridingAny = false;    // on a train roof this frame?
+
+      // 1) Crash check — depth-aware, against the CURRENT lane each frame (so sliding
+      //    out of a lane mid-obstacle also escapes it).
       for (const r of rows) {
-        if (r.scored) continue;
-        if (r.progress >= CAR_PROGRESS) {
-          r.scored = true;
-          if (CarLogic.isCrash(r, carLane)) {
-            if (player.items.shield > 0) {
-              // Consume an owned shield instead of crashing.
-              player.items.shield--; shieldFlash = 0.4; updateItemBadge(); playSound('shield');
+        const cell = r.cells[lane];
+
+        if (cell === 'train') {
+          const nose = r.progress, tail = r.progress - TRAIN_LEN;
+          if (CAR_PROGRESS <= nose && CAR_PROGRESS >= tail) {
+            // frac: 0 at the nose (front), 1 at the tail (back).
+            const frac = (nose - CAR_PROGRESS) / TRAIN_LEN;
+            const roof = roofHeightPx();
+            if (frac <= RAMP_FRAC) {
+              // Front of the carriage: board it whether you run up the ramp or jump on.
+              r.mounted = true;
+              ridingAny = true; elevTarget = Math.max(elevTarget, roof * (frac / RAMP_FRAC));
+            } else if (frac >= 1 - RAMP_FRAC) {
+              // Back slope: ride down off the carriage.
+              if (r.mounted) { ridingAny = true; elevTarget = Math.max(elevTarget, roof * ((1 - frac) / RAMP_FRAC)); }
+              else if (!trySurviveCrash(r)) return;
             } else {
-              triggerCrash();
-              return;
+              // Roof: safe only while actually riding.
+              if (r.mounted) { ridingAny = true; elevTarget = Math.max(elevTarget, roof); }
+              else if (!trySurviveCrash(r)) return;
             }
-          } else {
-            const near = CarLogic.isNearMiss(r, carLane);
-            score += CarLogic.scoreForPass(near);
-            const c = CarLogic.coinsForPass(difficulty, near);
-            coinsEarned += c;
-            if (near) playSound('near'); else playSound('pass');
+          } else if (CAR_PROGRESS < tail) {
+            r.mounted = false; r.cleared = true; // whole carriage behind us
           }
+          continue;
         }
+
+        // Short barriers (low / high).
+        if (r.cleared || !cell) continue;
+        const len = OBS_LEN[cell] || 0;
+        const nose = r.progress, tail = r.progress - len;
+        if (CAR_PROGRESS <= nose && CAR_PROGRESS >= tail) {
+          const handled = cell === 'high' ? (isRolling() || isAirborne()) : isAirborne();
+          if (!handled && !trySurviveCrash(r)) return;
+        } else if (tail > CAR_PROGRESS) {
+          r.cleared = true; // fully behind the runner
+        }
+      }
+
+      onTrain = ridingAny;
+      elevation += (elevTarget - elevation) * Math.min(1, dt * 14); // smooth ride up/down
+
+      // 2) Score each row once as its nose reaches the runner (crash handled above).
+      //    Coins are NOT awarded for passing — they only come from coins on the road.
+      const state = { airborne: isAirborne(), rolling: isRolling(), onTrain: onTrain };
+      for (const r of rows) {
+        if (r.scored || r.progress < CAR_PROGRESS) continue;
+        r.scored = true;
+        const near = SubwayLogic.isNearMiss(r, lane, state);
+        score += SubwayLogic.scoreForPass(near);
+        playSound(near ? 'near' : 'pass');
       }
 
       // Pickup collection.
       for (const pk of pickups) {
         if (pk.collected) continue;
         if (pk.progress >= CAR_PROGRESS) {
-          const sameLane = pk.lane === carLane;
+          const sameLane = pk.lane === lane;
           const grabbed = sameLane || (magnetSec > 0 && pk.kind === 'coin');
           if (grabbed) { pk.collected = true; collectPickup(pk); }
           else if (pk.progress > 1.05) pk.collected = true; // missed, cull
         }
       }
 
-      // Cull off-screen rows/pickups to keep arrays small.
-      rows = rows.filter(r => r.progress <= 1.1);
-      pickups = pickups.filter(pk => !pk.collected && pk.progress <= 1.1);
+      // Cull off-screen rows/pickups to keep arrays small. A long train keeps riding
+      // until its TAIL passes the runner, so keep rows until the whole carriage is gone.
+      rows = rows.filter(r => r.progress - TRAIN_LEN <= 1.02);
+      pickups = pickups.filter(pk => !pk.collected && pk.progress <= 1.02);
 
       trailParticles.forEach(p => { p.life -= dt * 2.2; p.y += 120 * dt; });
       trailParticles = trailParticles.filter(p => p.life > 0);
@@ -699,38 +826,61 @@
       refreshHud();
     }
 
-    function maybeSpawnPickup(openLane, rowProgress) {
-      // Place the pickup half a gap ahead of its row, in the open lane, so it sits
-      // on the clear path rather than overlapping a block.
-      const at = (typeof rowProgress === 'number' ? rowProgress : 0) + baseRowGap() * 0.5;
+    function maybeSpawnPickup(safeLane, rowProgress) {
+      const base = (typeof rowProgress === 'number' ? rowProgress : 0);
       const roll = Math.random();
-      if (roll < 0.28) {
-        pickups.push({ progress: at, lane: openLane, kind: 'coin', collected: false });
-      } else if (roll < 0.40) {
-        // Power-up pickup (shield/slowmo/magnet) — also buyable in the shop.
-        const kinds = CarLogic.ITEM_ORDER;
+      if (roll < 0.10) {
+        // Power-up drop on the clear path (shield/slowmo/magnet/2× — also buyable).
+        const kinds = SubwayLogic.ITEM_ORDER;
         const kind = kinds[Math.floor(Math.random() * kinds.length)];
-        pickups.push({ progress: at, lane: openLane, kind, collected: false });
+        pickups.push({ progress: base, lane: safeLane, kind, collected: false });
+        return;
+      }
+      // Otherwise lay a short COIN TRAIL along the safe lane. Dense rows + per-row
+      // trails join into a continuous winding line of coins, Subway-Surfers style.
+      const n = 2 + Math.floor(Math.random() * 3); // 2-4 coins
+      const gap = baseRowGap();
+      for (let i = 0; i < n; i++) {
+        pickups.push({ progress: base - (i * gap / n), lane: safeLane, kind: 'coin', collected: false });
       }
     }
 
     function collectPickup(pk) {
       if (pk.kind === 'coin') {
-        coinsEarned += 3; score += 5; playSound('coin');
+        coinsEarned += (doublerSec > 0 ? 2 : 1); // coins come ONLY from the road
+        score += 2; playSound('coin');
       } else {
         player.items[pk.kind] = (player.items[pk.kind] || 0) + 1;
-        updateItemBadge(); playSound('powerup');
+        updateItemBar(); playSound('powerup');
       }
     }
 
     /* ═══════════════════════════════ Crash handling ═══════════════════════════════ */
+    // A DEPLOYED hoverboard absorbs one otherwise-fatal hit (the board breaks, then
+    // you keep running). Owning a hoverboard does nothing until you activate it.
+    function trySurviveCrash(r) {
+      if (hoverSec > 0) {
+        // The board absorbs the hit: it shatters, the runner stumbles, then runs on.
+        hoverSec = 0; hoverBreakSec = 0.5; shieldFlash = 0.4; playSound('shield');
+        const bx = laneX(lane, CAR_PROGRESS), by = screenY(CAR_PROGRESS) - elevation;
+        for (let i = 0; i < 12; i++) {
+          trailParticles.push({ x: bx + (Math.random() - 0.5) * 30, y: by, life: 1, board: true,
+            vx: (Math.random() - 0.5) * 220, vy: -Math.random() * 170 });
+        }
+        r.cleared = true; r.mounted = true;
+        return true;
+      }
+      triggerCrash();
+      return false;
+    }
+
     function triggerCrash() {
       playSound('crash');
       crashAnimSec = 0.9;       // slow-motion crash window
       pendingGameOver = true;
-      // little explosion of trail particles
+      // little explosion of particles at the runner
       for (let i = 0; i < 18; i++) {
-        trailParticles.push({ x: laneX(carLane, CAR_PROGRESS) + (Math.random() - 0.5) * 40, y: screenY(CAR_PROGRESS), life: 1, crash: true, vx: (Math.random() - 0.5) * 200, vy: (Math.random() - 0.5) * 200 });
+        trailParticles.push({ x: laneX(lane, CAR_PROGRESS) + (Math.random() - 0.5) * 40, y: screenY(CAR_PROGRESS), life: 1, crash: true, vx: (Math.random() - 0.5) * 200, vy: (Math.random() - 0.5) * 200 });
       }
     }
 
@@ -738,9 +888,9 @@
       running = false;
       const distM = Math.floor(distance);
       const finalScore = Math.max(score, distM);
-      const best = parseInt(localStorage.getItem('carrace_best_' + playerName)) || 0;
+      const best = parseInt(localStorage.getItem('subway_best_' + playerName)) || 0;
       const isNew = finalScore > best;
-      if (isNew) localStorage.setItem('carrace_best_' + playerName, finalScore);
+      if (isNew) localStorage.setItem('subway_best_' + playerName, finalScore);
 
       $('finalScore').textContent = finalScore;
       $('bestScore').textContent = isNew ? '' : 'Best: ' + best;
@@ -751,7 +901,7 @@
 
       submitScore(finalScore);
       if (coinsEarned > 0) { awardCoins(coinsEarned); showCoinReward(coinsEarned); }
-      saveCarState(); // persist consumed/collected items
+      saveState(); // persist consumed/collected items
     }
 
     /* ═══════════════════════════════════════════════════════════
@@ -767,12 +917,13 @@
       const pk = pickups.slice().sort((a, b) => a.progress - b.progress);
       for (const p of pk) drawPickup(p);
       drawTrail();
-      drawCar();
+      drawRunner();
       if (slowmoSec > 0) drawTint('rgba(76,201,240,0.10)');
       if (magnetSec > 0) drawTint('rgba(247,201,126,0.08)');
+      if (doublerSec > 0) drawTint('rgba(255,209,102,0.10)');
     }
 
-    function drawIdle() { ctx.clearRect(0, 0, W, H); drawSky(); drawRoad(); drawCar(); }
+    function drawIdle() { ctx.clearRect(0, 0, W, H); drawSky(); drawRoad(); drawRunner(); }
 
     function drawSky() {
       const g = ctx.createLinearGradient(0, 0, 0, HORIZON_Y * H);
@@ -783,7 +934,7 @@
     }
 
     function drawRoad() {
-      // Road trapezoid.
+      // Track bed trapezoid.
       const topY = HORIZON_Y * H, botY = H;
       ctx.beginPath();
       ctx.moveTo(W / 2 - roadHalf(0), topY);
@@ -797,52 +948,188 @@
       ctx.fillStyle = rg;
       ctx.fill();
 
-      // Lane divider lines (dashed, scrolling for motion feel).
-      const phase = (elapsed * 2) % 1;
-      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-      for (let l = 1; l < CarLogic.LANES; l++) {
-        const lanePos = l - CarLogic.LANES / 2;
-        for (let seg = 0; seg < 14; seg++) {
-          const p1 = ((seg + phase) / 14);
-          const p2 = ((seg + 0.45 + phase) / 14);
-          if (p1 > 1) continue;
-          const x1 = W / 2 + lanePos * (roadHalf(p1) * 2 / CarLogic.LANES);
-          const x2 = W / 2 + lanePos * (roadHalf(Math.min(1, p2)) * 2 / CarLogic.LANES);
-          ctx.lineWidth = lerp(1, 5, p1);
-          ctx.beginPath(); ctx.moveTo(x1, screenY(p1)); ctx.lineTo(x2, screenY(Math.min(1, p2))); ctx.stroke();
-        }
+      // Railway sleepers (ties) — horizontal bars scrolling toward the camera.
+      const phase = (elapsed * 1.4) % 1;
+      ctx.strokeStyle = 'rgba(0,0,0,0.28)';
+      for (let seg = 0; seg < 16; seg++) {
+        const p = ((seg + phase) / 16);
+        if (p < 0.02 || p > 1) continue;
+        const half = roadHalf(p);
+        ctx.lineWidth = lerp(1, 7, p);
+        ctx.beginPath();
+        ctx.moveTo(W / 2 - half * 0.92, screenY(p));
+        ctx.lineTo(W / 2 + half * 0.92, screenY(p));
+        ctx.stroke();
       }
-      // Road edges.
+
+      // Lane divider rails (steel lines).
+      ctx.strokeStyle = 'rgba(180,200,220,0.35)';
+      for (let l = 1; l < SubwayLogic.LANES; l++) {
+        const lanePos = l - SubwayLogic.LANES / 2;
+        const x0 = W / 2 + lanePos * (roadHalf(0) * 2 / SubwayLogic.LANES);
+        const x1 = W / 2 + lanePos * (roadHalf(1) * 2 / SubwayLogic.LANES);
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(x0, topY); ctx.lineTo(x1, botY); ctx.stroke();
+      }
+      // Outer edges.
       ctx.strokeStyle = 'rgba(247,37,133,0.5)'; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.moveTo(W / 2 - roadHalf(0), topY); ctx.lineTo(W / 2 - roadHalf(1), botY); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(W / 2 + roadHalf(0), topY); ctx.lineTo(W / 2 + roadHalf(1), botY); ctx.stroke();
     }
 
     function drawRow(r) {
-      if (r.progress < 0 || r.progress > 1.1) return;
+      if (r.progress < 0 || r.progress - TRAIN_LEN > 1.02) return; // long trains stay drawn past the bottom
       const sc = depthScale(r.progress);
       const half = roadHalf(r.progress);
-      const laneW = (half * 2) / CarLogic.LANES;
-      const blockH = 26 * sc;
+      const laneW = (half * 2) / SubwayLogic.LANES;
       const y = screenY(r.progress);
-      for (const lane of r.blocked) {
-        const cx = laneX(lane, r.progress);
+      for (let ln = 0; ln < SubwayLogic.LANES; ln++) {
+        const cell = r.cells[ln];
+        if (!cell) continue;
+        if (cell === 'train') { drawTrain(r, ln); continue; }
+        if (r.progress > 1.0) continue; // thin barriers only render within the road band
+        const cx = laneX(ln, r.progress);
         const w = laneW * 0.82;
-        const grad = ctx.createLinearGradient(0, y - blockH, 0, y);
-        grad.addColorStop(0, '#ff5d8f');
-        grad.addColorStop(1, '#b5179e');
-        ctx.fillStyle = grad;
-        roundRect(cx - w / 2, y - blockH, w, blockH, 4 * sc);
-        ctx.fill();
-        // Hazard stripe.
-        ctx.fillStyle = 'rgba(255,255,255,0.18)';
-        roundRect(cx - w / 2, y - blockH, w, blockH * 0.3, 4 * sc);
-        ctx.fill();
+        if (cell === 'low') drawLowBarrier(cx, y, w, sc);
+        else if (cell === 'high') drawHighBarrier(cx, y, w, sc);
       }
     }
 
+    // A subway carriage you ride on top of. Silver livery, window row + blue stripe,
+    // windshield/headlights up front, tail lights at the back. The streamlined sloped
+    // FRONT doubles as the boarding ramp (yellow safety stripe along its foot).
+    function drawTrain(r, ln) {
+      const TRAIN_H = 70;                          // carriage height (px before depth scale)
+      if (r.progress < 0 || r.progress - TRAIN_LEN > 1.02) return; // off-screen
+      const rampLen = TRAIN_LEN * RAMP_FRAC;
+      const noseVisible = r.progress <= 1.0;
+      const tailVisible = (r.progress - TRAIN_LEN) >= 0;
+      const pNose = Math.min(r.progress, 1.0);
+      const pTail = Math.max(r.progress - TRAIN_LEN, 0.008);
+      let pRampTop = noseVisible ? r.progress - rampLen : pNose;
+      let pBackTop = tailVisible ? r.progress - TRAIN_LEN + rampLen : pTail;
+      pRampTop = Math.min(Math.max(pRampTop, pTail), pNose);
+      pBackTop = Math.min(Math.max(pBackTop, pTail), pNose);
+      if (pBackTop > pRampTop) { pBackTop = pRampTop = (pBackTop + pRampTop) / 2; }
+
+      function P(p) {
+        const sc = depthScale(p);
+        const w = (roadHalf(p) * 2 / SubwayLogic.LANES) * 0.72;
+        const cx = laneX(ln, p), g = screenY(p);
+        return { l: cx - w / 2, r: cx + w / 2, g: g, t: g - TRAIN_H * sc, w: w };
+      }
+      function quad(a, b, c, d, fill) {
+        ctx.fillStyle = fill;
+        ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]);
+        ctx.lineTo(c[0], c[1]); ctx.lineTo(d[0], d[1]); ctx.closePath(); ctx.fill();
+      }
+      const N = P(pNose), RT = P(pRampTop), BT = P(pBackTop), T = P(pTail);
+      const C_SIDE = '#cdd3db', C_SIDE_L = '#b7bdc8', C_ROOF = '#9aa1ac', C_GLASS = '#21303f', C_STRIPE = '#1f6feb';
+
+      // Side walls following the silhouette.
+      quad([N.l, N.g], [RT.l, RT.t], [BT.l, BT.t], [T.l, T.g], C_SIDE_L);
+      quad([N.r, N.g], [RT.r, RT.t], [BT.r, BT.t], [T.r, T.g], C_SIDE);
+
+      // Window row + stripe on each side. f = height fraction (0 ground → 1 roof).
+      function band(side, f1, f2, fill) {
+        const nl = side < 0 ? N.l : N.r, rtl = side < 0 ? RT.l : RT.r, btl = side < 0 ? BT.l : BT.r, tl = side < 0 ? T.l : T.r;
+        const fP = f => [lerp(nl, rtl, f), lerp(N.g, RT.t, f)];
+        const bP = f => [lerp(tl, btl, f), lerp(T.g, BT.t, f)];
+        quad(fP(f2), bP(f2), bP(f1), fP(f1), fill);
+      }
+      for (const side of [-1, 1]) {
+        band(side, 0.52, 0.56, C_STRIPE);   // colored stripe under the windows
+        band(side, 0.58, 0.8, C_GLASS);     // window band
+        const nl = side < 0 ? N.l : N.r, rtl = side < 0 ? RT.l : RT.r, btl = side < 0 ? BT.l : BT.r, tl = side < 0 ? T.l : T.r;
+        ctx.strokeStyle = C_SIDE; ctx.lineWidth = Math.max(1, 1.6 * depthScale((pNose + pTail) / 2));
+        for (let k = 1; k <= 5; k++) {
+          const u = k / 6;
+          ctx.beginPath();
+          ctx.moveTo(lerp(lerp(nl, rtl, 0.8), lerp(tl, btl, 0.8), u), lerp(lerp(N.g, RT.t, 0.8), lerp(T.g, BT.t, 0.8), u));
+          ctx.lineTo(lerp(lerp(nl, rtl, 0.58), lerp(tl, btl, 0.58), u), lerp(lerp(N.g, RT.t, 0.58), lerp(T.g, BT.t, 0.58), u));
+          ctx.stroke();
+        }
+      }
+
+      // Roof with a center seam and a couple of AC units.
+      quad([RT.l, RT.t], [RT.r, RT.t], [BT.r, BT.t], [BT.l, BT.t], C_ROOF);
+      ctx.strokeStyle = shade(C_ROOF, 0.85); ctx.lineWidth = Math.max(1, 1.4 * depthScale(pNose));
+      ctx.beginPath(); ctx.moveTo((RT.l + RT.r) / 2, RT.t); ctx.lineTo((BT.l + BT.r) / 2, BT.t); ctx.stroke();
+      ctx.fillStyle = shade(C_ROOF, 0.9);
+      for (let k = 1; k <= 2; k++) {
+        const u = k / 3, cxm = lerp((RT.l + RT.r) / 2, (BT.l + BT.r) / 2, u), cym = lerp(RT.t, BT.t, u);
+        const ww = lerp(RT.w, BT.w, u) * 0.4, hh = 9 * depthScale(lerp(pRampTop, pBackTop, u));
+        rPath(ctx, cxm - ww / 2, cym - hh / 2, ww, hh, 2); ctx.fill();
+      }
+
+      // Front nose (streamlined slope = the boarding ramp).
+      if (noseVisible && pRampTop > pTail) {
+        quad([N.l, N.g], [N.r, N.g], [RT.r, RT.t], [RT.l, RT.t], C_SIDE);
+        const fL = f => [lerp(N.l, RT.l, f), lerp(N.g, RT.t, f)];
+        const fR = f => [lerp(N.r, RT.r, f), lerp(N.g, RT.t, f)];
+        quad(fL(0.5), fR(0.5), fR(0.84), fL(0.84), C_GLASS);          // windshield
+        ctx.fillStyle = '#fff3b0';                                     // headlights (near the foot)
+        const hr = Math.max(2, 3 * depthScale(pNose));
+        const hl = fL(0.2), hrt = fR(0.2);
+        ctx.beginPath(); ctx.arc(lerp(hl[0], hrt[0], 0.22), hl[1], hr, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(lerp(hl[0], hrt[0], 0.78), hrt[1], hr, 0, Math.PI * 2); ctx.fill();
+        quad(fL(0), fR(0), fR(0.12), fL(0.12), '#f4c20d');             // yellow safety stripe at the foot
+      }
+
+      // Back of the carriage with tail lights.
+      if (tailVisible && pBackTop < pNose) {
+        quad([BT.l, BT.t], [BT.r, BT.t], [T.r, T.g], [T.l, T.g], C_SIDE_L);
+        ctx.fillStyle = '#ff4d4d';
+        const tr = Math.max(2, 2.6 * depthScale(pTail));
+        const bL = f => [lerp(T.l, BT.l, f), lerp(T.g, BT.t, f)];
+        const bR = f => [lerp(T.r, BT.r, f), lerp(T.g, BT.t, f)];
+        const a = bL(0.2), b = bR(0.2);
+        ctx.beginPath(); ctx.arc(lerp(a[0], b[0], 0.25), a[1], tr, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(lerp(a[0], b[0], 0.75), b[1], tr, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+
+    // Low barrier — JUMP over it.
+    function drawLowBarrier(cx, y, w, sc) {
+      const h = 22 * sc;
+      const grad = ctx.createLinearGradient(0, y - h, 0, y);
+      grad.addColorStop(0, '#ff5d8f');
+      grad.addColorStop(1, '#b5179e');
+      ctx.fillStyle = grad;
+      roundRect(cx - w / 2, y - h, w, h, 4 * sc); ctx.fill();
+      // Hazard stripes.
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      for (let i = 0; i < 3; i++) {
+        ctx.save();
+        ctx.beginPath(); ctx.rect(cx - w / 2, y - h, w, h); ctx.clip();
+        ctx.fillRect(cx - w / 2 + i * w * 0.4 - 4, y - h, 6 * sc, h);
+        ctx.restore();
+      }
+    }
+
+    // High / overhead barrier — ROLL under it (note the clear gap beneath).
+    function drawHighBarrier(cx, y, w, sc) {
+      const beamH = 16 * sc;
+      const topGap = 40 * sc;     // beam sits this far above ground; gap underneath
+      const legW = 5 * sc;
+      // Support legs.
+      ctx.fillStyle = '#6c757d';
+      ctx.fillRect(cx - w / 2, y - topGap - beamH, legW, topGap + beamH);
+      ctx.fillRect(cx + w / 2 - legW, y - topGap - beamH, legW, topGap + beamH);
+      // Overhead beam (warning sign).
+      const grad = ctx.createLinearGradient(0, y - topGap - beamH, 0, y - topGap);
+      grad.addColorStop(0, '#ffd166');
+      grad.addColorStop(1, '#e8a317');
+      ctx.fillStyle = grad;
+      roundRect(cx - w / 2, y - topGap - beamH, w, beamH, 3 * sc); ctx.fill();
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.font = 'bold ' + (beamH * 0.8) + 'px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('⚠', cx, y - topGap - beamH * 0.5 + 1);
+    }
+
     function drawPickup(pk) {
-      if (pk.progress < 0 || pk.progress > 1.1 || pk.collected) return;
+      if (pk.progress < 0 || pk.progress > 1.0 || pk.collected) return;
       const sc = depthScale(pk.progress);
       const cx = laneX(pk.lane, pk.progress);
       const cy = screenY(pk.progress) - 16 * sc;
@@ -855,7 +1142,7 @@
         ctx.fillStyle = '#b8860b'; ctx.font = 'bold ' + (r * 1.1) + 'px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText('$', cx, cy + 1);
       } else {
-        const icon = CarLogic.ITEMS[pk.kind].icon;
+        const icon = SubwayLogic.ITEMS[pk.kind].icon;
         ctx.font = (r * 2) + 'px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(icon, cx, cy);
       }
@@ -864,64 +1151,192 @@
     function drawTrail() {
       const eff = player.selectedEffect;
       for (const p of trailParticles) {
-        ctx.globalAlpha = Math.max(0, p.life) * (p.crash ? 1 : 0.7);
+        const burst = p.crash || p.board;
+        ctx.globalAlpha = Math.max(0, p.life) * (burst ? 1 : 0.7);
         if (p.crash) { p.x += (p.vx || 0) * 0.016; p.y += (p.vy || 0) * 0.016; ctx.fillStyle = '#ff5d8f'; }
+        else if (p.board) { p.x += (p.vx || 0) * 0.016; p.y += (p.vy || 0) * 0.016; p.vy += 6; ctx.fillStyle = '#9be8ff'; }
         else ctx.fillStyle = effectColor(eff, p.life);
-        ctx.beginPath(); ctx.arc(p.x, p.y, (p.crash ? 5 : 7) * Math.max(0.2, p.life), 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x, p.y, (burst ? 5 : 7) * Math.max(0.2, p.life), 0, Math.PI * 2); ctx.fill();
       }
       ctx.globalAlpha = 1;
     }
 
     function effectColor(eff, life) {
-      const def = (CarLogic.EFFECTS.find(e => e.id === eff) || {});
+      const def = (SubwayLogic.EFFECTS.find(e => e.id === eff) || {});
       if (!def.color) return 'rgba(76,201,240,0.6)';
       if (def.color === 'rainbow') { const h = (Date.now() / 6 + life * 200) % 360; return 'hsl(' + h + ',90%,60%)'; }
       return def.color;
     }
 
-    function drawCar() {
-      const sc = depthScale(CAR_PROGRESS);
-      const cx = laneX(carLane, CAR_PROGRESS);
-      const cy = screenY(CAR_PROGRESS);
-      const skin = CarLogic.SKINS.find(s => s.id === player.selectedSkin) || CarLogic.SKINS[0];
-      const w = 44 * sc, h = 64 * sc;
+    /* ── Reusable drawing helpers (work on any 2D context, for game + shop) ── */
+    function rPath(c, x, y, w, h, r) {
+      r = Math.max(0, Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2));
+      c.beginPath();
+      c.moveTo(x + r, y);
+      c.arcTo(x + w, y, x + w, y + h, r);
+      c.arcTo(x + w, y + h, x, y + h, r);
+      c.arcTo(x, y + h, x, y, r);
+      c.arcTo(x, y, x + w, y, r);
+      c.closePath();
+    }
+    /** Darken a #rrggbb hex by factor f (0..1). */
+    function shade(hex, f) {
+      f = f == null ? 0.78 : f;
+      if (typeof hex !== 'string' || hex[0] !== '#') return hex;
+      const n = parseInt(hex.slice(1), 16);
+      let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+      r = Math.round(r * f); g = Math.round(g * f); b = Math.round(b * f);
+      return 'rgb(' + r + ',' + g + ',' + b + ')';
+    }
 
-      // Passive trail (non-nitro) so equipped trails are visible while cruising.
-      if (running && player.selectedEffect !== 'none' && Math.random() < 0.4) {
-        trailParticles.push({ x: cx + (Math.random() - 0.5) * w * 0.5, y: cy + h * 0.5, life: 0.8 });
+    // Shared upper body (hoodie + backpack + neck + head) for every standing pose.
+    function paintTorsoHead(c, skin, sc, shoulderY, torsoW, torsoH, headCY, headR) {
+      const body = skin.body, accent = skin.accent, tone = skin.skin, hair = skin.hair || '#3a2417';
+      c.fillStyle = body; rPath(c, -torsoW / 2, shoulderY, torsoW, torsoH, 5 * sc); c.fill();
+      c.fillStyle = shade(body, 0.82);
+      c.beginPath(); c.ellipse(0, shoulderY + 3 * sc, torsoW * 0.32, 4 * sc, 0, 0, Math.PI * 2); c.fill(); // hood
+      c.fillStyle = accent;
+      rPath(c, -torsoW * 0.34, shoulderY + 4 * sc, torsoW * 0.68, torsoH * 0.74, 4 * sc); c.fill(); // backpack
+      c.strokeStyle = 'rgba(0,0,0,0.18)'; c.lineWidth = 1.4 * sc;
+      c.beginPath(); c.moveTo(-torsoW * 0.24, shoulderY + torsoH * 0.52); c.lineTo(torsoW * 0.24, shoulderY + torsoH * 0.52); c.stroke();
+      c.fillStyle = shade(accent, 0.8);
+      rPath(c, -torsoW * 0.3, shoulderY + 1 * sc, 2.6 * sc, torsoH * 0.46, 1.3 * sc); c.fill();
+      rPath(c, torsoW * 0.3 - 2.6 * sc, shoulderY + 1 * sc, 2.6 * sc, torsoH * 0.46, 1.3 * sc); c.fill();
+      c.fillStyle = tone; rPath(c, -2.6 * sc, shoulderY - 3 * sc, 5.2 * sc, 5 * sc, 2 * sc); c.fill(); // neck
+      c.fillStyle = tone; c.beginPath(); c.arc(0, headCY, headR, 0, Math.PI * 2); c.fill();
+      if (skin.cap) {
+        c.fillStyle = accent; c.beginPath(); c.arc(0, headCY + 1 * sc, headR, Math.PI, 0); c.fill();
+        c.fillStyle = shade(accent, 0.85); rPath(c, -headR, headCY, headR * 2, 2.4 * sc, 1 * sc); c.fill();
+      } else {
+        c.fillStyle = hair; c.beginPath(); c.arc(0, headCY - headR * 0.18, headR * 0.98, 0, Math.PI * 2); c.fill();
+      }
+    }
+
+    /**
+     * Paint a runner character (BACK view — we chase them down the track) at foot
+     * position (cx, footY), scaled by `sc`. Used by the game and the shop preview.
+     * opts: { pose:'run'|'jump'|'roll'|'ride'|'stumble'|'idle', t:seconds, rollU:0..1 }
+     */
+    function paintRunner(c, cx, footY, sc, skin, opts) {
+      opts = opts || {};
+      const pose = opts.pose || 'run';
+      const t = opts.t || 0;
+      const body = skin.body, accent = skin.accent, tone = skin.skin, hair = skin.hair || '#3a2417';
+      const pants = '#363b54';
+      c.save();
+      c.translate(cx, footY);
+      c.lineJoin = 'round'; c.lineCap = 'round';
+
+      // ROLL = a tucked forward somersault that spins through the roll's duration, so
+      // it reads as an actual roll under the barrier (low profile, rotating).
+      if (pose === 'roll') {
+        const u = opts.rollU || 0;
+        const R = 13 * sc;
+        c.translate(0, -R);
+        c.rotate(u * Math.PI * 2);               // one full forward roll
+        c.fillStyle = pants;                       // tucked legs / knees
+        rPath(c, -R * 0.15, R * 0.35, R * 0.6, R * 0.55, 3 * sc); c.fill();
+        c.fillStyle = accent;                      // shoe
+        rPath(c, R * 0.3, R * 0.5, R * 0.5, R * 0.38, 2 * sc); c.fill();
+        c.fillStyle = body;                        // curled torso
+        c.beginPath(); c.arc(0, 0, R, 0, Math.PI * 2); c.fill();
+        c.fillStyle = accent;                      // backpack on the back
+        c.beginPath(); c.arc(-R * 0.55, -R * 0.15, R * 0.5, 0, Math.PI * 2); c.fill();
+        c.fillStyle = skin.cap ? accent : hair;    // tucked head
+        c.beginPath(); c.arc(R * 0.55, R * 0.3, R * 0.46, 0, Math.PI * 2); c.fill();
+        c.restore(); return;
       }
 
-      ctx.save();
-      ctx.translate(cx, cy);
-      // Shadow.
-      ctx.fillStyle = 'rgba(0,0,0,0.35)';
-      ctx.beginPath(); ctx.ellipse(0, h * 0.42, w * 0.55, h * 0.12, 0, 0, Math.PI * 2); ctx.fill();
-      // Shield aura.
-      if (player.items.shield > 0 || shieldFlash > 0) {
-        ctx.strokeStyle = shieldFlash > 0 ? 'rgba(255,255,255,0.9)' : 'rgba(76,201,240,0.6)';
-        ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(0, 0, w * 0.8, h * 0.7, 0, 0, Math.PI * 2); ctx.stroke();
+      const legLen = 15 * sc, torsoH = 17 * sc, torsoW = 17 * sc, headR = 7 * sc;
+      const hipY = -legLen, shoulderY = hipY - torsoH, headCY = shoulderY - headR * 0.95;
+      const airborne = pose === 'jump';
+      const swing = (pose === 'run') ? Math.sin(t * 16) : 0;
+      const bob = (pose === 'run') ? -Math.abs(Math.cos(t * 16)) * 1.5 * sc : 0;
+      // Lean: balance sway while riding; recoil + shake while the board breaks.
+      const lean = pose === 'ride' ? Math.sin(t * 6) * 0.10
+        : pose === 'stumble' ? (-0.28 - Math.sin(t * 34) * 0.08) : 0;
+
+      c.save();
+      if (lean) c.rotate(lean);
+
+      function leg(side, ang, len) {
+        len = len || legLen;
+        c.save(); c.translate(side * 4.5 * sc, hipY + bob); c.rotate(ang);
+        c.fillStyle = pants; rPath(c, -3 * sc, 0, 6 * sc, len, 3 * sc); c.fill();
+        c.fillStyle = accent; rPath(c, -4 * sc, len - 4 * sc, 9 * sc, 6 * sc, 2.5 * sc); c.fill();
+        c.restore();
+      }
+      function arm(side, ang, len) {
+        len = len || torsoH * 0.8;
+        c.save(); c.translate(side * (torsoW * 0.5 - 1 * sc), shoulderY + 4 * sc + bob); c.rotate(ang);
+        c.fillStyle = body; rPath(c, -2.6 * sc, 0, 5.2 * sc, len, 2.6 * sc); c.fill();
+        c.fillStyle = tone; c.beginPath(); c.arc(0, len, 3 * sc, 0, Math.PI * 2); c.fill();
+        c.restore();
+      }
+
+      if (pose === 'ride') {
+        // Feet planted apart on the board, knees bent, arms out for balance.
+        leg(-1, 0.30, legLen * 0.8); leg(1, -0.30, legLen * 0.8);
+        arm(-1, 1.15, torsoH * 0.7); arm(1, -1.15, torsoH * 0.7);
+      } else if (airborne) {
+        leg(-1, -0.8); leg(1, -1.15);
+        arm(-1, -2.3); arm(1, 2.3);
+      } else if (pose === 'stumble') {
+        leg(-1, 0.35); leg(1, -0.15);
+        arm(-1, -2.1); arm(1, 2.1);              // arms flail up
+      } else { // run / idle
+        leg(-1, swing * 0.5); leg(1, -swing * 0.5);
+        arm(-1, swing * 0.5); arm(1, -swing * 0.5);
+      }
+
+      paintTorsoHead(c, skin, sc, shoulderY + bob, torsoW, torsoH, headCY + bob, headR);
+      c.restore(); // lean
+      c.restore(); // translate
+    }
+
+    /* ── The runner in the world: shadow, hoverboard, trail, then the character ── */
+    function drawRunner() {
+      const sc = depthScale(CAR_PROGRESS);
+      const cx = laneX(lane, CAR_PROGRESS);
+      const groundY = screenY(CAR_PROGRESS);
+      const skin = SubwayLogic.SKINS.find(s => s.id === player.selectedSkin) || SubwayLogic.SKINS[0];
+
+      const u = airTimeLeft > 0 ? 1 - airTimeLeft / JUMP_DUR : 0;
+      const jumpH = airTimeLeft > 0 ? Math.sin(Math.PI * u) * JUMP_PEAK * sc : 0;
+      const rolling = isRolling();
+      const baseY = groundY - elevation; // ground, or a train roof when riding
+
+      // Passive trail (equipped non-none) while moving.
+      if (running && player.selectedEffect !== 'none' && Math.random() < 0.4) {
+        trailParticles.push({ x: cx + (Math.random() - 0.5) * 16 * sc, y: baseY, life: 0.8 });
+      }
+
+      // Shadow shrinks as the runner jumps off the surface.
+      const shadowScale = 1 - Math.min(0.6, jumpH / (JUMP_PEAK * sc));
+      ctx.fillStyle = 'rgba(0,0,0,0.32)';
+      ctx.beginPath(); ctx.ellipse(cx, baseY + 2 * sc, 18 * sc * shadowScale, 5 * sc * shadowScale, 0, 0, Math.PI * 2); ctx.fill();
+
+      const footY = baseY - jumpH;
+
+      // Hoverboard glides under the feet only while DEPLOYED (not just owned).
+      if (hoverSec > 0 || shieldFlash > 0) {
+        ctx.save(); ctx.translate(cx, footY);
+        ctx.fillStyle = shieldFlash > 0 ? 'rgba(255,255,255,0.95)' : '#4cc9f0';
+        rPath(ctx, -20 * sc, 1 * sc, 40 * sc, 7 * sc, 3.5 * sc); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        rPath(ctx, -16 * sc, 2 * sc, 32 * sc, 2 * sc, 1 * sc); ctx.fill();
+        ctx.restore();
         if (shieldFlash > 0) shieldFlash -= 0.03;
       }
-      // Body.
-      ctx.fillStyle = skin.body;
-      roundRect(-w / 2, -h / 2, w, h, 8 * sc); ctx.fill();
-      // Cabin / window.
-      ctx.fillStyle = skin.window;
-      roundRect(-w * 0.32, -h * 0.28, w * 0.64, h * 0.34, 5 * sc); ctx.fill();
-      // Accent stripe.
-      ctx.fillStyle = skin.accent;
-      ctx.fillRect(-w * 0.08, -h / 2, w * 0.16, h);
-      // Wheels.
-      ctx.fillStyle = '#111';
-      roundRect(-w * 0.6, -h * 0.32, w * 0.18, h * 0.26, 3); ctx.fill();
-      roundRect(w * 0.42, -h * 0.32, w * 0.18, h * 0.26, 3); ctx.fill();
-      roundRect(-w * 0.6, h * 0.08, w * 0.18, h * 0.26, 3); ctx.fill();
-      roundRect(w * 0.42, h * 0.08, w * 0.18, h * 0.26, 3); ctx.fill();
-      // Headlights.
-      ctx.fillStyle = '#ffd166';
-      ctx.beginPath(); ctx.arc(-w * 0.28, -h * 0.46, 3 * sc, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(w * 0.28, -h * 0.46, 3 * sc, 0, Math.PI * 2); ctx.fill();
-      ctx.restore();
+
+      // Pose priority: stumble (board just broke) → roll → jump → ride (on board) → run.
+      const pose = hoverBreakSec > 0 ? 'stumble'
+        : rolling ? 'roll'
+        : airTimeLeft > 0 ? 'jump'
+        : hoverSec > 0 ? 'ride'
+        : 'run';
+      const rollU = rollTimeLeft > 0 ? 1 - rollTimeLeft / ROLL_DUR : 0;
+      paintRunner(ctx, cx, footY, sc * 1.15, skin, { pose: pose, t: elapsed, rollU: rollU });
     }
 
     function drawTint(color) { ctx.fillStyle = color; ctx.fillRect(0, 0, W, H); }
@@ -941,55 +1356,87 @@
     function refreshHud() {
       $('scoreVal').textContent = Math.max(score, Math.floor(distance));
       $('coinsVal').textContent = running ? coinsEarned : player.coins;
-      $('speedVal').textContent = Math.round(CarLogic.speedAt(difficulty, elapsed));
-      const best = parseInt(localStorage.getItem('carrace_best_' + playerName)) || 0;
+      $('speedVal').textContent = Math.round(SubwayLogic.speedAt(difficulty, elapsed));
+      const best = parseInt(localStorage.getItem('subway_best_' + playerName)) || 0;
       $('bestVal').textContent = best;
       $('startCoins').textContent = player.coins;
-      updateItemBadge();
+      updateItemBar();
     }
 
-    // The action button shows a power-up the player can trigger. Usable consumables
-    // (slow-mo, magnet) are preferred; shield is shown only when nothing else is in
-    // stock since it auto-activates on crash anyway.
-    let activeItemKind = 'slowmo';
-    const ITEM_BTN_PRIORITY = ['slowmo', 'magnet', 'shield'];
-    function updateItemBadge() {
-      if ((player.items[activeItemKind] || 0) <= 0) {
-        activeItemKind = ITEM_BTN_PRIORITY.find(k => (player.items[k] || 0) > 0) || 'slowmo';
-      }
-      const icon = CarLogic.ITEMS[activeItemKind].icon;
-      $('btnItem').childNodes[0].nodeValue = icon;
-      $('itemBadge').textContent = player.items[activeItemKind] || 0;
+    // Item bar: one numbered slot per power-up (1-4). Built once; counts/active state
+    // refreshed each frame. The player chooses what to use — nothing auto-fires.
+    function buildItemBar() {
+      $('itemBar').innerHTML = SubwayLogic.ITEM_ORDER.map((k, i) => {
+        const it = SubwayLogic.ITEMS[k];
+        return '<button class="item-slot" data-kind="' + k + '" title="' + it.name + ' — ' + it.desc + '">' +
+          '<span class="num">' + (i + 1) + '</span><span class="ic">' + it.icon + '</span><span class="cnt">0</span></button>';
+      }).join('');
+      $('itemBar').querySelectorAll('.item-slot').forEach(btn => {
+        btn.addEventListener('click', () => useItemKind(btn.dataset.kind));
+      });
+    }
+    function updateItemBar() {
+      const active = { shield: hoverSec > 0, slowmo: slowmoSec > 0, magnet: magnetSec > 0, doubler: doublerSec > 0 };
+      $('itemBar').querySelectorAll('.item-slot').forEach(btn => {
+        const k = btn.dataset.kind, cnt = player.items[k] || 0;
+        btn.querySelector('.cnt').textContent = cnt;
+        btn.classList.toggle('empty', cnt <= 0 && !active[k]);
+        btn.classList.toggle('active', !!active[k]);
+      });
     }
 
     /* ═══════════════════════════════ Input ═══════════════════════════════ */
-    function moveLeft()  { if (running && crashAnimSec <= 0 && carLane > 0) { carLane--; playSound('move'); } }
-    function moveRight() { if (running && crashAnimSec <= 0 && carLane < CarLogic.LANES - 1) { carLane++; playSound('move'); } }
-    function useItem() {
+    function moveLeft()  { if (running && crashAnimSec <= 0 && lane > 0) { lane--; playSound('move'); } }
+    function moveRight() { if (running && crashAnimSec <= 0 && lane < SubwayLogic.LANES - 1) { lane++; playSound('move'); } }
+    function jump() {
       if (!running || crashAnimSec > 0) return;
-      const k = activeItemKind;
-      if ((player.items[k] || 0) <= 0) return;
-      // Shield is a passive auto-save: it is consumed automatically on the next
-      // crash (see update()), so the action button does not spend it manually.
-      if (k === 'shield') { shieldFlash = 0.4; playSound('shield'); return; }
-      player.items[k]--; updateItemBadge();
-      if (k === 'slowmo') slowmoSec = 5;
-      else if (k === 'magnet') magnetSec = 6;
-      playSound('powerup');
+      if (airTimeLeft > 0) return;       // already in the air
+      rollTimeLeft = 0;                  // a jump cancels a roll
+      airTimeLeft = JUMP_DUR;
+      playSound('jump');
     }
+    function roll() {
+      if (!running || crashAnimSec > 0) return;
+      if (rollTimeLeft > 0) return;      // must finish the current roll before rolling again
+      airTimeLeft = 0;                   // air-dive: rolling mid-jump cancels the jump and drops you
+      rollTimeLeft = ROLL_DUR;
+      playSound('roll');
+    }
+    // Use a specific power-up by kind. Each press consumes one and activates its
+    // effect — including the hoverboard (deploy it, don't get it for free).
+    function useItemKind(kind) {
+      if (!running || crashAnimSec > 0) return;
+      if ((player.items[kind] || 0) <= 0) return;
+      if (kind === 'shield' && hoverSec > 0) return; // already riding one — don't waste it
+      player.items[kind]--;
+      if (kind === 'shield') { hoverSec = HOVER_DUR; playSound('shield'); }
+      else if (kind === 'slowmo') { slowmoSec = 5; playSound('powerup'); }
+      else if (kind === 'magnet') { magnetSec = 6; playSound('powerup'); }
+      else if (kind === 'doubler') { doublerSec = 8; playSound('powerup'); }
+      updateItemBar();
+    }
+    // Press 1/2/3/4 to use the matching item slot.
+    function useItemSlot(i) { const k = SubwayLogic.ITEM_ORDER[i]; if (k) useItemKind(k); }
 
     document.addEventListener('keydown', e => {
       switch (e.key) {
         case 'ArrowLeft': case 'a': case 'A': moveLeft(); e.preventDefault(); break;
         case 'ArrowRight': case 'd': case 'D': moveRight(); e.preventDefault(); break;
-        case ' ': case 'Enter': useItem(); e.preventDefault(); break;
+        case ' ': jump(); e.preventDefault(); break;                       // Space = jump
+        case 'ArrowDown': case 's': case 'S': roll(); e.preventDefault(); break;
+        case '1': useItemSlot(0); e.preventDefault(); break;
+        case '2': useItemSlot(1); e.preventDefault(); break;
+        case '3': useItemSlot(2); e.preventDefault(); break;
+        case '4': useItemSlot(3); e.preventDefault(); break;
       }
     });
     $('btnLeft').addEventListener('click', moveLeft);
     $('btnRight').addEventListener('click', moveRight);
-    $('btnItem').addEventListener('click', useItem);
+    $('btnJump').addEventListener('click', jump);
+    $('btnRoll').addEventListener('click', roll);
+    buildItemBar();
 
-    // Swipe controls on the canvas.
+    // Swipe controls on the canvas (left/right = lane, up = jump, down = roll).
     let touchX = 0, touchY = 0;
     canvas.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; touchY = e.touches[0].clientY; }, { passive: true });
     canvas.addEventListener('touchend', e => {
@@ -997,6 +1444,7 @@
       const dy = e.changedTouches[0].clientY - touchY;
       if (Math.abs(dx) < 20 && Math.abs(dy) < 20) return;
       if (Math.abs(dx) > Math.abs(dy)) { dx > 0 ? moveRight() : moveLeft(); }
+      else { dy > 0 ? roll() : jump(); }
     });
 
     /* ═══════════════════════════════ Screens ═══════════════════════════════ */
@@ -1012,7 +1460,7 @@
 
     // Show what the picked difficulty actually changes (speeds, spacing, coin multiplier).
     function updateDiffInfo() {
-      const d = CarLogic.getDifficulty(difficulty);
+      const d = SubwayLogic.getDifficulty(difficulty);
       $('diffInfo').innerHTML =
         'Start speed <b>' + d.baseSpeed + '</b> · ramp <b>+' + d.rampPerSec + '/s</b> · max <b>' + d.maxSpeed + '</b><br>' +
         'Row spacing <b>' + d.rowGap + '</b> · coins <b>×' + d.coinMult + '</b>';
@@ -1036,7 +1484,7 @@
     document.querySelectorAll('.diff-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         difficulty = btn.dataset.diff;
-        localStorage.setItem('carrace_diff', difficulty);
+        localStorage.setItem('subway_diff', difficulty);
         document.querySelectorAll('.diff-btn').forEach(b => b.classList.toggle('active', b === btn));
         updateDiffInfo();
       });
@@ -1058,17 +1506,26 @@
 
     function refreshShopUI() {
       $('shopCoins').textContent = player.coins;
-      // Skins
-      $('skinGrid').innerHTML = CarLogic.SKINS.map(s => {
+      // Runners (skins)
+      $('skinGrid').innerHTML = SubwayLogic.SKINS.map(s => {
         const owned = player.ownedSkins.includes(s.id);
         const selected = player.selectedSkin === s.id;
         const btn = selected ? '<button class="selected">Equipped</button>'
           : owned ? '<button data-act="equip-skin" data-id="' + s.id + '">Equip</button>'
           : '<button data-act="buy-skin" data-id="' + s.id + '"' + (player.coins < s.price ? ' disabled' : '') + '>🪙 ' + s.price + '</button>';
-        return '<div class="shop-card"><div class="swatch" style="background:linear-gradient(135deg,' + s.body + ',' + s.accent + ')"></div><div class="name">' + s.name + '</div>' + (owned ? '' : '<div class="price">🪙 ' + s.price + '</div>') + btn + '</div>';
+        return '<div class="shop-card"><canvas class="char-prev" data-skin="' + s.id + '" width="110" height="88"></canvas><div class="name">' + s.name + '</div>' + (owned ? '' : '<div class="price">🪙 ' + s.price + '</div>') + btn + '</div>';
       }).join('');
+      // Paint a live character preview into each skin card so you see who you're buying.
+      document.querySelectorAll('#skinGrid .char-prev').forEach(cv => {
+        const s = SubwayLogic.SKINS.find(x => x.id === cv.dataset.skin);
+        if (!s) return;
+        const c = cv.getContext('2d');
+        c.clearRect(0, 0, cv.width, cv.height);
+        c.fillStyle = 'rgba(255,255,255,0.05)'; rPath(c, 0, 0, cv.width, cv.height, 10); c.fill();
+        paintRunner(c, cv.width / 2, cv.height - 12, 1.45, s, { pose: 'idle', t: 0 });
+      });
       // Effects
-      $('effectGrid').innerHTML = CarLogic.EFFECTS.map(eff => {
+      $('effectGrid').innerHTML = SubwayLogic.EFFECTS.map(eff => {
         const owned = player.ownedEffects.includes(eff.id);
         const selected = player.selectedEffect === eff.id;
         const swatch = eff.color === 'rainbow' ? 'linear-gradient(90deg,red,orange,yellow,green,blue,violet)' : (eff.color || 'rgba(255,255,255,0.1)');
@@ -1078,11 +1535,11 @@
         return '<div class="shop-card"><div class="swatch" style="background:' + swatch + '"></div><div class="name">' + eff.name + '</div>' + (owned ? '' : '<div class="price">🪙 ' + eff.price + '</div>') + btn + '</div>';
       }).join('');
       // Items (consumables)
-      $('itemGrid').innerHTML = CarLogic.ITEM_ORDER.map(id => {
-        const it = CarLogic.ITEMS[id];
+      $('itemGrid').innerHTML = SubwayLogic.ITEM_ORDER.map(id => {
+        const it = SubwayLogic.ITEMS[id];
         return '<div class="shop-card"><div class="icon">' + it.icon + '</div><div class="name">' + it.name + '</div><div class="count">Owned: ' + (player.items[id] || 0) + '</div><div class="price">' + it.desc + '</div><button data-act="buy-item" data-id="' + id + '"' + (player.coins < it.price ? ' disabled' : '') + '>🪙 ' + it.price + '</button></div>';
       }).join('');
-      updateItemBadge();
+      updateItemBar();
     }
 
     // Event delegation for all shop buttons.
@@ -1091,35 +1548,35 @@
       if (!btn) return;
       const act = btn.dataset.act, id = btn.dataset.id;
       $('shopMsg').textContent = '';
-      if (act === 'equip-skin') { player.selectedSkin = id; await saveCarState(); refreshShopUI(); }
-      else if (act === 'equip-effect') { player.selectedEffect = id; await saveCarState(); refreshShopUI(); }
-      else if (act === 'buy-skin')   await purchaseCatalog(CarLogic.SKINS, id, 'skin');
-      else if (act === 'buy-effect') await purchaseCatalog(CarLogic.EFFECTS, id, 'effect');
+      if (act === 'equip-skin') { player.selectedSkin = id; await saveState(); refreshShopUI(); }
+      else if (act === 'equip-effect') { player.selectedEffect = id; await saveState(); refreshShopUI(); }
+      else if (act === 'buy-skin')   await purchaseCatalog(SubwayLogic.SKINS, id, 'skin');
+      else if (act === 'buy-effect') await purchaseCatalog(SubwayLogic.EFFECTS, id, 'effect');
       else if (act === 'buy-item')   await purchaseItem(id);
     });
 
     async function purchaseCatalog(catalog, id, type) {
       const ownedArr = type === 'skin' ? player.ownedSkins : player.ownedEffects;
-      const result = CarLogic.buyCatalogItem({ coins: player.coins, owned: ownedArr }, catalog, id);
+      const result = SubwayLogic.buyCatalogItem({ coins: player.coins, owned: ownedArr }, catalog, id);
       if (!result.ok) { $('shopMsg').textContent = result.reason === 'insufficient' ? 'Not enough coins.' : 'Cannot buy this.'; return; }
       const paid = await spendCoins(result.item.price);
       if (!paid) { $('shopMsg').textContent = 'Not enough coins.'; return; }
       if (type === 'skin') { player.ownedSkins = result.owned; player.selectedSkin = id; }
       else { player.ownedEffects = result.owned; player.selectedEffect = id; }
-      await saveCarState();
+      await saveState();
       $('shopMsg').style.color = '#34d399'; $('shopMsg').textContent = 'Purchased & equipped!';
       setTimeout(() => { $('shopMsg').style.color = '#f87171'; }, 1200);
       refreshShopUI();
     }
 
     async function purchaseItem(id) {
-      const result = CarLogic.buyItem(player.coins, id, 1);
+      const result = SubwayLogic.buyItem(player.coins, id, 1);
       if (!result.ok) { $('shopMsg').textContent = 'Not enough coins.'; return; }
-      const paid = await spendCoins(CarLogic.ITEMS[id].price);
+      const paid = await spendCoins(SubwayLogic.ITEMS[id].price);
       if (!paid) { $('shopMsg').textContent = 'Not enough coins.'; return; }
       player.items[id] = (player.items[id] || 0) + 1;
-      await saveCarState();
-      $('shopMsg').style.color = '#34d399'; $('shopMsg').textContent = CarLogic.ITEMS[id].name + ' bought!';
+      await saveState();
+      $('shopMsg').style.color = '#34d399'; $('shopMsg').textContent = SubwayLogic.ITEMS[id].name + ' bought!';
       setTimeout(() => { $('shopMsg').style.color = '#f87171'; }, 1200);
       refreshShopUI();
     }
@@ -1142,6 +1599,8 @@
         const now = ac.currentTime;
         const cfg = {
           move:    { type: 'square',   f: 320, f2: 380, dur: 0.06, vol: 0.06 },
+          jump:    { type: 'sine',     f: 380, f2: 760, dur: 0.14, vol: 0.10 },
+          roll:    { type: 'sine',     f: 500, f2: 220, dur: 0.14, vol: 0.10 },
           pass:    { type: 'sine',     f: 440, f2: 560, dur: 0.08, vol: 0.08 },
           near:    { type: 'sine',     f: 600, f2: 900, dur: 0.14, vol: 0.12 },
           coin:    { type: 'sine',     f: 700, f2: 1100, dur: 0.12, vol: 0.12 },

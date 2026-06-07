@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Test: Subway Dash logic</title>
+  <style>
+    body { font-family: monospace; background: #1a1a2e; color: #eee; padding: 20px; }
+    .pass { color: #34d399; }
+    .fail { color: #f87171; font-weight: bold; }
+    h2 { color: #a5b4fc; }
+    .summary { margin-top: 20px; padding: 10px; border-radius: 8px; font-size: 16px; }
+    .summary.all-pass { background: rgba(52,211,153,0.15); border: 1px solid #34d399; }
+    .summary.has-fail { background: rgba(248,113,113,0.15); border: 1px solid #f87171; }
+  </style>
+  <!-- Pull in the SAME pure logic the game uses, so tests stay in sync. -->
+  <script src="../games/subway/subway-logic.js"></script>
+</head>
+<body>
+  <h1>🧪 Subway Dash — Unit Tests</h1>
+  <div id="results"></div>
+  <div id="summary"></div>
+
+  <script>
+    let _passed = 0, _failed = 0;
+    const resultsEl = document.getElementById('results');
+    function assert(cond, msg) {
+      if (cond) { _passed++; resultsEl.innerHTML += '<div class="pass">✓ ' + msg + '</div>'; }
+      else { _failed++; resultsEl.innerHTML += '<div class="fail">✗ ' + msg + '</div>'; }
+    }
+    function section(t) { resultsEl.innerHTML += '<h2>' + t + '</h2>'; }
+    const S = SubwayLogic;
+
+    /* 1. Obstacle rows always leave a survivable safe lane (never a train there) */
+    section('1. Obstacle row generation');
+    (function () {
+      for (let n = 0; n < 300; n++) {
+        const row = S.makeObstacleRow(Math.random, undefined, S.DIFFICULTIES.hard);
+        assert(row.cells.length === S.LANES, 'Row has one cell per lane');
+        assert(row.safeLane >= 0 && row.safeLane < S.LANES, 'Safe lane within range');
+        assert(row.cells[row.safeLane] !== S.CELL.TRAIN, 'Safe lane is never an un-dodgeable train');
+      }
+    })();
+
+    /* 1b. Consecutive rows keep a reachable corridor (safe lane within ±1) */
+    section('1b. Reachable corridor between rows');
+    (function () {
+      let prev = 1; // start in the middle
+      for (let n = 0; n < 300; n++) {
+        const row = S.makeObstacleRow(Math.random, prev, S.DIFFICULTIES.hard);
+        assert(Math.abs(row.safeLane - prev) <= 1, 'New safe lane ' + row.safeLane + ' reachable from ' + prev);
+        prev = row.safeLane;
+      }
+    })();
+
+    /* 1c. Safe lane is always survivable from the right state */
+    section('1c. Safe lane is always survivable');
+    (function () {
+      for (let n = 0; n < 300; n++) {
+        const row = S.makeObstacleRow(Math.random, undefined, S.DIFFICULTIES.hard);
+        const ln = row.safeLane;
+        const survivable =
+          !S.isCrash(row, ln, { airborne: false, rolling: false }) || // clear lane
+          !S.isCrash(row, ln, { airborne: true,  rolling: false }) || // jump a low
+          !S.isCrash(row, ln, { airborne: false, rolling: true });    // roll a high
+        assert(survivable, 'Safe lane survivable with at most one action');
+      }
+    })();
+
+    /* 2. Crash detection respects jump / roll / train */
+    section('2. Crash detection (jump / roll / train)');
+    (function () {
+      const low   = { cells: [S.CELL.LOW, null, null], safeLane: 1 };
+      const high  = { cells: [S.CELL.HIGH, null, null], safeLane: 1 };
+      const train = { cells: [S.CELL.TRAIN, null, null], safeLane: 1 };
+      // Clear lane is always safe.
+      assert(S.isCrash(low, 1, {}) === false, 'Empty lane never crashes');
+      // Low barrier: must be airborne.
+      assert(S.isCrash(low, 0, { airborne: false }) === true, 'Low barrier hits a grounded runner');
+      assert(S.isCrash(low, 0, { airborne: true }) === false, 'Jumping clears a low barrier');
+      assert(S.isCrash(low, 0, { rolling: true }) === true, 'Rolling does NOT clear a low barrier');
+      // High barrier: rolling under OR jumping over both clear it.
+      assert(S.isCrash(high, 0, { rolling: false, airborne: false }) === true, 'High barrier hits a standing runner');
+      assert(S.isCrash(high, 0, { rolling: true }) === false, 'Rolling clears a high barrier');
+      assert(S.isCrash(high, 0, { airborne: true }) === false, 'Jumping also clears a high barrier');
+      // Train: you must be RIDING it (onTrain). Being airborne but not yet on it (the
+      // shell boards you at the front) is still a crash in the pure state check.
+      assert(S.isCrash(train, 0, { airborne: false }) === true, 'Train hits a runner who is not on it');
+      assert(S.isCrash(train, 0, { airborne: true }) === true, 'Airborne but not on the train still crashes');
+      assert(S.isCrash(train, 0, { onTrain: true }) === false, 'Riding the train roof is safe');
+      assert(S.isCrash(train, 1, { airborne: false }) === false, 'Train in another lane is safe');
+    })();
+
+    /* 3. Near-miss detection */
+    section('3. Near-miss detection');
+    (function () {
+      // Cleared an obstacle in your own lane = near miss.
+      const low = { cells: [S.CELL.LOW, null, null], safeLane: 1 };
+      assert(S.isNearMiss(low, 0, { airborne: true }) === true, 'Jumping a low barrier in-lane is a near miss');
+      assert(S.isNearMiss(low, 0, { airborne: false }) === false, 'A crash is never a near miss');
+      // Train in an adjacent lane = near miss.
+      const adj = { cells: [S.CELL.TRAIN, null, null], safeLane: 1 };
+      assert(S.isNearMiss(adj, 1, {}) === true, 'Passing next to a train is a near miss');
+      assert(S.isNearMiss(adj, 2, {}) === false, 'Two lanes away from the only obstacle is not a near miss');
+      // Totally empty row = no near miss.
+      const empty = { cells: [null, null, null], safeLane: 1 };
+      assert(S.isNearMiss(empty, 1, {}) === false, 'Empty row is not a near miss');
+    })();
+
+    /* 4. Speed ramps up over time and respects difficulty + cap */
+    section('4. Speed ramp & difficulty');
+    (function () {
+      const e0 = S.speedAt('normal', 0);
+      const e10 = S.speedAt('normal', 10);
+      assert(e10 > e0, 'Speed increases with elapsed time');
+      assert(S.speedAt('hard', 5) > S.speedAt('easy', 5), 'Hard is faster than Easy at same time');
+      const capped = S.speedAt('normal', 100000);
+      assert(capped === S.DIFFICULTIES.normal.maxSpeed, 'Speed never exceeds maxSpeed');
+      assert(S.speedAt('normal', -5) === S.DIFFICULTIES.normal.baseSpeed, 'Negative time clamps to baseSpeed');
+      assert(S.getDifficulty('does-not-exist').id === 'normal', 'Unknown difficulty falls back to normal');
+    })();
+
+    /* 5. Coin rewards scale with difficulty and near-miss */
+    section('5. Coin & score rewards');
+    (function () {
+      assert(S.coinsForPass('hard', false) >= S.coinsForPass('easy', false), 'Hard pays >= Easy');
+      assert(S.coinsForPass('normal', true) > S.coinsForPass('normal', false), 'Near-miss pays more coins');
+      assert(S.coinsForPass('easy', false) >= 0, 'Coins never negative');
+      assert(S.scoreForPass(true) > S.scoreForPass(false), 'Near-miss scores more points');
+    })();
+
+    /* 6. Buying skins / effects (pure) */
+    section('6. Catalog purchases');
+    (function () {
+      const buyable = S.SKINS.find(s => s.price > 0);
+      let r = S.buyCatalogItem({ coins: 0, owned: ['classic'] }, S.SKINS, buyable.id);
+      assert(r.ok === false && r.reason === 'insufficient', 'Cannot buy without enough coins');
+      r = S.buyCatalogItem({ coins: buyable.price + 50, owned: ['classic'] }, S.SKINS, buyable.id);
+      assert(r.ok === true, 'Buy succeeds with enough coins');
+      assert(r.coins === 50, 'Coins deducted correctly');
+      assert(r.owned.indexOf(buyable.id) !== -1, 'New skin added to owned');
+      const r2 = S.buyCatalogItem({ coins: 999, owned: [buyable.id] }, S.SKINS, buyable.id);
+      assert(r2.ok === false && r2.reason === 'owned', 'Cannot re-buy an owned item');
+      const r3 = S.buyCatalogItem({ coins: 999, owned: [] }, S.SKINS, 'nope');
+      assert(r3.ok === false && r3.reason === 'not_found', 'Unknown skin rejected');
+    })();
+
+    /* 7. Buying consumable power-up items (pure) */
+    section('7. Power-up item purchases');
+    (function () {
+      const price = S.ITEMS.shield.price;
+      let r = S.buyItem(price - 1, 'shield', 1);
+      assert(r.ok === false && r.reason === 'insufficient', 'Cannot buy item without enough coins');
+      r = S.buyItem(price * 3, 'shield', 2);
+      assert(r.ok === true, 'Buying 2 hoverboards succeeds');
+      assert(r.coins === price * 3 - price * 2, 'Bulk cost deducted correctly');
+      assert(r.qty === 2, 'Quantity returned');
+      const r2 = S.buyItem(999, 'bogus', 1);
+      assert(r2.ok === false && r2.reason === 'not_found', 'Unknown item rejected');
+    })();
+
+    // Summary
+    const sum = document.getElementById('summary');
+    sum.className = 'summary ' + (_failed === 0 ? 'all-pass' : 'has-fail');
+    sum.textContent = _failed === 0
+      ? '✅ All ' + _passed + ' tests passed!'
+      : '❌ ' + _failed + ' failed, ' + _passed + ' passed.';
+  </script>
+</body>
+</html>
