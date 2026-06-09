@@ -135,6 +135,50 @@
       return choice;
     }
 
+    // Draw all floor drops for the current layer — glow ring + sparkles + item (亮眼).
+    function drawFloorDrops(ctx, rw, rh, t) {
+      const drops = (roomData.petDrops || []);
+      const glowFor = { common: '#5bc0ff', rare: '#b06bff', epic: '#ffd23d', coins: '#ffcf4d' };
+      for (const dr of drops) {
+        if (dr.layer !== currentLayer) continue;
+        const px = dr.x * rw;
+        const bob = Math.sin(t / 400 + (dr.x + dr.y) * 10) * 4;
+        const py = dr.y * rh + bob;
+        const rarity = dr.kind === 'coins' ? 'coins' : (dr.pieceIdx < 3 ? 'common' : dr.pieceIdx < 6 ? 'rare' : 'epic');
+        const glow = glowFor[rarity] || '#ffcf4d';
+        const pulse = 0.6 + 0.4 * Math.sin(t / 300);
+        // Glow halo
+        ctx.save();
+        ctx.globalAlpha = 0.4 * pulse;
+        const grd = ctx.createRadialGradient(px, py, 2, px, py, 24);
+        grd.addColorStop(0, glow);
+        grd.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = grd;
+        ctx.beginPath(); ctx.arc(px, py, 24, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+        // Orbiting sparkles
+        ctx.save();
+        ctx.fillStyle = glow;
+        ctx.globalAlpha = 0.85;
+        for (let i = 0; i < 3; i++) {
+          const a = t / 500 + i * 2.1;
+          ctx.beginPath();
+          ctx.arc(px + Math.cos(a) * 16, py + Math.sin(a) * 10, 1.7, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+        // The item itself
+        const pieces = PET_COLLECTIBLES[dr.petType];
+        const emoji = dr.kind === 'coins' ? '💰' : (pieces && pieces[dr.pieceIdx] ? pieces[dr.pieceIdx].emoji : '🎁');
+        ctx.save();
+        ctx.font = '20px serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(emoji, px, py);
+        ctx.restore();
+      }
+    }
+
     function startPetAnimation(pets) {
       cancelAnimationFrame(petAnimFrame);
       const cvs = document.getElementById('petCanvas');
@@ -252,6 +296,17 @@
         const rect = cvs.getBoundingClientRect();
         const clickX = (e.clientX - rect.left) / rect.width;
         const clickY = (e.clientY - rect.top) / rect.height;
+        // Collecting a floor drop takes priority — but only when not feeding/playing.
+        if (viewingUid === currentUid && !selectedFood && !selectedToy && !selectedDrink && roomData.petDrops && roomData.petDrops.length) {
+          let hitDrop = null, hitDist = Infinity;
+          for (const dr of roomData.petDrops) {
+            if (dr.layer !== currentLayer) continue;
+            const dx = dr.x - clickX, dy = dr.y - clickY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 0.06 && dist < hitDist) { hitDist = dist; hitDrop = dr; }
+          }
+          if (hitDrop) { collectDrop(hitDrop.id); e.stopPropagation(); return; }
+        }
         let closestPet = null;
         let closestDist = Infinity;
         for (const p of pets) {
@@ -492,6 +547,7 @@
           }
         } catch(e) { ctx.restore(); } }
 
+        drawFloorDrops(ctx, rw, rh, t);
         petAnimFrame = requestAnimationFrame(frame);
       }
       petAnimFrame = requestAnimationFrame(frame);
