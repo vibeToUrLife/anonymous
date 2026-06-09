@@ -135,17 +135,19 @@
       return choice;
     }
 
+    // Rarity → glow color for floor drops (shared by the 九宫格 grid renderer).
+    const DROP_GLOW = { common: '#5bc0ff', rare: '#b06bff', epic: '#ffd23d', coins: '#ffcf4d' };
+
     // Draw all floor drops for the current layer — glow ring + sparkles + item (亮眼).
     function drawFloorDrops(ctx, rw, rh, t) {
       const drops = (roomData.petDrops || []);
-      const glowFor = { common: '#5bc0ff', rare: '#b06bff', epic: '#ffd23d', coins: '#ffcf4d' };
       for (const dr of drops) {
         if (dr.layer !== currentLayer) continue;
         const px = dr.x * rw;
         const bob = Math.sin(t / 400 + (dr.x + dr.y) * 10) * 4;
         const py = dr.y * rh + bob;
-        const rarity = dr.kind === 'coins' ? 'coins' : (dr.pieceIdx < 3 ? 'common' : dr.pieceIdx < 6 ? 'rare' : 'epic');
-        const glow = glowFor[rarity] || '#ffcf4d';
+        const rarity = dr.kind === 'coins' ? 'coins' : rarityOf(dr.pieceIdx);
+        const glow = DROP_GLOW[rarity] || '#ffcf4d';
         const pulse = 0.6 + 0.4 * Math.sin(t / 300);
         // Glow halo
         ctx.save();
