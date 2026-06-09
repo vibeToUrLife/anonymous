@@ -569,6 +569,7 @@
       }
       _selectedPetId = null;
       document.getElementById('petStatusBar').style.display = 'none';
+      closePetCollection(); // never leave the collection modal orphaned
     }
 
     function updatePetStatusBar() {
