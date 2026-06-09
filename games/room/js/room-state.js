@@ -1,7 +1,7 @@
 ﻿    /* ═══════════════════════════════
        State
        ═══════════════════════════════ */
-    let roomData = { coins: 0, pets: [], plant: null, plantLevels: {}, plantPosition: null, ownedPlants: [], ownedDecors: [], placedDecors: [], ownedWalls: ['wall_default'], wallPattern: 'wall_default', ownedWindows: ['win_none','win_classic'], windowStyle: 'win_classic', ownedFloors: ['floor_wood'], floorStyle: 'floor_wood', ownedAccessories: [], displayName: '', lastCoinCollect: 0, loginStreak: 0, lastLoginDay: '', achievements: [], gachaPulls: 0, giftsGiven: 0, giftsReceived: 0, jukeboxTrack: null, jukeboxVol: 0.5, unlockedLayers: 1, layerData: {} };
+    let roomData = { coins: 0, petDrops: [], petCollections: {}, pets: [], plant: null, plantLevels: {}, plantPosition: null, ownedPlants: [], ownedDecors: [], placedDecors: [], ownedWalls: ['wall_default'], wallPattern: 'wall_default', ownedWindows: ['win_none','win_classic'], windowStyle: 'win_classic', ownedFloors: ['floor_wood'], floorStyle: 'floor_wood', ownedAccessories: [], displayName: '', lastCoinCollect: 0, loginStreak: 0, lastLoginDay: '', achievements: [], gachaPulls: 0, giftsGiven: 0, giftsReceived: 0, jukeboxTrack: null, jukeboxVol: 0.5, unlockedLayers: 1, layerData: {} };
     // Active layer (1–3) and view mode — local UI state, NOT saved to Firestore
     let currentLayer = 1;
     let isOutsideView = false;
@@ -46,11 +46,10 @@
       if (d.pets && d.pets.length) {
         // Migrate from active (boolean) to layer (number) if needed
         return d.pets.map(p => {
-          if (p.layer === undefined) {
-            // Old format: active boolean → assign to layer 1 if active, null if not
-            return { ...p, layer: p.active ? 1 : null };
-          }
-          return p;
+          const withLayer = (p.layer === undefined)
+            ? { ...p, layer: p.active ? 1 : null }
+            : p;
+          return { lastDropDay: '', pendingDrops: 0, ...withLayer };
         });
       }
       const pets = [];
@@ -65,7 +64,9 @@
           affection: (d.petAffection && d.petAffection[type]) ?? 0,
           color: (d.petColors && d.petColors[type]) || null,
           layer: layer,
-          accessory: (d.petAccessories && d.petAccessories[type]) || null
+          accessory: (d.petAccessories && d.petAccessories[type]) || null,
+          lastDropDay: '',
+          pendingDrops: 0
         });
       };
       if (d.pet) addPet(d.pet, 1);

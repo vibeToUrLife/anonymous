@@ -17,7 +17,9 @@
           hunger: 100, thirst: 100, affection: 0,
           color: PET_COLORS[id] ? PET_COLORS[id][0].key : null,
           layer: layerPetCount < MAX_PETS_PER_LAYER ? currentLayer : null, // Auto-place on current floor if space
-          accessory: null
+          accessory: null,
+          lastDropDay: '',
+          pendingDrops: 0
         };
         roomData.pets.push(newPet);
         await saveRoom();
