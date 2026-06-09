@@ -282,6 +282,14 @@
       { id: 'rug_gold',     emoji: '🟡', name: 'Gold Rug',       cost: 500,  category: 'rug',   dx: 0.38,  dy: 0.82 },
       { id: 'rug_galaxy',   emoji: '🌌', name: 'Galaxy Rug',     cost: 600,  category: 'rug',   dx: 0.38,  dy: 0.82 },
       { id: 'rug_heart',    emoji: '❤️', name: 'Heart Rug',       cost: 350,  category: 'rug',   dx: 0.38,  dy: 0.82 },
+      // Unlock-only: granted when a pet type's 九宫格 collection is completed. Not buyable.
+      { id: 'decor_cat_throne',        emoji: '👑', name: 'Royal Cat Throne',    cost: 0, category: 'floor', dx: 0.30, dy: 0.82, unlockOnly: true },
+      { id: 'decor_dog_doghouse',      emoji: '🏠', name: 'Champion Doghouse',   cost: 0, category: 'floor', dx: 0.70, dy: 0.82, unlockOnly: true },
+      { id: 'decor_bunny_garden',      emoji: '🌻', name: 'Bunny Garden',        cost: 0, category: 'floor', dx: 0.20, dy: 0.86, unlockOnly: true },
+      { id: 'decor_hamster_playground',emoji: '🎡', name: 'Hamster Playground',  cost: 0, category: 'floor', dx: 0.55, dy: 0.84, unlockOnly: true },
+      { id: 'decor_fox_den',           emoji: '🏕️', name: 'Mystic Fox Den',      cost: 0, category: 'floor', dx: 0.78, dy: 0.80, unlockOnly: true },
+      { id: 'decor_panda_garden',      emoji: '🎋', name: 'Bamboo Garden',       cost: 0, category: 'floor', dx: 0.40, dy: 0.80, unlockOnly: true },
+      { id: 'decor_goose_pond',        emoji: '⛲', name: 'Goose Pond',          cost: 0, category: 'floor', dx: 0.62, dy: 0.88, unlockOnly: true },
     ];
 
     const WALL_PATTERNS = [

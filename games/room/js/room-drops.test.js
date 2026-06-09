@@ -120,3 +120,25 @@ test('milestoneProgress returns 0 for degenerate milestone tables', () => {
   assert.strictEqual(D.milestoneProgress(500, [{ min: 0 }]), 0); // n<=1 guard
   assert.strictEqual(D.milestoneProgress(500, []), 0);
 });
+
+const TYPES = ['cat','dog','bunny','hamster','fox','panda','goose'];
+
+test('PET_COLLECTIBLES has exactly 9 pieces with emoji+name for every type', () => {
+  for (const t of TYPES) {
+    const arr = D.PET_COLLECTIBLES[t];
+    assert.ok(Array.isArray(arr), 'missing collectibles for ' + t);
+    assert.strictEqual(arr.length, 9, t + ' must have 9 pieces');
+    for (const pc of arr) {
+      assert.ok(pc.emoji && typeof pc.emoji === 'string', t + ' piece needs emoji');
+      assert.ok(pc.name && typeof pc.name === 'string', t + ' piece needs name');
+    }
+  }
+});
+
+test('PET_COLLECTION_DECOR maps every type to a unique decor id', () => {
+  const ids = TYPES.map(t => D.PET_COLLECTION_DECOR[t]);
+  for (let i = 0; i < TYPES.length; i++) {
+    assert.ok(ids[i] && typeof ids[i] === 'string', 'missing decor for ' + TYPES[i]);
+  }
+  assert.strictEqual(new Set(ids).size, ids.length, 'decor ids must be unique');
+});

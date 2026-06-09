@@ -1510,7 +1510,7 @@
     }
 
     function _renderDecorGrid(targetEl, filterCat) {
-        const items = DECORATIONS.filter(d => d.category === filterCat);
+        const items = DECORATIONS.filter(d => d.category === filterCat && !d.unlockOnly);
         targetEl.innerHTML = items.map(item => {
           const isOwned = roomData.ownedDecors.includes(item.id);
           const isPlaced = roomData.placedDecors.some(d => d.id === item.id);

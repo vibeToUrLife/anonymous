@@ -99,8 +99,58 @@
     return { pets: updated, placements: placements };
   }
 
+  // 9 pieces per type. Order: idx 0-2 common, 3-5 rare, 6-8 epic.
+  const PET_COLLECTIBLES = {
+    cat: [
+      { emoji:'🐾', name:'Paw Print' }, { emoji:'🧶', name:'Yarn Scrap' }, { emoji:'🐟', name:'Fish Treat' },
+      { emoji:'🔔', name:'Silver Bell' }, { emoji:'🪶', name:'Teaser Feather' }, { emoji:'🥛', name:'Cream Bowl' },
+      { emoji:'👑', name:'Cat Crown' }, { emoji:'💎', name:'Gem Collar' }, { emoji:'🏆', name:'Mouser Trophy' },
+    ],
+    dog: [
+      { emoji:'🦴', name:'Bone' }, { emoji:'🎾', name:'Tennis Ball' }, { emoji:'🐾', name:'Muddy Paw' },
+      { emoji:'🦮', name:'Leash Badge' }, { emoji:'🥏', name:'Frisbee Medal' }, { emoji:'🍖', name:'Meaty Treat' },
+      { emoji:'🏅', name:'Best Boy Medal' }, { emoji:'💎', name:'Diamond Tag' }, { emoji:'👑', name:'Top Dog Crown' },
+    ],
+    bunny: [
+      { emoji:'🥕', name:'Carrot' }, { emoji:'🍀', name:'Clover' }, { emoji:'🐾', name:'Bunny Print' },
+      { emoji:'🌷', name:'Tulip' }, { emoji:'🔔', name:'Garden Bell' }, { emoji:'🥬', name:'Lettuce' },
+      { emoji:'🥚', name:'Golden Egg' }, { emoji:'💎', name:'Crystal Carrot' }, { emoji:'👑', name:'Bunny Crown' },
+    ],
+    hamster: [
+      { emoji:'🌰', name:'Acorn' }, { emoji:'🥜', name:'Peanut' }, { emoji:'🌻', name:'Seed' },
+      { emoji:'🎡', name:'Wheel Token' }, { emoji:'🧀', name:'Cheese Bit' }, { emoji:'🪵', name:'Chew Stick' },
+      { emoji:'💎', name:'Gem Stash' }, { emoji:'👑', name:'Hamster Crown' }, { emoji:'🏆', name:'Hoarder Trophy' },
+    ],
+    fox: [
+      { emoji:'🍂', name:'Autumn Leaf' }, { emoji:'🐾', name:'Fox Track' }, { emoji:'🫐', name:'Wild Berry' },
+      { emoji:'🍄', name:'Mushroom' }, { emoji:'🔥', name:'Ember' }, { emoji:'🌙', name:'Moonstone Sliver' },
+      { emoji:'💎', name:'Fox Gem' }, { emoji:'👑', name:'Sly Crown' }, { emoji:'✨', name:'Spirit Flame' },
+    ],
+    panda: [
+      { emoji:'🎋', name:'Bamboo Shoot' }, { emoji:'🍃', name:'Leaf' }, { emoji:'🐾', name:'Panda Print' },
+      { emoji:'🍡', name:'Dango' }, { emoji:'🏮', name:'Lantern' }, { emoji:'🎍', name:'Bamboo Stalk' },
+      { emoji:'💎', name:'Jade Stone' }, { emoji:'👑', name:'Panda Crown' }, { emoji:'🏆', name:'Zen Trophy' },
+    ],
+    goose: [
+      { emoji:'🪶', name:'Down Feather' }, { emoji:'🌾', name:'Wheat' }, { emoji:'🥖', name:'Bread Crust' },
+      { emoji:'🍞', name:'Fresh Loaf' }, { emoji:'🔔', name:'Honk Bell' }, { emoji:'🥨', name:'Pretzel' },
+      { emoji:'💎', name:'Goose Gem' }, { emoji:'👑', name:'Goose Crown' }, { emoji:'🥚', name:'Golden Goose Egg' },
+    ],
+  };
+
+  const PET_COLLECTION_DECOR = {
+    cat:     'decor_cat_throne',
+    dog:     'decor_dog_doghouse',
+    bunny:   'decor_bunny_garden',
+    hamster: 'decor_hamster_playground',
+    fox:     'decor_fox_den',
+    panda:   'decor_panda_garden',
+    goose:   'decor_goose_pond',
+  };
+
   return {
     rarityOf, milestoneProgress, pieceProbabilities, rollPieceIndex,
     classifyDrop, dropCoinValue, daysBetween, planTopUp,
+    PET_COLLECTIBLES, PET_COLLECTION_DECOR,
   };
 });
