@@ -638,6 +638,60 @@
           tricksBtns.innerHTML = '';
         }
       }
+
+      const cbtn = document.getElementById('petStatusCollectionBtn');
+      if (cbtn) {
+        const col = (roomData.petCollections && roomData.petCollections[pet.type]) || [];
+        const have = col.filter(Boolean).length;
+        cbtn.textContent = '🎁 Collection (' + have + '/9)';
+      }
+    }
+
+    function openPetCollection() {
+      const pet = getPet(_selectedPetId);
+      if (!pet) return;
+      _collectionOpenType = pet.type;
+      const modal = document.getElementById('petCollectionModal');
+      if (modal) modal.style.display = 'flex';
+      renderCollectionGrid(pet.type);
+    }
+
+    function closePetCollection() {
+      _collectionOpenType = null;
+      const modal = document.getElementById('petCollectionModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function renderCollectionGrid(type) {
+      const pieces = PET_COLLECTIBLES[type] || [];
+      const collected = (roomData.petCollections && roomData.petCollections[type]) || [];
+      const have = pieces.reduce((n, _, i) => n + (collected[i] ? 1 : 0), 0);
+      const petName = (PETS.find(p => p.id === type) || {}).name || type;
+      const titleEl = document.getElementById('petCollectionTitle');
+      if (titleEl) titleEl.textContent = '🎁 ' + petName + ' Collection (' + have + '/9)';
+      const gridEl = document.getElementById('petCollectionGrid');
+      if (gridEl) {
+        gridEl.innerHTML = pieces.map((pc, i) => {
+          const got = !!collected[i];
+          const border = got ? (DROP_GLOW[rarityOf(i)] || 'rgba(255,255,255,0.1)') : 'rgba(255,255,255,0.1)';
+          return '<div style="aspect-ratio:1;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;'
+            + 'border:1px solid ' + border + ';'
+            + 'background:' + (got ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.25)') + '">'
+            + '<div style="font-size:22px;' + (got ? '' : 'filter:grayscale(1);opacity:0.25') + '">' + (got ? pc.emoji : '❔') + '</div>'
+            + '<div style="font-size:8px;margin-top:2px;color:' + (got ? '#ddd' : '#666') + '">' + (got ? pc.name : '???') + '</div>'
+            + '</div>';
+        }).join('');
+      }
+      const decorId = PET_COLLECTION_DECOR[type];
+      const ddef = DECORATIONS.find(d => d.id === decorId);
+      const decorLabel = ddef ? ddef.emoji + ' ' + ddef.name : 'a special decoration';
+      const complete = pieces.length === 9 && pieces.every((_, i) => collected[i]);
+      const rewardEl = document.getElementById('petCollectionReward');
+      if (rewardEl) {
+        rewardEl.innerHTML = complete
+          ? '✨ Unlocked: ' + decorLabel + ' — place it from your decorations!'
+          : 'Complete all 9 to unlock: ' + decorLabel;
+      }
     }
 
     let _petNameTimer = null;

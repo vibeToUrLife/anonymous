@@ -81,6 +81,9 @@
             <div style="font-size:10px;color:rgba(255,255,255,0.5);margin-bottom:6px;text-align:center">🎪 Tricks</div>
             <div id="petStatusTricksBtns" style="display:flex;gap:5px;justify-content:center;flex-wrap:wrap"></div>
           </div>
+          <div id="petStatusCollectionWrap" style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.1);text-align:center">
+            <button id="petStatusCollectionBtn" onclick="openPetCollection()" style="font-size:11px;padding:6px 12px;border-radius:8px;cursor:pointer;border:1px solid rgba(255,210,61,0.35);background:rgba(255,210,61,0.12);color:#ffd23d">🎁 Collection</button>
+          </div>
         </div>
         <!-- Floor badge: click to view building exterior -->
         <div id="layerBadge" class="layer-badge" onclick="goOutside()" title="Outside View">🏠 My Room</div>
@@ -358,5 +361,15 @@
   <script src="room/js/room-weather.js"></script>
   <script src="room/js/room-gacha.js"></script>
   <script src="room/js/room-leaderboard.js"></script>
+  <div id="petCollectionModal" style="display:none;position:fixed;inset:0;z-index:60;background:rgba(0,0,0,0.6);align-items:center;justify-content:center" onclick="if(event.target===this)closePetCollection()">
+    <div style="background:#16162a;border:1px solid rgba(255,255,255,0.15);border-radius:16px;padding:18px;max-width:340px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span id="petCollectionTitle" style="font-weight:700;color:#fff;font-size:14px"></span>
+        <button onclick="closePetCollection()" style="background:none;border:none;color:#aaa;font-size:18px;cursor:pointer">✕</button>
+      </div>
+      <div id="petCollectionGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+      <div id="petCollectionReward" style="margin-top:14px;text-align:center;font-size:11px;color:#bbb;line-height:1.4"></div>
+    </div>
+  </div>
 </body>
 </html>
