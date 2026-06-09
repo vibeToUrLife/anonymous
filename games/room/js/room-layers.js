@@ -43,6 +43,9 @@
       _lastPetKey   = '';
       _lastPlantKey = '';
       renderAll();
+      // Pets on this floor accrue/place their daily drops when you arrive here
+      // (load only generates for floor 1; this covers floors 2-3).
+      maybeGenerateDailyDrops();
       if (doSave) saveRoom();
     }
 

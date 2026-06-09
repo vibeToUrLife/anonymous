@@ -851,6 +851,10 @@
       roomData.jukeboxTrack = d.jukeboxTrack ?? null;
       roomData.jukeboxVol = d.jukeboxVol ?? 0.5;
       roomData.ownedDecors = d.ownedDecors ?? [];
+      // Show the host's floor drops read-only (collection is blocked by the
+      // viewingUid===currentUid guard in the click handler).
+      roomData.petDrops = Array.isArray(d.petDrops) ? d.petDrops : [];
+      roomData.petCollections = d.petCollections || {};
       // Load multi-layer data for visited room (visitor starts on floor 1)
       roomData.unlockedLayers = d.unlockedLayers ?? 1;
       const rawLayerData = d.layerData ? JSON.parse(JSON.stringify(d.layerData)) : {};

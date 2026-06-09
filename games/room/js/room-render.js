@@ -1510,7 +1510,9 @@
     }
 
     function _renderDecorGrid(targetEl, filterCat) {
-        const items = DECORATIONS.filter(d => d.category === filterCat && !d.unlockOnly);
+        // Hide unlock-only collection rewards from the shop UNTIL they're earned;
+        // once owned they appear here so they can be placed (never shown as buyable).
+        const items = DECORATIONS.filter(d => d.category === filterCat && (!d.unlockOnly || roomData.ownedDecors.includes(d.id)));
         targetEl.innerHTML = items.map(item => {
           const isOwned = roomData.ownedDecors.includes(item.id);
           const isPlaced = roomData.placedDecors.some(d => d.id === item.id);
