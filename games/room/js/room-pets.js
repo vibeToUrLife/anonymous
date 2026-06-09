@@ -6,6 +6,93 @@
     let _selectedPetId = null; // Currently selected pet for status bar
     let _petDragCleanup = null; // Removes window drag listeners from a previous init
 
+    let _collectionOpenType = null; // pet type whose 九宫格 modal is open, or null
+
+    // Local calendar day as 'YYYY-MM-DD' (matches lastLoginDay convention).
+    function _todayStr() {
+      const d = new Date();
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+
+    // Accrue daily pending credits and place drops up to the 5-per-floor cap.
+    function maybeGenerateDailyDrops() {
+      if (viewingUid !== currentUid) return;          // only your own pets drop
+      if (!roomData.pets || !roomData.pets.length) return;
+      roomData.petDrops = roomData.petDrops || [];
+      roomData.petCollections = roomData.petCollections || {};
+      const today = _todayStr();
+      const layerPets = roomData.pets.filter(p => p.layer === currentLayer);
+      if (!layerPets.length) return;
+      const floorCount = roomData.petDrops.filter(dr => dr.layer === currentLayer).length;
+      const plan = planTopUp(
+        layerPets.map(p => ({ id: p.id, lastDropDay: p.lastDropDay, pendingDrops: p.pendingDrops })),
+        floorCount, today
+      );
+      let changed = false;
+      plan.pets.forEach(u => {
+        const pet = getPet(u.id);
+        if (!pet) return;
+        if (pet.lastDropDay !== u.lastDropDay || (pet.pendingDrops || 0) !== u.pendingDrops) changed = true;
+        pet.lastDropDay = u.lastDropDay;
+        pet.pendingDrops = u.pendingDrops;
+      });
+      for (const pl of plan.placements) {
+        const pet = getPet(pl.petId);
+        if (!pet) continue;
+        const m = milestoneProgress(pet.affection ?? 0, AFFECTION_MILESTONES);
+        const idx = rollPieceIndex(m);
+        const collected = roomData.petCollections[pet.type];
+        const cls = classifyDrop(idx, collected);
+        const coins = dropCoinValue(idx, m, cls.kind);
+        const ax = pet.posX != null ? pet.posX : 0.40;
+        const ay = pet.posY != null ? pet.posY : 0.85;
+        roomData.petDrops.push({
+          id: 'drop_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          petId: pet.id, petType: pet.type, layer: currentLayer,
+          kind: cls.kind, pieceIdx: cls.pieceIdx, coins: coins,
+          x: Math.max(0.06, Math.min(0.92, ax + (Math.random() - 0.5) * 0.10)),
+          y: Math.max(0.74, Math.min(0.90, ay + 0.02 + Math.random() * 0.04)),
+        });
+        changed = true;
+      }
+      if (changed) saveRoom();
+    }
+
+    // Collect a floor drop: award coins, fill the grid, unlock decoration on completion.
+    async function collectDrop(dropId) {
+      if (viewingUid !== currentUid) return;
+      const drops = roomData.petDrops || [];
+      const i = drops.findIndex(d => d.id === dropId);
+      if (i < 0) return;
+      const dr = drops[i];
+      drops.splice(i, 1);
+      roomData.coins = (roomData.coins || 0) + (dr.coins || 0);
+      let msg = '💰 +' + (dr.coins || 0) + ' coins';
+      if (dr.kind === 'piece') {
+        roomData.petCollections = roomData.petCollections || {};
+        let arr = roomData.petCollections[dr.petType];
+        if (!arr || arr.length !== 9) arr = [false, false, false, false, false, false, false, false, false];
+        arr[dr.pieceIdx] = true;
+        roomData.petCollections[dr.petType] = arr;
+        const piece = PET_COLLECTIBLES[dr.petType] && PET_COLLECTIBLES[dr.petType][dr.pieceIdx];
+        msg = (piece ? piece.emoji + ' ' + piece.name : 'New piece') + ' collected!  +' + (dr.coins || 0) + ' coins';
+        if (arr.every(Boolean)) {
+          const decorId = PET_COLLECTION_DECOR[dr.petType];
+          roomData.ownedDecors = roomData.ownedDecors || [];
+          if (decorId && !roomData.ownedDecors.includes(decorId)) {
+            roomData.ownedDecors.push(decorId);
+            const ddef = DECORATIONS.find(d => d.id === decorId);
+            showToast('🎉 ' + dr.petType + ' collection complete! Unlocked ' + (ddef ? ddef.emoji + ' ' + ddef.name : 'a special decoration') + '!', 'success');
+          }
+        }
+      }
+      showToast(msg, 'success');
+      maybeGenerateDailyDrops();        // pull a pending drop into the freed slot
+      await saveRoom();
+      if (_selectedPetId) updatePetStatusBar();
+      if (_collectionOpenType) renderCollectionGrid(_collectionOpenType);
+    }
+
     function getPetState(id, idx, petInst) {
       if (!petStates[id]) {
         // Start from the last dropped position if the pet was dragged before,

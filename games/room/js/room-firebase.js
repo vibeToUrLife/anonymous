@@ -196,6 +196,7 @@
             saveRoom();
           }
         }
+        maybeGenerateDailyDrops();
         _roomLoaded = true;
       } else {
         // New user — create room document
