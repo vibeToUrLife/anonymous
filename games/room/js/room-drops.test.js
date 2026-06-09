@@ -92,3 +92,31 @@ test('planTopUp places nothing when floor already full', () => {
   const r = D.planTopUp(pets, 5, '2026-06-09');
   assert.strictEqual(r.placements.length, 0);
 });
+
+test('planTopUp drains the most-pending pet first and leaves inputs unmutated', () => {
+  const pets = [
+    { id:'a', lastDropDay:'2026-06-09', pendingDrops:3 }, // already today -> no accrual
+    { id:'b', lastDropDay:'2026-06-09', pendingDrops:1 },
+  ];
+  const r = D.planTopUp(pets, 0, '2026-06-09');
+  // 4 pending total, floor cap 5 -> all 4 placed. 'a' stays strictly most-pending
+  // until exhausted, so it drains fully before 'b' gets a slot.
+  assert.deepStrictEqual(r.placements.map(p => p.petId), ['a', 'a', 'a', 'b']);
+  // Inputs must not be mutated (planTopUp returns fresh copies).
+  assert.strictEqual(pets[0].pendingDrops, 3);
+  assert.strictEqual(pets[1].pendingDrops, 1);
+});
+
+test('pieceProbabilities interpolates at mid-range m=0.5', () => {
+  const mid = D.pieceProbabilities(0.5);
+  assert.ok(Math.abs(mid.reduce((a,b)=>a+b,0) - 1) < 1e-9);
+  // Epics are the linear midpoint of EPIC_LOW and EPIC_HIGH.
+  assert.ok(Math.abs(mid[6] - (0.015 + 0.040) / 2) < 1e-9);
+  assert.ok(Math.abs(mid[7] - (0.010 + 0.030) / 2) < 1e-9);
+  assert.ok(Math.abs(mid[8] - (0.005 + 0.020) / 2) < 1e-9);
+});
+
+test('milestoneProgress returns 0 for degenerate milestone tables', () => {
+  assert.strictEqual(D.milestoneProgress(500, [{ min: 0 }]), 0); // n<=1 guard
+  assert.strictEqual(D.milestoneProgress(500, []), 0);
+});
