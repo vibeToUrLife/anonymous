@@ -201,6 +201,10 @@
       let _dragPetId = null;      // pet currently being dragged
       let _dragMoved = false;     // became a real drag (vs a click)
       let _dragSuppressClick = false;
+      let _dragStartX = 0, _dragStartY = 0;  // pointer-down spot (normalized)
+      // Finger jitter on a tap fires tiny touchmoves; stay a tap until the
+      // pointer clears this dead-zone, so taps aren't misread as drags on mobile.
+      const DRAG_THRESHOLD = 0.03;
 
       function _canvasPos(e) {
         const rect = cvs.getBoundingClientRect();
@@ -231,6 +235,7 @@
         if (!p) return;
         _dragPetId = p.id;
         _dragMoved = false;
+        _dragStartX = pos.x; _dragStartY = pos.y;
         // Keep the event off elements behind the canvas, but do NOT preventDefault
         // on touchstart — that cancels the synthetic 'click' we rely on for
         // tap-to-open-status on mobile. Native scroll/drag during an actual drag is
@@ -245,6 +250,10 @@
         if (!st) return;
         const pos = _canvasPos(e);
         if (!_dragMoved) {
+          // Below the dead-zone this is still a tap — let it through (and allow
+          // native scroll) until the finger clearly moves, then start dragging.
+          const dx = pos.x - _dragStartX, dy = pos.y - _dragStartY;
+          if (dx * dx + dy * dy < DRAG_THRESHOLD * DRAG_THRESHOLD) return;
           _dragMoved = true;
           st.dragging = true;
         }
