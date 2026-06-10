@@ -547,9 +547,10 @@
        so they apply ONLY when NOT in light-theme. Light mode is untouched.
        Border/shadow left non-!important so paid cosmetic frames still win. */
     body:not(.light-theme) .bubble {
-      --paper:#2a2318 !important;          /* dark kraft paper */
-      color:#ece4d2 !important;            /* light ink */
-      border-color:rgba(255,255,255,0.08);
+      --paper:#2e2214 !important;          /* same warm tone as the walnut board, lifted just enough to read as a note */
+      color:#f0e8d6 !important;            /* light ink */
+      border-color:rgba(255,228,194,0.12);
+      box-shadow:0 8px 18px rgba(0,0,0,0.5);
     }
     body:not(.light-theme) .bubble-footer { color:rgba(236,228,210,0.55) !important; }
     body:not(.light-theme) .reply-toggle,
