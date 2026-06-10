@@ -30,6 +30,7 @@
     let hunger = pet.hunger != null ? pet.hunger : target;
     let thirst = pet.thirst != null ? pet.thirst : target;
     let remaining = coins, spent = 0;
+    // Hunger takes funding priority when coins are tight; thirst draws from what's left.
     if (hunger <= threshold) {
       const c = statRefillCost(hunger, target, foodRate);
       if (remaining >= c) { remaining -= c; spent += c; hunger = target; }
@@ -49,6 +50,8 @@
     if (!(decay > 0)) {
       return { pets: pets.map(p => ({ hunger: p.hunger, thirst: p.thirst, affection: p.affection })), coinsSpent: 0 };
     }
+    // Each funded pet is billed a flat `decay` worth of food + drink (not its exact
+    // deficit) and topped to target — a pet kept fed all window consumed ~decay points.
     const petCost = Math.ceil(decay * foodRate + decay * drinkRate);
     let remaining = opts.coins, spent = 0;
     const out = pets.map(p => {
