@@ -727,7 +727,7 @@
         repeating-linear-gradient(90deg, rgba(0,0,0,.10) 0 1px, transparent 1px 23px),
         linear-gradient(180deg,#2b1f15,#221910);
     }
-    .panel-wrap.farm-mode .tabs,.panel-wrap.farm-mode .tab-panel{display:none}
+    .panel-wrap.farm-mode .tab-panel{display:none}
     .panel-wrap.farm-mode .farm-panel{display:block}
     .panel-wrap.farm-mode .panel-inner{background:transparent}
 

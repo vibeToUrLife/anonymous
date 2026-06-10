@@ -6,6 +6,7 @@
        Reuses the outside scene's sky/hills/fence drawers (shared globals).
        ═══════════════════════════════ */
     let isFarmView = false;
+    let _lastRoomTab = 'shop';   // header tab to restore when leaving the farm
     let _farmAnimFrame = null;
     let _farmTickInterval = null;
     let _farmAnimStates = {};   // ephemeral wander state per animal id (not saved)
@@ -122,14 +123,19 @@
     function _setFarmPanelMode(on) {
       const wrap = document.getElementById('panelWrap');
       if (wrap) wrap.classList.toggle('farm-mode', on);
-      const tabs = document.getElementById('tabsBar');
-      if (tabs) tabs.style.display = on ? 'none' : '';
+      // The farm is its own header tab now — keep the tab bar visible, just
+      // swap the tab panels for the farm panel and sync the active highlight.
       document.querySelectorAll('#panelWrap .tab-panel').forEach(p => { p.style.display = on ? 'none' : ''; });
       const fp = document.getElementById('farmPanel');
       if (fp) fp.style.display = on ? 'block' : 'none';
+      document.querySelectorAll('.tab-btn').forEach(b =>
+        b.classList.toggle('active', on ? b.dataset.tab === 'farm' : b.dataset.tab === _lastRoomTab));
     }
 
     function openFarm() {
+      // Remember which room tab to return to when the farm is closed.
+      const cur = document.querySelector('.tab-btn.active');
+      if (cur && cur.dataset.tab && cur.dataset.tab !== 'farm') _lastRoomTab = cur.dataset.tab;
       isFarmView = true;
       document.getElementById('farmView')?.classList.add('visible');
       _setFarmPanelMode(true);
