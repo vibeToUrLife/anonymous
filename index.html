@@ -542,6 +542,57 @@
     /* award / boost text on paper → warm brown (gold reads poorly on cream) */
     .bubble-award-givers, .award-toggle, .boost-toggle { color:#9a6a1e !important; }
 
+    /* ══ DARK MODE: paper notes become dark kraft with light ink ══════
+       Additive overrides — each is more specific than the light rule above,
+       so they apply ONLY when NOT in light-theme. Light mode is untouched.
+       Border/shadow left non-!important so paid cosmetic frames still win. */
+    body:not(.light-theme) .bubble {
+      --paper:#2a2318 !important;          /* dark kraft paper */
+      color:#ece4d2 !important;            /* light ink */
+      border-color:rgba(255,255,255,0.08);
+    }
+    body:not(.light-theme) .bubble-footer { color:rgba(236,228,210,0.55) !important; }
+    body:not(.light-theme) .reply-toggle,
+    body:not(.light-theme) .reply-to-reply-toggle { color:rgba(236,228,210,0.72) !important; }
+    body:not(.light-theme) .reply-toggle:hover,
+    body:not(.light-theme) .reply-to-reply-toggle:hover { color:#fff !important; background:rgba(255,255,255,0.08) !important; }
+    body:not(.light-theme) .replies-container { border-top-color:rgba(255,255,255,0.1) !important; }
+    body:not(.light-theme) .reply-item,
+    body:not(.light-theme) .replies-container > .reply-item {
+      color:#e7e0d0 !important; background:rgba(255,255,255,0.05) !important; border-color:rgba(255,255,255,0.08) !important;
+    }
+    body:not(.light-theme) .reply-item.is-nested { background:transparent !important; }
+    body:not(.light-theme) .reply-children { border-left-color:rgba(255,255,255,0.12) !important; }
+    body:not(.light-theme) .reply-time,
+    body:not(.light-theme) .reply-anon-text { color:rgba(236,228,210,0.42) !important; }
+    body:not(.light-theme) .answer-sender:not(.cos-name-rainbow),
+    body:not(.light-theme) .reply-sender:not(.cos-name-rainbow) { color:#f3ecdb; }
+    /* reaction chips on a dark note */
+    body:not(.light-theme) .bubble .reaction-btn { background:rgba(255,255,255,0.06) !important; border-color:rgba(255,255,255,0.14) !important; color:#e7e0d0 !important; }
+    body:not(.light-theme) .bubble .reaction-btn:hover { background:rgba(255,255,255,0.12) !important; border-color:rgba(255,255,255,0.24) !important; }
+    body:not(.light-theme) .bubble .reaction-add { border-color:rgba(255,255,255,0.2) !important; color:rgba(236,228,210,0.5) !important; }
+    body:not(.light-theme) .bubble .reaction-add:hover { background:rgba(255,255,255,0.08) !important; color:#fff !important; }
+    body:not(.light-theme) .bubble .bubble-hp { background:rgba(255,255,255,0.1) !important; border-color:rgba(255,255,255,0.14) !important; }
+    body:not(.light-theme) .bubble .bubble-hp-label { color:rgba(236,228,210,0.6) !important; }
+    /* a poll shown inside a dark note */
+    body:not(.light-theme) .bubble .poll-question { color:#f3ecdb !important; }
+    body:not(.light-theme) .bubble .poll-option-text { color:#e7e0d0 !important; }
+    body:not(.light-theme) .bubble .poll-option-row { background:rgba(255,255,255,0.05) !important; border-color:rgba(255,255,255,0.1) !important; }
+    body:not(.light-theme) .bubble .poll-vote-count,
+    body:not(.light-theme) .bubble .poll-total { color:rgba(236,228,210,0.5) !important; }
+    body:not(.light-theme) .bubble-award-givers,
+    body:not(.light-theme) .award-toggle,
+    body:not(.light-theme) .boost-toggle { color:#e0a64a !important; }
+    /* reply input row on a dark note */
+    body:not(.light-theme) .reply-input-row input {
+      background:rgba(255,255,255,0.06) !important; color:#ece4d2 !important; border-color:rgba(255,255,255,0.16) !important;
+    }
+    body:not(.light-theme) .reply-input-row input::placeholder { color:rgba(236,228,210,0.4) !important; }
+    /* daily quote — dark kraft card to match the notes */
+    body:not(.light-theme) .daily-quote-banner { background:#2a2318 !important; border-color:rgba(255,255,255,0.1) !important; }
+    body:not(.light-theme) .daily-quote-text { color:#ece4d2 !important; }
+    body:not(.light-theme) .daily-quote-label { color:#e0a64a !important; }
+
     /* Daily quote — a pinned kraft card */
     .daily-quote-banner {
       background:#fdf0c4 !important; border:1px solid rgba(0,0,0,0.1) !important;
