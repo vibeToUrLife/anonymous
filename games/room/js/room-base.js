@@ -178,6 +178,11 @@
       { id: 'boba',   emoji: '🧋', name: 'Boba',   cost: 280, restore: 100 },
     ];
 
+    // Auto-Feeder: one-time purchase that keeps all pets' hunger & thirst topped up.
+    const AUTO_FEEDER_COST = 2500;
+    const AUTOFEED_THRESHOLD = 50;  // refill a stat when it drops to/below this
+    const AUTOFEED_TARGET = 100;    // refill back up to this
+
     const AFFECTION_MILESTONES = [
       { min: 0,    title: 'Stranger',      reward: 0 },
       { min: 50,   title: 'Acquaintance',  reward: 20 },
