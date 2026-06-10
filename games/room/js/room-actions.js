@@ -855,6 +855,10 @@
       // viewingUid===currentUid guard in the click handler).
       roomData.petDrops = Array.isArray(d.petDrops) ? d.petDrops : [];
       roomData.petCollections = d.petCollections || {};
+      // Mirror the host's Auto-Feeder flags so a visit doesn't show our own state
+      // (auto-feed never runs while viewing — it's owner-gated).
+      roomData.autoFeeder = d.autoFeeder || false;
+      roomData.autoFeedOn = d.autoFeedOn || false;
       // Load multi-layer data for visited room (visitor starts on floor 1)
       roomData.unlockedLayers = d.unlockedLayers ?? 1;
       const rawLayerData = d.layerData ? JSON.parse(JSON.stringify(d.layerData)) : {};
