@@ -2765,11 +2765,20 @@ countdownRef.onSnapshot((snap) => {
 
 /* ── Cleanup: delete expired docs (runs once on each page load) ── */
 (async function cleanup() {
-    const expiredCutoff = Date.now() - SIX_HOURS;
+    const now = Date.now();
+    const expiredCutoff = now - SIX_HOURS;
     const expired = await answersRef.where('ts', '<=', expiredCutoff).get();
     const batch = db.batch();
-    expired.forEach((doc) => batch.delete(doc.ref));
-    if (!expired.empty) batch.commit();
+    let count = 0;
+    expired.forEach((doc) => {
+        // A paid pin (置顶) must survive past the 6h window until it actually
+        // expires — otherwise the 24h/6h/1h pin a user bought is deleted early.
+        const d = doc.data();
+        if (d.boostUntil && d.boostUntil > now) return;
+        batch.delete(doc.ref);
+        count++;
+    });
+    if (count) batch.commit();
 })();
 
 /* ═══════════════════════════════════════════
