@@ -141,59 +141,71 @@ function drawPigPet(ctx, s, lp, moving) {
 }
 
 function drawHorsePet(ctx, s, lp, moving) {
-  const coat = '#c98e57', coatDark = '#a87142', mane = '#5e3f26', muzzleCol = '#e6caa8';
-  ctx.lineCap = 'round';
+  // Proper horse proportions: one continuous body+neck+head silhouette (so no
+  // part can look detached), then legs, mane, tail and face layered on top.
+  const coat = '#b5814f', coatDark = '#946539', light = '#e8cda6', mane = '#523521', hoof = '#3a2a1a';
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
-  // Flowing tail
-  ctx.strokeStyle = mane; ctx.lineWidth = s * 0.12;
-  ctx.beginPath();
-  ctx.moveTo(-s * 0.44, -s * 0.05);
-  ctx.quadraticCurveTo(-s * 0.66, s * 0.08, -s * 0.55, s * 0.34);
-  ctx.stroke();
+  const sway = moving ? Math.sin(lp) * s * 0.05 : 0;
 
-  drawPetLegs(ctx, s, lp, moving, coatDark);
-
-  // Body
-  ctx.fillStyle = coat;
-  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.5, s * 0.32, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = 'rgba(255,245,225,0.25)';
-  ctx.beginPath(); ctx.ellipse(0, s * 0.13, s * 0.3, s * 0.1, 0, 0, Math.PI * 2); ctx.fill();
-
-  // Neck — thick rounded stroke rising from the shoulder to the head
-  ctx.strokeStyle = coat; ctx.lineWidth = s * 0.27;
-  ctx.beginPath();
-  ctx.moveTo(s * 0.24, -s * 0.02);
-  ctx.quadraticCurveTo(s * 0.46, -s * 0.22, s * 0.5, -s * 0.46);
-  ctx.stroke();
-
-  // Head — tilted oval with a cream muzzle pointing up-right
-  const hx = s * 0.55, hy = -s * 0.54;
-  ctx.fillStyle = coat;
-  ctx.beginPath(); ctx.ellipse(hx, hy, s * 0.18, s * 0.14, 0.5, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = muzzleCol;
-  ctx.beginPath(); ctx.ellipse(hx + s * 0.1, hy - s * 0.12, s * 0.085, s * 0.07, 0.5, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = coatDark;
-  ctx.beginPath(); ctx.arc(hx + s * 0.13, hy - s * 0.17, s * 0.016, 0, Math.PI * 2); ctx.fill();
-
-  // Ears
-  ctx.fillStyle = coat;
-  ctx.beginPath(); ctx.moveTo(hx - s * 0.08, hy - s * 0.1); ctx.lineTo(hx - s * 0.04, hy - s * 0.28); ctx.lineTo(hx + s * 0.05, hy - s * 0.14); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = coatDark;
-  ctx.beginPath(); ctx.moveTo(hx - s * 0.05, hy - s * 0.13); ctx.lineTo(hx - s * 0.03, hy - s * 0.23); ctx.lineTo(hx + s * 0.01, hy - s * 0.15); ctx.closePath(); ctx.fill();
-
-  // Mane — single smooth dark stroke down the crest of the neck
+  // ── Tail (behind everything) ──
   ctx.strokeStyle = mane; ctx.lineWidth = s * 0.11;
-  ctx.beginPath();
-  ctx.moveTo(hx - s * 0.06, hy - s * 0.04);
-  ctx.quadraticCurveTo(s * 0.34, -s * 0.30, s * 0.2, -s * 0.01);
-  ctx.stroke();
-  // Forelock between the ears
-  ctx.fillStyle = mane;
-  ctx.beginPath(); ctx.ellipse(hx - s * 0.02, hy - s * 0.12, s * 0.06, s * 0.045, 0.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-s * 0.5, -s * 0.18); ctx.quadraticCurveTo(-s * 0.66, s * 0.06 + sway, -s * 0.6, s * 0.42); ctx.stroke();
+  ctx.lineWidth = s * 0.06;
+  ctx.beginPath(); ctx.moveTo(-s * 0.5, -s * 0.16); ctx.quadraticCurveTo(-s * 0.56, s * 0.08 - sway, -s * 0.5, s * 0.40); ctx.stroke();
 
-  // Eye + blush
-  _farmEye(ctx, s, hx + s * 0.02, hy - s * 0.02);
-  _farmBlush(ctx, s, hx - s * 0.1, hy + s * 0.04);
+  // ── Legs (long; drawn before the body so the body covers their tops).
+  //    Kept well inside the barrel's x-range so none pokes past the body. ──
+  const lw = s * 0.085, legTop = s * 0.02, legBot = s * 0.5;
+  const sw = moving ? Math.sin(lp) * s * 0.035 : 0;
+  const legX = [s * 0.14 + sw, s * 0.0 - sw, -s * 0.26 - sw, -s * 0.38 + sw];
+  ctx.fillStyle = coatDark;
+  for (const x of legX) ctx.fillRect(x, legTop, lw, legBot - legTop);
+  ctx.fillStyle = hoof;
+  for (const x of legX) ctx.fillRect(x - s * 0.005, legBot - s * 0.05, lw + s * 0.01, s * 0.06);
+
+  // ── One continuous silhouette: rump → back → neck crest → poll → face →
+  //    muzzle → throat → chest → belly → back to rump ──
+  ctx.fillStyle = coat;
+  ctx.beginPath();
+  ctx.moveTo(-s * 0.46, -s * 0.18);                                   // rump top
+  ctx.quadraticCurveTo(-s * 0.2, -s * 0.34, s * 0.06, -s * 0.30);     // back to withers
+  ctx.quadraticCurveTo(s * 0.20, -s * 0.52, s * 0.30, -s * 0.64);     // up the neck crest
+  ctx.quadraticCurveTo(s * 0.40, -s * 0.70, s * 0.46, -s * 0.58);     // over the poll
+  ctx.quadraticCurveTo(s * 0.56, -s * 0.46, s * 0.56, -s * 0.36);     // down the face to the muzzle
+  ctx.quadraticCurveTo(s * 0.56, -s * 0.28, s * 0.46, -s * 0.30);     // muzzle underside
+  ctx.quadraticCurveTo(s * 0.36, -s * 0.32, s * 0.32, -s * 0.16);     // throat / jaw
+  ctx.quadraticCurveTo(s * 0.36, -s * 0.02, s * 0.36, s * 0.16);      // fuller chest (covers front legs)
+  ctx.quadraticCurveTo(s * 0.30, s * 0.26, s * 0.0, s * 0.26);        // belly
+  ctx.quadraticCurveTo(-s * 0.34, s * 0.26, -s * 0.46, s * 0.10);     // rear belly to haunch
+  ctx.quadraticCurveTo(-s * 0.5, -s * 0.04, -s * 0.46, -s * 0.18);    // haunch up to rump
+  ctx.closePath(); ctx.fill();
+
+  // Muzzle (lighter) at the head's lower-right tip
+  ctx.fillStyle = light;
+  ctx.beginPath(); ctx.ellipse(s * 0.5, -s * 0.36, s * 0.08, s * 0.075, -0.3, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = coatDark; // nostril
+  ctx.beginPath(); ctx.ellipse(s * 0.53, -s * 0.39, s * 0.018, s * 0.024, -0.3, 0, Math.PI * 2); ctx.fill();
+
+  // Ears (pointed, at the poll)
+  ctx.fillStyle = coat;
+  ctx.beginPath(); ctx.moveTo(s * 0.30, -s * 0.6); ctx.lineTo(s * 0.30, -s * 0.78); ctx.lineTo(s * 0.40, -s * 0.62); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(s * 0.40, -s * 0.62); ctx.lineTo(s * 0.50, -s * 0.74); ctx.lineTo(s * 0.46, -s * 0.56); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#7a5436';
+  ctx.beginPath(); ctx.moveTo(s * 0.33, -s * 0.62); ctx.lineTo(s * 0.33, -s * 0.73); ctx.lineTo(s * 0.39, -s * 0.63); ctx.closePath(); ctx.fill();
+
+  // Mane — thick dark band along the back of the neck (poll → withers)
+  ctx.strokeStyle = mane; ctx.lineWidth = s * 0.12;
+  ctx.beginPath(); ctx.moveTo(s * 0.36, -s * 0.64); ctx.quadraticCurveTo(s * 0.16, -s * 0.5, s * 0.04, -s * 0.28); ctx.stroke();
+  // Forelock
+  ctx.lineWidth = s * 0.045;
+  ctx.beginPath(); ctx.moveTo(s * 0.40, -s * 0.62); ctx.lineTo(s * 0.46, -s * 0.5); ctx.stroke();
+
+  // Eye + highlight (on the side of the face)
+  ctx.fillStyle = '#2a1a10';
+  ctx.beginPath(); ctx.arc(s * 0.42, -s * 0.46, s * 0.04, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(s * 0.435, -s * 0.475, s * 0.014, 0, Math.PI * 2); ctx.fill();
 }
 
 /* Dispatch a farm animal type to its drawer (goose comes from goose.js). */

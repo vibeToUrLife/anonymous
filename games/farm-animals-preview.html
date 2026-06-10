@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Farm Animals Preview</title>
+<style>
+  body { margin: 0; background: #7ec850; font-family: sans-serif; color: #2a3a1a; }
+  h1 { text-align: center; padding: 12px; margin: 0; font-size: 18px; }
+  .grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; padding: 16px; }
+  .cell { background: #8ed860; border: 2px solid #5aa838; border-radius: 16px; padding: 8px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,.15); }
+  .cell canvas { display: block; background: linear-gradient(#bfe9a0,#8ed860); border-radius: 10px; }
+  .cell div { font-weight: 700; margin-top: 6px; font-size: 14px; }
+  .note { text-align:center; font-size:12px; opacity:.7; padding-bottom:16px; }
+</style>
+</head>
+<body>
+  <h1>🚜 Farm Animals Preview</h1>
+  <div class="grid" id="grid"></div>
+  <p class="note">Standalone preview — no login needed. Tell me which animal and what to change (shape / mane / ears / muzzle / colour).</p>
+
+  <!-- Same drawers the game uses -->
+  <script src="pets/shared.js"></script>
+  <script src="pets/goose.js"></script>
+  <script src="pets/farm-animals.js"></script>
+  <script>
+    const animals = [
+      { type: 'cow',   name: '🐄 Cow' },
+      { type: 'pig',   name: '🐷 Pig' },
+      { type: 'horse', name: '🐎 Horse' },
+      { type: 'goose', name: '🦆 Goose' },
+    ];
+    const grid = document.getElementById('grid');
+    const CELL = 220, S = 150; // big so details are visible
+
+    for (const a of animals) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      const cvs = document.createElement('canvas');
+      cvs.width = CELL; cvs.height = CELL;
+      cell.appendChild(cvs);
+      const label = document.createElement('div');
+      label.textContent = a.name;
+      cell.appendChild(label);
+      grid.appendChild(cell);
+
+      const ctx = cvs.getContext('2d');
+      let t = 0;
+      (function frame() {
+        ctx.clearRect(0, 0, CELL, CELL);
+        ctx.save();
+        // Center; origin is the body center, base of legs ~ +0.42s
+        ctx.translate(CELL / 2, CELL / 2 + S * 0.12);
+        drawFarmAnimal(ctx, a.type, S, t / 120, true); // moving=true to see leg swing
+        ctx.restore();
+        t += 16;
+        requestAnimationFrame(frame);
+      })();
+    }
+  </script>
+</body>
+</html>
