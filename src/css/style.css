@@ -1314,21 +1314,21 @@ body.light-theme .bubble-footer { color: rgba(0,0,0,0.4); }
 body.light-theme .input-area button { color: #fff; }
 
 /* Light mode — sidebar game links */
-body.light-theme .sidebar-section a[href] {
+body.light-theme .sidebar-section a:not(.game-card) {
     background: rgba(0,0,0,0.04) !important;
     color: #333 !important;
 }
-body.light-theme .sidebar-section a[href]:hover {
+body.light-theme .sidebar-section a:not(.game-card):hover {
     background: rgba(0,0,0,0.08) !important;
 }
-body.light-theme .sidebar-section a[href] div,
-body.light-theme .sidebar-section a[href] div div {
+body.light-theme .sidebar-section a:not(.game-card) div,
+body.light-theme .sidebar-section a:not(.game-card) div div {
     color: #333 !important;
 }
-body.light-theme .sidebar-section a[href] div div:last-child {
+body.light-theme .sidebar-section a:not(.game-card) div div:last-child {
     color: rgba(0,0,0,0.45) !important;
 }
-body.light-theme .sidebar-section a[href] span {
+body.light-theme .sidebar-section a:not(.game-card) span {
     color: inherit !important;
 }
 body.light-theme .collapse-toggle {

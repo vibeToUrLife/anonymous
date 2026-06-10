@@ -8,11 +8,11 @@
   <link rel="stylesheet" href="./src/css/style.css?v=3">
   <link rel="stylesheet" href="./src/css/interactive.css?v=1">
   <style>
-    body.light-theme .sidebar-section a[href] { background: rgba(0,0,0,0.04) !important; color: #333 !important; }
-    body.light-theme .sidebar-section a[href]:hover { background: rgba(0,0,0,0.08) !important; }
-    body.light-theme .sidebar-section a[href] div,
-    body.light-theme .sidebar-section a[href] div div { color: #333 !important; }
-    body.light-theme .sidebar-section a[href] div div:last-child { color: rgba(0,0,0,0.45) !important; }
+    body.light-theme .sidebar-section a:not(.game-card) { background: rgba(0,0,0,0.04) !important; color: #333 !important; }
+    body.light-theme .sidebar-section a:not(.game-card):hover { background: rgba(0,0,0,0.08) !important; }
+    body.light-theme .sidebar-section a:not(.game-card) div,
+    body.light-theme .sidebar-section a:not(.game-card) div div { color: #333 !important; }
+    body.light-theme .sidebar-section a:not(.game-card) div div:last-child { color: rgba(0,0,0,0.45) !important; }
     body.light-theme .collapse-toggle { background: rgba(0,0,0,0.04) !important; color: #333 !important; }
     body.light-theme .collapse-toggle span { color: #333 !important; }
     body.light-theme .collapse-arrow { color: rgba(0,0,0,0.4) !important; }
@@ -326,55 +326,78 @@
     body.light-theme .wn-editor-status { color: rgba(100,40,180,0.8); }
 
     /* ══════════════════════════════════════════════════════════════
-       Pixel Bubble Arcade — board hero + unified game cards.
-       Targeted redesign: grape + bubblegum identity, derived from the
-       pixel speech-bubble. Preserves light-theme + all components.
+       Sticky-Note Corkboard — the board is a corkboard; entries are
+       paper notes pinned with tape and taken down when they expire.
+       Identity from real materials: cork, kraft paper, tape, handwriting.
+       (Hero + game cards; light & dark preserved.)
        ══════════════════════════════════════════════════════════════ */
-    /* Hero — pixel logo → grape speech-bubble wordmark (signature) → subtitle */
-    .page-title-wrapper { display:flex; flex-direction:column; align-items:center; gap:12px; margin-top:8px; }
-    .page-logo { width:62px; height:auto; image-rendering:pixelated; filter:drop-shadow(0 5px 12px rgba(124,92,255,0.5)); }
+    .page-title-wrapper { display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:8px; }
+    .page-logo { width:58px; height:auto; image-rendering:pixelated; filter:drop-shadow(0 3px 5px rgba(0,0,0,0.35)); }
+
+    /* Hero — a hand-written paper note, pinned (the signature) */
     .page-title {
-      display:inline-block; position:relative; margin:0; max-width:90vw;
-      font-family:ui-monospace,"Cascadia Mono","Consolas","Courier New",monospace;
-      font-size:clamp(17px,4.4vw,26px); font-weight:800; letter-spacing:0.4px; text-align:center;
-      padding:12px 22px; border-radius:18px;
-      background:linear-gradient(135deg,#7c5cff,#9d7bff);
-      /* reset style.css's gradient-text clipping so the bubble + white text show */
-      color:#fff; -webkit-text-fill-color:#fff; -webkit-background-clip:border-box; background-clip:border-box;
-      box-shadow:0 10px 26px rgba(124,92,255,0.42), inset 0 1px 0 rgba(255,255,255,0.25);
+      display:inline-block; position:relative; margin:0; max-width:90vw; text-align:center;
+      font-family:"Segoe Print","Bradley Hand","Comic Sans MS",cursive;
+      font-size:clamp(20px,5vw,30px); font-weight:700; letter-spacing:0.2px; line-height:1.2;
+      padding:14px 26px 12px; border-radius:3px; transform:rotate(-1.6deg);
+      background:#fdf0c4;
+      color:#2b2440; -webkit-text-fill-color:#2b2440; -webkit-background-clip:border-box; background-clip:border-box;
+      box-shadow:0 7px 16px rgba(0,0,0,0.32);
     }
-    /* speech-bubble tail — ties the title to the logo + the board's bubbles */
-    .page-title::after {
-      content:''; position:absolute; left:30px; bottom:-9px;
-      border:10px solid transparent; border-bottom:0; border-top-color:#8a68ff;
+    .page-title::before { /* push-pin */
+      content:''; position:absolute; top:-9px; left:50%; transform:translateX(-50%);
+      width:14px; height:14px; border-radius:50%;
+      background:radial-gradient(circle at 35% 30%, #ff9a8a, #d23b2c 70%);
+      box-shadow:0 2px 3px rgba(0,0,0,0.4);
     }
-    .page-subtitle { text-align:center; color:rgba(255,255,255,0.5); font-size:12px; margin:2px 0 0; }
+    .page-subtitle { text-align:center; color:rgba(255,255,255,0.5); font-size:12px; margin:4px 0 0; font-style:italic; }
     body.light-theme .page-subtitle { color:rgba(0,0,0,0.45); }
-    /* light theme: keep the grape bubble (beats style.css's more-specific light rule) */
+    /* paper note in light theme too (beats style.css's gradient-text rule) */
     body.light-theme .page-title {
-      background:linear-gradient(135deg,#7c5cff,#9d7bff);
-      color:#fff; -webkit-text-fill-color:#fff; -webkit-background-clip:border-box; background-clip:border-box;
-    }
-    @media (prefers-reduced-motion: no-preference) {
-      .page-logo .logo-dot { animation:logoType 1.4s ease-in-out infinite; }
-      @keyframes logoType { 0%,100%{opacity:0.35} 50%{opacity:1} }
+      background:#fdf0c4; color:#2b2440; -webkit-text-fill-color:#2b2440;
+      -webkit-background-clip:border-box; background-clip:border-box;
     }
 
-    /* Unified game/room cards — replaces 10 blocks of repeated inline styles */
-    .game-card {
-      display:flex; align-items:center; gap:12px; position:relative;
-      padding:13px 15px; border-radius:14px; text-decoration:none; cursor:pointer; color:#fff;
-      background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.07);
-      transition:transform 0.15s, background 0.2s, border-color 0.2s, box-shadow 0.2s;
+    /* Cork surface behind the games board */
+    #miniGamesBody {
+      background-color:#c19a5b;
+      background-image:
+        radial-gradient(rgba(110,75,35,0.28) 1px, transparent 1.4px),
+        radial-gradient(rgba(80,52,22,0.20) 1px, transparent 1.4px);
+      background-size:7px 7px, 12px 12px; background-position:0 0, 4px 5px;
+      border-radius:12px; padding:14px 12px;
+      box-shadow:inset 0 0 0 4px #7c5b30, inset 0 2px 12px rgba(0,0,0,0.3);
     }
-    .game-card:hover { transform:translateY(-2px); background:rgba(124,92,255,0.16); border-color:rgba(124,92,255,0.45); box-shadow:0 6px 18px rgba(124,92,255,0.28); }
-    .game-card:active { transform:translateY(0); }
-    .game-card-emoji { font-size:26px; line-height:1; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.35)); transition:transform 0.15s; }
-    .game-card:hover .game-card-emoji { transform:scale(1.12) rotate(-5deg); }
+
+    /* Game/room links — paper notes taped to the board (replaces inline styles) */
+    .game-card {
+      display:flex; align-items:center; gap:11px; position:relative;
+      padding:12px 14px; text-decoration:none; cursor:pointer;
+      color:#2b2440; background:#fdf0c4; border-radius:3px;
+      box-shadow:0 4px 8px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.55);
+      transform:rotate(-1.4deg);
+      transition:transform 0.14s ease, box-shadow 0.2s ease;
+    }
+    .game-card:nth-of-type(even) { transform:rotate(1.3deg); background:#d6efd4; }
+    .game-card:nth-of-type(3n)   { background:#ffd9c9; }
+    .game-card:nth-of-type(4n)   { background:#d4e8ff; }
+    .game-card::before { /* tape strip across the top */
+      content:''; position:absolute; top:-6px; left:50%;
+      width:44px; height:15px; transform:translateX(-50%) rotate(-3deg);
+      background:rgba(255,255,255,0.4); border:1px solid rgba(255,255,255,0.5);
+      box-shadow:0 1px 2px rgba(0,0,0,0.12);
+    }
+    .game-card:hover { transform:rotate(0deg) translateY(-2px); box-shadow:0 9px 18px rgba(0,0,0,0.34); }
+    .game-card:focus-visible { outline:3px solid #2b2440; outline-offset:3px; }
+    .game-card-emoji { font-size:24px; line-height:1; }
     .game-card > div { flex:1; min-width:0; }
-    .game-card-title { font-size:14px; font-weight:700; }
-    .game-card-sub { font-size:11px; color:rgba(255,255,255,0.45); }
-    body.light-theme .game-card { border-color:rgba(0,0,0,0.08); }
+    .game-card-title { font-size:14px; font-weight:700; color:#2b2440;
+      font-family:"Segoe Print","Bradley Hand","Comic Sans MS",cursive; letter-spacing:0.2px; }
+    .game-card-sub { font-size:11px; color:rgba(43,36,64,0.62); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .game-card, .game-card:hover { transition:none; }
+    }
   </style>
 </head>
 <body>
