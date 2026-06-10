@@ -28,7 +28,7 @@
       backdrop-filter: blur(10px); color: var(--g-ink); font-size: 14px;
       cursor: pointer; text-decoration: none; transition: background 0.2s; box-shadow: var(--g-shadow-sm);
     }
-    .back-btn:hover { background: #fff; }
+    .back-btn:hover { background: var(--g-card-hover); }
 
     /* ── Settings gear ── */
     .settings-btn {
@@ -40,7 +40,7 @@
       display: flex; align-items: center; justify-content: center;
       transition: background 0.2s, color 0.2s, transform 0.3s; box-shadow: var(--g-shadow-sm);
     }
-    .settings-btn:hover { background: #fff; color: var(--g-accent); transform: rotate(45deg); }
+    .settings-btn:hover { background: var(--g-card-hover); color: var(--g-accent); transform: rotate(45deg); }
 
     /* ── Settings modal ── */
     .settings-overlay { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; background: var(--g-scrim); backdrop-filter: blur(8px); }
@@ -60,7 +60,7 @@
     .login-box h2 { font-size: 22px; margin-bottom: 8px; font-family: var(--g-display); background: linear-gradient(90deg, #4ecdc4, #45b7d1); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
     .login-box p { font-size: 13px; color: var(--g-ink-soft); margin-bottom: 24px; line-height: 1.5; }
     .google-login-btn { display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; border: 1px solid var(--g-border); border-radius: 14px; background: var(--g-card); color: var(--g-ink); font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; box-shadow: var(--g-shadow-sm); }
-    .google-login-btn:hover { background: #fff; }
+    .google-login-btn:hover { background: var(--g-card-hover); }
     .google-login-btn svg { width: 20px; height: 20px; }
     .login-error { margin-top: 12px; font-size: 12px; color: var(--g-danger); min-height: 18px; }
 

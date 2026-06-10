@@ -15,7 +15,7 @@
       backdrop-filter: blur(10px); color: var(--g-ink); font-size: 14px;
       cursor: pointer; text-decoration: none; transition: background 0.2s; box-shadow: var(--g-shadow-sm);
     }
-    .back-btn:hover { background: #fff; }
+    .back-btn:hover { background: var(--g-card-hover); }
 
     /* ── Coin display ── */
     .coin-display {
@@ -137,7 +137,7 @@
       backdrop-filter: blur(4px); box-shadow: var(--g-shadow-sm);
     }
     .panel-toggle:hover {
-      background: #fff; color: var(--g-accent);
+      background: var(--g-card-hover); color: var(--g-accent);
     }
 
     /* ── Tabs ── */
@@ -213,7 +213,7 @@
       border-radius: 16px; padding: 16px 12px; text-align: center;
       transition: all 0.25s; cursor: pointer; position: relative;
     }
-    .shop-card:hover { background: #fff; transform: translateY(-3px); box-shadow: var(--g-shadow-sm); }
+    .shop-card:hover { background: var(--g-card-hover); transform: translateY(-3px); box-shadow: var(--g-shadow-sm); }
     .shop-card.owned { border-color: rgba(52,211,153,0.3); background: rgba(52,211,153,0.04); }
     .shop-card.equipped { border-color: var(--g-accent); box-shadow: 0 0 16px rgba(255,122,92,0.15); background: rgba(255,122,92,0.06); }
     .shop-emoji { font-size: 40px; display: block; margin-bottom: 10px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
@@ -274,7 +274,7 @@
       border-radius: 12px; padding: 10px 6px; text-align: center;
       transition: all 0.2s; cursor: pointer;
     }
-    .food-card:hover { background: #fff; transform: translateY(-2px); }
+    .food-card:hover { background: var(--g-card-hover); transform: translateY(-2px); }
     .food-card.selected {
       border-color: var(--g-accent); background: rgba(255,122,92,0.12);
       box-shadow: 0 0 12px rgba(255,122,92,0.25);
@@ -296,7 +296,7 @@
       background: var(--g-slot); border: 1px solid var(--g-border);
       border-radius: 14px; padding: 14px 16px; cursor: pointer; transition: all 0.25s;
     }
-    .visit-card:hover { background: #fff; transform: translateX(4px); box-shadow: var(--g-shadow-sm); }
+    .visit-card:hover { background: var(--g-card-hover); transform: translateX(4px); box-shadow: var(--g-shadow-sm); }
     .visit-avatar { font-size: 32px; background: var(--g-slot); border-radius: 12px; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; }
     .visit-info { flex: 1; }
     .visit-name { font-size: 14px; font-weight: 700; color: var(--g-ink); margin-bottom: 4px; }
@@ -333,7 +333,7 @@
     .google-login-btn {
       display: inline-flex; align-items: center; gap: 12px;
       padding: 14px 32px; border: 1px solid var(--g-border); border-radius: 14px;
-      background: #fff; color: #333; font-size: 16px; font-weight: 600;
+      background: var(--g-card-hover); color: var(--g-ink); font-size: 16px; font-weight: 600;
       cursor: pointer; transition: transform 0.2s; box-shadow: var(--g-shadow-sm);
     }
     .google-login-btn:hover { transform: scale(1.03); }
@@ -351,12 +351,12 @@
       cursor: pointer; display: flex; align-items: center; justify-content: center;
       transition: background 0.2s, color 0.2s, transform 0.3s; box-shadow: var(--g-shadow-sm);
     }
-    .settings-btn:hover { background: #fff; color: var(--g-accent); transform: rotate(45deg); }
+    .settings-btn:hover { background: var(--g-card-hover); color: var(--g-accent); transform: rotate(45deg); }
     .achieve-header-btn { position: fixed; top: 14px; right: 190px; z-index: 50; width: 40px; height: 40px; border: 1px solid var(--g-border); border-radius: 50%; background: var(--g-card-90); backdrop-filter: blur(10px); color: var(--g-ink-soft); font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s, color 0.2s; box-shadow: var(--g-shadow-sm); }
-    .achieve-header-btn:hover { background: #fff; color: var(--g-accent); }
+    .achieve-header-btn:hover { background: var(--g-card-hover); color: var(--g-accent); }
     .panel-shortcuts{display:flex;gap:6px;padding:10px 16px;border-top:1px solid var(--g-border);flex-shrink:0}
     .panel-shortcut-btn{flex:1;padding:8px 4px;border:1px solid var(--g-border);border-radius:10px;background:var(--g-slot);color:var(--g-ink-soft);font-size:11px;font-weight:600;cursor:pointer;text-align:center;transition:all .2s}
-    .panel-shortcut-btn:hover{background:#fff;color:var(--g-accent)}
+    .panel-shortcut-btn:hover{background: var(--g-card-hover);color:var(--g-accent)}
     @media (max-width: 768px) {
       .settings-btn { top: 10px; right: 110px; width: 36px; height: 36px; font-size: 17px; }
       .achieve-header-btn { top: 10px; right: 155px; width: 36px; height: 36px; font-size: 17px; }
@@ -554,7 +554,7 @@
     .gb-time{font-size:10px;color:var(--g-ink-faint);margin-top:4px}
     .gb-sticker{font-size:32px;margin-bottom:4px}
     .gb-input-area{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
-    .gb-textarea{width:100%;padding:10px 12px;border:1px solid var(--g-border);border-radius:12px;background:#fff;color:var(--g-ink);font-size:13px;resize:none;font-family:inherit}
+    .gb-textarea{width:100%;padding:10px 12px;border:1px solid var(--g-border);border-radius:12px;background: var(--g-card-hover);color:var(--g-ink);font-size:13px;resize:none;font-family:inherit}
     .gb-textarea::placeholder{color:var(--g-ink-faint)}
     .gb-sticker-row{display:flex;gap:6px;flex-wrap:wrap}
     .gb-sticker-btn{font-size:22px;padding:4px 6px;border:1px solid var(--g-border);border-radius:8px;background:transparent;cursor:pointer;transition:all .2s}
@@ -570,7 +570,7 @@
     .gb-reply-btn{font-size:10px;padding:4px 10px;border:1px solid var(--g-border);border-radius:8px;background:transparent;color:var(--g-ink-soft);cursor:pointer;margin-top:6px}
     .gb-reply-btn:hover{background:var(--g-hover);color:var(--g-ink)}
     .gb-reply-form{display:flex;gap:6px;margin-top:6px;align-items:center}
-    .gb-reply-input{flex:1;padding:6px 10px;border:1px solid var(--g-border);border-radius:8px;background:#fff;color:var(--g-ink);font-size:12px;font-family:inherit}
+    .gb-reply-input{flex:1;padding:6px 10px;border:1px solid var(--g-border);border-radius:8px;background: var(--g-card-hover);color:var(--g-ink);font-size:12px;font-family:inherit}
     .gb-reply-input::placeholder{color:var(--g-ink-faint)}
     .gb-reply-send{padding:6px 12px;border:none;border-radius:8px;background:var(--g-accent-grad);color:#fff;font-size:11px;font-weight:600;cursor:pointer}
 
@@ -590,7 +590,7 @@
     /* ── Pet Accessories ── */
     .acc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
     .acc-card{background:var(--g-slot);border:1px solid var(--g-border);border-radius:12px;padding:10px 6px;text-align:center;transition:all .2s;overflow:visible}
-    .acc-card:hover{background:#fff;transform:translateY(-2px)}
+    .acc-card:hover{background: var(--g-card-hover);transform:translateY(-2px)}
     .acc-card.equipped{border-color:var(--g-accent);background:rgba(255,122,92,.08)}
     .acc-card.owned{border-color:rgba(43,168,106,.3);background:rgba(43,168,106,.04)}
     .acc-emoji{font-size:24px;display:block;margin-bottom:4px}
@@ -603,7 +603,7 @@
     .jukebox-title{flex:1;font-size:13px;font-weight:600;color:var(--g-ink)}
     .jukebox-controls{display:flex;gap:6px}
     .jukebox-btn{width:32px;height:32px;border:1px solid var(--g-border);border-radius:50%;background:var(--g-slot);color:var(--g-ink);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
-    .jukebox-btn:hover{background:#fff}
+    .jukebox-btn:hover{background: var(--g-card-hover)}
     .jukebox-list{display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto}
     .jukebox-track{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:all .2s;font-size:12px;color:var(--g-ink-soft)}
     .jukebox-track:hover{background:var(--g-hover)}
@@ -660,7 +660,7 @@
     .swap-desc{font-size:12px;color:var(--g-ink-soft);margin-bottom:16px}
     .swap-pet-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
     .swap-pet-card{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--g-slot);border:1px solid var(--g-border);cursor:pointer;transition:all .2s}
-    .swap-pet-card:hover{background:#fff;transform:translateX(4px);border-color:rgba(255,122,92,.3)}
+    .swap-pet-card:hover{background: var(--g-card-hover);transform:translateX(4px);border-color:rgba(255,122,92,.3)}
     .swap-pet-emoji{font-size:32px}
     .swap-pet-info{flex:1;text-align:left}
     .swap-pet-name{font-size:13px;font-weight:700;color:var(--g-ink)}

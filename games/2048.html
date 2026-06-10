@@ -26,7 +26,7 @@
       backdrop-filter: blur(10px); color: var(--g-ink); font-size: 14px; font-weight: 600;
       cursor: pointer; text-decoration: none; transition: background 0.2s; box-shadow: var(--g-shadow-sm);
     }
-    .back-btn:hover { background: #fff; }
+    .back-btn:hover { background: var(--g-card-hover); }
 
     .settings-btn {
       position: fixed; top: 14px; right: 14px; z-index: 50;
@@ -37,7 +37,7 @@
       display: flex; align-items: center; justify-content: center;
       transition: background 0.2s, color 0.2s, transform 0.3s; box-shadow: var(--g-shadow-sm);
     }
-    .settings-btn:hover { background: #fff; color: var(--g-accent); transform: rotate(45deg); }
+    .settings-btn:hover { background: var(--g-card-hover); color: var(--g-accent); transform: rotate(45deg); }
 
     .settings-overlay { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; background: var(--g-scrim); backdrop-filter: blur(8px); }
     .settings-overlay.hidden { display: none; }
@@ -124,7 +124,7 @@
       font-size: 14px; font-weight: 600; text-decoration: none;
       transition: background 0.2s; cursor: pointer; box-shadow: var(--g-shadow-sm);
     }
-    .lobby-btn:hover { background: #fff; }
+    .lobby-btn:hover { background: var(--g-card-hover); }
     .final-score { font-size: 60px; font-weight: 700; font-family: var(--g-display); background: var(--g-title-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
     .best-score { font-size: 14px; color: var(--g-ink-soft); margin-top: 4px; }
     .new-best { color: var(--g-coin-ink); font-size: 14px; font-weight: 700; margin-top: 4px; animation: pulse 0.6s ease-in-out infinite alternate; }
@@ -155,7 +155,7 @@
       background: var(--g-card); color: var(--g-ink); font-size: 15px; font-weight: 600;
       cursor: pointer; transition: background 0.2s; box-shadow: var(--g-shadow-sm);
     }
-    .google-btn:hover { background: #fff; }
+    .google-btn:hover { background: var(--g-card-hover); }
     .login-error { color: var(--g-danger); font-size: 12px; margin-top: 10px; }
 
     /* Chess invite popup */

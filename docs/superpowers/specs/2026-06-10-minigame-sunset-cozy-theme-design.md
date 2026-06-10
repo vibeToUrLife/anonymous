@@ -1,4 +1,16 @@
-# Minigame Theme Redesign — "Sunset Cozy"
+# Minigame Theme Redesign
+
+> **Update (2026-06-10, later):** After trying the light "Sunset Cozy" palette,
+> the direction was changed to **"Midnight" — a modern dark theme** (sleek
+> charcoal `#171B22→#0E1117`, elevated `#1B212B` cards, near-white text, warm
+> coral accent, gold coins, Space Grotesk display font). The token system below
+> made this a one-file flip in `games/theme.css` (same token names, dark values)
+> plus a small sweep replacing hardcoded light literals (`#fff` button hovers →
+> `--g-card-hover`, white inputs → dark, cream canvas pause-overlays → dark
+> scrim + light text). The structure/approach in this doc still applies; only
+> the palette values changed.
+
+## Original direction — "Sunset Cozy" (superseded)
 
 **Date:** 2026-06-10
 **Goal:** Replace the generic "AI purple" look across all minigames with a warm,
