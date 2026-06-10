@@ -421,7 +421,7 @@
         happiness: FARM_START_HAPPINESS,
         lastDropTime: now,
         posX: 0.15 + Math.random() * 0.7,
-        posY: 0.55 + Math.random() * 0.3,
+        posY: 0.54 + Math.random() * 0.13,   // stay in the pasture (above the crop fence)
       });
       roomData.farmVariants = roomData.farmVariants || {};
       roomData.farmVariants[def.id + '_' + (variant.id || 'default')] = true;
@@ -767,15 +767,32 @@
         _drawHDSky(ctx, W, H, night, t);
         _drawRollingHills(ctx, W, H, night);
 
-        // Pasture: one big grass field from the horizon down
-        const grass = ctx.createLinearGradient(0, H * 0.42, 0, H);
+        // The dividing fence between the animal pasture (above) and the crop
+        // garden (below). It moves DOWN as the farm is expanded, so each
+        // "Expand farm" visibly enlarges the pasture.
+        const divY = Math.min(0.81, 0.74 + 0.035 * (roomData.farmCapLevel || 0));
+        const gy = H * divY;
+
+        // Animal pasture — grass from the horizon down to the dividing fence
+        const grass = ctx.createLinearGradient(0, H * 0.42, 0, gy);
         grass.addColorStop(0, night ? '#1d4028' : '#7ec850');
         grass.addColorStop(1, night ? '#15301e' : '#5aa838');
         ctx.fillStyle = grass;
-        ctx.fillRect(0, H * 0.42, W, H * 0.58);
+        ctx.fillRect(0, H * 0.42, W, gy - H * 0.42);
 
-        // Fence ring around the pasture
+        // Crop garden — a tilled soil band below the dividing fence
+        const soil = ctx.createLinearGradient(0, gy, 0, H);
+        soil.addColorStop(0, night ? '#3a2c18' : '#7a5a32');
+        soil.addColorStop(1, night ? '#241a0e' : '#5c4022');
+        ctx.fillStyle = soil;
+        ctx.fillRect(0, gy, W, H - gy);
+        ctx.strokeStyle = night ? 'rgba(0,0,0,.28)' : 'rgba(70,46,22,.32)';
+        ctx.lineWidth = 1;
+        for (let fy = gy + 7; fy < H - 2; fy += 9) { ctx.beginPath(); ctx.moveTo(0, fy); ctx.lineTo(W, fy); ctx.stroke(); }
+
+        // Fences: top of the pasture, the dividing 围栏 (farm | crops), bottom edge
         _drawFence(ctx, W * 0.02, H * 0.46, W * 0.96, night);
+        _drawFence(ctx, W * 0.02, gy, W * 0.96, night);
         _drawFence(ctx, W * 0.02, H * 0.93, W * 0.96, night);
         _drawHDTree(ctx, W * 0.06, H * 0.46, H * 0.18, windSway, night);
         _drawHDTree(ctx, W * 0.94, H * 0.46, H * 0.15, windSway * 0.7, night);
@@ -807,11 +824,13 @@
         }
 
         // Animals: wander + drawn renderers, mini happiness bar above
+        // Animals stay in the pasture, above the dividing fence (crops are below).
+        const penTop = 0.50, penBot = Math.max(0.60, divY - 0.05);
         for (const a of (roomData.farmAnimals || [])) {
           const st = _farmAnimState(a);
           if (t > st.nextWander) {
             st.tx = 0.08 + Math.random() * 0.84;
-            st.ty = 0.52 + Math.random() * 0.36;
+            st.ty = penTop + Math.random() * (penBot - penTop);
             st.nextWander = t + 4000 + Math.random() * 8000;
           }
           const dx = st.tx - st.x, dy = st.ty - st.y;
@@ -822,6 +841,7 @@
             st.y += (dy / dist) * 0.0009;
             st.facingRight = dx > 0;
           }
+          st.y = Math.max(penTop, Math.min(penBot, st.y));
           const px = st.x * W, py = st.y * H;
           const size = Math.max(34, Math.min(W, H) * 0.085);
           const bob = Math.sin(t / 400 + st.x * 20) * 2;
