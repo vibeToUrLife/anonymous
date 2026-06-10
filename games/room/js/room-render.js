@@ -9,8 +9,8 @@
     function renderAll() {
       const isOwner = viewingUid === currentUid;
 
-      // Coin display
-      document.getElementById('coinAmount').textContent = roomData.coins;
+      // Coin display — always whole coins (guards any stray fractional balance)
+      document.getElementById('coinAmount').textContent = Math.floor(roomData.coins || 0);
 
       // Title
       const name = roomData.displayName || 'Anonymous';

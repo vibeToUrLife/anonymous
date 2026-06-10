@@ -57,9 +57,11 @@
     return { animals: animals, foodStock: foodStock, foodAt: now, spawns: spawns };
   }
 
-  // Units a refill adds: fill the trough, bounded by what the coins afford.
+  // Whole units a refill adds: fill the trough, bounded by what the coins afford.
+  // Both bounds are floored so the result is always an integer — otherwise the
+  // fractional capacity gap (foodStock is a float) would charge fractional coins.
   function farmRefillUnits(foodStock, foodMax, coins, costPerUnit) {
-    return Math.max(0, Math.min(foodMax - foodStock, Math.floor(coins / costPerUnit)));
+    return Math.max(0, Math.min(Math.floor(foodMax - foodStock), Math.floor(coins / costPerUnit)));
   }
 
   return { farmCycleMs, planFarmTick, farmRefillUnits };

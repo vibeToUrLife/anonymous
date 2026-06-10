@@ -85,7 +85,7 @@
           }
         }
         const d = snap.data();
-        roomData.coins = d.coins ?? 0;
+        roomData.coins = Math.floor(d.coins ?? 0); // coins are always whole
         // Migrate old pet format or load new pets array
         roomData.pets = migratePets(d);
         roomData.plant = d.plant ?? null;

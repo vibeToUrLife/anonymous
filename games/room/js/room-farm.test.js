@@ -122,3 +122,11 @@ test('farmRefillUnits fills to max when affordable, else what coins buy', () => 
   assert.equal(F.farmRefillUnits(100, 100, 10000, 5), 0); // already full
   assert.equal(F.farmRefillUnits(0, 100, 3, 5), 0);       // too broke for 1 unit
 });
+
+test('farmRefillUnits returns whole units even when foodStock is fractional', () => {
+  // foodStock drifts to a float after production; the gap must be floored so the
+  // coin charge (units * cost) never becomes fractional.
+  const u = F.farmRefillUnits(73.456, 100, 10000, 5);
+  assert.equal(u, 26);                            // floor(100 - 73.456) = 26
+  assert.equal(Number.isInteger(u * 5), true);    // whole-coin charge
+});

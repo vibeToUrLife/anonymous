@@ -141,68 +141,59 @@ function drawPigPet(ctx, s, lp, moving) {
 }
 
 function drawHorsePet(ctx, s, lp, moving) {
-  // Flowing tail — layered strands
+  const coat = '#c98e57', coatDark = '#a87142', mane = '#5e3f26', muzzleCol = '#e6caa8';
   ctx.lineCap = 'round';
-  ctx.strokeStyle = '#6e4a2e'; ctx.lineWidth = s * 0.1;
+
+  // Flowing tail
+  ctx.strokeStyle = mane; ctx.lineWidth = s * 0.12;
   ctx.beginPath();
-  ctx.moveTo(-s * 0.46, -s * 0.08);
-  ctx.bezierCurveTo(-s * 0.62, 0, -s * 0.64, s * 0.16, -s * 0.56, s * 0.3);
-  ctx.stroke();
-  ctx.strokeStyle = '#8a5e3a'; ctx.lineWidth = s * 0.05;
-  ctx.beginPath();
-  ctx.moveTo(-s * 0.46, -s * 0.06);
-  ctx.bezierCurveTo(-s * 0.58, s * 0.04, -s * 0.6, s * 0.16, -s * 0.52, s * 0.26);
+  ctx.moveTo(-s * 0.44, -s * 0.05);
+  ctx.quadraticCurveTo(-s * 0.66, s * 0.08, -s * 0.55, s * 0.34);
   ctx.stroke();
 
-  drawPetLegs(ctx, s, lp, moving, '#c08a58');
+  drawPetLegs(ctx, s, lp, moving, coatDark);
 
   // Body
-  ctx.fillStyle = '#cd9663';
-  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.5, s * 0.34, 0, 0, Math.PI * 2); ctx.fill();
-  // Belly highlight + back shading
-  ctx.fillStyle = 'rgba(255,245,225,0.3)';
-  ctx.beginPath(); ctx.ellipse(0, s * 0.14, s * 0.3, s * 0.12, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = 'rgba(0,0,0,0.05)';
-  ctx.beginPath(); ctx.ellipse(-s * 0.1, -s * 0.16, s * 0.3, s * 0.11, 0.1, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = coat;
+  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.5, s * 0.32, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,245,225,0.25)';
+  ctx.beginPath(); ctx.ellipse(0, s * 0.13, s * 0.3, s * 0.1, 0, 0, Math.PI * 2); ctx.fill();
 
-  // Head — chibi, slightly long muzzle
-  const hx = s * 0.35, hy = -s * 0.22;
+  // Neck — thick rounded stroke rising from the shoulder to the head
+  ctx.strokeStyle = coat; ctx.lineWidth = s * 0.27;
+  ctx.beginPath();
+  ctx.moveTo(s * 0.24, -s * 0.02);
+  ctx.quadraticCurveTo(s * 0.46, -s * 0.22, s * 0.5, -s * 0.46);
+  ctx.stroke();
+
+  // Head — tilted oval with a cream muzzle pointing up-right
+  const hx = s * 0.55, hy = -s * 0.54;
+  ctx.fillStyle = coat;
+  ctx.beginPath(); ctx.ellipse(hx, hy, s * 0.18, s * 0.14, 0.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = muzzleCol;
+  ctx.beginPath(); ctx.ellipse(hx + s * 0.1, hy - s * 0.12, s * 0.085, s * 0.07, 0.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = coatDark;
+  ctx.beginPath(); ctx.arc(hx + s * 0.13, hy - s * 0.17, s * 0.016, 0, Math.PI * 2); ctx.fill();
+
   // Ears
-  ctx.fillStyle = '#cd9663';
+  ctx.fillStyle = coat;
+  ctx.beginPath(); ctx.moveTo(hx - s * 0.08, hy - s * 0.1); ctx.lineTo(hx - s * 0.04, hy - s * 0.28); ctx.lineTo(hx + s * 0.05, hy - s * 0.14); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = coatDark;
+  ctx.beginPath(); ctx.moveTo(hx - s * 0.05, hy - s * 0.13); ctx.lineTo(hx - s * 0.03, hy - s * 0.23); ctx.lineTo(hx + s * 0.01, hy - s * 0.15); ctx.closePath(); ctx.fill();
+
+  // Mane — single smooth dark stroke down the crest of the neck
+  ctx.strokeStyle = mane; ctx.lineWidth = s * 0.11;
   ctx.beginPath();
-  ctx.moveTo(hx - s * 0.16, hy - s * 0.2); ctx.quadraticCurveTo(hx - s * 0.16, hy - s * 0.42, hx - s * 0.04, hy - s * 0.24);
-  ctx.closePath(); ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(hx + s * 0.06, hy - s * 0.24); ctx.quadraticCurveTo(hx + s * 0.14, hy - s * 0.44, hx + s * 0.2, hy - s * 0.2);
-  ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#a87648';
-  ctx.beginPath();
-  ctx.moveTo(hx - s * 0.13, hy - s * 0.22); ctx.quadraticCurveTo(hx - s * 0.13, hy - s * 0.34, hx - s * 0.06, hy - s * 0.24);
-  ctx.closePath(); ctx.fill();
-  // Face
-  ctx.fillStyle = '#cd9663';
-  ctx.beginPath(); ctx.arc(hx, hy, s * 0.26, 0, Math.PI * 2); ctx.fill();
-  // Muzzle — soft cream, extends right
-  ctx.fillStyle = '#e8cba8';
-  ctx.beginPath(); ctx.ellipse(hx + s * 0.16, hy + s * 0.1, s * 0.14, s * 0.1, 0.15, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#a87648';
-  ctx.beginPath(); ctx.ellipse(hx + s * 0.22, hy + s * 0.08, s * 0.018, s * 0.026, 0, 0, Math.PI * 2); ctx.fill();
-  // Smile
-  ctx.strokeStyle = '#a87648'; ctx.lineWidth = s * 0.014; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.arc(hx + s * 0.15, hy + s * 0.14, s * 0.05, 0.5, Math.PI - 0.7); ctx.stroke();
-  // Mane — rounded bumps over the crown and down the neck
-  ctx.fillStyle = '#6e4a2e';
-  ctx.beginPath(); ctx.ellipse(hx - s * 0.06, hy - s * 0.26, s * 0.12, s * 0.07, -0.2, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(hx - s * 0.2, hy - s * 0.14, s * 0.09, s * 0.07, -0.6, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(hx - s * 0.28, hy + s * 0.04, s * 0.08, s * 0.07, -0.9, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(hx - s * 0.3, hy + s * 0.22, s * 0.07, s * 0.07, -1.1, 0, Math.PI * 2); ctx.fill();
-  // Forelock falling between the ears
-  ctx.fillStyle = '#8a5e3a';
-  ctx.beginPath(); ctx.ellipse(hx + s * 0.02, hy - s * 0.22, s * 0.07, s * 0.05, 0.3, 0, Math.PI * 2); ctx.fill();
-  // Eyes + blush
-  _farmEye(ctx, s, hx - s * 0.04, hy - s * 0.04);
-  _farmEye(ctx, s, hx + s * 0.18, hy - s * 0.04);
-  _farmBlush(ctx, s, hx - s * 0.14, hy + s * 0.08);
+  ctx.moveTo(hx - s * 0.06, hy - s * 0.04);
+  ctx.quadraticCurveTo(s * 0.34, -s * 0.30, s * 0.2, -s * 0.01);
+  ctx.stroke();
+  // Forelock between the ears
+  ctx.fillStyle = mane;
+  ctx.beginPath(); ctx.ellipse(hx - s * 0.02, hy - s * 0.12, s * 0.06, s * 0.045, 0.5, 0, Math.PI * 2); ctx.fill();
+
+  // Eye + blush
+  _farmEye(ctx, s, hx + s * 0.02, hy - s * 0.02);
+  _farmBlush(ctx, s, hx - s * 0.1, hy + s * 0.04);
 }
 
 /* Dispatch a farm animal type to its drawer (goose comes from goose.js). */

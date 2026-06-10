@@ -54,12 +54,24 @@
     }
 
     /* ── Open / close ── */
+    // Swap the room tabs/panels for the farm panel (coins stay shared in the
+    // header). Driven by inline styles AND a class so it works even if a stale
+    // room.css is cached — inline styles always win over the stylesheet.
+    function _setFarmPanelMode(on) {
+      const wrap = document.getElementById('panelWrap');
+      if (wrap) wrap.classList.toggle('farm-mode', on);
+      const tabs = document.getElementById('tabsBar');
+      if (tabs) tabs.style.display = on ? 'none' : '';
+      document.querySelectorAll('#panelWrap .tab-panel').forEach(p => { p.style.display = on ? 'none' : ''; });
+      const fp = document.getElementById('farmPanel');
+      if (fp) fp.style.display = on ? 'block' : 'none';
+    }
+
     function openFarm() {
       if (viewingUid !== currentUid) return;
       isFarmView = true;
       document.getElementById('farmView')?.classList.add('visible');
-      // Swap the room tabs for the farm panel (coins stay shared in the header)
-      document.getElementById('panelWrap')?.classList.add('farm-mode');
+      _setFarmPanelMode(true);
       if (runFarmProduction() > 0) saveRoom();
       renderFarmPanel();
       drawFarmCanvas();
@@ -75,7 +87,7 @@
     function closeFarm() {
       isFarmView = false;
       document.getElementById('farmView')?.classList.remove('visible');
-      document.getElementById('panelWrap')?.classList.remove('farm-mode');
+      _setFarmPanelMode(false);
       cancelAnimationFrame(_farmAnimFrame);
       _farmAnimFrame = null;
       clearInterval(_farmTickInterval);
