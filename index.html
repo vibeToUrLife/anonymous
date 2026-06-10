@@ -398,6 +398,321 @@
     @media (prefers-reduced-motion: reduce) {
       .game-card, .game-card:hover { transition:none; }
     }
+
+    /* ══════════════════════════════════════════════════════════════
+       Corkboard — extend the board look to the whole page.
+       The page IS a corkboard; answers are flat paper notes taped on.
+       (Surfaces chosen so no text inverts to invisible; sidebar shell
+       left intact to preserve its light-theme.)
+       ══════════════════════════════════════════════════════════════ */
+    /* The board itself — warm cork with a soft edge vignette (framed feel) */
+    body, body.light-theme {
+      background-color:#cdab6e !important;
+      background-image:
+        radial-gradient(circle at 50% 36%, rgba(60,40,18,0) 52%, rgba(55,36,16,0.26) 100%),
+        radial-gradient(rgba(120,82,38,0.30) 1px, transparent 1.6px),
+        radial-gradient(rgba(90,58,24,0.22) 1px, transparent 1.6px) !important;
+      background-size:100% 100%, 7px 7px, 12px 12px !important;
+      background-position:0 0, 0 0, 4px 5px !important;
+      background-attachment:fixed !important;
+    }
+    .page-subtitle, body.light-theme .page-subtitle { color:rgba(45,32,12,0.62) !important; }
+
+    /* Floating controls (☰ collapse + ⚙ settings) → wooden board buttons,
+       so they stop clashing with the cork as purple glass */
+    .sidebar-toggle, .settings-btn {
+      background:linear-gradient(180deg,#5b4026,#43301c) !important;
+      color:#f4e9d2 !important; border:1px solid #6e4f2c !important;
+      backdrop-filter:none !important;
+      box-shadow:0 3px 7px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.12) !important;
+    }
+    .sidebar-toggle:hover, .settings-btn:hover { background:linear-gradient(180deg,#6b4d2e,#4f3a22) !important; }
+
+    /* Logo: recolour the purple pixel speech-bubble to wood + cream so the hero
+       (logo + paper title) reads as one board element, not a leftover accent */
+    .page-logo .logo-body, body.light-theme .page-logo .logo-body { fill:#6b4a2e !important; }
+    .page-logo .logo-dot,  body.light-theme .page-logo .logo-dot  { fill:#f4e9d2 !important; }
+
+    /* ── Answers as pinned paper notes — the board's signature is the push-pin ──
+       Surfaces forced to paper + ink in BOTH themes; border/shadow left
+       non-!important so paid cosmetic frames (gold/neon/star) still win. */
+    .bubble {
+      color:#2b2440 !important;
+      background-color:var(--paper,#fdf0c4) !important;
+      background-image:radial-gradient(circle at 50% 12px,
+        rgba(255,255,255,.55) 0 2px, var(--pin,#d8504b) 2.5px 6px,
+        rgba(60,20,18,.5) 6px 7.5px, transparent 8px) !important;
+      background-repeat:no-repeat !important;
+      background-position:center top !important;
+      backdrop-filter:none !important;
+      padding-top:30px !important;
+      border:1px solid rgba(70,45,20,.18);
+      border-radius:4px !important;
+      box-shadow:0 8px 16px rgba(45,28,10,.3);
+      transform:rotate(-1.2deg);
+      animation:floatIn 0.4s ease-out forwards;   /* drop the wobble */
+    }
+    .bubble:nth-of-type(even) { transform:rotate(1.3deg); }
+    .bubble:hover { transform:rotate(0deg) scale(1.04) !important; box-shadow:0 12px 26px rgba(45,28,10,.4) !important; }
+    @media (prefers-reduced-motion: reduce) { .bubble, .bubble:hover { animation:none !important; } }
+
+    /* hide the old speech-bubble tails — paper notes are pinned, not spoken */
+    .bubble.shape0::after,
+    .bubble.shape1::before, .bubble.shape1::after,
+    .bubble.shape2::before,
+    .bubble.shape3::before, .bubble.shape3::after { display:none !important; }
+
+    /* paper + pin colour pairs (warm sticky-note set, rotating pin colours) */
+    .bubble.c0 {--paper:#fdf0c4;--pin:#d8504b}  .bubble.c1 {--paper:#ffd9c9;--pin:#3f7cc4}
+    .bubble.c2 {--paper:#d6efd4;--pin:#e0a32e}  .bubble.c3 {--paper:#d4e8ff;--pin:#d8504b}
+    .bubble.c4 {--paper:#fbe5a6;--pin:#4f9d6b}  .bubble.c5 {--paper:#f6d6e6;--pin:#3f7cc4}
+    .bubble.c6 {--paper:#cdeee4;--pin:#d8504b}  .bubble.c7 {--paper:#e6ddf6;--pin:#e0a32e}
+    .bubble.c8 {--paper:#fde3c4;--pin:#4f9d6b}  .bubble.c9 {--paper:#ffd9c9;--pin:#d8504b}
+    .bubble.c10{--paper:#d4e8ff;--pin:#e0a32e}  .bubble.c11{--paper:#e6ddf6;--pin:#3f7cc4}
+    .bubble.c12{--paper:#d6efd4;--pin:#d8504b}  .bubble.c13{--paper:#f6d6e6;--pin:#4f9d6b}
+    .bubble.c14{--paper:#dbe7f2;--pin:#d8504b}  .bubble.c15{--paper:#fde3c4;--pin:#3f7cc4}
+
+    /* on-paper chrome → ink instead of white (both themes) */
+    .bubble-footer, body.light-theme .bubble-footer { color:rgba(43,36,64,.6) !important; }
+    .reply-toggle, .reply-to-reply-toggle,
+    body.light-theme .reply-toggle, body.light-theme .reply-to-reply-toggle { color:rgba(43,36,64,.7) !important; }
+    .reply-toggle:hover, .reply-to-reply-toggle:hover { color:#2b2440 !important; background:rgba(0,0,0,.06) !important; }
+    .replies-container, body.light-theme .replies-container { border-top-color:rgba(70,45,20,.18) !important; }
+    .replies-container > .reply-item, body.light-theme .replies-container > .reply-item,
+    .reply-item, body.light-theme .reply-item {
+      color:#3a3358 !important; background:rgba(120,80,30,.07) !important; border-color:rgba(70,45,20,.14) !important;
+    }
+    .reply-item.is-nested { background:transparent !important; }
+    .reply-children, body.light-theme .reply-children { border-left-color:rgba(70,45,20,.2) !important; }
+    .reply-time, .reply-anon-text, body.light-theme .reply-anon-text { color:rgba(43,36,64,.45) !important; }
+    /* Sender name on paper:
+         · no cosmetic   → clean ink, no chip (the common case)
+         · colour bought → dark name-tag chip so light colours (mint/pink/gold) stay
+           legible; the inline cosmetic colour supplies the text (NO !important so it wins)
+         · rainbow       → excluded (it needs its own gradient bg for clip-to-text) + shadow */
+    .answer-sender:not(.cos-name-rainbow), .reply-sender:not(.cos-name-rainbow),
+    body.light-theme .answer-sender:not(.cos-name-rainbow), body.light-theme .reply-sender:not(.cos-name-rainbow) {
+      color:#2b2440; background:transparent;
+    }
+    .answer-sender[style*="color:"], .reply-sender[style*="color:"] {
+      background:rgba(43,30,16,.82) !important; border-radius:6px; padding:0 6px;
+    }
+    .cos-name-rainbow { text-shadow:0 1px 2px rgba(0,0,0,.5); }
+    .cos-title { color:#3a2a10 !important; background:#f1c85b !important; }
+    .bubble.cos-frame-simple { border-color:rgba(60,40,20,.5) !important; }
+    /* reaction chips inside a note → ink on paper */
+    .bubble .reaction-btn, body.light-theme .bubble .reaction-btn { background:rgba(60,40,15,.08) !important; border-color:rgba(70,45,20,.2) !important; color:#3a3358 !important; }
+    .bubble .reaction-btn:hover { background:rgba(60,40,15,.16) !important; border-color:rgba(70,45,20,.34) !important; }
+    .bubble .reaction-btn.reacted { background:rgba(216,80,75,.16) !important; border-color:rgba(216,80,75,.5) !important; color:#b23b36 !important; }
+    .bubble .reaction-add, body.light-theme .bubble .reaction-add { border-color:rgba(70,45,20,.3) !important; color:rgba(43,36,64,.45) !important; }
+    .bubble .reaction-add:hover { background:rgba(60,40,15,.1) !important; color:#2b2440 !important; }
+    /* HP bar inside a note */
+    .bubble .bubble-hp, body.light-theme .bubble .bubble-hp { background:rgba(60,40,15,.16) !important; border-color:rgba(70,45,20,.2) !important; }
+    .bubble .bubble-hp-label, body.light-theme .bubble .bubble-hp-label { color:rgba(43,36,64,.6) !important; }
+    /* reply input row + nested send/attach → warm field + wood pill */
+    .reply-input-row input, .poll-add-row input,
+    body.light-theme .reply-input-row input {
+      background:#fff8e6 !important; color:#2b2440 !important; border-color:rgba(70,45,20,.25) !important;
+    }
+    .reply-input-row input::placeholder, .poll-add-row input::placeholder { color:rgba(43,36,64,.4) !important; }
+    .reply-input-row .reply-send-btn, .reply-attach, .poll-add-row button,
+    body.light-theme .reply-input-row .reply-send-btn, body.light-theme .reply-attach {
+      background:linear-gradient(180deg,#5b4026,#43301c) !important; color:#f4e9d2 !important;
+    }
+    /* a poll shown inside a note → ink */
+    .bubble .poll-question { color:#2b2440 !important; }
+    .bubble .poll-option-text, body.light-theme .bubble .poll-option-text { color:#3a3358 !important; }
+    .bubble .poll-option-row, body.light-theme .bubble .poll-option-row { background:rgba(60,40,15,.06) !important; border-color:rgba(70,45,20,.16) !important; }
+    .bubble .poll-option-bar { background:rgba(224,163,46,.22) !important; }
+    .bubble .poll-vote-count, .bubble .poll-total { color:rgba(43,36,64,.5) !important; }
+    /* award / boost text on paper → warm brown (gold reads poorly on cream) */
+    .bubble-award-givers, .award-toggle, .boost-toggle { color:#9a6a1e !important; }
+
+    /* Daily quote — a pinned kraft card */
+    .daily-quote-banner {
+      background:#fdf0c4 !important; border:1px solid rgba(0,0,0,0.1) !important;
+      box-shadow:0 6px 16px rgba(0,0,0,0.3) !important; transform:rotate(-0.6deg);
+    }
+    .daily-quote-banner::before { display:none !important; }  /* kill the purple wash */
+    .daily-quote-label { color:#b06a2a !important; }
+    .daily-quote-text { color:#2b2440 !important; }
+
+    /* Live bar + composer — warm wood strips (light text stays readable) */
+    .live-bar { background:linear-gradient(180deg,#5b4026,#43301c) !important; border:1px solid #6e4f2c !important; border-radius:12px !important; }
+    .input-area { background:linear-gradient(180deg,#43301c,#2e2113) !important; border-top:1px solid #6e4f2c !important; }
+    .input-area textarea { background:#fdf6e0 !important; color:#2b2440 !important; border-color:rgba(0,0,0,0.15) !important; }
+    .input-area textarea::placeholder { color:rgba(43,36,64,0.45) !important; }
+
+    /* Login + access gate — a paper note pinned to the cork (first impression) */
+    .login-box, .access-gate-box {
+      background:#fdf0c4 !important; color:#2b2440 !important;
+      border:1px solid rgba(0,0,0,0.12) !important; backdrop-filter:none !important;
+      box-shadow:0 12px 32px rgba(0,0,0,0.45) !important;
+    }
+    .login-box h2, .access-gate-box h2 {
+      color:#2b2440 !important; -webkit-text-fill-color:#2b2440 !important; background:none !important;
+    }
+    .login-box p, .access-gate-box p, .access-gate-box h2 + p { color:rgba(43,36,64,0.7) !important; }
+
+    /* ── Sidebar → wooden board panel (cream text), identical in both themes ── */
+    .sidebar, body.light-theme .sidebar {
+      background:linear-gradient(180deg,#2e2117,#241a11) !important;
+      border-right:1px solid #6e4f2c !important; color:#f4e9d2 !important; backdrop-filter:none !important;
+    }
+    .sidebar-header, body.light-theme .sidebar-header { color:#fff6de !important; text-shadow:0 1px 0 #6b4a23; }
+    .sidebar-body, body.light-theme .sidebar-body { color:#f4e9d2 !important; }
+    .sidebar-section, body.light-theme .sidebar-section { border-bottom-color:rgba(255,255,255,0.08) !important; }
+    .sidebar-section h3, body.light-theme .sidebar-section h3 { color:#eab64f !important; }
+    /* collapse toggles (Food & Vote / Mini Games) — wooden sub-bars */
+    .collapse-toggle, body.light-theme .collapse-toggle { background:rgba(0,0,0,0.22) !important; color:#f4e9d2 !important; }
+    .collapse-toggle span, .collapse-arrow,
+    body.light-theme .collapse-toggle span, body.light-theme .collapse-arrow { color:#f4e9d2 !important; }
+    /* countdown */
+    .countdown-display, body.light-theme .countdown-display { background:rgba(0,0,0,0.25) !important; color:#f4e9d2 !important; }
+    .countdown-digits { color:#fff6de !important; }
+    .countdown-label, body.light-theme .countdown-label { color:rgba(244,233,210,0.6) !important; }
+    .countdown-schedule { color:rgba(244,233,210,0.45) !important; }
+    .countdown-input-row input[type="time"], body.light-theme .countdown-input-row input[type="time"] {
+      background:rgba(0,0,0,0.25) !important; color:#f4e9d2 !important; border-color:#6e4f2c !important; color-scheme:dark !important;
+    }
+    /* food list + spin */
+    .food-input-row input, body.light-theme .food-input-row input {
+      background:rgba(0,0,0,0.25) !important; color:#f4e9d2 !important; border-color:#6e4f2c !important;
+    }
+    .food-input-row input::placeholder, body.light-theme .food-input-row input::placeholder { color:rgba(244,233,210,0.4) !important; }
+    .random-result, body.light-theme .random-result { background:rgba(0,0,0,0.25) !important; color:#eab64f !important; }
+    .restore-btn, body.light-theme .restore-btn { color:rgba(244,233,210,0.6) !important; border-color:#6e4f2c !important; }
+    .reset-info, .vote-empty { color:rgba(244,233,210,0.45) !important; }
+    .vote-item, body.light-theme .vote-item {
+      background:rgba(255,255,255,0.05) !important; border-color:rgba(255,255,255,0.08) !important; color:#f4e9d2 !important;
+    }
+    .vote-item .vote-text, body.light-theme .vote-item .vote-text { color:#f4e9d2 !important; }
+
+    /* Floating action buttons → wooden, to match the board */
+    .feedback-fab, .riddle-fab, .mood-fab {
+      background:linear-gradient(180deg,#5b4026,#43301c) !important;
+      box-shadow:0 4px 14px rgba(0,0,0,0.4) !important; color:#f4e9d2 !important;
+    }
+    .mood-fab.has-checked { background:linear-gradient(180deg,#4f9d6b,#2f7d4d) !important; }
+
+    /* ══════════════════════════════════════════════════════════════
+       Buttons & modals — the board's two materials only:
+         · WOOD pills (cream text)   · GOLD pills (ink text, primary CTA)
+       Panels swap dark→wood / light→kraft, so text contrast is preserved
+       in each theme automatically; accent retints are for cohesion only.
+       ══════════════════════════════════════════════════════════════ */
+
+    /* ── Pill buttons ─────────────────────────────────────────────── */
+    /* Wood (neutral / secondary) */
+    .access-enter-btn, .settings-cache-btn, .settings-close-btn, .settings-select button,
+    .poll-btn, .poll-add-option-btn, .riddle-btn, .cc-tab, .cc-bet, .cc-btn.own,
+    .pg-toggle, .food-input-row button, .countdown-input-row button, .countdown-clear,
+    .mood-emoji-btn, .attach-btn, .gif-btn, .vote-item .vote-btn {
+      background:linear-gradient(180deg,#5b4026,#43301c) !important;
+      color:#f4e9d2 !important; border:1px solid #6e4f2c !important;
+    }
+    .access-enter-btn:hover, .settings-cache-btn:hover, .settings-close-btn:hover,
+    .poll-btn:hover, .riddle-btn:hover, .cc-tab:hover, .pg-toggle:hover,
+    .food-input-row button:hover, .countdown-input-row button:hover, .vote-item .vote-btn:hover {
+      background:linear-gradient(180deg,#6b4d2e,#4f3a22) !important;
+    }
+    /* Gold (primary CTA) */
+    .input-area button, .settings-name-row button, .poll-submit-btn, .riddle-btn.primary,
+    .cc-btn.buy, .cc-tab.active, .cc-bet.active, .settings-select button.active,
+    .random-btn, .spin-result-close, .cc-super-btn, .cc-pool-btn,
+    .ci-accept, .vote-item .vote-btn.voted, .pg-toggle.active {
+      background:linear-gradient(180deg,#f1c85b,#e0a32e) !important;
+      color:#3a2a10 !important; border:1px solid #c98f24 !important; font-weight:700 !important;
+      -webkit-text-fill-color:#3a2a10 !important;
+    }
+    /* Pressable feel */
+    .access-enter-btn:active, .input-area button:active, .settings-name-row button:active,
+    .poll-submit-btn:active, .riddle-btn:active, .cc-btn:active, .cc-tab:active,
+    .random-btn:active, .spin-result-close:active, .poll-btn:active, .vote-item .vote-btn:active {
+      transform:translateY(1px) scale(.99) !important;
+    }
+    /* Destructive stays red, just reshaped onto the board */
+    .settings-logout-btn, .spin-actions .remove-btn, .ci-reject { border-radius:12px !important; }
+
+    /* Icon close buttons (✕) → small wood discs, red on hover */
+    .poll-creator-close, .riddle-close, .cc-close, .pg-close, .gif-picker-close,
+    body.light-theme .riddle-close, body.light-theme .cc-close, body.light-theme .gif-picker-close {
+      background:rgba(0,0,0,.3) !important; color:#f4e9d2 !important; border:1px solid #6e4f2c !important;
+    }
+    .poll-creator-close:hover, .riddle-close:hover, .cc-close:hover, .pg-close:hover, .gif-picker-close:hover {
+      background:#9a3b34 !important; color:#fff !important;
+    }
+
+    /* ── Modal panels ─────────────────────────────────────────────── */
+    /* Warm-dim every backdrop */
+    .settings-overlay, .spin-result-overlay, .riddle-overlay, .cc-overlay,
+    body.light-theme .settings-overlay, body.light-theme .spin-result-overlay {
+      background:rgba(28,18,8,.74) !important; backdrop-filter:blur(4px) !important;
+    }
+    #pgOverlay { background:radial-gradient(circle at 50% 26%, rgba(74,50,24,.94), rgba(26,17,8,.97)) !important; }
+
+    /* Dark theme → wooden panels (existing white text stays readable) */
+    .settings-box, .spin-result-box, .riddle-card, .cc-card, .mood-panel, .gif-picker,
+    .poll-creator, .chess-invite-box, .reaction-picker-popup {
+      background:linear-gradient(170deg,#33261a,#241a11) !important;
+      border:1px solid #6e4f2c !important; backdrop-filter:none !important;
+      box-shadow:0 18px 48px rgba(0,0,0,.55) !important;
+    }
+    /* Light theme → kraft-paper panels (existing dark text stays readable) */
+    body.light-theme .settings-box, body.light-theme .spin-result-box,
+    body.light-theme .riddle-card, body.light-theme .cc-card, body.light-theme .mood-panel,
+    body.light-theme .gif-picker, body.light-theme .reaction-picker-popup {
+      background:#fdf0c4 !important; border:1px solid rgba(70,45,20,.25) !important;
+      box-shadow:0 16px 40px rgba(45,28,10,.4) !important;
+    }
+    /* poll-creator & chess have no light-text support → wood in both themes */
+    body.light-theme .poll-creator, body.light-theme .chess-invite-box {
+      background:linear-gradient(170deg,#33261a,#241a11) !important; border:1px solid #6e4f2c !important;
+    }
+    /* chess title inherits body colour (dark in light theme) → force cream on its wood box */
+    .chess-invite-box h3, body.light-theme .chess-invite-box h3 { color:#f4e9d2 !important; }
+
+    /* Titles that used transparent gradient-fill → solid, theme-aware
+       (cos-name-rainbow intentionally untouched — it's a paid cosmetic) */
+    .settings-box h3, .cc-title, .pg-title {
+      background:none !important; -webkit-text-fill-color:#fff6de !important; color:#fff6de !important;
+    }
+    body.light-theme .settings-box h3, body.light-theme .cc-title {
+      -webkit-text-fill-color:#3a2a10 !important; color:#3a2a10 !important;
+    }
+    /* Accents on wood-in-both surfaces (sidebar / poll / chess / pg) → gold both themes */
+    .poll-creator-header, body.light-theme .poll-creator-header,
+    .pg-coins, .vote-item .vote-count, body.light-theme .vote-item .vote-count,
+    .live-presence b, body.light-theme .live-presence b { color:#eab64f !important; }
+    /* Accents on dark→wood / light→kraft panels → gold on wood, brown on kraft */
+    .riddle-head, .cc-sec, .cc-coins { color:#eab64f !important; }
+    body.light-theme .riddle-head, body.light-theme .cc-sec, body.light-theme .cc-coins { color:#9a6a1e !important; }
+    .riddle-hint { color:#eab64f !important; background:rgba(234,182,79,.12) !important; }
+    body.light-theme .riddle-hint { color:#9a6a1e !important; background:rgba(154,106,30,.1) !important; }
+
+    /* live-bar children (the bar itself is wood in both themes) — keep cream */
+    body.light-theme .live-presence { background:rgba(255,255,255,.06) !important; color:#f4e9d2 !important; }
+    body.light-theme .live-typing { color:rgba(244,233,210,.6) !important; }
+
+    /* Panel inputs → warm field (dark on wood panels, kraft on light) */
+    .settings-name-row input, .poll-question-input, .poll-option-input, .riddle-input, .gif-picker-header input {
+      background:rgba(0,0,0,.26) !important; color:#f4e9d2 !important; border:1px solid #6e4f2c !important;
+    }
+    .settings-name-row input::placeholder, .poll-question-input::placeholder,
+    .poll-option-input::placeholder, .riddle-input::placeholder, .gif-picker-header input::placeholder {
+      color:rgba(244,233,210,.45) !important;
+    }
+    body.light-theme .settings-name-row input, body.light-theme .riddle-input, body.light-theme .gif-picker-header input {
+      background:#fff8e6 !important; color:#2b2440 !important; border:1px solid rgba(70,45,20,.25) !important;
+    }
+
+    /* Inner cards / rows / toggles → warm tints, theme-aware */
+    .settings-row, .cc-item, .cc-pull, .cc-lb-row, .cc-fortune-card { background:rgba(0,0,0,.2) !important; border-color:#5e4426 !important; }
+    body.light-theme .settings-row, body.light-theme .cc-item, body.light-theme .cc-pull,
+    body.light-theme .cc-lb-row, body.light-theme .cc-fortune-card { background:rgba(120,80,30,.08) !important; border-color:rgba(70,45,20,.16) !important; }
+    .settings-toggle input:checked + .slider { background:#e0a32e !important; }
+    .settings-select button.active, .poll-btn.active, .mood-emoji-btn.selected { border-color:#e0a32e !important; }
+    .poll-option-row.voted, .cc-lb-row.me, .cc-fortune-card.rare { border-color:rgba(224,163,46,.55) !important; }
   </style>
 </head>
 <body>
