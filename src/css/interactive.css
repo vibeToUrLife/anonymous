@@ -302,9 +302,15 @@ body.light-theme .pg-toggle.active { background: #c8b6ff; color: #2a1f4a; }
   line-height: 1.6;
   color: #fff;
   font-weight: 600;
-  margin-bottom: 14px;
+  margin-bottom: 6px;
   min-height: 48px;
 }
+.riddle-len {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 12px;
+}
+.riddle-len:empty { display: none; }
 .riddle-hint {
   font-size: 13px;
   color: #a5b4fc;
@@ -377,6 +383,7 @@ body.light-theme .riddle-fab.has-new::after { border-color: #f5f3fa; }
 body.light-theme .riddle-card { background: linear-gradient(160deg, #ffffff 0%, #f5f3fa 100%); border-color: rgba(0, 0, 0, 0.08); }
 body.light-theme .riddle-close { background: rgba(0, 0, 0, 0.06); color: #555; }
 body.light-theme .riddle-q { color: #2a2150; }
+body.light-theme .riddle-len { color: rgba(0, 0, 0, 0.45); }
 body.light-theme .riddle-hint { color: #6b4fa0; background: rgba(120, 90, 200, 0.08); }
 body.light-theme .riddle-input { background: rgba(0, 0, 0, 0.04); color: #333; border-color: rgba(0, 0, 0, 0.12); }
 body.light-theme .riddle-input::placeholder { color: rgba(0, 0, 0, 0.35); }

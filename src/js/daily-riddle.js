@@ -75,6 +75,7 @@
   if (!fab || !overlay) return;
 
   const qEl        = document.getElementById('riddleQ');
+  const lenEl      = document.getElementById('riddleLen');
   const inputEl    = document.getElementById('riddleInput');
   const submitBtn  = document.getElementById('riddleSubmit');
   const hintBtn    = document.getElementById('riddleHintBtn');
@@ -109,6 +110,8 @@
   function render() {
     riddle = RIDDLES[L.dailyIndex(RIDDLES.length)];   // recompute (in case the day rolled over)
     qEl.textContent = riddle.q;
+    // Length clue based on the canonical answer a[0] (code-point safe for Chinese).
+    if (lenEl) lenEl.textContent = '（答案 ' + [...riddle.a[0]].length + ' 个字）';
     inputEl.value = '';
     hintEl.hidden = true; hintEl.textContent = '💡 ' + riddle.hint;
     answerEl.hidden = true;
