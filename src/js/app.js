@@ -51,21 +51,26 @@ auth.onAuthStateChanged(async (user) => {
     if (user) {
     loginOverlay.classList.add('hidden');
     appContent.classList.add('visible');
-    // Sync displayName to rooms collection so chess invite list shows correct name
-    let customName = localStorage.getItem('flappy_custom_name_' + user.uid);
-    // If no local custom name, try fetching from Firestore (cross-device sync)
-    if (!customName) {
-        try {
-            const roomDoc = await db.collection('rooms').doc(user.uid).get();
-            if (roomDoc.exists && roomDoc.data().displayName) {
-                customName = roomDoc.data().displayName;
-                localStorage.setItem('flappy_custom_name_' + user.uid, customName);
-            }
-        } catch (e) {}
-    }
-    const displayName = customName || user.displayName || user.email?.split('@')[0] || 'Anonymous';
+    // Display name: Firestore rooms/{uid}.displayName is the source of truth so a
+    // name changed on one device shows on all of them. localStorage is only a cache —
+    // always reconcile it with the server value, never let a stale cache win.
+    const cachedName = localStorage.getItem('flappy_custom_name_' + user.uid);
+    let serverName = null, fetchOk = false;
+    try {
+        const roomDoc = await db.collection('rooms').doc(user.uid).get();
+        fetchOk = true;
+        if (roomDoc.exists && roomDoc.data().displayName) serverName = roomDoc.data().displayName;
+    } catch (e) {}
+    // Server value wins over the local cache; fall back to cache/auth/email only when unset.
+    const displayName = serverName || cachedName || user.displayName || user.email?.split('@')[0] || 'Anonymous';
     localStorage.setItem('flappy_name', displayName);
-    db.collection('rooms').doc(user.uid).set({ displayName: displayName, lastSeen: Date.now() }, { merge: true }).catch(() => {});
+    localStorage.setItem('flappy_custom_name_' + user.uid, displayName);
+    // Only seed Firestore when we confirmed it has no name yet — never overwrite a
+    // name set on another device, and never clobber on a failed/offline read.
+    const roomUpdate = (fetchOk && !serverName)
+        ? { displayName: displayName, lastSeen: Date.now() }
+        : { lastSeen: Date.now() };
+    db.collection('rooms').doc(user.uid).set(roomUpdate, { merge: true }).catch(() => {});
     // Heartbeat: update lastSeen every 2 min so others see you online
     if (_lastSeenInterval) clearInterval(_lastSeenInterval);
     _lastSeenInterval = setInterval(() => {
