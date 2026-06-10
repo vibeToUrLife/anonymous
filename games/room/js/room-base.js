@@ -251,7 +251,7 @@
     const FARM_START_HAPPINESS = 60;               // happiness of a newly bought animal
     const FARM_FOOD_MAX = 100;                     // trough capacity (units)
     const FARM_FOOD_COST = 5;                      // coins per food unit on refill
-    const FARM_FOOD_PER_DAY = 2;                   // units each animal eats per day
+    const FARM_FOOD_PER_DAY = 12;                  // units each animal eats per day (drains faster → refill often)
     const FARM_HAPPY_GAIN_PER_DAY = 25;            // happiness gained per fed day
     const FARM_HAPPY_DECAY_PER_DAY = 25;           // happiness lost per hungry (empty-trough) day
 

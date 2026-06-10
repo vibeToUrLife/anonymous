@@ -158,6 +158,8 @@
 
     function closeFarm() {
       isFarmView = false;
+      closeCropPicker();
+      _hideFarmTip();
       document.getElementById('farmView')?.classList.remove('visible');
       _setFarmPanelMode(false);
       cancelAnimationFrame(_farmAnimFrame);
@@ -282,18 +284,7 @@
                 '</div>';
             }).join(''));
 
-      const decorHtml =
-        '<div class="farm-section-title">🌻 Decor</div>' +
-        FARM_DECORS.map(def => {
-          const owned = (roomData.farmDecors || []).filter(dc => dc.type === def.id).length;
-          const afford = roomData.coins >= def.cost;
-          return '<div class="farm-shop-row">' +
-            '<span class="farm-shop-animal">' + def.emoji + ' ' + def.name + ' <small>×' + owned + '</small></span>' +
-            '<button class="farm-shop-buy" onclick="buyFarmDecor(\'' + def.id + '\')"' + (!afford ? ' disabled' : '') + '>' + def.cost + '🪙</button>' +
-            '</div>';
-        }).join('');
-
-      // Garden: plot count + Add-plot, and crop seeds you can select to plant
+      // Garden: plot count + Add-plot + how-to (seed choice now happens on the farm)
       const plots = roomData.farmPlots || [];
       const usedPlots = plots.filter(p => p.crop).length;
       const gardenHtml =
@@ -302,15 +293,12 @@
             ? '<button class="farm-shop-buy" onclick="addFarmPlot()"' + (roomData.coins < FARM_PLOT_COST ? ' disabled' : '') + '>+ Plot · ' + FARM_PLOT_COST + '🪙</button>'
             : '<span class="farm-panel-cap">' + plots.length + ' plots</span>') +
         '</div>' +
-        '<div class="farm-panel-empty" style="padding-bottom:2px">' + usedPlots + '/' + plots.length + ' plots planted · tap soil on the farm to plant the selected seed</div>' +
-        FARM_CROPS.map(c => {
-          const sel = _selectedCrop === c.id;
-          const yld = c.yield.food ? ('+' + c.yield.food + ' 🌾food') : (FARM_PRODUCTS[c.yield.product].emoji + ' ' + farmProductPrices()[c.yield.product] + '🪙');
-          return '<div class="farm-shop-row" style="' + (sel ? 'background:rgba(247,201,126,.12);border-radius:8px' : '') + '">' +
-            '<span class="farm-shop-animal">' + c.emoji + ' ' + c.name + ' <small>' + Math.round(c.growMs / 60000) + 'm → ' + yld + '</small></span>' +
-            '<button class="farm-shop-buy" onclick="selectFarmCrop(\'' + c.id + '\')">' + (sel ? '✓ Seed ' : 'Seed ') + c.seedCost + '🪙</button>' +
-            '</div>';
-        }).join('');
+        '<div class="farm-panel-empty" style="padding-bottom:2px">' + usedPlots + '/' + plots.length + ' plots planted</div>' +
+        '<div class="farm-howto">' +
+          '👆 Tap an empty plot on the farm to choose a seed.<br>' +
+          '✋ Drag across plots to plant several at once.<br>' +
+          '⏳ Hover a crop to see its time left — tap it when ripe to harvest.' +
+        '</div>';
 
       // Workshop: processing machines (buy → make → collect)
       const machines = roomData.farmMachines || {};
@@ -362,13 +350,13 @@
         { id: 'animals',  label: '🐮 Animals' },
         { id: 'garden',   label: '🌱 Garden' },
         { id: 'market',   label: '📦 Market' },
-        { id: 'upgrades', label: '⚙️ More' },
+        { id: 'upgrades', label: '⚙️ Upgrades' },
       ];
       const groups = {
         animals:  card(foodHtml) + card(herdHtml) + card(shopHtml),
         garden:   card(gardenHtml) + card(workshopHtml),
         market:   card(stockHtml) + card(ordersHtml),
-        upgrades: card(upgradesHtml) + card(decorHtml),
+        upgrades: card(upgradesHtml),
       };
       const hints = {
         animals:  'Keep the trough filled — fed animals are happy and produce faster!',
@@ -623,6 +611,77 @@
       }
       plot.crop = null; plot.plantedAt = 0;
       saveRoom(); renderFarmPanel(); renderAll();
+    }
+
+    /* ── Crop picker (tap an empty plot) + plant helpers ── */
+    function _fmtFarmTime(ms) {
+      const m = Math.max(0, Math.ceil(ms / 60000));
+      if (m < 60) return m + 'm';
+      return Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
+    }
+
+    // Plant the currently-armed seed (_selectedCrop) into plot i. Silent on
+    // failure so drag-planting just stops when you run out of coins.
+    function _plantArmed(i) {
+      const plot = (roomData.farmPlots || [])[i];
+      if (!plot || plot.crop) return false;
+      const crop = FARM_CROPS.find(c => c.id === _selectedCrop);
+      if (!crop || roomData.coins < crop.seedCost) return false;
+      roomData.coins -= crop.seedCost;
+      plot.crop = crop.id; plot.plantedAt = Date.now();
+      const pos = _farmPlotPos(i);
+      _farmParticles.push({ text: crop.emoji, x: pos.x, y: pos.y - 0.05, vy: -0.0008, life: 900, born: performance.now() });
+      return true;
+    }
+
+    function openCropPicker(plotIndex) {
+      const picker = document.getElementById('cropPicker');
+      if (!picker) return;
+      const prices = farmProductPrices();
+      picker.innerHTML =
+        '<div class="cp-head">🌱 Plant what?</div>' +
+        FARM_CROPS.map(c => {
+          const yld = c.yield.food
+            ? ('+' + c.yield.food + ' 🌾 food')
+            : ((FARM_PRODUCTS[c.yield.product] ? FARM_PRODUCTS[c.yield.product].emoji : '') + ' ' + (prices[c.yield.product] || 0) + '🪙');
+          const afford = roomData.coins >= c.seedCost;
+          return '<button class="cp-crop"' + (afford ? '' : ' disabled') + ' onclick="pickCrop(' + plotIndex + ',\'' + c.id + '\')">' +
+            '<span class="cp-emoji">' + c.emoji + '</span>' +
+            '<span class="cp-info"><b>' + c.name + '</b><small>' + _fmtFarmTime(c.growMs) + ' → ' + yld + '</small></span>' +
+            '<span class="cp-cost">' + c.seedCost + '🪙</span>' +
+            '</button>';
+        }).join('') +
+        '<button class="cp-close" onclick="closeCropPicker()">Close</button>';
+      picker.style.display = 'block';
+    }
+    function closeCropPicker() {
+      const p = document.getElementById('cropPicker');
+      if (p) p.style.display = 'none';
+    }
+    function pickCrop(plotIndex, cropId) {
+      _selectedCrop = cropId;
+      closeCropPicker();
+      const crop = FARM_CROPS.find(c => c.id === cropId);
+      if (crop && roomData.coins < crop.seedCost) return showToast('Not enough coins for ' + crop.name + ' seed!', 'error');
+      if (plotIndex != null && _plantArmed(plotIndex)) { saveRoom(); renderFarmPanel(); renderAll(); }
+    }
+
+    function _showFarmTip(text, e) {
+      const tip = document.getElementById('farmTip');
+      const view = document.getElementById('farmView');
+      if (!tip || !view) return;
+      const r = view.getBoundingClientRect();
+      const src = (e.touches && e.touches[0]) ? e.touches[0] : e;
+      tip.textContent = text;
+      tip.style.display = 'block';
+      let x = src.clientX - r.left + 14;
+      x = Math.min(x, r.width - tip.offsetWidth - 8);
+      tip.style.left = Math.max(6, x) + 'px';
+      tip.style.top = Math.max(6, src.clientY - r.top - tip.offsetHeight - 6) + 'px';
+    }
+    function _hideFarmTip() {
+      const tip = document.getElementById('farmTip');
+      if (tip) tip.style.display = 'none';
     }
 
     function _collectFarmDrop(drop) {
@@ -1021,6 +1080,9 @@
     let _farmDragSuppressClick = false;
     let _farmDragStartX = 0, _farmDragStartY = 0;
     const FARM_DRAG_THRESHOLD = 0.03; // dead-zone: finger jitter stays a tap
+    let _farmPlantStartIdx = null;    // empty plot a plant-drag started on
+    let _farmPlantDrag = false;       // dragging across plots to plant the armed seed
+    let _farmPlantedSet = null;       // plot indices already planted this drag
 
     function _attachFarmPointerHandlers(cvs) {
       function pos(e) {
@@ -1037,15 +1099,76 @@
           const dist = Math.hypot(dc.x - p.x, dc.y - p.y);
           if (dist < 0.06 && dist < hitDist) { hitDist = dist; hit = dc; }
         }
-        if (!hit) return;
-        _farmDragDecorId = hit.id;
-        _farmDragMoved = false;
-        _farmDragStartX = p.x; _farmDragStartY = p.y;
-        e.stopPropagation();
-        if (e.type === 'mousedown') e.preventDefault();
+        if (hit) {
+          _farmDragDecorId = hit.id;
+          _farmDragMoved = false;
+          _farmDragStartX = p.x; _farmDragStartY = p.y;
+          e.stopPropagation();
+          if (e.type === 'mousedown') e.preventDefault();
+          return;
+        }
+        // Empty plot → arm a potential plant-drag (a plain tap opens the picker).
+        const plots = roomData.farmPlots || [];
+        for (let i = 0; i < plots.length; i++) {
+          const pp = _farmPlotPos(i);
+          if (!plots[i].crop && Math.hypot(pp.x - p.x, pp.y - p.y) < 0.045) {
+            _farmPlantStartIdx = i; _farmPlantDrag = false; _farmPlantedSet = new Set();
+            _farmDragStartX = p.x; _farmDragStartY = p.y;
+            return;
+          }
+        }
       }
 
       function onMove(e) {
+        // Plant-drag: paint the armed seed across empty plots.
+        if (_farmPlantStartIdx != null) {
+          const p = pos(e);
+          if (!_farmPlantDrag) {
+            const dx = p.x - _farmDragStartX, dy = p.y - _farmDragStartY;
+            if (dx * dx + dy * dy < FARM_DRAG_THRESHOLD * FARM_DRAG_THRESHOLD) return;
+            _farmPlantDrag = true;
+            _hideFarmTip();
+            if (_plantArmed(_farmPlantStartIdx)) _farmPlantedSet.add(_farmPlantStartIdx);
+          }
+          if (e.cancelable) e.preventDefault();
+          e.stopPropagation();
+          const plots = roomData.farmPlots || [];
+          for (let i = 0; i < plots.length; i++) {
+            if (_farmPlantedSet.has(i)) continue;
+            const pp = _farmPlotPos(i);
+            if (Math.hypot(pp.x - p.x, pp.y - p.y) < 0.045 && _plantArmed(i)) _farmPlantedSet.add(i);
+          }
+          return;
+        }
+
+        // Hover tooltip (mouse only, when not dragging): crop time / trough food.
+        if (e.type === 'mousemove' && !_farmDragDecorId) {
+          const p = pos(e);
+          let tip = '';
+          if (Math.hypot(p.x - FARM_TROUGH_X, p.y - FARM_TROUGH_Y) < 0.08) {
+            tip = '🌾 Food  ' + Math.floor(roomData.farmFood || 0) + ' / ' + FARM_FOOD_MAX;
+          } else {
+            const plots = roomData.farmPlots || [];
+            for (let i = 0; i < plots.length; i++) {
+              const pp = _farmPlotPos(i);
+              if (Math.hypot(pp.x - p.x, pp.y - p.y) < 0.045) {
+                const plot = plots[i];
+                if (!plot.crop) { tip = '🌱 Empty — tap to plant'; }
+                else {
+                  const crop = FARM_CROPS.find(c => c.id === plot.crop);
+                  if (crop) {
+                    const left = crop.growMs - (Date.now() - plot.plantedAt);
+                    tip = left <= 0 ? (crop.emoji + ' Ready to harvest!') : (crop.emoji + ' ' + _fmtFarmTime(left) + ' left');
+                  }
+                }
+                break;
+              }
+            }
+          }
+          if (tip) _showFarmTip(tip, e); else _hideFarmTip();
+          cvs.style.cursor = tip ? 'pointer' : 'default';
+        }
+
         if (!_farmDragDecorId) return;
         const dc = (roomData.farmDecors || []).find(d => d.id === _farmDragDecorId);
         if (!dc) { _farmDragDecorId = null; return; }
@@ -1062,6 +1185,17 @@
       }
 
       function onUp(e) {
+        // End a plant-drag (a non-moving press falls through to the click → picker).
+        if (_farmPlantStartIdx != null) {
+          if (_farmPlantDrag) {
+            _farmDragSuppressClick = true;
+            saveRoom(); renderFarmPanel(); renderAll();
+            if (e && e.cancelable) e.preventDefault();
+            e.stopPropagation();
+          }
+          _farmPlantStartIdx = null; _farmPlantDrag = false; _farmPlantedSet = null;
+          return;
+        }
         if (!_farmDragDecorId) return;
         if (_farmDragMoved) {
           _farmDragSuppressClick = true;
@@ -1076,22 +1210,28 @@
       cvs.onmousedown = onDown;
       cvs.onmousemove = onMove;
       cvs.onmouseup = onUp;
+      cvs.onmouseleave = () => { _hideFarmTip(); };
       cvs.ontouchstart = onDown;
       cvs.ontouchmove = onMove;
       cvs.ontouchend = onUp;
 
       cvs.onclick = (e) => {
+        closeCropPicker();   // any tap dismisses an open picker
         if (_farmDragSuppressClick) { _farmDragSuppressClick = false; return; }
         if (viewingUid !== currentUid) return;
         const rect = cvs.getBoundingClientRect();
         const cx = (e.clientX - rect.left) / rect.width;
         const cy = (e.clientY - rect.top) / rect.height;
 
-        // Garden plots first (fixed tiles — clearest intent)
+        // Garden plots first: empty → choose a seed, planted → harvest / show time.
         const plots = roomData.farmPlots || [];
         for (let i = 0; i < plots.length; i++) {
           const pos = _farmPlotPos(i);
-          if (Math.hypot(pos.x - cx, pos.y - cy) < 0.05) { _plantOrHarvestPlot(plots[i], pos); return; }
+          if (Math.hypot(pos.x - cx, pos.y - cy) < 0.05) {
+            if (!plots[i].crop) openCropPicker(i);
+            else _plantOrHarvestPlot(plots[i], pos);
+            return;
+          }
         }
 
         // Drops take priority (they're the payout)

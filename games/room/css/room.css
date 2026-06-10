@@ -809,3 +809,34 @@
 
     .farm-panel-hint{font-size:10px;color:rgba(244,233,210,.5);margin-top:4px;padding:9px 4px 0;border-top:1px dotted rgba(255,255,255,.12);line-height:1.55}
     .farm-panel-empty{font-size:11px;color:rgba(244,233,210,.45);padding:4px 0}
+    .farm-howto{font-size:11px;line-height:1.8;color:rgba(244,233,210,.74);padding:6px 2px 2px}
+
+    /* Hover tooltip over the farm canvas (crop time / trough food) */
+    .farm-tip{
+      position:absolute;z-index:60;pointer-events:none;
+      background:rgba(20,14,8,.92);color:#f4e9d2;font-size:11px;font-weight:600;
+      padding:5px 9px;border:1px solid #6e4f2c;border-radius:8px;white-space:nowrap;
+      box-shadow:0 3px 10px rgba(0,0,0,.5);
+    }
+
+    /* Tap-a-plot crop picker */
+    .crop-picker{
+      position:absolute;left:50%;bottom:15%;transform:translateX(-50%);z-index:70;
+      width:min(86%,320px);max-height:58%;overflow-y:auto;
+      background:linear-gradient(180deg,#2f2217,#231a10);border:1px solid #6e4f2c;border-radius:16px;
+      padding:12px 12px 12px;box-shadow:0 12px 34px rgba(0,0,0,.6);
+    }
+    .cp-head{font-family:var(--farm-display);font-size:14px;font-weight:800;color:#fff6de;text-align:center;margin-bottom:10px;letter-spacing:.4px}
+    .cp-crop{
+      display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin-bottom:7px;padding:8px 10px;cursor:pointer;
+      background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.08));border:1px solid rgba(255,255,255,.1);border-radius:11px;color:#f4e9d2;
+    }
+    .cp-crop:hover{background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(0,0,0,.05));border-color:#eab64f}
+    .cp-crop:disabled{opacity:.45;cursor:not-allowed}
+    .cp-emoji{font-size:22px;line-height:1}
+    .cp-info{flex:1;display:flex;flex-direction:column;min-width:0}
+    .cp-info b{font-size:13px}
+    .cp-info small{font-size:10px;color:rgba(244,233,210,.6)}
+    .cp-cost{font-family:var(--farm-display);font-weight:800;font-size:12px;color:#3a2710;background:linear-gradient(180deg,#f4c863,#e3a838);padding:3px 9px;border-radius:999px;white-space:nowrap}
+    .cp-close{display:block;width:100%;margin-top:2px;padding:7px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(255,255,255,.05);color:rgba(244,233,210,.7);font-size:12px;font-weight:600;cursor:pointer}
+    .cp-close:hover{background:rgba(255,255,255,.1)}
