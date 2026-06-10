@@ -154,7 +154,8 @@
         const lastUpdate = d.updatedAt ?? Date.now();
         const elapsed = Date.now() - lastUpdate;
         const decay = Math.floor(elapsed / (10 * 60 * 1000));
-        if (decay > 0) {
+        const _autoFeedActive = roomData.autoFeeder && roomData.autoFeedOn && viewingUid === currentUid;
+        if (decay > 0 && !_autoFeedActive) {
           let changed = false;
           for (const pet of roomData.pets) {
             const oldH = pet.hunger ?? 100;
@@ -199,6 +200,31 @@
             roomData.lastCoinCollect = Date.now();
             saveRoom();
           }
+        }
+        // Auto-Feeder offline catch-up — after plant income so idle earnings can pay.
+        if (decay > 0 && _autoFeedActive) {
+          const _afPlan = planOfflineAutoFeed({
+            pets: roomData.pets.map(p => ({ hunger: p.hunger ?? 100, thirst: p.thirst ?? 100, affection: p.affection ?? 0 })),
+            coins: roomData.coins,
+            decay: decay,
+            foodRate: bestCoinsPerPoint(FOODS),
+            drinkRate: bestCoinsPerPoint(DRINKS),
+            target: AUTOFEED_TARGET,
+            starveLoss: STARVE_AFFECTION_LOSS
+          });
+          roomData.pets.forEach((p, i) => {
+            p.hunger = _afPlan.pets[i].hunger;
+            p.thirst = _afPlan.pets[i].thirst;
+            p.affection = _afPlan.pets[i].affection;
+          });
+          if (_afPlan.coinsSpent > 0) {
+            roomData.coins = Math.max(0, roomData.coins - _afPlan.coinsSpent);
+            const _afSpent = _afPlan.coinsSpent;
+            setTimeout(function () {
+              showToast('🤖 Auto-Feeder kept your pets fed — spent ' + _afSpent + ' coins while you were away!', 'success');
+            }, 1000);
+          }
+          saveRoom();
         }
         maybeGenerateDailyDrops();
         _roomLoaded = true;
@@ -251,6 +277,18 @@
             changed = true;
           }
           if ((pet.thirst ?? 100) > 0) { pet.thirst = (pet.thirst ?? 100) - 1; changed = true; }
+        }
+        if (roomData.autoFeeder && roomData.autoFeedOn) {
+          const _afFood = bestCoinsPerPoint(FOODS), _afDrink = bestCoinsPerPoint(DRINKS);
+          for (const pet of roomData.pets) {
+            const _r = liveRefillPlan(pet, roomData.coins, _afFood, _afDrink, { threshold: AUTOFEED_THRESHOLD, target: AUTOFEED_TARGET });
+            if (_r.coinsSpent > 0) {
+              pet.hunger = _r.hunger;
+              pet.thirst = _r.thirst;
+              roomData.coins = Math.max(0, roomData.coins - _r.coinsSpent);
+              changed = true;
+            }
+          }
         }
         if (changed) { await saveRoom(); renderAllDebounced(); }
       }, 10 * 60 * 1000);
