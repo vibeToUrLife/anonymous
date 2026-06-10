@@ -714,26 +714,83 @@
     .outside-hint{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);font-size:10px;color:rgba(255,255,255,.45);pointer-events:none;z-index:5;white-space:nowrap}
     /* Farm view — stacked above the outside view */
     .farm-view{z-index:46}
-    /* Farm panel — swaps in for the room tabs while the farm is open */
-    .farm-panel{display:none;padding:10px}
+    /* ══ Farm panel — "Pocket Market Stall": warm wood + hay, its own identity ══ */
+    .farm-panel{
+      display:none; padding:12px 10px 16px;
+      --hay:#eab64f; --leaf:#86bf4b; --tomato:#e0613a; --cream:#f4e9d2;
+      --farm-display:ui-rounded,"Segoe UI",system-ui,sans-serif;
+      color:var(--cream);
+      /* sun-glow + faint vertical wood grain over warm bark */
+      background:
+        radial-gradient(130% 55% at 50% -12%, rgba(234,182,79,.12), transparent 62%),
+        repeating-linear-gradient(90deg, rgba(0,0,0,.10) 0 1px, transparent 1px 23px),
+        linear-gradient(180deg,#2b1f15,#221910);
+    }
     .panel-wrap.farm-mode .tabs,.panel-wrap.farm-mode .tab-panel{display:none}
     .panel-wrap.farm-mode .farm-panel{display:block}
-    .farm-panel-head{font-size:13px;font-weight:700;color:#f7c97e;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
-    .farm-panel-cap{font-size:10px;color:rgba(255,255,255,.55);font-weight:600}
-    .farm-section-title{font-size:11px;font-weight:700;color:rgba(255,255,255,.6);margin:10px 0 4px;text-transform:uppercase;letter-spacing:.5px}
-    .farm-shop-row{display:flex;align-items:center;gap:6px;padding:6px 0;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:rgba(255,255,255,.85)}
-    .farm-shop-animal{flex:1;white-space:nowrap}
-    .farm-shop-animal small{color:rgba(255,255,255,.5)}
-    .farm-shop-drop{font-size:10px;color:rgba(255,255,255,.55);white-space:nowrap}
-    .farm-shop-buy{padding:4px 10px;border:none;border-radius:8px;background:#f7c97e;color:#1a1a2e;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
-    .farm-shop-buy:disabled{background:rgba(255,255,255,.15);color:rgba(255,255,255,.4);cursor:not-allowed}
-    .farm-food-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px;color:rgba(255,255,255,.85)}
-    .farm-herd-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:rgba(255,255,255,.85)}
-    .farm-herd-emoji{font-size:18px}
+    .panel-wrap.farm-mode .panel-inner{background:transparent}
+
+    /* Signature: carved wooden sign header */
+    .farm-panel-head{
+      font-family:var(--farm-display); font-size:20px; font-weight:800; letter-spacing:.5px;
+      color:#fff6de; text-shadow:0 1px 0 #6b4a23,0 2px 5px rgba(0,0,0,.5);
+      display:flex; justify-content:space-between; align-items:center; gap:10px;
+      padding:12px 14px; margin:0 0 12px; border-radius:14px;
+      background:linear-gradient(180deg,#5b4026,#42301c);
+      border:1px solid #6e4f2c;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.14),inset 0 -2px 4px rgba(0,0,0,.3),0 3px 9px rgba(0,0,0,.4);
+    }
+    .farm-panel-cap{
+      font-family:var(--farm-display); font-size:11px; font-weight:800; letter-spacing:.3px;
+      color:#3a2710; background:linear-gradient(180deg,#f4c863,#e3a838);
+      padding:4px 10px; border-radius:999px; white-space:nowrap;
+      box-shadow:inset 0 -1px 0 rgba(0,0,0,.2),0 1px 2px rgba(0,0,0,.3);
+    }
+
+    /* Section "crate" cards */
+    .farm-card{
+      background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.07));
+      border:1px solid rgba(255,255,255,.08); border-radius:13px;
+      padding:9px 12px 11px; margin-bottom:9px;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 2px 7px rgba(0,0,0,.22);
+    }
+    .farm-section-title{
+      font-family:var(--farm-display); font-size:12px; font-weight:800; letter-spacing:.7px;
+      text-transform:uppercase; color:var(--hay);
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+      margin:0 0 6px; padding-bottom:6px; border-bottom:2px dotted rgba(234,182,79,.32);
+    }
+
+    /* Rows — feed-sack dotted separators, quiet by default */
+    .farm-shop-row,.farm-herd-row,.farm-food-row{
+      display:flex; align-items:center; gap:8px; padding:6px 2px; font-size:12px;
+      color:var(--cream); border-top:1px dotted rgba(255,255,255,.1);
+    }
+    .farm-shop-row:first-of-type,.farm-herd-row:first-of-type,.farm-food-row:first-of-type{border-top:none}
+    .farm-shop-animal{flex:1;min-width:0}
+    .farm-shop-animal small{color:rgba(244,233,210,.5)}
+    .farm-shop-drop{font-size:10px;color:rgba(244,233,210,.6);white-space:nowrap;font-variant-numeric:tabular-nums}
+
+    /* Action buttons — little pressable wooden signs (one accent: hay) */
+    .farm-shop-buy{
+      font-family:var(--farm-display); font-size:11px; font-weight:800; letter-spacing:.2px;
+      padding:5px 12px; border:none; border-radius:999px; cursor:pointer; white-space:nowrap;
+      color:#3a2710; background:linear-gradient(180deg,#f4c863,#e3a838);
+      box-shadow:0 2px 0 #a9781f,0 3px 6px rgba(0,0,0,.3);
+      font-variant-numeric:tabular-nums; transition:transform .08s,box-shadow .08s;
+    }
+    .farm-shop-buy:hover{transform:translateY(-1px);box-shadow:0 3px 0 #a9781f,0 5px 9px rgba(0,0,0,.32)}
+    .farm-shop-buy:active{transform:translateY(2px);box-shadow:0 0 0 #a9781f}
+    .farm-shop-buy:disabled{background:rgba(255,255,255,.09);color:rgba(244,233,210,.35);box-shadow:none;cursor:not-allowed;transform:none}
+
+    /* Herd + jar-style progress bars */
+    .farm-herd-emoji{font-size:20px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.45))}
     .farm-herd-info{flex:1;min-width:0}
-    .farm-herd-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .farm-herd-bar{height:5px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden;margin-top:3px}
-    .farm-herd-bar span{display:block;height:100%;border-radius:3px;transition:width .3s}
-    .farm-herd-drops{font-size:10px;color:#f7c97e;white-space:nowrap}
-    .farm-panel-hint{font-size:10px;color:rgba(255,255,255,.45);margin-top:10px;border-top:1px solid rgba(255,255,255,.08);padding-top:8px}
-    .farm-panel-empty{font-size:11px;color:rgba(255,255,255,.45);padding:6px 0}
+    .farm-herd-name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .farm-herd-name small{font-family:var(--farm-display);color:var(--hay);font-weight:800}
+    .farm-herd-bar{height:7px;background:rgba(0,0,0,.32);border-radius:999px;overflow:hidden;margin-top:4px;box-shadow:inset 0 1px 2px rgba(0,0,0,.45)}
+    .farm-herd-bar span{display:block;height:100%;border-radius:999px;transition:width .35s ease}
+    .farm-herd-drops{font-size:10px;color:var(--hay);white-space:nowrap;font-weight:700;font-variant-numeric:tabular-nums}
+
+    .farm-panel-hint{font-size:10px;color:rgba(244,233,210,.5);margin-top:4px;padding:9px 4px 0;border-top:1px dotted rgba(255,255,255,.12);line-height:1.55}
+    .farm-panel-empty{font-size:11px;color:rgba(244,233,210,.45);padding:4px 0}

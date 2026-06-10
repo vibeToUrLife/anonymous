@@ -175,11 +175,14 @@
         const herdLine = FARM_ANIMALS.filter(d => counts[d.id]).map(d => d.emoji + '×' + counts[d.id]).join('  ') || 'No animals yet';
         panel.innerHTML =
           '<div class="farm-panel-head">🚜 ' + (roomData.displayName || 'Their') + '\'s Farm</div>' +
-          '<div class="farm-shop-row"><span class="farm-shop-animal">' + herd.length + ' animals</span><span class="farm-shop-drop">' + (roomData.farmAnimals || []).reduce((m, a) => Math.max(m, animalLevel(a.collected, FARM_LEVELS)), 0) + ' top Lv</span></div>' +
-          '<div class="farm-shop-row"><span class="farm-shop-animal">' + herdLine + '</span></div>' +
-          '<div class="farm-shop-row"><span class="farm-shop-animal">🌻 ' + (roomData.farmDecors || []).length + ' decorations · 🌱 ' + (roomData.farmPlots || []).length + ' plots</span></div>' +
-          '<div class="farm-panel-hint">You\'re visiting — tap 👍 to cheer this farm!</div>' +
-          '<button class="farm-shop-buy" style="width:100%;margin-top:8px;padding:8px" onclick="cheerFarm()">👍 Cheer this farm</button>';
+          '<section class="farm-card">' +
+            '<div class="farm-section-title">🐮 Their Herd <span class="farm-panel-cap">Lv ' + (roomData.farmAnimals || []).reduce((m, a) => Math.max(m, animalLevel(a.collected, FARM_LEVELS)), 0) + ' top</span></div>' +
+            '<div class="farm-shop-row"><span class="farm-shop-animal">' + herd.length + ' animals</span></div>' +
+            '<div class="farm-shop-row"><span class="farm-shop-animal">' + herdLine + '</span></div>' +
+            '<div class="farm-shop-row"><span class="farm-shop-animal">🌻 ' + (roomData.farmDecors || []).length + ' decorations · 🌱 ' + (roomData.farmPlots || []).length + ' plots</span></div>' +
+          '</section>' +
+          '<button class="farm-shop-buy" style="width:100%;padding:9px;font-size:13px" onclick="cheerFarm()">👍 Cheer this farm</button>' +
+          '<div class="farm-panel-hint">You\'re visiting — cheer to show some love!</div>';
         return;
       }
 
@@ -349,9 +352,10 @@
             : '<button class="farm-shop-buy" onclick="buyFarmAutoCollect()"' + (roomData.coins < FARM_AUTOCOLLECT_COST ? ' disabled' : '') + '>' + FARM_AUTOCOLLECT_COST + '🪙</button>') +
         '</div>';
 
+      const card = (s) => '<section class="farm-card">' + s + '</section>';
       panel.innerHTML =
         '<div class="farm-panel-head">🚜 Farm <span class="farm-panel-cap">' + animals.length + '/' + farmAnimalCap() + ' animals</span></div>' +
-        foodHtml + ordersHtml + stockHtml + shopHtml + herdHtml + gardenHtml + workshopHtml + decorHtml + upgradesHtml +
+        card(foodHtml) + card(ordersHtml) + card(stockHtml) + card(shopHtml) + card(herdHtml) + card(gardenHtml) + card(workshopHtml) + card(decorHtml) + card(upgradesHtml) +
         '<div class="farm-panel-hint">Keep the trough filled — fed animals are happy and produce faster! Tap produce to collect, then sell it. Drag decor to arrange your farm.</div>';
     }
 
