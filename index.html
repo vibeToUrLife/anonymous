@@ -324,6 +324,57 @@
     body.light-theme .wn-editor-input::placeholder, body.light-theme .wn-editor-textarea::placeholder { color: rgba(0,0,0,0.3); }
     body.light-theme .wn-editor-hint { color: rgba(0,0,0,0.35); }
     body.light-theme .wn-editor-status { color: rgba(100,40,180,0.8); }
+
+    /* ══════════════════════════════════════════════════════════════
+       Pixel Bubble Arcade — board hero + unified game cards.
+       Targeted redesign: grape + bubblegum identity, derived from the
+       pixel speech-bubble. Preserves light-theme + all components.
+       ══════════════════════════════════════════════════════════════ */
+    /* Hero — pixel logo → grape speech-bubble wordmark (signature) → subtitle */
+    .page-title-wrapper { display:flex; flex-direction:column; align-items:center; gap:12px; margin-top:8px; }
+    .page-logo { width:62px; height:auto; image-rendering:pixelated; filter:drop-shadow(0 5px 12px rgba(124,92,255,0.5)); }
+    .page-title {
+      display:inline-block; position:relative; margin:0; max-width:90vw;
+      font-family:ui-monospace,"Cascadia Mono","Consolas","Courier New",monospace;
+      font-size:clamp(17px,4.4vw,26px); font-weight:800; letter-spacing:0.4px; text-align:center;
+      padding:12px 22px; border-radius:18px;
+      background:linear-gradient(135deg,#7c5cff,#9d7bff);
+      /* reset style.css's gradient-text clipping so the bubble + white text show */
+      color:#fff; -webkit-text-fill-color:#fff; -webkit-background-clip:border-box; background-clip:border-box;
+      box-shadow:0 10px 26px rgba(124,92,255,0.42), inset 0 1px 0 rgba(255,255,255,0.25);
+    }
+    /* speech-bubble tail — ties the title to the logo + the board's bubbles */
+    .page-title::after {
+      content:''; position:absolute; left:30px; bottom:-9px;
+      border:10px solid transparent; border-bottom:0; border-top-color:#8a68ff;
+    }
+    .page-subtitle { text-align:center; color:rgba(255,255,255,0.5); font-size:12px; margin:2px 0 0; }
+    body.light-theme .page-subtitle { color:rgba(0,0,0,0.45); }
+    /* light theme: keep the grape bubble (beats style.css's more-specific light rule) */
+    body.light-theme .page-title {
+      background:linear-gradient(135deg,#7c5cff,#9d7bff);
+      color:#fff; -webkit-text-fill-color:#fff; -webkit-background-clip:border-box; background-clip:border-box;
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .page-logo .logo-dot { animation:logoType 1.4s ease-in-out infinite; }
+      @keyframes logoType { 0%,100%{opacity:0.35} 50%{opacity:1} }
+    }
+
+    /* Unified game/room cards — replaces 10 blocks of repeated inline styles */
+    .game-card {
+      display:flex; align-items:center; gap:12px; position:relative;
+      padding:13px 15px; border-radius:14px; text-decoration:none; cursor:pointer; color:#fff;
+      background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.07);
+      transition:transform 0.15s, background 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+    .game-card:hover { transform:translateY(-2px); background:rgba(124,92,255,0.16); border-color:rgba(124,92,255,0.45); box-shadow:0 6px 18px rgba(124,92,255,0.28); }
+    .game-card:active { transform:translateY(0); }
+    .game-card-emoji { font-size:26px; line-height:1; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.35)); transition:transform 0.15s; }
+    .game-card:hover .game-card-emoji { transform:scale(1.12) rotate(-5deg); }
+    .game-card > div { flex:1; min-width:0; }
+    .game-card-title { font-size:14px; font-weight:700; }
+    .game-card-sub { font-size:11px; color:rgba(255,255,255,0.45); }
+    body.light-theme .game-card { border-color:rgba(0,0,0,0.08); }
   </style>
 </head>
 <body>
@@ -511,11 +562,11 @@
 
     <!-- My Room (standalone) -->
     <div class="sidebar-section" style="padding:0">
-      <a href="./games/room.html" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,0.06);text-decoration:none;color:#fff;transition:background 0.2s;cursor:pointer" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
-        <span style="font-size:28px">🏠</span>
+      <a href="./games/room.html" class="game-card">
+        <span class="game-card-emoji">🏠</span>
         <div>
-          <div style="font-size:14px;font-weight:600">My Room</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.45)">Adopt pets, grow plants, visit friends!</div>
+          <div class="game-card-title">My Room</div>
+          <div class="game-card-sub">Adopt pets, grow plants, visit friends!</div>
         </div>
       </a>
     </div>
@@ -528,67 +579,67 @@
       </h3>
       <div id="miniGamesBody">
         <div style="display:flex;flex-direction:column;gap:10px">
-          <a href="./games/flappy.html" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,0.06);text-decoration:none;color:#fff;transition:background 0.2s;cursor:pointer" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
-            <span style="font-size:28px">🐦</span>
+          <a href="./games/flappy.html" class="game-card">
+            <span class="game-card-emoji">🐦</span>
             <div>
-              <div style="font-size:14px;font-weight:600">Flappy Bird</div>
-              <div style="font-size:11px;color:rgba(255,255,255,0.45)">Tap to fly — beat the high score!</div>
+              <div class="game-card-title">Flappy Bird</div>
+              <div class="game-card-sub">Tap to fly — beat the high score!</div>
             </div>
           </a>
-          <a href="./games/tetris.html" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,0.06);text-decoration:none;color:#fff;transition:background 0.2s;cursor:pointer" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
-            <span style="font-size:28px">🧱</span>
+          <a href="./games/tetris.html" class="game-card">
+            <span class="game-card-emoji">🧱</span>
             <div>
-              <div style="font-size:14px;font-weight:600">Tetris</div>
-              <div style="font-size:11px;color:rgba(255,255,255,0.45)">Clear lines, earn coins, chain combos!</div>
+              <div class="game-card-title">Tetris</div>
+              <div class="game-card-sub">Clear lines, earn coins, chain combos!</div>
             </div>
           </a>
-          <a href="./games/chinese-chess.html" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,0.06);text-decoration:none;color:#fff;transition:background 0.2s;cursor:pointer" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
-            <span style="font-size:28px">♟️</span>
+          <a href="./games/chinese-chess.html" class="game-card">
+            <span class="game-card-emoji">♟️</span>
             <div>
-              <div style="font-size:14px;font-weight:600">中國象棋</div>
-              <div style="font-size:11px;color:rgba(255,255,255,0.45)">Challenge friends — bet coins & play!</div>
+              <div class="game-card-title">中國象棋</div>
+              <div class="game-card-sub">Challenge friends — bet coins & play!</div>
             </div>
           </a>
-          <a href="./games/snake.html" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,0.06);text-decoration:none;color:#fff;transition:background 0.2s;cursor:pointer" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
-            <span style="font-size:28px">🐍</span>
+          <a href="./games/snake.html" class="game-card">
+            <span class="game-card-emoji">🐍</span>
             <div>
-              <div style="font-size:14px;font-weight:600">贪吃蛇</div>
-              <div style="font-size:11px;color:rgba(255,255,255,0.45)">Eat, grow, survive — earn coins!</div>
+              <div class="game-card-title">贪吃蛇</div>
+              <div class="game-card-sub">Eat, grow, survive — earn coins!</div>
             </div>
           </a>
-          <a href="./games/block-blast.html" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,0.06);text-decoration:none;color:#fff;transition:background 0.2s;cursor:pointer" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
-            <span style="font-size:28px">🧩</span>
+          <a href="./games/block-blast.html" class="game-card">
+            <span class="game-card-emoji">🧩</span>
             <div>
-              <div style="font-size:14px;font-weight:600">Block Blast</div>
-              <div style="font-size:11px;color:rgba(255,255,255,0.45)">Fill rows & columns — combo for coins!</div>
+              <div class="game-card-title">Block Blast</div>
+              <div class="game-card-sub">Fill rows & columns — combo for coins!</div>
             </div>
           </a>
-          <a href="./games/2048.html" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,0.06);text-decoration:none;color:#fff;transition:background 0.2s;cursor:pointer" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
-            <span style="font-size:28px">🔢</span>
+          <a href="./games/2048.html" class="game-card">
+            <span class="game-card-emoji">🔢</span>
             <div>
-              <div style="font-size:14px;font-weight:600">2048</div>
-              <div style="font-size:11px;color:rgba(255,255,255,0.45)">Swipe & merge tiles to 2048!</div>
+              <div class="game-card-title">2048</div>
+              <div class="game-card-sub">Swipe & merge tiles to 2048!</div>
             </div>
           </a>
-          <a href="./games/fishing.html" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,0.06);text-decoration:none;color:#fff;transition:background 0.2s;cursor:pointer" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
-            <span style="font-size:28px">🎣</span>
+          <a href="./games/fishing.html" class="game-card">
+            <span class="game-card-emoji">🎣</span>
             <div>
-              <div style="font-size:14px;font-weight:600">Fishing</div>
-              <div style="font-size:11px;color:rgba(255,255,255,0.45)">Cast your line — catch fish for coins!</div>
+              <div class="game-card-title">Fishing</div>
+              <div class="game-card-sub">Cast your line — catch fish for coins!</div>
             </div>
           </a>
-          <a href="./games/toto.html" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,0.06);text-decoration:none;color:#fff;transition:background 0.2s;cursor:pointer" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
-            <span style="font-size:28px">🎱</span>
+          <a href="./games/toto.html" class="game-card">
+            <span class="game-card-emoji">🎱</span>
             <div>
-              <div style="font-size:14px;font-weight:600">TOTO Lottery</div>
-              <div style="font-size:11px;color:rgba(255,255,255,0.45)">Daily 4-digit draw — bet coins, win big!</div>
+              <div class="game-card-title">TOTO Lottery</div>
+              <div class="game-card-sub">Daily 4-digit draw — bet coins, win big!</div>
             </div>
           </a>
-          <a href="./games/subway-dash.html" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,0.06);text-decoration:none;color:#fff;transition:background 0.2s;cursor:pointer" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
-            <span style="font-size:28px">🚇</span>
+          <a href="./games/subway-dash.html" class="game-card">
+            <span class="game-card-emoji">🚇</span>
             <div>
-              <div style="font-size:14px;font-weight:600">Subway Dash</div>
-              <div style="font-size:11px;color:rgba(255,255,255,0.45)">Run, jump &amp; roll — dodge the trains!</div>
+              <div class="game-card-title">Subway Dash</div>
+              <div class="game-card-sub">Run, jump &amp; roll — dodge the trains!</div>
             </div>
           </a>
         </div>
