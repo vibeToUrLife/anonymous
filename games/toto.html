@@ -5,61 +5,62 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>TOTO Lottery — Daily 4-Digit Draw</title>
+  <link rel="stylesheet" href="theme.css">
   <style>
     /* ── Reset & base ── */
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: #fff; min-height: 100vh; overflow-x: hidden; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--g-bg); background-attachment: fixed; color: var(--g-ink); min-height: 100vh; overflow-x: hidden; }
 
     /* ── Back & settings buttons ── */
-    .back-btn { position: fixed; top: 14px; left: 14px; z-index: 100; padding: 8px 14px; border-radius: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 600; text-decoration: none; transition: background 0.2s; }
-    .back-btn:hover { background: rgba(255,255,255,0.15); }
-    .settings-btn { position: fixed; top: 14px; right: 14px; z-index: 100; width: 40px; height: 40px; border-radius: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); font-size: 18px; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; justify-content: center; }
-    .settings-btn:hover { background: rgba(255,255,255,0.15); }
+    .back-btn { position: fixed; top: 14px; left: 14px; z-index: 100; padding: 8px 14px; border-radius: 12px; background: var(--g-card-90); border: 1px solid var(--g-border); color: var(--g-ink); font-size: 13px; font-weight: 600; text-decoration: none; transition: background 0.2s; box-shadow: var(--g-shadow-sm); }
+    .back-btn:hover { background: #fff; }
+    .settings-btn { position: fixed; top: 14px; right: 14px; z-index: 100; width: 40px; height: 40px; border-radius: 12px; background: var(--g-card-90); border: 1px solid var(--g-border); font-size: 18px; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; justify-content: center; box-shadow: var(--g-shadow-sm); }
+    .settings-btn:hover { background: #fff; }
 
     /* ── Settings overlay ── */
-    .settings-overlay { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; background: rgba(15,12,41,0.85); backdrop-filter: blur(8px); }
+    .settings-overlay { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; background: var(--g-scrim); backdrop-filter: blur(8px); }
     .settings-overlay.hidden { display: none; }
-    .settings-box { background: rgba(30,25,65,0.97); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 24px 20px; max-width: 320px; width: 90%; text-align: center; }
-    .settings-box h3 { font-size: 18px; margin-bottom: 16px; }
-    .settings-logout-btn { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid rgba(248,113,113,0.3); border-radius: 14px; background: rgba(248,113,113,0.08); color: #f87171; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-    .settings-logout-btn:hover { background: rgba(248,113,113,0.15); }
-    .settings-close-btn { width: 100%; padding: 12px; margin-top: 8px; border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7); font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-    .settings-close-btn:hover { background: rgba(255,255,255,0.12); }
+    .settings-box { background: var(--g-card); border: 1px solid var(--g-border); border-top: 2px solid rgba(255,122,92,0.45); border-radius: 20px; padding: 24px 20px; max-width: 320px; width: 90%; text-align: center; box-shadow: var(--g-shadow); }
+    .settings-box h3 { font-size: 18px; margin-bottom: 16px; font-family: var(--g-display); background: var(--g-title-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .settings-logout-btn { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid rgba(226,85,63,0.3); border-radius: 14px; background: rgba(226,85,63,0.08); color: var(--g-danger); font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .settings-logout-btn:hover { background: rgba(226,85,63,0.18); }
+    .settings-close-btn { width: 100%; padding: 12px; margin-top: 8px; border: 1px solid var(--g-border); border-radius: 14px; background: var(--g-hover); color: var(--g-ink-soft); font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .settings-close-btn:hover { background: var(--g-border); }
 
     /* ── Login overlay ── */
-    .login-overlay { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); }
+    .login-overlay { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; background: var(--g-bg); background-attachment: fixed; }
     .login-overlay.hidden { display: none; }
     .login-box { text-align: center; padding: 40px 28px; }
     .login-icon { font-size: 64px; margin-bottom: 16px; }
-    .login-box h2 { font-size: 22px; margin-bottom: 8px; background: linear-gradient(90deg, #6366f1, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .login-box p { font-size: 13px; color: rgba(255,255,255,0.5); margin-bottom: 24px; line-height: 1.5; }
-    .google-login-btn { display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; border: 1px solid rgba(255,255,255,0.15); border-radius: 14px; background: rgba(255,255,255,0.08); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-    .google-login-btn:hover { background: rgba(255,255,255,0.15); }
+    .login-box h2 { font-size: 22px; margin-bottom: 8px; font-family: var(--g-display); background: var(--g-title-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .login-box p { font-size: 13px; color: var(--g-ink-soft); margin-bottom: 24px; line-height: 1.5; }
+    .google-login-btn { display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; border: 1px solid var(--g-border); border-radius: 14px; background: var(--g-card); color: var(--g-ink); font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; box-shadow: var(--g-shadow-sm); }
+    .google-login-btn:hover { background: #fff; }
     .google-login-btn svg { width: 20px; height: 20px; }
-    .login-error { margin-top: 12px; font-size: 12px; color: #ff6b6b; min-height: 18px; }
+    .login-error { margin-top: 12px; font-size: 12px; color: var(--g-danger); min-height: 18px; }
 
     /* ── Toast ── */
     .toast-container { position: fixed; top: 60px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
     .toast { padding: 10px 20px; border-radius: 12px; font-size: 13px; font-weight: 600; opacity: 0; transform: translateY(-10px); transition: all 0.3s; pointer-events: none; }
     .toast.show { opacity: 1; transform: translateY(0); }
     .toast.success { background: rgba(78,205,196,0.2); color: #4ecdc4; border: 1px solid rgba(78,205,196,0.3); }
-    .toast.error { background: rgba(248,113,113,0.2); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
+    .toast.error { background: rgba(226,85,63,0.18); color: var(--g-danger); border: 1px solid rgba(226,85,63,0.3); }
 
     /* ── Game header ── */
     .game-header { text-align: center; padding: 60px 20px 12px; }
-    .game-header h1 { font-size: 28px; font-weight: 800; background: linear-gradient(90deg, #6366f1, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .game-header p { font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 4px; }
+    .game-header h1 { font-size: 28px; font-weight: 800; font-family: var(--g-display); background: var(--g-title-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .game-header p { font-size: 12px; color: var(--g-ink-soft); margin-top: 4px; }
 
     /* ── Coin display ── */
     .coin-bar { text-align: center; margin-bottom: 16px; }
-    .coin-bar .coin-val { font-size: 22px; font-weight: 800; color: #f7c97e; }
-    .coin-bar .coin-label { font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+    .coin-bar .coin-val { font-size: 22px; font-weight: 800; font-family: var(--g-display); color: var(--g-coin-ink); }
+    .coin-bar .coin-label { font-size: 10px; color: var(--g-ink-soft); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
 
     /* ── Countdown ── */
-    .countdown-bar { text-align: center; margin-bottom: 18px; padding: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; max-width: 400px; margin-left: auto; margin-right: auto; }
-    .countdown-bar .cd-label { font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
-    .countdown-bar .cd-time { font-size: 20px; font-weight: 700; color: #a5b4fc; font-variant-numeric: tabular-nums; }
-    .countdown-bar.draw-ready .cd-time { color: #34d399; }
+    .countdown-bar { text-align: center; margin-bottom: 18px; padding: 10px; background: var(--g-slot); border: 1px solid var(--g-border); border-radius: 14px; max-width: 400px; margin-left: auto; margin-right: auto; }
+    .countdown-bar .cd-label { font-size: 10px; color: var(--g-ink-soft); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+    .countdown-bar .cd-time { font-size: 20px; font-weight: 700; color: var(--g-accent); font-variant-numeric: tabular-nums; }
+    .countdown-bar.draw-ready .cd-time { color: #2BA86A; }
 
     /* ── Main card ── */
     .toto-card { max-width: 420px; margin: 0 auto; padding: 0 16px 32px; }
@@ -67,121 +68,121 @@
     /* ── Status badge ── */
     .status-badge { text-align: center; margin-bottom: 14px; }
     .status-badge span { display: inline-block; padding: 6px 16px; border-radius: 10px; font-size: 12px; font-weight: 600; }
-    .status-badge .badge-open { background: rgba(99,102,241,0.15); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.3); }
-    .status-badge .badge-waiting { background: rgba(251,191,36,0.12); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
-    .status-badge .badge-done { background: rgba(52,211,153,0.12); color: #34d399; border: 1px solid rgba(52,211,153,0.3); }
+    .status-badge .badge-open { background: rgba(255,122,92,0.15); color: var(--g-accent); border: 1px solid rgba(255,122,92,0.3); }
+    .status-badge .badge-waiting { background: rgba(242,161,84,0.16); color: var(--g-accent-2); border: 1px solid rgba(242,161,84,0.35); }
+    .status-badge .badge-done { background: rgba(43,168,106,0.12); color: #2BA86A; border: 1px solid rgba(43,168,106,0.3); }
 
     /* ── Prize table ── */
-    .prize-table { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 10px 14px; margin-bottom: 16px; }
-    .prize-header { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.5); text-align: center; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+    .prize-table { background: var(--g-slot); border: 1px solid var(--g-border); border-radius: 12px; padding: 10px 14px; margin-bottom: 16px; }
+    .prize-header { font-size: 11px; font-weight: 700; color: var(--g-ink-soft); text-align: center; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
     .prize-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; }
     .prize-emoji { font-size: 16px; width: 24px; text-align: center; }
-    .prize-tier { flex: 1; color: rgba(255,255,255,0.7); }
-    .prize-mult { font-weight: 700; color: #f7c97e; font-size: 14px; }
+    .prize-tier { flex: 1; color: var(--g-ink-soft); }
+    .prize-mult { font-weight: 700; color: var(--g-coin-ink); font-size: 14px; }
 
     /* ── 4-digit input ── */
     .input-section { margin-bottom: 16px; }
-    .input-label { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px; }
+    .input-label { font-size: 12px; font-weight: 600; color: var(--g-ink-soft); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px; }
     .number-row { display: flex; align-items: center; gap: 8px; justify-content: center; margin-bottom: 16px; }
     .digit-inputs { display: flex; gap: 6px; }
-    .digit-input { width: 48px; height: 54px; border: 2px solid rgba(255,255,255,0.15); border-radius: 12px; background: rgba(255,255,255,0.06); color: #fff; font-size: 24px; font-weight: 700; text-align: center; outline: none; transition: border-color 0.2s; }
-    .digit-input:focus { border-color: #a5b4fc; }
+    .digit-input { width: 48px; height: 54px; border: 2px solid var(--g-border); border-radius: 12px; background: var(--g-card); color: var(--g-ink); font-size: 24px; font-weight: 700; text-align: center; outline: none; transition: border-color 0.2s; }
+    .digit-input:focus { border-color: var(--g-accent); }
     .digit-input:disabled { opacity: 0.4; cursor: not-allowed; }
-    .random-btn { width: 48px; height: 54px; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; background: rgba(99,102,241,0.15); font-size: 22px; cursor: pointer; transition: background 0.2s; }
-    .random-btn:hover { background: rgba(99,102,241,0.3); }
+    .random-btn { width: 48px; height: 54px; border: 1px solid var(--g-border); border-radius: 12px; background: rgba(255,122,92,0.15); font-size: 22px; cursor: pointer; transition: background 0.2s; }
+    .random-btn:hover { background: rgba(255,122,92,0.3); }
     .random-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
     /* ── Bet controls ── */
     .bet-row { margin-bottom: 18px; }
     .bet-controls { display: flex; align-items: center; justify-content: center; gap: 6px; }
-    .bet-btn { padding: 6px 14px; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-    .bet-btn:hover { background: rgba(255,255,255,0.12); }
+    .bet-btn { padding: 6px 14px; border: 1px solid var(--g-border); border-radius: 8px; background: var(--g-card); color: var(--g-ink-soft); font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .bet-btn:hover { background: #fff; }
     .bet-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .bet-display { padding: 8px 18px; border: 2px solid rgba(247,201,126,0.25); border-radius: 10px; background: rgba(247,201,126,0.08); font-size: 18px; font-weight: 700; color: #f7c97e; min-width: 90px; text-align: center; }
+    .bet-display { padding: 8px 18px; border: 2px solid rgba(247,201,126,0.45); border-radius: 10px; background: rgba(247,201,126,0.14); font-size: 18px; font-weight: 700; color: var(--g-coin-ink); min-width: 90px; text-align: center; }
 
     /* ── Submit / Check button ── */
     .main-btn { display: block; width: 100%; padding: 16px; border: none; border-radius: 14px; font-size: 17px; font-weight: 700; cursor: pointer; transition: opacity 0.2s, transform 0.1s; }
     .main-btn:hover:not([disabled]) { opacity: 0.9; }
     .main-btn:active:not([disabled]) { transform: scale(0.97); }
     .main-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
-    .btn-submit { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; }
-    .btn-check  { background: linear-gradient(135deg, #34d399, #10b981); color: #1a1a2e; }
-    .btn-info   { font-size: 11px; color: rgba(255,255,255,0.35); text-align: center; margin-top: 6px; }
+    .btn-submit { background: linear-gradient(135deg, #FF9A6B, #FF7A5C); color: #fff; }
+    .btn-check  { background: linear-gradient(135deg, #34d399, #10b981); color: #fff; }
+    .btn-info   { font-size: 11px; color: var(--g-ink-faint); text-align: center; margin-top: 6px; }
 
     /* ── Today's pick summary ── */
-    .pick-summary { text-align: center; padding: 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; margin-bottom: 16px; }
-    .pick-summary .ps-label { font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .pick-summary { text-align: center; padding: 16px; background: var(--g-slot); border: 1px solid var(--g-border); border-radius: 14px; margin-bottom: 16px; }
+    .pick-summary .ps-label { font-size: 10px; color: var(--g-ink-soft); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
     .pick-summary .ps-number { display: flex; justify-content: center; gap: 6px; margin-bottom: 6px; }
     .pick-summary .ps-digit { width: 42px; height: 48px; line-height: 48px; border: 2px solid rgba(99,102,241,0.3); border-radius: 10px; background: rgba(99,102,241,0.1); font-size: 22px; font-weight: 700; color: #a5b4fc; }
-    .pick-summary .ps-bet { font-size: 14px; font-weight: 700; color: #f7c97e; }
+    .pick-summary .ps-bet { font-size: 14px; font-weight: 700; color: var(--g-coin-ink); }
 
     /* ── Result overlay ── */
-    .result-overlay { position: fixed; inset: 0; z-index: 9200; background: rgba(15,12,41,0.92); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; }
+    .result-overlay { position: fixed; inset: 0; z-index: 9200; background: var(--g-scrim-strong); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; }
     .result-overlay.hidden { display: none; }
-    .result-box { background: rgba(30,27,75,0.97); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 28px 24px; max-width: 420px; width: 90%; max-height: 85vh; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none; text-align: center; animation: fadeSlideIn 0.4s ease; }
+    .result-box { background: var(--g-card); border: 1px solid var(--g-border); border-top: 2px solid rgba(255,122,92,0.45); border-radius: 20px; padding: 28px 24px; max-width: 420px; width: 90%; max-height: 85vh; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none; text-align: center; animation: fadeSlideIn 0.4s ease; box-shadow: var(--g-shadow); }
     .result-box::-webkit-scrollbar { display: none; }
     @keyframes fadeSlideIn { from { opacity: 0; transform: scale(0.9) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-    .result-box h3 { font-size: 22px; margin-bottom: 18px; color: #fff; }
+    .result-box h3 { font-size: 22px; margin-bottom: 18px; font-family: var(--g-display); background: var(--g-title-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 
     /* ── Result: player number ── */
     .res-player { margin-bottom: 18px; }
-    .res-label-sm { font-size: 11px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; }
+    .res-label-sm { font-size: 11px; color: var(--g-ink-soft); text-transform: uppercase; letter-spacing: 1px; }
     .res-number { display: flex; justify-content: center; gap: 6px; margin-top: 6px; }
     .res-number.winner { animation: glowPulse 1s ease infinite alternate; }
     @keyframes glowPulse { from { filter: drop-shadow(0 0 6px rgba(255,215,0,0.3)); } to { filter: drop-shadow(0 0 18px rgba(255,215,0,0.6)); } }
-    .res-digit { width: 44px; height: 50px; line-height: 50px; border: 2px solid rgba(255,255,255,0.2); border-radius: 10px; background: rgba(255,255,255,0.06); font-size: 24px; font-weight: 700; color: #fff; }
+    .res-digit { width: 44px; height: 50px; line-height: 50px; border: 2px solid var(--g-border); border-radius: 10px; background: var(--g-slot); font-size: 24px; font-weight: 700; color: var(--g-ink); }
 
     /* ── Result: tier sections ── */
     .tier-section { margin-bottom: 14px; }
     .tier-header { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
     .tier-nums { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
-    .draw-num { padding: 5px 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; background: rgba(255,255,255,0.04); font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.6); font-family: monospace; transition: all 0.3s; opacity: 0; animation: numReveal 0.5s ease forwards; }
+    .draw-num { padding: 5px 12px; border: 1px solid var(--g-border); border-radius: 8px; background: var(--g-slot); font-size: 15px; font-weight: 600; color: var(--g-ink-soft); font-family: monospace; transition: all 0.3s; opacity: 0; animation: numReveal 0.5s ease forwards; }
     .draw-num.match { border-color: #ffd700; background: rgba(255,215,0,0.15); color: #ffd700; animation: numReveal 0.5s ease forwards, matchBounce 0.6s ease 0.5s; }
     @keyframes numReveal { from { opacity: 0; transform: rotateX(90deg); } to { opacity: 1; transform: rotateX(0); } }
     @keyframes matchBounce { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
 
     /* ── Result: outcome message ── */
-    .outcome { margin: 20px 0 16px; padding: 16px; border-radius: 12px; background: rgba(255,255,255,0.03); opacity: 0; animation: outcomeFade 0.5s ease forwards; }
+    .outcome { margin: 20px 0 16px; padding: 16px; border-radius: 12px; background: var(--g-slot); opacity: 0; animation: outcomeFade 0.5s ease forwards; }
     @keyframes outcomeFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .win-msg { font-size: 18px; font-weight: 700; color: #ffd700; margin-bottom: 6px; }
-    .win-amount { font-size: 22px; font-weight: 800; color: #34d399; margin-bottom: 4px; }
-    .win-detail { font-size: 11px; color: rgba(255,255,255,0.4); }
-    .lose-msg { font-size: 16px; font-weight: 600; color: rgba(255,255,255,0.6); margin-bottom: 4px; }
-    .lose-amount { font-size: 13px; color: #f87171; }
+    .win-amount { font-size: 22px; font-weight: 800; color: #2BA86A; margin-bottom: 4px; }
+    .win-detail { font-size: 11px; color: var(--g-ink-soft); }
+    .lose-msg { font-size: 16px; font-weight: 600; color: var(--g-ink-soft); margin-bottom: 4px; }
+    .lose-amount { font-size: 13px; color: var(--g-danger); }
 
     /* ── Close button ── */
-    .close-btn { margin-top: 12px; padding: 12px 28px; border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7); font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-    .close-btn:hover { background: rgba(255,255,255,0.12); }
+    .close-btn { margin-top: 12px; padding: 12px 28px; border: 1px solid var(--g-border); border-radius: 12px; background: var(--g-card); color: var(--g-ink-soft); font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .close-btn:hover { background: #fff; }
 
     /* ── History ── */
     .history-btn-wrap { text-align: center; margin: 16px auto; max-width: 420px; padding: 0 16px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
-    .history-btn { padding: 10px 24px; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.6); font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-    .history-btn:hover { background: rgba(255,255,255,0.12); }
+    .history-btn { padding: 10px 24px; border: 1px solid var(--g-border); border-radius: 12px; background: var(--g-card); color: var(--g-ink-soft); font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .history-btn:hover { background: #fff; }
 
-    .history-overlay { position: fixed; inset: 0; z-index: 9100; background: rgba(15,12,41,0.88); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; }
+    .history-overlay { position: fixed; inset: 0; z-index: 9100; background: var(--g-scrim); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; }
     .history-overlay.hidden { display: none; }
-    .history-box { background: rgba(30,27,75,0.97); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 24px 20px; max-width: 440px; width: 90%; max-height: 85vh; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none; animation: fadeSlideIn 0.3s ease; }
+    .history-box { background: var(--g-card); border: 1px solid var(--g-border); border-top: 2px solid rgba(255,122,92,0.45); border-radius: 20px; padding: 24px 20px; max-width: 440px; width: 90%; max-height: 85vh; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none; animation: fadeSlideIn 0.3s ease; box-shadow: var(--g-shadow); }
     .history-box::-webkit-scrollbar { display: none; }
-    .history-box h3 { font-size: 18px; text-align: center; margin-bottom: 16px; color: #fff; }
+    .history-box h3 { font-size: 18px; text-align: center; margin-bottom: 16px; font-family: var(--g-display); background: var(--g-title-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 
-    .history-day { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+    .history-day { background: var(--g-slot); border: 1px solid var(--g-border); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
     .history-day .hd-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-    .history-day .hd-date { font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.8); }
+    .history-day .hd-date { font-size: 14px; font-weight: 700; color: var(--g-ink); }
     .history-day .hd-result { font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 8px; }
-    .history-day .hd-result.win { background: rgba(52,211,153,0.15); color: #34d399; }
-    .history-day .hd-result.lose { background: rgba(248,113,113,0.1); color: #f87171; }
-    .history-day .hd-result.no-bet { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.4); }
-    .history-day .hd-result.pending { background: rgba(251,191,36,0.12); color: #fbbf24; }
-    .history-day .hd-result.ready { background: rgba(99,102,241,0.15); color: #a5b4fc; }
+    .history-day .hd-result.win { background: rgba(43,168,106,0.15); color: #2BA86A; }
+    .history-day .hd-result.lose { background: rgba(226,85,63,0.12); color: var(--g-danger); }
+    .history-day .hd-result.no-bet { background: var(--g-hover); color: var(--g-ink-faint); }
+    .history-day .hd-result.pending { background: rgba(242,161,84,0.16); color: var(--g-accent-2); }
+    .history-day .hd-result.ready { background: rgba(255,122,92,0.15); color: var(--g-accent); }
 
-    .history-day .hd-pick { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 12px; color: rgba(255,255,255,0.5); }
+    .history-day .hd-pick { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 12px; color: var(--g-ink-soft); }
     .history-day .hd-pick-num { font-weight: 700; color: #a5b4fc; font-family: monospace; letter-spacing: 2px; font-size: 14px; }
-    .history-day .hd-pick-bet { color: #f7c97e; }
+    .history-day .hd-pick-bet { color: var(--g-coin-ink); }
 
     .history-day .hd-tier { margin-bottom: 6px; }
     .history-day .hd-tier-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
     .history-day .hd-tier-nums { display: flex; flex-wrap: wrap; gap: 4px; }
-    .history-day .hd-num { padding: 2px 8px; border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; background: rgba(255,255,255,0.03); font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.5); font-family: monospace; }
+    .history-day .hd-num { padding: 2px 8px; border: 1px solid var(--g-border); border-radius: 6px; background: var(--g-slot); font-size: 12px; font-weight: 600; color: var(--g-ink-soft); font-family: monospace; }
     .history-day .hd-num.hd-match { border-color: #ffd700; background: rgba(255,215,0,0.12); color: #ffd700; }
 
     /* ── Responsive ── */
@@ -191,21 +192,21 @@
     }
 
     /* ── Purchase list overlay ── */
-    .purchases-overlay { position: fixed; inset: 0; z-index: 9100; background: rgba(15,12,41,0.88); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; }
+    .purchases-overlay { position: fixed; inset: 0; z-index: 9100; background: var(--g-scrim); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; }
     .purchases-overlay.hidden { display: none; }
-    .purchases-box { background: rgba(30,27,75,0.97); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 24px 20px; max-width: 440px; width: 90%; max-height: 85vh; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none; animation: fadeSlideIn 0.3s ease; }
+    .purchases-box { background: var(--g-card); border: 1px solid var(--g-border); border-top: 2px solid rgba(255,122,92,0.45); border-radius: 20px; padding: 24px 20px; max-width: 440px; width: 90%; max-height: 85vh; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none; animation: fadeSlideIn 0.3s ease; box-shadow: var(--g-shadow); }
     .purchases-box::-webkit-scrollbar { display: none; }
-    .purchases-box h3 { font-size: 18px; text-align: center; margin-bottom: 6px; color: #fff; }
-    .purchases-summary { text-align: center; font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 16px; }
+    .purchases-box h3 { font-size: 18px; text-align: center; margin-bottom: 6px; font-family: var(--g-display); background: var(--g-title-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .purchases-summary { text-align: center; font-size: 12px; color: var(--g-ink-soft); margin-bottom: 16px; }
     .purchases-list { display: flex; flex-direction: column; gap: 8px; }
-    .purchase-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; }
-    .purchase-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #a78bfa); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #fff; flex-shrink: 0; }
+    .purchase-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--g-slot); border: 1px solid var(--g-border); border-radius: 12px; }
+    .purchase-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--g-accent-grad); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #fff; flex-shrink: 0; }
     .purchase-info { flex: 1; min-width: 0; }
-    .purchase-name { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.85); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .purchase-detail { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+    .purchase-name { font-size: 13px; font-weight: 600; color: var(--g-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .purchase-detail { font-size: 11px; color: var(--g-ink-soft); margin-top: 2px; }
     .purchase-number { font-family: monospace; font-size: 16px; font-weight: 700; color: #a5b4fc; letter-spacing: 2px; flex-shrink: 0; }
-    .purchase-bet { font-size: 12px; font-weight: 600; color: #f7c97e; flex-shrink: 0; }
-    .purchases-empty { text-align: center; padding: 24px 16px; color: rgba(255,255,255,0.4); font-size: 14px; }
+    .purchase-bet { font-size: 12px; font-weight: 600; color: var(--g-coin-ink); flex-shrink: 0; }
+    .purchases-empty { text-align: center; padding: 24px 16px; color: var(--g-ink-soft); font-size: 14px; }
   </style>
 </head>
 <body>
@@ -691,12 +692,12 @@
         if (todayPicks.length) {
           html += '<div class="status-badge"><span class="badge-waiting">⏳ Waiting for 5 PM Draw</span></div>';
           html += renderPicksSummary();
-          html += '<div style="text-align:center;font-size:12px;color:rgba(255,255,255,0.4);margin-top:8px">';
+          html += '<div style="text-align:center;font-size:12px;color:var(--g-ink-soft);margin-top:8px">';
           html += 'Draw at 5:00 PM today — hang tight!';
           html += '</div>';
         } else {
           html += '<div class="status-badge"><span class="badge-done">🌙 Bets Closed</span></div>';
-          html += '<div style="text-align:center;padding:20px;color:rgba(255,255,255,0.5);font-size:14px">';
+          html += '<div style="text-align:center;padding:20px;color:var(--g-ink-soft);font-size:14px">';
           html += 'No bets placed today. Draw at 5:00 PM.';
           html += '</div>';
         }
@@ -712,21 +713,21 @@
           html += renderPicksSummary();
           const totalWinnings = todayPicks.reduce((sum, p) => sum + (p.winnings || 0), 0);
           const resultLabel = totalWinnings > 0
-            ? '<span style="color:#34d399;font-weight:700">Total won +' + totalWinnings.toLocaleString() + ' coins 🎉</span>'
-            : '<span style="color:rgba(255,255,255,0.5)">No match today 😔</span>';
+            ? '<span style="color:#2BA86A;font-weight:700">Total won +' + totalWinnings.toLocaleString() + ' coins 🎉</span>'
+            : '<span style="color:var(--g-ink-soft)">No match today 😔</span>';
           html += '<div style="text-align:center;margin-top:8px;font-size:14px">' + resultLabel + '</div>';
-          html += '<div style="text-align:center;font-size:12px;color:rgba(255,255,255,0.4);margin-top:8px">New bets open at ' + BET_OPEN_HOUR + ':00 AM tomorrow</div>';
+          html += '<div style="text-align:center;font-size:12px;color:var(--g-ink-soft);margin-top:8px">New bets open at ' + BET_OPEN_HOUR + ':00 AM tomorrow</div>';
         } else {
           // No bet was placed today
           html += '<div class="status-badge"><span class="badge-done">📅 No Bet Today</span></div>';
-          html += '<div style="text-align:center;padding:20px;color:rgba(255,255,255,0.5);font-size:14px">';
+          html += '<div style="text-align:center;padding:20px;color:var(--g-ink-soft);font-size:14px">';
           html += 'You didn\'t place a bet today.<br>Bets open at ' + BET_OPEN_HOUR + ':00 AM tomorrow!';
           html += '</div>';
         }
       } else {
         // Closed phase (midnight – 8 AM)
         html += '<div class="status-badge"><span class="badge-done">🌙 Closed</span></div>';
-        html += '<div style="text-align:center;padding:20px;color:rgba(255,255,255,0.5);font-size:14px">';
+        html += '<div style="text-align:center;padding:20px;color:var(--g-ink-soft);font-size:14px">';
         html += 'Betting opens at ' + BET_OPEN_HOUR + ':00 AM.<br>Draw at 5:00 PM.';
         html += '</div>';
       }
@@ -773,11 +774,11 @@
       html += '<div class="bet-controls">';
       html += '<button class="bet-btn" onclick="adjustBet(-50)">−50</button>';
       html += '<button class="bet-btn" onclick="adjustBet(-10)">−10</button>';
-      html += '<input type="number" class="bet-display" id="betDisplay" value="' + currentBet + '" min="' + MIN_BET + '" onchange="setBetFromInput(this.value)" style="width:70px;text-align:center;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:4px 6px;color:inherit;font-size:inherit;font-weight:inherit;-moz-appearance:textfield" />';
+      html += '<input type="number" class="bet-display" id="betDisplay" value="' + currentBet + '" min="' + MIN_BET + '" onchange="setBetFromInput(this.value)" style="width:70px;text-align:center;background:rgba(247,201,126,0.14);border:1px solid rgba(247,201,126,0.45);border-radius:8px;padding:4px 6px;color:inherit;font-size:inherit;font-weight:inherit;-moz-appearance:textfield" />';
       html += '<button class="bet-btn" onclick="adjustBet(+10)">+10</button>';
       html += '<button class="bet-btn" onclick="adjustBet(+50)">+50</button>';
       html += '</div>';
-      html += '<div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:4px;text-align:center">Min: ' + MIN_BET + '</div>';
+      html += '<div style="font-size:10px;color:var(--g-ink-faint);margin-top:4px;text-align:center">Min: ' + MIN_BET + '</div>';
       html += '</div>';
       html += '</div>';
 
@@ -785,7 +786,7 @@
       html += '<button class="main-btn btn-submit" onclick="submitPick()" ' +
         (canPlay ? '' : 'disabled') + '>🎱 Place Bet</button>';
       if (!canPlay) {
-        html += '<div class="btn-info" style="color:#f87171">Need at least ' + MIN_BET + ' coins to play</div>';
+        html += '<div class="btn-info" style="color:var(--g-danger)">Need at least ' + MIN_BET + ' coins to play</div>';
       }
 
       return html;
@@ -806,9 +807,9 @@
         html += '</div>';
         html += '<div class="ps-bet">' + pick.bet + ' coins';
         if (pick.checked && pick.winnings > 0) {
-          html += ' → <span style="color:#34d399">Won +' + pick.winnings + '</span>';
+          html += ' → <span style="color:#2BA86A">Won +' + pick.winnings + '</span>';
         } else if (pick.checked) {
-          html += ' → <span style="color:rgba(255,255,255,0.4)">No match</span>';
+          html += ' → <span style="color:var(--g-ink-soft)">No match</span>';
         }
         html += '</div>';
         html += '</div>';
@@ -889,14 +890,14 @@
             html += 'Pick: <span class="hd-pick-num">' + p.number + '</span>';
             html += ' · <span class="hd-pick-bet">' + p.bet + ' coins</span>';
             if (drawReleased && p.winnings > 0) {
-              html += ' → <span style="color:#34d399;font-weight:600">+' + p.winnings + '</span>';
+              html += ' → <span style="color:#2BA86A;font-weight:600">+' + p.winnings + '</span>';
             }
             html += '</div>';
           }
         }
 
         if (!drawReleased) {
-          html += '<div style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:8px;text-align:center">';
+          html += '<div style="font-size:12px;color:var(--g-ink-soft);margin-top:8px;text-align:center">';
           html += histPicks.length
             ? 'Winning numbers will appear after 5:00 PM.'
             : 'This draw has not been released yet.';

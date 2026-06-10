@@ -5,35 +5,36 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>中國象棋 — Chinese Chess</title>
+<link rel="stylesheet" href="theme.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);color:#fff;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100dvh;overflow-x:hidden}
+body{background:var(--g-bg);background-attachment:fixed;color:var(--g-ink);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100dvh;overflow-x:hidden}
 
 /* ── Login overlay ── */
-.login-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);transition:opacity .3s}
+.login-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--g-bg);background-attachment:fixed;transition:opacity .3s}
 .login-overlay.hidden{opacity:0;pointer-events:none}
 .login-overlay.loading .login-box{opacity:0;transform:translateY(20px)}
-.login-box{background:rgba(255,255,255,.07);backdrop-filter:blur(12px);border-radius:20px;padding:36px 28px;text-align:center;max-width:340px;width:90%;transition:all .4s}
+.login-box{background:var(--g-card);box-shadow:var(--g-shadow);border:1px solid var(--g-border);border-radius:20px;padding:36px 28px;text-align:center;max-width:340px;width:90%;transition:all .4s}
 .login-icon{font-size:48px;margin-bottom:12px}
-.login-box h2{font-size:22px;margin-bottom:8px}
-.login-box p{font-size:13px;color:rgba(255,255,255,.55);margin-bottom:24px;line-height:1.5}
-.google-login-btn{display:inline-flex;align-items:center;gap:10px;padding:12px 24px;border:none;border-radius:12px;background:#fff;color:#333;font-size:15px;font-weight:600;cursor:pointer;transition:transform .15s,box-shadow .15s}
-.google-login-btn:hover{transform:scale(1.03);box-shadow:0 4px 20px rgba(255,255,255,.15)}
+.login-box h2{font-size:22px;margin-bottom:8px;font-family:var(--g-display)}
+.login-box p{font-size:13px;color:var(--g-ink-soft);margin-bottom:24px;line-height:1.5}
+.google-login-btn{display:inline-flex;align-items:center;gap:10px;padding:12px 24px;border:1px solid var(--g-border);border-radius:12px;background:var(--g-card);color:var(--g-ink);font-size:15px;font-weight:600;cursor:pointer;transition:transform .15s,box-shadow .15s;box-shadow:var(--g-shadow-sm)}
+.google-login-btn:hover{transform:scale(1.03);box-shadow:var(--g-shadow)}
 .google-login-btn:active{transform:scale(.98)}
 .google-login-btn svg{width:20px;height:20px}
-.login-error{color:#ff6b6b;font-size:12px;margin-top:12px;min-height:18px}
+.login-error{color:var(--g-danger);font-size:12px;margin-top:12px;min-height:18px}
 
 /* ── Settings gear ── */
-.settings-gear{position:fixed;top:12px;right:12px;z-index:8999;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.1);backdrop-filter:blur(6px);border:none;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s}
-.settings-gear:hover{background:rgba(255,255,255,.2)}
-.settings-overlay{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;transition:opacity .25s}
+.settings-gear{position:fixed;top:12px;right:12px;z-index:8999;width:40px;height:40px;border-radius:50%;background:var(--g-card-90);backdrop-filter:blur(6px);border:1px solid var(--g-border);color:var(--g-ink-soft);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;box-shadow:var(--g-shadow-sm)}
+.settings-gear:hover{background:#fff}
+.settings-overlay{position:fixed;inset:0;z-index:9000;background:var(--g-scrim);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;transition:opacity .25s}
 .settings-overlay.hidden{opacity:0;pointer-events:none}
-.settings-box{background:rgba(30,25,60,.97);backdrop-filter:blur(16px);border-radius:20px;padding:28px 24px;max-width:360px;width:90%;text-align:center}
-.settings-box h3{margin-bottom:18px;font-size:18px}
-.settings-logout-btn{width:100%;padding:12px;border:none;border-radius:12px;background:rgba(255,80,80,.15);color:#ff6b6b;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px;transition:background .2s}
-.settings-logout-btn:hover{background:rgba(255,80,80,.25)}
-.settings-close-btn{width:100%;padding:10px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:transparent;color:rgba(255,255,255,.6);font-size:13px;cursor:pointer;transition:background .2s}
-.settings-close-btn:hover{background:rgba(255,255,255,.06)}
+.settings-box{background:var(--g-card);box-shadow:var(--g-shadow);border:1px solid var(--g-border);border-radius:20px;padding:28px 24px;max-width:360px;width:90%;text-align:center}
+.settings-box h3{margin-bottom:18px;font-size:18px;font-family:var(--g-display)}
+.settings-logout-btn{width:100%;padding:12px;border:1px solid rgba(226,85,63,.3);border-radius:12px;background:rgba(226,85,63,.08);color:var(--g-danger);font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px;transition:background .2s}
+.settings-logout-btn:hover{background:rgba(226,85,63,.18)}
+.settings-close-btn{width:100%;padding:10px;border:1px solid var(--g-border);border-radius:12px;background:var(--g-hover);color:var(--g-ink-soft);font-size:13px;cursor:pointer;transition:background .2s}
+.settings-close-btn:hover{background:var(--g-border)}
 
 /* ── Toast ── */
 .toast-container{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:10000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
@@ -44,69 +45,69 @@ body{background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);color:#fff;font-
 @keyframes toastIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
 
 /* ── Back button ── */
-.back-btn{position:fixed;top:12px;left:12px;z-index:8999;padding:8px 16px;border-radius:12px;background:rgba(255,255,255,.1);backdrop-filter:blur(6px);border:none;color:#fff;font-size:14px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:background .2s}
-.back-btn:hover{background:rgba(255,255,255,.2)}
+.back-btn{position:fixed;top:12px;left:12px;z-index:8999;padding:8px 16px;border-radius:12px;background:var(--g-card-90);backdrop-filter:blur(6px);border:1px solid var(--g-border);color:var(--g-ink);font-size:14px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:background .2s;box-shadow:var(--g-shadow-sm)}
+.back-btn:hover{background:#fff}
 
 /* ── Lobby ── */
 .lobby{max-width:560px;margin:0 auto;padding:60px 16px 24px}
-.lobby h1{text-align:center;font-size:28px;margin-bottom:4px;background:linear-gradient(90deg,#f7c97e,#ff8a65);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.lobby .subtitle{text-align:center;font-size:13px;color:rgba(255,255,255,.45);margin-bottom:24px}
-.coin-bar{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:24px;font-size:18px;font-weight:700;color:#f7c97e}
+.lobby h1{text-align:center;font-size:28px;margin-bottom:4px;font-family:var(--g-display);background:var(--g-title-grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.lobby .subtitle{text-align:center;font-size:13px;color:var(--g-ink-soft);margin-bottom:24px}
+.coin-bar{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:24px;font-size:18px;font-weight:700;color:var(--g-coin-ink)}
 .coin-bar .coin-icon{font-size:22px}
 
 /* Create room */
-.create-section{background:rgba(255,255,255,.06);border-radius:16px;padding:20px;margin-bottom:20px}
+.create-section{background:var(--g-card);border:1px solid var(--g-border);box-shadow:var(--g-shadow);border-radius:16px;padding:20px;margin-bottom:20px}
 .create-section h3{font-size:15px;margin-bottom:12px}
 .bet-options{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
-.bet-btn{padding:8px 16px;border-radius:10px;border:2px solid rgba(255,255,255,.12);background:transparent;color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
-.bet-btn:hover{border-color:rgba(247,201,126,.5);background:rgba(247,201,126,.1)}
-.bet-btn.selected{border-color:#f7c97e;background:rgba(247,201,126,.2);color:#f7c97e}
+.bet-btn{padding:8px 16px;border-radius:10px;border:2px solid var(--g-border);background:var(--g-card-90);color:var(--g-ink);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.bet-btn:hover{border-color:rgba(255,122,92,.5);background:rgba(255,122,92,.1)}
+.bet-btn.selected{border-color:var(--g-accent);background:rgba(255,122,92,.2);color:var(--g-accent)}
 .bet-btn:disabled{opacity:.4;cursor:not-allowed}
-.create-go{width:100%;padding:12px;border:none;border-radius:12px;background:linear-gradient(135deg,#f7c97e,#ff8a65);color:#1a1a2e;font-size:15px;font-weight:700;cursor:pointer;transition:transform .15s}
+.create-go{width:100%;padding:12px;border:none;border-radius:12px;background:linear-gradient(135deg,#FF9A6B,#FF7A5C);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:transform .15s}
 .create-go:hover{transform:scale(1.02)}
 .create-go:disabled{opacity:.5;cursor:not-allowed}
 
 /* Invite section */
-.invite-section{background:rgba(255,255,255,.06);border-radius:16px;padding:20px;margin-bottom:20px}
+.invite-section{background:var(--g-card);border:1px solid var(--g-border);box-shadow:var(--g-shadow);border-radius:16px;padding:20px;margin-bottom:20px}
 .invite-section h3{font-size:15px;margin-bottom:12px}
 .online-users{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto}
-.online-user-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.04);transition:background .2s}
-.online-user-row:hover{background:rgba(255,255,255,.08)}
+.online-user-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:10px;background:var(--g-slot);transition:background .2s}
+.online-user-row:hover{background:var(--g-hover)}
 .online-user-name{font-size:14px;font-weight:600}
-.invite-btn{padding:6px 14px;border-radius:8px;border:none;background:rgba(58,176,162,.25);color:#3ab0a2;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s}
+.invite-btn{padding:6px 14px;border-radius:8px;border:none;background:rgba(58,176,162,.25);color:#2d8f83;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s}
 .invite-btn:hover{background:rgba(58,176,162,.4)}
 .invite-btn:disabled{opacity:.4;cursor:not-allowed}
-.online-count{font-size:12px;color:#3ab0a2;font-weight:600;display:inline-flex;align-items:center;gap:4px;margin-left:8px}
+.online-count{font-size:12px;color:#2d8f83;font-weight:600;display:inline-flex;align-items:center;gap:4px;margin-left:8px}
 .online-count .pulse{width:6px;height:6px;border-radius:50%;background:#3ab0a2;animation:onlinePulse 1.5s ease-in-out infinite}
 @keyframes onlinePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.4)}}
-.lobby-online-section{background:rgba(255,255,255,.06);border-radius:16px;padding:20px;margin-bottom:20px}
+.lobby-online-section{background:var(--g-card);border:1px solid var(--g-border);box-shadow:var(--g-shadow);border-radius:16px;padding:20px;margin-bottom:20px}
 .lobby-online-section h3{font-size:15px;margin-bottom:12px}
 
 /* Room list */
 .room-list{margin-bottom:20px}
 .room-list h3{font-size:15px;margin-bottom:12px}
-.room-card{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,.06);margin-bottom:8px;transition:background .2s}
-.room-card:hover{background:rgba(255,255,255,.1)}
+.room-card{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:14px;background:var(--g-card);border:1px solid var(--g-border);box-shadow:var(--g-shadow-sm);margin-bottom:8px;transition:background .2s}
+.room-card:hover{background:#fff}
 .room-info{display:flex;flex-direction:column;gap:2px}
 .room-players{font-size:14px;font-weight:600}
-.room-bet{font-size:12px;color:#f7c97e}
-.room-status{font-size:11px;color:rgba(255,255,255,.45)}
-.spectate-btn{padding:8px 16px;border-radius:10px;border:none;background:rgba(100,140,255,.2);color:#88aaff;font-size:13px;font-weight:600;cursor:pointer;transition:background .2s}
+.room-bet{font-size:12px;color:var(--g-coin-ink)}
+.room-status{font-size:11px;color:var(--g-ink-soft)}
+.spectate-btn{padding:8px 16px;border-radius:10px;border:none;background:rgba(100,140,255,.2);color:#4f74e0;font-size:13px;font-weight:600;cursor:pointer;transition:background .2s}
 .spectate-btn:hover{background:rgba(100,140,255,.35)}
 
 /* Waiting room */
 .waiting-room{max-width:400px;margin:0 auto;padding:80px 16px 24px;text-align:center}
 .waiting-room h2{font-size:22px;margin-bottom:8px}
-.waiting-info{font-size:14px;color:rgba(255,255,255,.55);margin-bottom:24px}
-.waiting-bet{font-size:20px;font-weight:700;color:#f7c97e;margin-bottom:16px}
+.waiting-info{font-size:14px;color:var(--g-ink-soft);margin-bottom:24px}
+.waiting-bet{font-size:20px;font-weight:700;color:var(--g-coin-ink);margin-bottom:16px}
 .waiting-players{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
-.waiting-player{padding:14px;border-radius:12px;background:rgba(255,255,255,.06);font-size:15px;font-weight:600}
-.waiting-player.empty{color:rgba(255,255,255,.3);font-weight:400;border:2px dashed rgba(255,255,255,.12)}
+.waiting-player{padding:14px;border-radius:12px;background:var(--g-card);border:1px solid var(--g-border);box-shadow:var(--g-shadow-sm);font-size:15px;font-weight:600}
+.waiting-player.empty{color:var(--g-ink-faint);font-weight:400;border:2px dashed var(--g-border);box-shadow:none;background:var(--g-slot)}
 .waiting-start{padding:14px 32px;border:none;border-radius:14px;background:linear-gradient(135deg,#3ab0a2,#2d8f83);color:#fff;font-size:16px;font-weight:700;cursor:pointer;transition:transform .15s;margin-bottom:10px}
 .waiting-start:hover{transform:scale(1.03)}
 .waiting-start:disabled{opacity:.4;cursor:not-allowed}
-.waiting-leave{padding:10px 24px;border:1px solid rgba(255,80,80,.3);border-radius:12px;background:transparent;color:#ff6b6b;font-size:13px;cursor:pointer;transition:background .2s}
-.waiting-leave:hover{background:rgba(255,80,80,.1)}
+.waiting-leave{padding:10px 24px;border:1px solid rgba(226,85,63,.3);border-radius:12px;background:transparent;color:var(--g-danger);font-size:13px;cursor:pointer;transition:background .2s}
+.waiting-leave:hover{background:rgba(226,85,63,.1)}
 
 /* ── Game board ── */
 .game-container{display:none;flex-direction:column;align-items:center;padding:50px 8px 16px}
@@ -118,23 +119,23 @@ body{background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);color:#fff;font-
 .game-turn-indicator{font-size:12px;padding:4px 12px;border-radius:8px;font-weight:600}
 .game-turn-indicator.red-turn{background:rgba(211,47,47,.2);color:#ff6b6b}
 .game-turn-indicator.black-turn{background:rgba(50,50,50,.4);color:#aaa}
-.game-bet-display{font-size:13px;color:#f7c97e;font-weight:600}
+.game-bet-display{font-size:13px;color:var(--g-coin-ink);font-weight:600}
 .board-wrapper{position:relative;display:inline-block}
 canvas#chessBoard{display:block;border-radius:8px;touch-action:none}
 .game-status{margin-top:12px;font-size:14px;font-weight:600;min-height:24px;text-align:center}
 
 /* ── Move history ── */
-.move-history{margin-top:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px 14px;max-width:400px;width:100%;margin-left:auto;margin-right:auto}
-.move-history-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.4);margin-bottom:6px}
+.move-history{margin-top:10px;background:var(--g-card);border:1px solid var(--g-border);box-shadow:var(--g-shadow-sm);border-radius:12px;padding:10px 14px;max-width:400px;width:100%;margin-left:auto;margin-right:auto}
+.move-history-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--g-ink-soft);margin-bottom:6px}
 .move-history-list{display:flex;flex-direction:column;gap:4px}
-.move-entry{display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 8px;border-radius:8px;background:rgba(255,255,255,.03)}
-.move-entry .move-num{font-size:11px;color:rgba(255,255,255,.35);min-width:20px}
+.move-entry{display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 8px;border-radius:8px;background:var(--g-slot)}
+.move-entry .move-num{font-size:11px;color:var(--g-ink-faint);min-width:20px}
 .move-entry .move-color{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .move-entry .move-color.red{background:#d32f2f}
 .move-entry .move-color.black{background:#555}
-.move-entry .move-text{color:rgba(255,255,255,.8)}
-.move-entry .move-capture{color:#ff6b6b;font-weight:600}
-.move-history-empty{font-size:12px;color:rgba(255,255,255,.3);text-align:center;padding:4px 0}
+.move-entry .move-text{color:var(--g-ink)}
+.move-entry .move-capture{color:var(--g-danger);font-weight:600}
+.move-history-empty{font-size:12px;color:var(--g-ink-faint);text-align:center;padding:4px 0}
 
 /* ── Turn reminder ── */
 .turn-reminder{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9500;font-size:22px;font-weight:800;padding:16px 32px;border-radius:16px;pointer-events:none;animation:turnPop .8s ease forwards}
@@ -144,58 +145,58 @@ canvas#chessBoard{display:block;border-radius:8px;touch-action:none}
 
 .game-buttons{display:flex;gap:10px;margin-top:12px}
 .game-buttons button{padding:10px 20px;border-radius:10px;border:none;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
-.resign-btn{background:rgba(255,80,80,.15);color:#ff6b6b}
-.resign-btn:hover{background:rgba(255,80,80,.25)}
-.back-lobby-btn{background:rgba(255,255,255,.1);color:#fff}
-.back-lobby-btn:hover{background:rgba(255,255,255,.18)}
+.resign-btn{background:rgba(226,85,63,.1);color:var(--g-danger);border:1px solid rgba(226,85,63,.3)}
+.resign-btn:hover{background:rgba(226,85,63,.2)}
+.back-lobby-btn{background:var(--g-card-90);color:var(--g-ink);border:1px solid var(--g-border)}
+.back-lobby-btn:hover{background:#fff}
 
 /* Spectator bar */
-.spectator-bar{display:none;text-align:center;padding:6px 16px;font-size:12px;color:rgba(255,255,255,.5);background:rgba(255,255,255,.04);border-radius:8px;margin-top:8px}
+.spectator-bar{display:none;text-align:center;padding:6px 16px;font-size:12px;color:var(--g-ink-soft);background:var(--g-slot);border-radius:8px;margin-top:8px}
 
 /* ── Invite popup (shown on all pages via listener) ── */
-.invite-popup-overlay{position:fixed;inset:0;z-index:9900;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;animation:fadeIn .2s}
-.invite-popup{background:rgba(30,25,60,.97);backdrop-filter:blur(16px);border-radius:20px;padding:28px 24px;max-width:340px;width:90%;text-align:center}
-.invite-popup h3{font-size:18px;margin-bottom:8px}
-.invite-popup .inv-from{font-size:14px;color:rgba(255,255,255,.7);margin-bottom:6px}
-.invite-popup .inv-bet{font-size:22px;font-weight:700;color:#f7c97e;margin-bottom:20px}
+.invite-popup-overlay{position:fixed;inset:0;z-index:9900;background:var(--g-scrim);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;animation:fadeIn .2s}
+.invite-popup{background:var(--g-card);box-shadow:var(--g-shadow);border:1px solid var(--g-border);border-radius:20px;padding:28px 24px;max-width:340px;width:90%;text-align:center}
+.invite-popup h3{font-size:18px;margin-bottom:8px;font-family:var(--g-display)}
+.invite-popup .inv-from{font-size:14px;color:var(--g-ink-soft);margin-bottom:6px}
+.invite-popup .inv-bet{font-size:22px;font-weight:700;color:var(--g-coin-ink);margin-bottom:20px}
 .invite-popup .inv-buttons{display:flex;gap:10px}
 .invite-popup .inv-accept{flex:1;padding:12px;border:none;border-radius:12px;background:linear-gradient(135deg,#3ab0a2,#2d8f83);color:#fff;font-size:15px;font-weight:700;cursor:pointer}
-.invite-popup .inv-reject{flex:1;padding:12px;border:1px solid rgba(255,80,80,.3);border-radius:12px;background:transparent;color:#ff6b6b;font-size:15px;font-weight:600;cursor:pointer}
+.invite-popup .inv-reject{flex:1;padding:12px;border:1px solid rgba(226,85,63,.3);border-radius:12px;background:transparent;color:var(--g-danger);font-size:15px;font-weight:600;cursor:pointer}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 
 /* ── No rooms msg ── */
-.no-rooms{text-align:center;padding:20px;color:rgba(255,255,255,.35);font-size:13px}
+.no-rooms{text-align:center;padding:20px;color:var(--g-ink-faint);font-size:13px}
 
 /* ── Win animation overlay ── */
-.win-overlay{position:fixed;inset:0;z-index:9800;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0);pointer-events:none;animation:winBgFade .6s ease forwards}
+.win-overlay{position:fixed;inset:0;z-index:9800;display:flex;align-items:center;justify-content:center;background:rgba(255,231,211,0);pointer-events:none;animation:winBgFade .6s ease forwards}
 .win-overlay.dismissable{pointer-events:auto;cursor:pointer}
 .win-box{text-align:center;transform:scale(0);animation:winBoxPop .5s .3s cubic-bezier(.17,.67,.29,1.3) forwards}
 .win-crown{font-size:64px;margin-bottom:8px;animation:winCrownBounce 1s .6s ease infinite}
-.win-text{font-size:32px;font-weight:800;margin-bottom:6px;text-shadow:0 0 30px rgba(255,255,255,.3)}
-.win-text.red-win{background:linear-gradient(135deg,#ff6b6b,#ff4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.win-text.black-win{background:linear-gradient(135deg,#ccc,#888);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.win-sub{font-size:16px;color:rgba(255,255,255,.7);margin-bottom:4px}
-.win-coins{font-size:22px;font-weight:700;color:#f7c97e;opacity:0;animation:winCoinsFade .4s .8s ease forwards}
+.win-text{font-size:32px;font-weight:800;margin-bottom:6px;font-family:var(--g-display)}
+.win-text.red-win{background:linear-gradient(135deg,#ff6b6b,#ff4444);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.win-text.black-win{background:linear-gradient(135deg,#888,#555);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.win-sub{font-size:16px;color:var(--g-ink-soft);margin-bottom:4px}
+.win-coins{font-size:22px;font-weight:700;color:var(--g-coin-ink);opacity:0;animation:winCoinsFade .4s .8s ease forwards}
 .win-buttons{display:flex;gap:10px;margin-top:20px;opacity:0;animation:winCoinsFade .4s 1.2s ease forwards}
 .win-btn{flex:1;padding:12px 16px;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s}
 .win-btn:hover{transform:scale(1.04)}
 .win-btn:active{transform:scale(.97)}
-.win-btn-again{background:linear-gradient(135deg,#f7c97e,#ff8a65);color:#1a1a2e}
-.win-btn-lobby{background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.15)}
-.win-btn-lobby:hover{background:rgba(255,255,255,.15)}
+.win-btn-again{background:linear-gradient(135deg,#FF9A6B,#FF7A5C);color:#fff}
+.win-btn-lobby{background:var(--g-card);color:var(--g-ink);border:1px solid var(--g-border)}
+.win-btn-lobby:hover{background:#fff}
 .win-bet-picker{margin-top:14px;opacity:0;animation:winCoinsFade .3s ease forwards}
-.win-bet-picker .wbp-label{font-size:13px;color:rgba(255,255,255,.5);margin-bottom:8px}
+.win-bet-picker .wbp-label{font-size:13px;color:var(--g-ink-soft);margin-bottom:8px}
 .win-bet-options{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:12px}
-.win-bet-opt{padding:6px 14px;border-radius:8px;border:2px solid rgba(255,255,255,.12);background:transparent;color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
-.win-bet-opt:hover{border-color:rgba(247,201,126,.5);background:rgba(247,201,126,.1)}
-.win-bet-opt.selected{border-color:#f7c97e;background:rgba(247,201,126,.2);color:#f7c97e}
+.win-bet-opt{padding:6px 14px;border-radius:8px;border:2px solid var(--g-border);background:var(--g-card-90);color:var(--g-ink);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.win-bet-opt:hover{border-color:rgba(255,122,92,.5);background:rgba(255,122,92,.1)}
+.win-bet-opt.selected{border-color:var(--g-accent);background:rgba(255,122,92,.2);color:var(--g-accent)}
 .win-bet-opt:disabled{opacity:.35;cursor:not-allowed}
 .win-send-rematch{padding:10px 24px;border:none;border-radius:10px;background:linear-gradient(135deg,#3ab0a2,#2d8f83);color:#fff;font-size:14px;font-weight:700;cursor:pointer;transition:transform .15s}
 .win-send-rematch:hover{transform:scale(1.03)}
 .win-send-rematch:disabled{opacity:.4;cursor:not-allowed}
-.win-waiting-text{font-size:13px;color:rgba(255,255,255,.5);margin-top:10px}
+.win-waiting-text{font-size:13px;color:var(--g-ink-soft);margin-top:10px}
 .win-particle{position:fixed;width:8px;height:8px;border-radius:50%;pointer-events:none;z-index:9799;animation:winParticleFall linear forwards}
-@keyframes winBgFade{to{background:rgba(0,0,0,.7)}}
+@keyframes winBgFade{to{background:var(--g-scrim)}}
 @keyframes winBoxPop{to{transform:scale(1)}}
 @keyframes winCrownBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 @keyframes winCoinsFade{to{opacity:1}}
@@ -1203,8 +1204,8 @@ function showWinAnimation(winner, winnerName, bet) {
 
   // Spawn confetti particles
   const colors = winner === 'red'
-    ? ['#ff6b6b','#ff4444','#ff8a65','#f7c97e','#fff']
-    : ['#aaa','#ccc','#888','#f7c97e','#fff'];
+    ? ['#ff6b6b','#ff4444','#ff8a65','#F7C97E','#FF7A5C']
+    : ['#888','#aaa','#555','#F7C97E','#FF7A5C'];
   for (let i = 0; i < 40; i++) {
     const p = document.createElement('div');
     p.className = 'win-particle';

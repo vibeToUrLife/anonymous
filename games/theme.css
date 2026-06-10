@@ -1,0 +1,62 @@
+/* ───────────────────────────────────────────────────────────────
+   theme.css — "Sunset Cozy" shared theme for all minigames.
+
+   A warm, daytime peach→coral identity that replaces the old dark
+   "AI purple" template. Pages reference these tokens so re-theming
+   the whole arcade is a one-file change.
+
+   Coins stay gold (they're core to the game). Gameplay-functional
+   colors (2048 tiles, tetris/snake pieces, etc.) live in each page,
+   not here — this file only owns the shared chrome palette.
+   ─────────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap');
+
+:root {
+  /* Surfaces */
+  --g-bg: linear-gradient(160deg, #FFE7D3 0%, #FFB8A0 55%, #FF8FB1 100%);
+  --g-card: #FFF6EC;                       /* cream panel */
+  --g-card-90: rgba(255, 246, 236, 0.92);  /* translucent card */
+  --g-board: #FBE6D4;                       /* game board tray */
+  --g-slot: rgba(58, 42, 42, 0.06);         /* empty slot / faint fill */
+
+  /* Ink */
+  --g-ink: #3A2A2A;        /* primary text — warm brown */
+  --g-ink-soft: #8A6F63;   /* labels */
+  --g-ink-faint: #B59C90;  /* faint captions */
+
+  /* Lines & states */
+  --g-border: rgba(58, 42, 42, 0.10);
+  --g-hover: rgba(58, 42, 42, 0.06);
+
+  /* Accents */
+  --g-accent: #FF7A5C;     /* coral */
+  --g-accent-2: #F2A154;   /* warm orange */
+  --g-accent-grad: linear-gradient(135deg, #FF9A6B, #FF7A5C);
+  --g-title-grad: linear-gradient(90deg, #FF7A5C, #E8853A); /* readable title/score text on light */
+  --g-coin: #F7C97E;       /* coin gold */
+  --g-coin-ink: #D98A2B;   /* coin numbers — readable on cream */
+  --g-danger: #E2553F;     /* sign-out / end-game / errors */
+
+  /* Overlays & shadows */
+  --g-scrim: rgba(255, 231, 211, 0.88);     /* light frosted overlay */
+  --g-scrim-strong: rgba(255, 231, 211, 0.94);
+  --g-shadow: 0 10px 30px rgba(214, 120, 90, 0.18);
+  --g-shadow-sm: 0 4px 14px rgba(214, 120, 90, 0.16);
+
+  /* Type */
+  --g-display: 'Fredoka', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* Pillowy cream card with a thin coral top-edge highlight — the theme's
+   signature surface. Opt-in: add class="cozy-card" or use the token vars. */
+.cozy-card {
+  background: var(--g-card);
+  border: 1px solid var(--g-border);
+  border-top: 2px solid rgba(255, 122, 92, 0.45);
+  border-radius: 20px;
+  box-shadow: var(--g-shadow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}

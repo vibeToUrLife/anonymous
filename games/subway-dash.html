@@ -6,13 +6,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Subway Dash — Mini Games</title>
+  <link rel="stylesheet" href="theme.css">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       min-height: 100vh;
-      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      background: var(--g-bg); background-attachment: fixed;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      color: #fff;
+      color: var(--g-ink);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -24,24 +25,24 @@
     .back-btn, .settings-btn {
       position: fixed; top: 14px; z-index: 50;
       padding: 8px 16px;
-      border: 1px solid rgba(255,255,255,0.15);
+      border: 1px solid var(--g-border);
       border-radius: 12px;
-      background: rgba(15, 12, 41, 0.9);
+      background: var(--g-card-90);
       backdrop-filter: blur(10px);
-      color: #fff; font-size: 14px; cursor: pointer;
-      text-decoration: none; transition: background 0.2s;
+      color: var(--g-ink); font-size: 14px; cursor: pointer;
+      text-decoration: none; transition: background 0.2s; box-shadow: var(--g-shadow-sm);
     }
     .back-btn { left: 14px; }
     .settings-btn { right: 14px; border-radius: 50%; width: 38px; height: 38px; padding: 0; font-size: 18px; }
-    .back-btn:hover, .settings-btn:hover { background: rgba(255,255,255,0.12); }
+    .back-btn:hover, .settings-btn:hover { background: #fff; }
 
     .game-header { text-align: center; padding: 16px 20px 6px; z-index: 10; }
     .game-header h1 {
-      font-size: 24px; font-weight: 800;
-      background: linear-gradient(90deg, #f72585, #4cc9f0);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      font-size: 24px; font-weight: 800; font-family: var(--g-display);
+      background: var(--g-title-grad);
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
     }
-    .game-header p { font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+    .game-header p { font-size: 12px; color: var(--g-ink-faint); margin-top: 2px; }
 
     /* ── HUD ── */
     .hud {
@@ -49,13 +50,13 @@
       margin: 6px 0 8px; z-index: 10;
     }
     .hud .info-box {
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.08);
+      background: var(--g-slot);
+      border: 1px solid var(--g-border);
       border-radius: 12px; padding: 6px 14px; text-align: center; min-width: 66px;
     }
-    .hud .label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.4); }
-    .hud .value { font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; }
-    .hud .value.coins-val { color: #f7c97e; }
+    .hud .label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--g-ink-soft); }
+    .hud .value { font-size: 19px; font-weight: 800; font-family: var(--g-display); font-variant-numeric: tabular-nums; color: var(--g-ink); }
+    .hud .value.coins-val { color: var(--g-coin-ink); }
     .hud .value.speed-val { color: #4cc9f0; }
 
     /* ── Canvas ── */
@@ -71,14 +72,14 @@
     .touch-controls { display: flex; gap: 10px; justify-content: center; align-items: center; padding: 12px; flex-wrap: wrap; z-index: 20; }
     .touch-btn {
       width: 60px; height: 60px; border-radius: 18px;
-      border: 1px solid rgba(255,255,255,0.15);
-      background: rgba(255,255,255,0.08); color: #fff; font-size: 22px;
-      cursor: pointer; transition: background 0.15s, transform 0.1s; user-select: none;
+      border: 1px solid var(--g-border);
+      background: var(--g-card-90); color: var(--g-ink); font-size: 22px;
+      cursor: pointer; transition: background 0.15s, transform 0.1s; user-select: none; box-shadow: var(--g-shadow-sm);
     }
-    .touch-btn:active { background: rgba(255,255,255,0.2); transform: scale(0.93); }
-    .touch-btn.jump { background: linear-gradient(135deg, #34d399, #059669); }
-    .touch-btn.roll { background: linear-gradient(135deg, #fbbf24, #d97706); }
-    .touch-btn.item  { background: linear-gradient(135deg, #4cc9f0, #4361ee); position: relative; }
+    .touch-btn:active { background: var(--g-hover); transform: scale(0.93); }
+    .touch-btn.jump { background: linear-gradient(135deg, #34d399, #059669); color: #fff; }
+    .touch-btn.roll { background: linear-gradient(135deg, #fbbf24, #d97706); color: #fff; }
+    .touch-btn.item  { background: linear-gradient(135deg, #4cc9f0, #4361ee); color: #fff; position: relative; }
     .touch-btn.item .item-badge {
       position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px;
       border-radius: 10px; background: #f7c97e; color: #111; font-size: 11px; font-weight: 800;
@@ -89,85 +90,85 @@
     .item-bar { display: flex; gap: 8px; justify-content: center; align-items: center; padding: 0 12px 12px; flex-wrap: wrap; z-index: 20; }
     .item-slot {
       position: relative; width: 56px; height: 56px; border-radius: 14px;
-      border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.07);
-      color: #fff; font-size: 24px; cursor: pointer; user-select: none;
+      border: 1px solid var(--g-border); background: var(--g-slot);
+      color: var(--g-ink); font-size: 24px; cursor: pointer; user-select: none;
       display: flex; align-items: center; justify-content: center;
       transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
     }
     .item-slot:active { transform: scale(0.92); }
     .item-slot.empty { opacity: 0.35; }
     .item-slot.active { box-shadow: 0 0 0 2px #34d399 inset, 0 0 12px rgba(52,211,153,0.5); }
-    .item-slot .num { position: absolute; top: 2px; left: 6px; font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.45); }
-    .item-slot .cnt { position: absolute; bottom: 1px; right: 6px; font-size: 12px; font-weight: 800; color: #f7c97e; }
+    .item-slot .num { position: absolute; top: 2px; left: 6px; font-size: 10px; font-weight: 800; color: var(--g-ink-faint); }
+    .item-slot .cnt { position: absolute; bottom: 1px; right: 6px; font-size: 12px; font-weight: 800; color: var(--g-coin-ink); }
 
     /* ── Overlays ── */
     .overlay {
       position: fixed; inset: 0; z-index: 100;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      background: rgba(15,12,41,0.93); backdrop-filter: blur(12px);
+      background: var(--g-scrim-strong); backdrop-filter: blur(12px);
       padding: 20px; overflow-y: auto;
     }
     .overlay.hidden { display: none; }
     .overlay h2 {
-      font-size: 28px; font-weight: 800; margin-bottom: 6px;
-      background: linear-gradient(90deg, #f72585, #4cc9f0);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      font-size: 28px; font-weight: 800; margin-bottom: 6px; font-family: var(--g-display);
+      background: var(--g-title-grad);
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
     }
     .play-btn {
       padding: 14px 48px; border: none; border-radius: 16px;
-      background: linear-gradient(135deg, #f72585, #7209b7); color: #fff;
+      background: linear-gradient(135deg, #f2a154, #e8853a); color: #fff;
       font-size: 17px; font-weight: 700; cursor: pointer; margin-top: 14px;
-      box-shadow: 0 4px 16px rgba(247,37,133,0.35); transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 4px 16px rgba(242,161,84,0.35); transition: transform 0.15s, box-shadow 0.15s;
     }
     .play-btn:hover { transform: scale(1.05); }
     .secondary-link {
       display: inline-block; margin-top: 10px; padding: 10px 28px;
-      border: 1px solid rgba(255,255,255,0.15); border-radius: 14px;
-      background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.75);
-      font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; transition: background 0.2s;
+      border: 1px solid var(--g-border); border-radius: 14px;
+      background: var(--g-card); color: var(--g-ink);
+      font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; transition: background 0.2s; box-shadow: var(--g-shadow-sm);
     }
-    .secondary-link:hover { background: rgba(255,255,255,0.12); }
+    .secondary-link:hover { background: #fff; }
 
-    .final-score { font-size: 56px; font-weight: 900; background: linear-gradient(135deg, #f72585, #4cc9f0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .best-score { font-size: 14px; color: rgba(255,255,255,0.5); margin-top: 4px; }
-    .new-best { color: #f7c97e; font-size: 14px; font-weight: 700; margin-top: 4px; animation: pulse 0.6s ease-in-out infinite alternate; }
+    .final-score { font-size: 56px; font-weight: 900; font-family: var(--g-display); background: var(--g-title-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .best-score { font-size: 14px; color: var(--g-ink-soft); margin-top: 4px; }
+    .new-best { color: var(--g-coin-ink); font-size: 14px; font-weight: 700; margin-top: 4px; animation: pulse 0.6s ease-in-out infinite alternate; }
     .new-best.hidden { display: none; }
     @keyframes pulse { from { opacity: 0.6; } to { opacity: 1; } }
-    .stats-row { display: flex; gap: 22px; margin-top: 10px; font-size: 14px; color: rgba(255,255,255,0.65); }
+    .stats-row { display: flex; gap: 22px; margin-top: 10px; font-size: 14px; color: var(--g-ink-soft); }
 
     /* ── Difficulty selector ── */
     .diff-row { display: flex; gap: 10px; margin-top: 14px; }
     .diff-btn {
-      padding: 9px 18px; border: 1px solid rgba(255,255,255,0.15); border-radius: 12px;
-      background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7);
-      font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+      padding: 9px 18px; border: 1px solid var(--g-border); border-radius: 12px;
+      background: var(--g-card); color: var(--g-ink-soft);
+      font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; box-shadow: var(--g-shadow-sm);
     }
-    .diff-btn.active { background: linear-gradient(135deg, #f72585, #7209b7); color: #fff; border-color: transparent; }
+    .diff-btn.active { background: linear-gradient(135deg, #FF9A6B, #FF7A5C); color: #fff; border-color: transparent; }
 
-    .player-row { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; font-size: 13px; color: rgba(255,255,255,0.6); }
-    .coin-pill { background: rgba(247,201,126,0.15); border: 1px solid rgba(247,201,126,0.3); color: #f7c97e; padding: 4px 12px; border-radius: 20px; font-weight: 700; }
+    .player-row { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; font-size: 13px; color: var(--g-ink-soft); }
+    .coin-pill { background: rgba(247,201,126,0.22); border: 1px solid rgba(247,201,126,0.45); color: var(--g-coin-ink); padding: 4px 12px; border-radius: 20px; font-weight: 700; }
 
     /* ── Leaderboard ── */
     .leaderboard { margin-top: 18px; width: 90%; max-width: 340px; max-height: 190px; overflow-y: auto; }
-    .lb-title { font-size: 14px; font-weight: 700; text-align: center; margin-bottom: 8px; color: rgba(255,255,255,0.5); }
+    .lb-title { font-size: 14px; font-weight: 700; text-align: center; margin-bottom: 8px; color: var(--g-ink-soft); }
     .lb-row { display: flex; justify-content: space-between; padding: 5px 12px; font-size: 13px; border-radius: 8px; }
-    .lb-row:nth-child(odd) { background: rgba(255,255,255,0.04); }
-    .lb-rank { color: rgba(255,255,255,0.4); margin-right: 8px; }
+    .lb-row:nth-child(odd) { background: var(--g-slot); }
+    .lb-rank { color: var(--g-ink-faint); margin-right: 8px; }
     .lb-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .lb-score { font-weight: 700; color: #4cc9f0; margin-left: 12px; }
-    .lb-me { background: rgba(76,201,240,0.12) !important; }
+    .lb-score { font-weight: 700; color: var(--g-coin-ink); margin-left: 12px; }
+    .lb-me { background: rgba(255,122,92,0.12) !important; }
 
     /* ── Shop modal ── */
     .shop-box {
-      background: rgba(30,25,60,0.97); border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 20px; padding: 20px; width: 92%; max-width: 460px; max-height: 88vh; overflow-y: auto;
+      background: var(--g-card); border: 1px solid var(--g-border);
+      border-radius: 20px; padding: 20px; width: 92%; max-width: 460px; max-height: 88vh; overflow-y: auto; box-shadow: var(--g-shadow);
     }
-    .shop-box h3 { font-size: 20px; margin-bottom: 4px; }
-    .shop-coins { font-size: 13px; color: #f7c97e; margin-bottom: 14px; font-weight: 700; }
+    .shop-box h3 { font-size: 20px; margin-bottom: 4px; font-family: var(--g-display); color: var(--g-ink); }
+    .shop-coins { font-size: 13px; color: var(--g-coin-ink); margin-bottom: 14px; font-weight: 700; }
     .shop-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
     .shop-tab {
-      flex: 1; padding: 8px; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
-      background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.7);
+      flex: 1; padding: 8px; border: 1px solid var(--g-border); border-radius: 10px;
+      background: var(--g-card-90); color: var(--g-ink-soft);
       font-size: 13px; font-weight: 600; cursor: pointer;
     }
     .shop-tab.active { background: linear-gradient(135deg, #4cc9f0, #4361ee); color: #fff; border-color: transparent; }
@@ -175,44 +176,44 @@
     .shop-panel { display: none; }
     .shop-panel.active { display: block; }
     .shop-card {
-      border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 12px; text-align: center;
-      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--g-border); border-radius: 14px; padding: 12px; text-align: center;
+      background: var(--g-slot);
     }
     .shop-card .swatch { width: 100%; height: 46px; border-radius: 10px; margin-bottom: 8px; }
-    .shop-card .char-prev { width: 100%; height: auto; border-radius: 10px; margin-bottom: 8px; display: block; background: rgba(255,255,255,0.04); }
-    .shop-card .name { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
-    .shop-card .price { font-size: 12px; color: #f7c97e; margin-bottom: 8px; }
+    .shop-card .char-prev { width: 100%; height: auto; border-radius: 10px; margin-bottom: 8px; display: block; background: var(--g-board); }
+    .shop-card .name { font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--g-ink); }
+    .shop-card .price { font-size: 12px; color: var(--g-coin-ink); margin-bottom: 8px; }
     .shop-card button {
       width: 100%; padding: 7px; border: none; border-radius: 10px; cursor: pointer;
-      font-size: 12px; font-weight: 700; background: linear-gradient(135deg, #f72585, #7209b7); color: #fff;
+      font-size: 12px; font-weight: 700; background: linear-gradient(135deg, #FF9A6B, #FF7A5C); color: #fff;
     }
-    .shop-card button.owned { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.6); cursor: default; }
+    .shop-card button.owned { background: var(--g-hover); color: var(--g-ink-soft); cursor: default; }
     .shop-card button.selected { background: linear-gradient(135deg, #34d399, #059669); }
     .shop-card button:disabled { opacity: 0.5; cursor: not-allowed; }
     .shop-card .icon { font-size: 30px; margin-bottom: 6px; }
-    .shop-card .count { font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 6px; }
-    .shop-msg { text-align: center; font-size: 12px; color: #f87171; min-height: 16px; margin-top: 10px; }
+    .shop-card .count { font-size: 11px; color: var(--g-ink-soft); margin-bottom: 6px; }
+    .shop-msg { text-align: center; font-size: 12px; color: var(--g-danger); min-height: 16px; margin-top: 10px; }
 
     /* ── Settings modal ── */
-    .settings-overlay { position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); }
+    .settings-overlay { position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; background: var(--g-scrim); backdrop-filter: blur(8px); }
     .settings-overlay.hidden { display: none; }
-    .settings-box { background: rgba(30,25,60,0.97); border-radius: 20px; padding: 24px; width: 88%; max-width: 320px; text-align: center; }
-    .settings-box h3 { margin-bottom: 16px; }
+    .settings-box { background: var(--g-card); border: 1px solid var(--g-border); border-top: 2px solid rgba(255,122,92,0.45); border-radius: 20px; padding: 24px; width: 88%; max-width: 320px; text-align: center; box-shadow: var(--g-shadow); }
+    .settings-box h3 { margin-bottom: 16px; font-family: var(--g-display); color: var(--g-ink); }
     .settings-box button { width: 100%; padding: 12px; border-radius: 12px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px; }
-    .settings-logout-btn { background: rgba(255,80,80,0.15); color: #ff6b6b; border: 1px solid rgba(255,80,80,0.3) !important; }
-    .settings-close-btn { background: rgba(255,255,255,0.08); color: #fff; }
+    .settings-logout-btn { background: rgba(226,85,63,0.10); color: var(--g-danger); border: 1px solid rgba(226,85,63,0.3) !important; }
+    .settings-close-btn { background: var(--g-hover); color: var(--g-ink-soft); }
 
     /* ── Login overlay ── */
     #loginOverlay { z-index: 400; }
     #loginOverlay.loading .login-box { opacity: 0; }
     .login-box { text-align: center; transition: opacity 0.3s; }
-    .login-title { font-size: 28px; font-weight: 800; margin-bottom: 8px; background: linear-gradient(90deg, #f72585, #4cc9f0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .login-sub { font-size: 13px; color: rgba(255,255,255,0.45); margin-bottom: 24px; }
-    .google-btn { display: inline-flex; align-items: center; gap: 10px; padding: 12px 28px; border: 1px solid rgba(255,255,255,0.15); border-radius: 14px; background: rgba(255,255,255,0.08); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-    .google-btn:hover { background: rgba(255,255,255,0.16); }
-    .login-error { color: #f87171; font-size: 12px; margin-top: 10px; }
+    .login-title { font-size: 28px; font-weight: 800; margin-bottom: 8px; font-family: var(--g-display); background: var(--g-title-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .login-sub { font-size: 13px; color: var(--g-ink-soft); margin-bottom: 24px; }
+    .google-btn { display: inline-flex; align-items: center; gap: 10px; padding: 12px 28px; border: 1px solid var(--g-border); border-radius: 14px; background: var(--g-card); color: var(--g-ink); font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; box-shadow: var(--g-shadow-sm); }
+    .google-btn:hover { background: #fff; }
+    .login-error { color: var(--g-danger); font-size: 12px; margin-top: 10px; }
 
-    .coin-reward-pop { position: fixed; top: 30%; left: 50%; transform: translateX(-50%); font-size: 26px; font-weight: 800; color: #f7c97e; z-index: 500; pointer-events: none; opacity: 0; }
+    .coin-reward-pop { position: fixed; top: 30%; left: 50%; transform: translateX(-50%); font-size: 26px; font-weight: 800; color: var(--g-coin-ink); z-index: 500; pointer-events: none; opacity: 0; }
     .coin-reward-pop.show { animation: coinPop 1.4s ease-out; }
     @keyframes coinPop { 0% { opacity: 0; transform: translate(-50%, 10px); } 20% { opacity: 1; transform: translate(-50%, -6px); } 100% { opacity: 0; transform: translate(-50%, -40px); } }
   </style>
@@ -278,17 +279,17 @@
       <span id="playerDisplayName"></span>
       <span class="coin-pill">🪙 <span id="startCoins">0</span></span>
     </div>
-    <div style="font-size:12px;color:rgba(255,255,255,0.45);">Choose difficulty</div>
+    <div style="font-size:12px;color:var(--g-ink-soft);">Choose difficulty</div>
     <div class="diff-row" id="diffRow">
       <button class="diff-btn" data-diff="easy">Easy</button>
       <button class="diff-btn active" data-diff="normal">Normal</button>
       <button class="diff-btn" data-diff="hard">Hard</button>
     </div>
-    <div id="diffInfo" style="font-size:11px;color:rgba(255,255,255,0.55);margin-top:6px;max-width:300px;text-align:center;line-height:1.45"></div>
+    <div id="diffInfo" style="font-size:11px;color:var(--g-ink-soft);margin-top:6px;max-width:300px;text-align:center;line-height:1.45"></div>
     <button class="play-btn" id="playBtn">▶ Play</button>
     <button class="secondary-link" id="openShopBtn">🛒 Characters &amp; Shop</button>
     <a href="../index.html" class="secondary-link">← Back to Lobby</a>
-    <div style="font-size:12px;color:rgba(255,255,255,0.35);margin-top:10px">◀ ▶ move &nbsp;·&nbsp; Space jump &nbsp;·&nbsp; ⬇ roll &nbsp;·&nbsp; 1 2 3 4 use item</div>
+    <div style="font-size:12px;color:var(--g-ink-faint);margin-top:10px">◀ ▶ move &nbsp;·&nbsp; Space jump &nbsp;·&nbsp; ⬇ roll &nbsp;·&nbsp; 1 2 3 4 use item</div>
     <div class="leaderboard" id="startLeaderboard">
       <div class="lb-title">🏆 Leaderboard</div>
       <div id="startLbBody"></div>
@@ -522,7 +523,7 @@
           const me = r.uid === uid ? ' lb-me' : '';
           const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
           return '<div class="lb-row' + me + '"><span class="lb-rank">' + (medal || (i + 1)) + '</span><span class="lb-name">' + escapeHtml(r.name) + '</span><span class="lb-score">' + r.score + '</span></div>';
-        }).join('') || '<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:12px;padding:10px">No scores yet — be the first!</div>';
+        }).join('') || '<div style="text-align:center;color:var(--g-ink-faint);font-size:12px;padding:10px">No scores yet — be the first!</div>';
         $('startLbBody').innerHTML = html;
         $('overLbBody').innerHTML = html;
       }, err => console.error('Leaderboard listen error:', err));
@@ -1564,8 +1565,8 @@
       if (type === 'skin') { player.ownedSkins = result.owned; player.selectedSkin = id; }
       else { player.ownedEffects = result.owned; player.selectedEffect = id; }
       await saveState();
-      $('shopMsg').style.color = '#34d399'; $('shopMsg').textContent = 'Purchased & equipped!';
-      setTimeout(() => { $('shopMsg').style.color = '#f87171'; }, 1200);
+      $('shopMsg').style.color = '#2BA86A'; $('shopMsg').textContent = 'Purchased & equipped!';
+      setTimeout(() => { $('shopMsg').style.color = 'var(--g-danger)'; }, 1200);
       refreshShopUI();
     }
 
@@ -1576,8 +1577,8 @@
       if (!paid) { $('shopMsg').textContent = 'Not enough coins.'; return; }
       player.items[id] = (player.items[id] || 0) + 1;
       await saveState();
-      $('shopMsg').style.color = '#34d399'; $('shopMsg').textContent = SubwayLogic.ITEMS[id].name + ' bought!';
-      setTimeout(() => { $('shopMsg').style.color = '#f87171'; }, 1200);
+      $('shopMsg').style.color = '#2BA86A'; $('shopMsg').textContent = SubwayLogic.ITEMS[id].name + ' bought!';
+      setTimeout(() => { $('shopMsg').style.color = 'var(--g-danger)'; }, 1200);
       refreshShopUI();
     }
 

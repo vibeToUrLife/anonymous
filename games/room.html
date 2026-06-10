@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>My Room — Virtual Pet & Garden</title>
   <link rel="stylesheet" href="room/css/room.css">
+  <link rel="stylesheet" href="theme.css">
 </head>
 <body>
 
@@ -13,7 +14,7 @@
   <div class="login-overlay loading" id="loginOverlay">
     <div class="login-box">
       <h2 style="margin-bottom:8px">🏠 My Room</h2>
-      <p style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:28px">Sign in to access your room</p>
+      <p style="font-size:13px;color:var(--g-ink-soft);margin-bottom:28px">Sign in to access your room</p>
       <button class="google-login-btn" id="googleLoginBtn">
         <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
         Sign in with Google
@@ -52,36 +53,36 @@
   <div class="main-wrap">
     <div class="room-container">
       <div class="room" id="roomView">
-        <div id="roomLoadingOverlay" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(20,20,30,0.85);z-index:50;border-radius:18px;flex-direction:column;gap:12px">
-          <div style="width:36px;height:36px;border:3px solid rgba(255,255,255,0.15);border-top-color:#f7c97e;border-radius:50%;animation:roomSpin .7s linear infinite"></div>
-          <div style="color:rgba(255,255,255,0.6);font-size:13px">Loading room...</div>
+        <div id="roomLoadingOverlay" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,246,236,0.92);z-index:50;border-radius:18px;flex-direction:column;gap:12px">
+          <div style="width:36px;height:36px;border:3px solid var(--g-border);border-top-color:var(--g-accent);border-radius:50%;animation:roomSpin .7s linear infinite"></div>
+          <div style="color:var(--g-ink-soft);font-size:13px">Loading room...</div>
         </div>
         <canvas id="roomBgCanvas"></canvas>
         <div class="pet-slot" id="petSlot"></div>
         <div class="plant-slot" id="plantSlot"></div>
         <!-- Pet Status Bar Overlay -->
-        <div id="petStatusBar" style="display:none;position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(20,20,35,0.92);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:12px 16px;z-index:40;min-width:260px;max-width:340px;backdrop-filter:blur(8px);box-shadow:0 4px 20px rgba(0,0,0,0.5)">
+        <div id="petStatusBar" style="display:none;position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(255,246,236,0.92);border:1px solid var(--g-border);border-radius:14px;padding:12px 16px;z-index:40;min-width:260px;max-width:340px;backdrop-filter:blur(8px);box-shadow:var(--g-shadow)">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <input id="petStatusName" type="text" maxlength="16" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-size:13px;font-weight:600;padding:4px 8px;width:120px" oninput="onPetNameChange(this.value)">
-            <button onclick="closePetStatus()" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:16px;cursor:pointer;padding:2px 6px">✕</button>
+            <input id="petStatusName" type="text" maxlength="16" style="background:#fff;border:1px solid var(--g-border);border-radius:8px;color:var(--g-ink);font-size:13px;font-weight:600;padding:4px 8px;width:120px" oninput="onPetNameChange(this.value)">
+            <button onclick="closePetStatus()" style="background:none;border:none;color:var(--g-ink-soft);font-size:16px;cursor:pointer;padding:2px 6px">✕</button>
           </div>
           <div style="display:flex;flex-direction:column;gap:5px;font-size:11px">
-            <div style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.7)">
-              <span>🍖</span><span style="flex:1;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden"><span id="petStatusHunger" style="display:block;height:100%;border-radius:3px;transition:width .3s"></span></span><span id="petStatusHungerVal" style="min-width:32px;text-align:right"></span>
+            <div style="display:flex;align-items:center;gap:6px;color:var(--g-ink-soft)">
+              <span>🍖</span><span style="flex:1;height:6px;background:var(--g-slot);border-radius:3px;overflow:hidden"><span id="petStatusHunger" style="display:block;height:100%;border-radius:3px;transition:width .3s"></span></span><span id="petStatusHungerVal" style="min-width:32px;text-align:right"></span>
             </div>
-            <div style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.7)">
-              <span>💧</span><span style="flex:1;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden"><span id="petStatusThirst" style="display:block;height:100%;border-radius:3px;transition:width .3s"></span></span><span id="petStatusThirstVal" style="min-width:32px;text-align:right"></span>
+            <div style="display:flex;align-items:center;gap:6px;color:var(--g-ink-soft)">
+              <span>💧</span><span style="flex:1;height:6px;background:var(--g-slot);border-radius:3px;overflow:hidden"><span id="petStatusThirst" style="display:block;height:100%;border-radius:3px;transition:width .3s"></span></span><span id="petStatusThirstVal" style="min-width:32px;text-align:right"></span>
             </div>
-            <div style="display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.7)">
-              <span>♥</span><span style="flex:1;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden"><span id="petStatusAffection" style="display:block;height:100%;background:#ff8aab;border-radius:3px;transition:width .3s"></span></span><span id="petStatusAffectionVal" style="min-width:32px;text-align:right;color:#ff8aab"></span>
+            <div style="display:flex;align-items:center;gap:6px;color:var(--g-ink-soft)">
+              <span>♥</span><span style="flex:1;height:6px;background:var(--g-slot);border-radius:3px;overflow:hidden"><span id="petStatusAffection" style="display:block;height:100%;background:#ff8aab;border-radius:3px;transition:width .3s"></span></span><span id="petStatusAffectionVal" style="min-width:32px;text-align:right;color:#ff8aab"></span>
             </div>
           </div>
           <div id="petStatusColors" style="display:flex;gap:5px;justify-content:center;margin-top:8px;flex-wrap:wrap"></div>
-          <div id="petStatusTricks" style="display:none;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.1)">
-            <div style="font-size:10px;color:rgba(255,255,255,0.5);margin-bottom:6px;text-align:center">🎪 Tricks</div>
+          <div id="petStatusTricks" style="display:none;margin-top:10px;padding-top:8px;border-top:1px solid var(--g-border)">
+            <div style="font-size:10px;color:var(--g-ink-soft);margin-bottom:6px;text-align:center">🎪 Tricks</div>
             <div id="petStatusTricksBtns" style="display:flex;gap:5px;justify-content:center;flex-wrap:wrap"></div>
           </div>
-          <div id="petStatusCollectionWrap" style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.1);text-align:center">
+          <div id="petStatusCollectionWrap" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--g-border);text-align:center">
             <button id="petStatusCollectionBtn" onclick="openPetCollection()" style="font-size:11px;padding:6px 12px;border-radius:8px;cursor:pointer;border:1px solid rgba(255,210,61,0.35);background:rgba(255,210,61,0.12);color:#ffd23d">🎁 Collection</button>
           </div>
         </div>
@@ -151,35 +152,35 @@
       <div class="decor-panel active" id="dp-wallpaper">
         <div class="shop-section">
           <div class="shop-section-title">🏠 Wall Pattern</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.4);padding:0 12px 8px;text-align:center">Change the look of your walls</div>
+          <div style="font-size:11px;color:var(--g-ink-faint);padding:0 12px 8px;text-align:center">Change the look of your walls</div>
           <div class="shop-grid" id="wallShop"></div>
         </div>
       </div>
       <div class="decor-panel" id="dp-floor">
         <div class="shop-section">
           <div class="shop-section-title">🪵 Floor Pattern</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.4);padding:0 12px 8px;text-align:center">Change the floor of this room</div>
+          <div style="font-size:11px;color:var(--g-ink-faint);padding:0 12px 8px;text-align:center">Change the floor of this room</div>
           <div class="shop-grid" id="floorShop"></div>
         </div>
       </div>
       <div class="decor-panel" id="dp-window">
         <div class="shop-section">
           <div class="shop-section-title">🪟 Windows</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.4);padding:0 12px 8px;text-align:center">Pick a window style</div>
+          <div style="font-size:11px;color:var(--g-ink-faint);padding:0 12px 8px;text-align:center">Pick a window style</div>
           <div class="shop-grid" id="windowShop"></div>
         </div>
       </div>
       <div class="decor-panel" id="dp-wallart">
         <div class="shop-section">
           <div class="shop-section-title">🖼️ Wall Art &amp; Hangings</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.4);padding:0 12px 8px;text-align:center">Drag to reposition on the wall</div>
+          <div style="font-size:11px;color:var(--g-ink-faint);padding:0 12px 8px;text-align:center">Drag to reposition on the wall</div>
           <div class="shop-grid" id="wallDecorShop"></div>
         </div>
       </div>
       <div class="decor-panel" id="dp-furniture">
         <div class="shop-section">
           <div class="shop-section-title">🪑 Furniture &amp; Floor Items</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.4);padding:0 12px 8px;text-align:center">Drag to reposition on the floor</div>
+          <div style="font-size:11px;color:var(--g-ink-faint);padding:0 12px 8px;text-align:center">Drag to reposition on the floor</div>
           <div class="shop-grid" id="floorDecorShop"></div>
         </div>
       </div>
@@ -225,7 +226,7 @@
     <div class="sub-panel active" id="accessoryWrap">
       <div class="shop-section">
         <div class="shop-section-title">🎩 Pet Accessories</div>
-        <div style="font-size:11px;color:rgba(255,255,255,0.4);padding:0 12px 8px;text-align:center">Win accessories from Gacha! Equip them on your pets</div>
+        <div style="font-size:11px;color:var(--g-ink-faint);padding:0 12px 8px;text-align:center">Win accessories from Gacha! Equip them on your pets</div>
         <div id="accShop"></div>
       </div>
     </div>
@@ -244,7 +245,7 @@
     <div class="sub-panel" id="gachaWrapTab">
       <div class="shop-section">
         <div class="shop-section-title">🎰 Lucky Draw</div>
-        <div style="font-size:11px;color:rgba(255,255,255,0.4);padding:0 12px 8px;text-align:center">Spend coins for random rare items!</div>
+        <div style="font-size:11px;color:var(--g-ink-faint);padding:0 12px 8px;text-align:center">Spend coins for random rare items!</div>
         <div id="gachaTabContent"></div>
       </div>
     </div>
@@ -298,7 +299,7 @@
   <div class="gift-overlay hidden" id="giftOverlay">
     <div class="gift-box">
       <h3>🎁 Send Gift</h3>
-      <div id="giftTarget" style="font-size:13px;color:rgba(255,255,255,.6);margin-bottom:14px"></div>
+      <div id="giftTarget" style="font-size:13px;color:var(--g-ink-soft);margin-bottom:14px"></div>
       <div class="gift-amounts" id="giftAmounts"></div>
       <button class="gift-send-btn" id="giftSendBtn" disabled>Send Gift</button>
       <button class="gift-close" id="giftCloseBtn">Cancel</button>
@@ -375,14 +376,14 @@
   <script src="room/js/room-weather.js"></script>
   <script src="room/js/room-gacha.js"></script>
   <script src="room/js/room-leaderboard.js"></script>
-  <div id="petCollectionModal" style="display:none;position:fixed;inset:0;z-index:9550;background:rgba(0,0,0,0.6);align-items:center;justify-content:center" onclick="if(event.target===this)closePetCollection()">
-    <div style="background:#16162a;border:1px solid rgba(255,255,255,0.15);border-radius:16px;padding:18px;max-width:340px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
+  <div id="petCollectionModal" style="display:none;position:fixed;inset:0;z-index:9550;background:var(--g-scrim);align-items:center;justify-content:center" onclick="if(event.target===this)closePetCollection()">
+    <div style="background:var(--g-card);border:1px solid var(--g-border);border-top:2px solid rgba(255,122,92,0.45);border-radius:16px;padding:18px;max-width:340px;width:90%;box-shadow:var(--g-shadow)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <span id="petCollectionTitle" style="font-weight:700;color:#fff;font-size:14px"></span>
-        <button onclick="closePetCollection()" style="background:none;border:none;color:#aaa;font-size:18px;cursor:pointer">✕</button>
+        <span id="petCollectionTitle" style="font-weight:700;color:var(--g-ink);font-size:14px"></span>
+        <button onclick="closePetCollection()" style="background:none;border:none;color:var(--g-ink-soft);font-size:18px;cursor:pointer">✕</button>
       </div>
       <div id="petCollectionGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
-      <div id="petCollectionReward" style="margin-top:14px;text-align:center;font-size:11px;color:#bbb;line-height:1.4"></div>
+      <div id="petCollectionReward" style="margin-top:14px;text-align:center;font-size:11px;color:var(--g-ink-soft);line-height:1.4"></div>
     </div>
   </div>
 </body>

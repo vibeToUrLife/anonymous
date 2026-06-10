@@ -5,13 +5,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Flappy Bird — Mini Games</title>
+  <link rel="stylesheet" href="theme.css">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       min-height: 100vh;
-      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      background: var(--g-bg); background-attachment: fixed;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      color: #fff;
+      color: var(--g-ink);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -26,17 +27,17 @@
       left: 14px;
       z-index: 50;
       padding: 8px 16px;
-      border: 1px solid rgba(255,255,255,0.15);
+      border: 1px solid var(--g-border);
       border-radius: 12px;
-      background: rgba(15, 12, 41, 0.9);
+      background: var(--g-card-90);
       backdrop-filter: blur(10px);
-      color: #fff;
+      color: var(--g-ink);
       font-size: 14px;
       cursor: pointer;
       text-decoration: none;
-      transition: background 0.2s;
+      transition: background 0.2s; box-shadow: var(--g-shadow-sm);
     }
-    .back-btn:hover { background: rgba(255,255,255,0.1); }
+    .back-btn:hover { background: #fff; }
 
     /* ── Game header ── */
     .game-header {
@@ -47,13 +48,15 @@
     .game-header h1 {
       font-size: 24px;
       font-weight: 800;
-      background: linear-gradient(90deg, #f7c97e, #f2a154);
+      font-family: var(--g-display);
+      background: var(--g-title-grad);
       -webkit-background-clip: text;
+      background-clip: text;
       -webkit-text-fill-color: transparent;
     }
     .game-header p {
       font-size: 12px;
-      color: rgba(255,255,255,0.4);
+      color: var(--g-ink-faint);
       margin-top: 2px;
     }
 
@@ -65,11 +68,12 @@
       transform: translateX(-50%);
       font-size: 48px;
       font-weight: 900;
-      color: rgba(255,255,255,0.25);
+      font-family: var(--g-display);
+      color: rgba(255,255,255,0.85);
       z-index: 15;
       pointer-events: none;
       font-variant-numeric: tabular-nums;
-      text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      text-shadow: 0 2px 8px rgba(0,0,0,0.35);
     }
 
     /* ── Canvas ── */
@@ -90,7 +94,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: rgba(15, 12, 41, 0.88);
+      background: var(--g-scrim);
       backdrop-filter: blur(8px);
     }
     .overlay.hidden { display: none; }
@@ -99,22 +103,29 @@
       font-size: 36px;
       font-weight: 900;
       margin-bottom: 8px;
+      font-family: var(--g-display);
+      background: var(--g-title-grad);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
     .overlay .final-score {
       font-size: 60px;
       font-weight: 900;
-      background: linear-gradient(90deg, #f7c97e, #f2a154);
+      font-family: var(--g-display);
+      background: var(--g-title-grad);
       -webkit-background-clip: text;
+      background-clip: text;
       -webkit-text-fill-color: transparent;
       line-height: 1.2;
     }
     .overlay .best-score {
       font-size: 16px;
-      color: rgba(255,255,255,0.5);
+      color: var(--g-ink-soft);
       margin-top: 4px;
     }
     .overlay .new-best {
-      color: #f7c97e;
+      color: var(--g-coin-ink);
       font-weight: 700;
       font-size: 14px;
       margin-top: 6px;
@@ -127,18 +138,19 @@
       padding: 16px 48px;
       border: none;
       border-radius: 18px;
-      background: linear-gradient(135deg, #f2a154, #f7c97e);
-      color: #1a1a2e;
+      background: linear-gradient(135deg, #f2a154, #e8853a);
+      color: #fff;
       font-size: 18px;
       font-weight: 800;
       cursor: pointer;
+      box-shadow: 0 4px 16px rgba(242,161,84,0.35);
       transition: opacity 0.2s, transform 0.12s;
     }
     .play-btn:hover { opacity: 0.9; }
     .play-btn:active { transform: scale(0.95); }
     .tap-hint {
       font-size: 13px;
-      color: rgba(255,255,255,0.35);
+      color: var(--g-ink-faint);
       margin-top: 10px;
     }
 
@@ -153,7 +165,7 @@
       text-align: center;
       font-size: 14px;
       font-weight: 700;
-      color: rgba(255,255,255,0.5);
+      color: var(--g-ink-soft);
       text-transform: uppercase;
       letter-spacing: 1px;
       margin-bottom: 8px;
@@ -164,16 +176,16 @@
       padding: 8px 14px;
       border-radius: 10px;
       margin-bottom: 4px;
-      background: rgba(255,255,255,0.06);
+      background: var(--g-slot);
       font-size: 14px;
     }
-    .lb-row.me { background: rgba(138, 120, 255, 0.18); }
+    .lb-row.me { background: rgba(255,122,92,0.12); }
     .lb-rank {
       width: 28px;
       font-weight: 800;
-      color: rgba(255,255,255,0.4);
+      color: var(--g-ink-faint);
     }
-    .lb-rank.gold { color: #f7c97e; }
+    .lb-rank.gold { color: var(--g-coin-ink); }
     .lb-rank.silver { color: #c0c0c0; }
     .lb-rank.bronze { color: #cd7f32; }
     .lb-name {
@@ -184,12 +196,12 @@
     }
     .lb-score {
       font-weight: 800;
-      color: #f7c97e;
+      color: var(--g-coin-ink);
       margin-left: 8px;
     }
     .lb-empty {
       text-align: center;
-      color: rgba(255,255,255,0.25);
+      color: var(--g-ink-faint);
       font-size: 13px;
       padding: 16px 0;
     }
@@ -203,20 +215,20 @@
     }
     .name-input input {
       padding: 10px 16px;
-      border: 1px solid rgba(255,255,255,0.15);
+      border: 1px solid var(--g-border);
       border-radius: 12px;
-      background: rgba(255,255,255,0.07);
-      color: #fff;
+      background: var(--g-card);
+      color: var(--g-ink);
       font-size: 14px;
       outline: none;
       width: 160px;
     }
-    .name-input input::placeholder { color: rgba(255,255,255,0.35); }
+    .name-input input::placeholder { color: var(--g-ink-faint); }
     .name-input button {
       padding: 10px 18px;
       border: none;
       border-radius: 12px;
-      background: linear-gradient(135deg, #7b5ea7, #5b6abf);
+      background: var(--g-accent-grad);
       color: #fff;
       font-size: 13px;
       font-weight: 600;
@@ -231,19 +243,19 @@
       z-index: 50;
       width: 40px;
       height: 40px;
-      border: 1px solid rgba(255,255,255,0.15);
+      border: 1px solid var(--g-border);
       border-radius: 50%;
-      background: rgba(15, 12, 41, 0.9);
+      background: var(--g-card-90);
       backdrop-filter: blur(10px);
-      color: rgba(255,255,255,0.7);
+      color: var(--g-ink-soft);
       font-size: 20px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background 0.2s, color 0.2s, transform 0.3s;
+      transition: background 0.2s, color 0.2s, transform 0.3s; box-shadow: var(--g-shadow-sm);
     }
-    .settings-btn:hover { background: rgba(255,255,255,0.1); color: #f7c97e; transform: rotate(45deg); }
+    .settings-btn:hover { background: #fff; color: var(--g-accent); transform: rotate(45deg); }
 
     /* ── Settings modal ── */
     .settings-overlay {
@@ -253,27 +265,29 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(15, 12, 41, 0.85);
+      background: var(--g-scrim);
       backdrop-filter: blur(8px);
     }
     .settings-overlay.hidden { display: none; }
     .settings-box {
       width: 90%;
       max-width: 360px;
-      background: rgba(30, 25, 65, 0.97);
-      border: 1px solid rgba(255,255,255,0.1);
+      background: var(--g-card);
+      border: 1px solid var(--g-border);
+      border-top: 2px solid rgba(255,122,92,0.45);
       border-radius: 24px;
       padding: 32px 28px 24px;
-      backdrop-filter: blur(16px);
-      box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+      box-shadow: var(--g-shadow);
     }
     .settings-box h3 {
       font-size: 20px;
       font-weight: 800;
       text-align: center;
       margin-bottom: 24px;
-      background: linear-gradient(90deg, #f7c97e, #f2a154);
+      font-family: var(--g-display);
+      background: var(--g-title-grad);
       -webkit-background-clip: text;
+      background-clip: text;
       -webkit-text-fill-color: transparent;
     }
     .settings-section {
@@ -282,43 +296,43 @@
     .settings-label {
       font-size: 12px;
       font-weight: 600;
-      color: rgba(255,255,255,0.45);
+      color: var(--g-ink-soft);
       text-transform: uppercase;
       letter-spacing: 1px;
       margin-bottom: 8px;
     }
     .settings-divider {
       border: none;
-      border-top: 1px solid rgba(255,255,255,0.08);
+      border-top: 1px solid var(--g-border);
       margin: 16px 0;
     }
     .settings-logout-btn {
       width: 100%;
       padding: 12px;
-      border: 1px solid rgba(248,113,113,0.3);
+      border: 1px solid rgba(226,85,63,0.3);
       border-radius: 14px;
-      background: rgba(248,113,113,0.08);
-      color: #f87171;
+      background: rgba(226,85,63,0.08);
+      color: var(--g-danger);
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
       transition: background 0.2s;
     }
-    .settings-logout-btn:hover { background: rgba(248,113,113,0.2); }
+    .settings-logout-btn:hover { background: rgba(226,85,63,0.18); }
     .settings-close-btn {
       width: 100%;
       padding: 12px;
       margin-top: 8px;
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid var(--g-border);
       border-radius: 14px;
-      background: rgba(255,255,255,0.06);
-      color: rgba(255,255,255,0.7);
+      background: var(--g-hover);
+      color: var(--g-ink-soft);
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
       transition: background 0.2s;
     }
-    .settings-close-btn:hover { background: rgba(255,255,255,0.12); }
+    .settings-close-btn:hover { background: var(--g-border); }
 
     /* scrollbar hide for leaderboard */
     .leaderboard::-webkit-scrollbar { width: 0; }
@@ -341,7 +355,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      background: var(--g-bg); background-attachment: fixed;
     }
     .login-overlay.hidden { display: none; }
     .login-overlay.loading .login-box { display: none; }
@@ -349,8 +363,8 @@
       content: '';
       width: 36px;
       height: 36px;
-      border: 3px solid rgba(255,255,255,0.15);
-      border-top-color: #f7c97e;
+      border: 3px solid var(--g-border);
+      border-top-color: var(--g-accent);
       border-radius: 50%;
       animation: spin 0.7s linear infinite;
     }
@@ -359,9 +373,10 @@
       text-align: center;
       padding: 48px 40px;
       border-radius: 24px;
-      background: rgba(255,255,255,0.06);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(255,255,255,0.1);
+      background: var(--g-card);
+      border: 1px solid var(--g-border);
+      border-top: 2px solid rgba(255,122,92,0.45);
+      box-shadow: var(--g-shadow);
       max-width: 380px;
       width: 90%;
     }
@@ -369,14 +384,16 @@
     .login-box h2 {
       font-size: 24px;
       font-weight: 700;
-      background: linear-gradient(90deg, #f7c97e, #f2a154);
+      font-family: var(--g-display);
+      background: var(--g-title-grad);
       -webkit-background-clip: text;
+      background-clip: text;
       -webkit-text-fill-color: transparent;
       margin-bottom: 8px;
     }
     .login-box p {
       font-size: 13px;
-      color: rgba(255,255,255,0.5);
+      color: var(--g-ink-soft);
       margin-bottom: 28px;
       line-height: 1.5;
     }
@@ -401,15 +418,15 @@
     .login-error {
       margin-top: 16px;
       font-size: 13px;
-      color: #e06377;
+      color: var(--g-danger);
       min-height: 20px;
     }
     /* Chess invite popup */
     .chess-invite-overlay{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;animation:chessInvFade .2s}
-    .chess-invite-box{background:rgba(30,25,60,.97);backdrop-filter:blur(16px);border-radius:20px;padding:28px 24px;max-width:340px;width:90%;text-align:center}
+    .chess-invite-box{background:var(--g-card);box-shadow:var(--g-shadow);border-radius:20px;padding:28px 24px;max-width:340px;width:90%;text-align:center}
     .chess-invite-box h3{font-size:18px;margin-bottom:8px}
-    .chess-invite-box .ci-from{font-size:14px;color:rgba(255,255,255,.7);margin-bottom:6px}
-    .chess-invite-box .ci-bet{font-size:22px;font-weight:700;color:#f7c97e;margin-bottom:20px}
+    .chess-invite-box .ci-from{font-size:14px;color:var(--g-ink-soft);margin-bottom:6px}
+    .chess-invite-box .ci-bet{font-size:22px;font-weight:700;color:var(--g-coin-ink);margin-bottom:20px}
     .chess-invite-box .ci-buttons{display:flex;gap:10px}
     .chess-invite-box .ci-accept{flex:1;padding:12px;border:none;border-radius:12px;background:linear-gradient(135deg,#3ab0a2,#2d8f83);color:#fff;font-size:15px;font-weight:700;cursor:pointer}
     .chess-invite-box .ci-reject{flex:1;padding:12px;border:1px solid rgba(255,80,80,.3);border-radius:12px;background:transparent;color:#ff6b6b;font-size:15px;font-weight:600;cursor:pointer}
@@ -456,7 +473,7 @@
   <div class="overlay" id="startScreen">
     <h2>🐦 Flappy Bird</h2>
     <div class="name-input" id="nameDisplay" style="justify-content:center">
-      <span style="font-size:14px;color:rgba(255,255,255,0.6)">Playing as: <strong id="playerDisplayName" style="color:#f7c97e">...</strong></span>
+      <span style="font-size:14px;color:var(--g-ink-soft)">Playing as: <strong id="playerDisplayName" style="color:var(--g-coin-ink)">...</strong></span>
     </div>
     <button class="play-btn" id="startBtn">Play!</button>
     <div class="tap-hint">Tap / Space / Click to flap</div>
