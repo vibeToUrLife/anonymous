@@ -608,6 +608,9 @@
     .input-area { background:linear-gradient(180deg,#43301c,#2e2113) !important; border-top:1px solid #6e4f2c !important; }
     .input-area textarea { background:#fdf6e0 !important; color:#2b2440 !important; border-color:rgba(0,0,0,0.15) !important; }
     .input-area textarea::placeholder { color:rgba(43,36,64,0.45) !important; }
+    /* Dark mode: the composer field goes dark too (matches the dark notes) */
+    body:not(.light-theme) .input-area textarea { background:#2e2214 !important; color:#f0e8d6 !important; border-color:rgba(255,228,194,0.16) !important; }
+    body:not(.light-theme) .input-area textarea::placeholder { color:rgba(236,228,210,0.45) !important; }
 
     /* Login + access gate — a paper note pinned to the cork (first impression) */
     .login-box, .access-gate-box {

@@ -90,6 +90,7 @@
     let _outsideAnimFrame = null;
     let _outsideLeaves = null;
     let _outsideClouds = null;
+    let _outsideFireflies = null;   // drifting glow motes at night
     let _outsideFlowers = null;
     let _outsideGrassTufts = null;
     // Currently hovered floor index (null if none)
@@ -232,6 +233,9 @@
         const bTop   = H * 0.68 - bH;
         const total  = roomData.unlockedLayers || 1;
         _drawHDBuilding(ctx, W, H, bX, bW, bTop, floorH, bH, MAX_FLOORS, total, night);
+
+        // -- Cozy night atmosphere: porch light, warm ground pool, fireflies --
+        if (night) _drawNightGlow(ctx, W, H, bX, bW, bTop, bH, t);
 
         // -- Floor hover indicator --
         _drawFloorHover(ctx, W, H);
@@ -643,6 +647,51 @@
     }
 
     // -- Charming cottage building (Hay Day barn style) --
+    // Warm lighting + fireflies that make the night scene feel lived-in.
+    function _drawNightGlow(ctx, W, H, bX, bW, bTop, bH, t) {
+      const doorX = W / 2, doorY = bTop + bH;   // entrance at the building base
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      // warm pool of light spilling onto the grass from the doorway
+      const pool = ctx.createRadialGradient(doorX, doorY + 6, 4, doorX, doorY + 6, bW * 0.8);
+      pool.addColorStop(0, 'rgba(255,190,90,0.26)');
+      pool.addColorStop(1, 'rgba(255,180,80,0)');
+      ctx.fillStyle = pool;
+      ctx.fillRect(doorX - bW, doorY - bW * 0.45, bW * 2, bW);
+      // porch lantern glow over the door
+      const lamp = ctx.createRadialGradient(doorX, doorY - 18, 1, doorX, doorY - 18, 36);
+      lamp.addColorStop(0, 'rgba(255,224,150,0.55)');
+      lamp.addColorStop(1, 'rgba(255,210,130,0)');
+      ctx.fillStyle = lamp;
+      ctx.fillRect(doorX - 42, doorY - 60, 84, 84);
+      ctx.restore();
+
+      // Fireflies drifting over the grass
+      if (!_outsideFireflies) {
+        _outsideFireflies = Array.from({ length: 14 }, (_, i) => ({
+          bx: 0.10 + 0.80 * ((i * 0.137) % 1),
+          by: 0.50 + 0.22 * ((i * 0.317) % 1),
+          ph: i * 1.7, sp: 0.6 + (i % 5) * 0.12,
+        }));
+      }
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (const f of _outsideFireflies) {
+        const fx = (f.bx + Math.sin(t / 1300 * f.sp + f.ph) * 0.02) * W;
+        const fy = (f.by + Math.cos(t / 1700 * f.sp + f.ph) * 0.02) * H;
+        const tw = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t / 420 * f.sp + f.ph));
+        const r = 2.4;
+        const g = ctx.createRadialGradient(fx, fy, 0, fx, fy, r * 2.6);
+        g.addColorStop(0, 'rgba(190,255,120,' + (0.5 * tw).toFixed(3) + ')');
+        g.addColorStop(1, 'rgba(150,230,90,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(fx, fy, r * 2.6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(225,255,165,' + (0.7 * tw).toFixed(3) + ')';
+        ctx.beginPath(); ctx.arc(fx, fy, 1, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+    }
+
     function _drawHDBuilding(ctx, W, H, bX, bW, bTop, floorH, bH, MAX_FLOORS, total, night) {
       // Drop shadow
       ctx.shadowColor = 'rgba(0,0,0,0.35)';
@@ -719,6 +768,18 @@
             ctx.lineWidth = 0.8;
             ctx.beginPath(); ctx.moveTo(wx + winW / 2, winY); ctx.lineTo(wx + winW / 2, winY + winH); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(wx, winY + winH / 2); ctx.lineTo(wx + winW, winY + winH / 2); ctx.stroke();
+            // Warm bloom spilling from a lit window at night — the cozy signature
+            if (night) {
+              ctx.save();
+              ctx.globalCompositeOperation = 'lighter';
+              const cgx = wx + winW / 2, cgy = winY + winH / 2, rr = winW * 1.8;
+              const gl = ctx.createRadialGradient(cgx, cgy, 1, cgx, cgy, rr);
+              gl.addColorStop(0, 'rgba(255,206,120,0.42)');
+              gl.addColorStop(1, 'rgba(255,196,110,0)');
+              ctx.fillStyle = gl;
+              ctx.fillRect(cgx - rr, cgy - rr, rr * 2, rr * 2);
+              ctx.restore();
+            }
           } else {
             // Locked - dark boarded-up windows
             ctx.fillStyle = 'rgba(30,20,10,0.7)';

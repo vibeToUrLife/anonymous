@@ -139,9 +139,11 @@
       _setFarmPanelMode(true);
       const isOwner = viewingUid === currentUid;
       if (isOwner) {
-        const _ch1 = runFarmProduction() > 0;
-        const _ch2 = _ensureFarmOrders();
-        if (_ch1 || _ch2) saveRoom();
+        let _changed = false;
+        if ((roomData.farmDecors || []).length) { roomData.farmDecors = []; _changed = true; } // decor feature removed
+        if (runFarmProduction() > 0) _changed = true;
+        if (_ensureFarmOrders()) _changed = true;
+        if (_changed) saveRoom();
       }
       renderFarmPanel();
       drawFarmCanvas();
@@ -996,18 +998,6 @@
 
         _drawFarmTrough(ctx, W, H, night);
         _drawFarmPlots(ctx, W, H, t);
-
-        // Decor (behind animals), drawn renderers, drag-aware
-        for (const dc of (roomData.farmDecors || [])) {
-          const def = FARM_DECORS.find(f => f.id === dc.type);
-          if (!def) continue;
-          const size = Math.max(28, Math.min(W, H) * 0.07) * (def.scale || 1);
-          ctx.save();
-          ctx.translate(dc.x * W, dc.y * H);
-          if (_farmDragDecorId === dc.id) ctx.scale(1.15, 1.15); // lift while dragging
-          drawFarmDecor(ctx, dc.type, size);
-          ctx.restore();
-        }
 
         // Drops (behind animals), gentle pulse
         ctx.textAlign = 'center';
