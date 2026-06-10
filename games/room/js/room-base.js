@@ -196,7 +196,7 @@
     // production (see room-farm.js planFarmTick / animalLevel).
     const FARM_LEVELS = [0, 10, 30, 70, 150];   // collected thresholds → Lv1..Lv5
     const FARM_LEVEL_SPEEDUP = 0.10;            // +10% production speed per level above 1
-    const FARM_EXPAND_COSTS = [5000, 15000];    // raise the animal cap by +10 per expansion
+    const FARM_EXPAND_COSTS = [5000, 15000, 40000, 90000];  // +10 animal cap & a bigger pasture per expansion
     const FARM_AUTOCOLLECT_COST = 4000;         // one-time: auto-collects produce into stock
 
     // Coat variants: each new animal is the common variant unless it rolls the

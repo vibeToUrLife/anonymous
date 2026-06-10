@@ -17,8 +17,8 @@
       document.getElementById('pageTitle').textContent = isOwner ? 'My Room' : name + "'s Room";
       document.getElementById('ownerName').textContent = isOwner ? ('Welcome, ' + name) : '';
 
-      // Tabs visibility
-      document.getElementById('tabsBar').style.display = isOwner ? 'flex' : 'none';
+      // Tabs visibility (hidden while the farm — with its own tab bar — is open)
+      document.getElementById('tabsBar').style.display = (isOwner && !isFarmView) ? 'flex' : 'none';
       document.querySelectorAll('.tab-panel').forEach(p => {
         if (!isOwner) p.classList.remove('active');
       });

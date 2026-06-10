@@ -332,11 +332,12 @@
       const upgradesHtml =
         '<div class="farm-section-title">⚙️ Upgrades</div>' +
         '<div class="farm-shop-row">' +
-          '<span class="farm-shop-animal">🏞️ Expand farm <small>cap ' + farmAnimalCap() + '</small></span>' +
+          '<span class="farm-shop-animal">🏞️ Bigger pasture <small>Lv ' + expLvl + '/' + FARM_EXPAND_COSTS.length + ' · holds ' + farmAnimalCap() + ' animals</small></span>' +
           (expandCost == null
             ? '<span class="farm-shop-drop">MAX</span>'
             : '<button class="farm-shop-buy" onclick="expandFarm()"' + (roomData.coins < expandCost ? ' disabled' : '') + '>+10 · ' + expandCost + '🪙</button>') +
         '</div>' +
+        '<div class="farm-panel-empty" style="padding:2px 0 4px">Pushes the crop fence down — more grass for a bigger herd.</div>' +
         '<div class="farm-shop-row">' +
           '<span class="farm-shop-animal">🤖 Auto-Collector <small>produce → stock</small></span>' +
           (roomData.farmAutoCollect
@@ -966,7 +967,7 @@
         // The dividing fence between the animal pasture (above) and the crop
         // garden (below). It moves DOWN as the farm is expanded, so each
         // "Expand farm" visibly enlarges the pasture.
-        const divY = Math.min(0.81, 0.74 + 0.035 * (roomData.farmCapLevel || 0));
+        const divY = Math.min(0.82, 0.66 + 0.04 * (roomData.farmCapLevel || 0));
         const gy = H * divY;
 
         // Animal pasture — grass from the horizon down to the dividing fence
