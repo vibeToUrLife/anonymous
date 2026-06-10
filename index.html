@@ -782,6 +782,8 @@
   </style>
 </head>
 <body>
+  <!-- Apply theme before first paint (default = light) to avoid a flash -->
+  <script>if(localStorage.getItem('theme')!=='dark')document.body.classList.add('light-theme');</script>
 
   <!-- Access code gate — must enter correct code to proceed -->
   <div class="access-gate" id="accessGate">

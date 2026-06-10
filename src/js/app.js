@@ -1996,8 +1996,8 @@ let isFirstSnapshot = true;
 let unseenCount = 0;
 let titleFlashInterval = null;
 
-// Restore saved preferences on load
-if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-theme');
+// Restore saved preferences on load (default = light unless explicitly 'dark')
+document.body.classList.toggle('light-theme', localStorage.getItem('theme') !== 'dark');
 const savedFont = localStorage.getItem('font_size') || 'medium';
 document.body.classList.add('font-' + savedFont);
 if (localStorage.getItem('animations') === '0') document.body.classList.add('no-animations');
