@@ -1,10 +1,11 @@
 /* ============================================================
    Farm logic — pure & dependency-free.
-   Animals produce coin drops on a happiness-driven timer; petting
-   raises happiness, neglect decays it. Runs as a browser global
-   (other room scripts call these names bare) AND as a Node module
-   for tests. All tuning constants are passed in by the caller
-   (FARM_* in room-base.js).
+   All animals share one food trough: while it has food they get
+   happier, when it runs dry happiness decays. Happiness drives
+   the production cycle that spawns coin drops. Runs as a browser
+   global (other room scripts call these names bare) AND as a Node
+   module for tests. All tuning constants are passed in by the
+   caller (FARM_* in room-base.js).
    ============================================================ */
 (function (root, factory) {
   const api = factory();
@@ -12,53 +13,54 @@
   for (const k in api) { if (Object.prototype.hasOwnProperty.call(api, k)) root[k] = api[k]; }
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
 
+  const DAY_MS = 86400000;
+
   // Production cycle length for a happiness level: linear slowMs → fastMs.
   function farmCycleMs(happiness, slowMs, fastMs) {
     const h = Math.max(0, Math.min(100, happiness)) / 100;
     return slowMs + (fastMs - slowMs) * h;
   }
 
-  // Happiness after lazy decay since `happyAt` (fractional days), floored at 0.
-  // Missing or future anchors decay nothing (first run / clock skew).
-  function decayedHappiness(happiness, happyAt, now, decayPerDay) {
-    if (happyAt == null || happyAt > now) return happiness;
-    const days = (now - happyAt) / 86400000;
-    return Math.max(0, happiness - days * decayPerDay);
-  }
+  // Advance the whole farm from its last accounting to `now`:
+  //   1. The herd eats from the shared trough (foodPerDay units per animal).
+  //      Fed time raises every animal's happiness by gainPerDay; once the
+  //      trough is empty the rest of the window decays it by decayPerDay.
+  //   2. Each animal's production clock advances at the speed of its updated
+  //      happiness. Spawns are capped at dropCap per animal (counting the
+  //      uncollected drops in dropCounts); excess cycles are lost — the clock
+  //      still advances, so a full animal can't bank production.
+  // Serves both the offline catch-up on load and the live tick while open.
+  // Returns { animals, foodStock, foodAt, spawns: [{ animalId, type }] }.
+  function planFarmTick(opts) {
+    const now = opts.now;
+    const herd = opts.animals.length;
+    const foodAt = opts.foodAt != null && opts.foodAt <= now ? opts.foodAt : now;
+    const elapsedDays = (now - foodAt) / DAY_MS;
+    const demandPerDay = herd * opts.foodPerDay;
+    const fedDays = demandPerDay > 0 ? Math.min(elapsedDays, opts.foodStock / demandPerDay) : elapsedDays;
+    const hungryDays = elapsedDays - fedDays;
+    const foodStock = Math.max(0, opts.foodStock - elapsedDays * demandPerDay);
 
-  // Pet an animal: apply pending decay, then boost (capped 100) and stamp the
-  // pet/decay anchors. Returns the updated copy, or null while on cooldown.
-  function applyPet(animal, now, opts) {
-    if (animal.lastPet != null && now - animal.lastPet < opts.cooldownMs) return null;
-    const h = decayedHappiness(animal.happiness, animal.happyAt, now, opts.decayPerDay);
-    return Object.assign({}, animal, {
-      happiness: Math.min(100, h + opts.boost),
-      lastPet: now,
-      happyAt: now,
-    });
-  }
-
-  // Advance every animal's production clock to `now`.
-  // dropCounts: { [animalId]: uncollected drops on the ground }.
-  // Spawns are capped at dropCap per animal; excess cycles are lost (the clock
-  // still advances, so a full animal can't bank production). Serves both the
-  // offline catch-up on load and the live tick while the farm is open.
-  // Returns { spawns: [{ animalId, type }], animals: updated copies }.
-  function planFarmProduction(opts) {
     const spawns = [];
     const animals = opts.animals.map(a => {
-      const last = a.lastDropTime != null ? a.lastDropTime : opts.now;
-      if (last > opts.now) return Object.assign({}, a, { lastDropTime: opts.now }); // clock skew
-      const h = decayedHappiness(a.happiness, a.happyAt, opts.now, opts.decayPerDay);
-      const cycle = farmCycleMs(h, opts.slowMs, opts.fastMs);
-      const cycles = Math.floor((opts.now - last) / cycle);
-      if (cycles <= 0) return a;
+      const happiness = Math.max(0, Math.min(100,
+        a.happiness + fedDays * opts.gainPerDay - hungryDays * opts.decayPerDay));
+      const last = a.lastDropTime != null ? a.lastDropTime : now;
+      if (last > now) return Object.assign({}, a, { happiness: happiness, lastDropTime: now }); // clock skew
+      const cycle = farmCycleMs(happiness, opts.slowMs, opts.fastMs);
+      const cycles = Math.floor((now - last) / cycle);
+      if (cycles <= 0) return Object.assign({}, a, { happiness: happiness });
       const capacity = Math.max(0, opts.dropCap - (opts.dropCounts[a.id] || 0));
       for (let i = 0; i < Math.min(cycles, capacity); i++) spawns.push({ animalId: a.id, type: a.type });
-      return Object.assign({}, a, { lastDropTime: last + cycles * cycle });
+      return Object.assign({}, a, { happiness: happiness, lastDropTime: last + cycles * cycle });
     });
-    return { spawns: spawns, animals: animals };
+    return { animals: animals, foodStock: foodStock, foodAt: now, spawns: spawns };
   }
 
-  return { farmCycleMs, decayedHappiness, applyPet, planFarmProduction };
+  // Units a refill adds: fill the trough, bounded by what the coins afford.
+  function farmRefillUnits(foodStock, foodMax, coins, costPerUnit) {
+    return Math.max(0, Math.min(foodMax - foodStock, Math.floor(coins / costPerUnit)));
+  }
+
+  return { farmCycleMs, planFarmTick, farmRefillUnits };
 });

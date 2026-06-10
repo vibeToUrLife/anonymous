@@ -5,10 +5,17 @@ const F = require('./room-farm.js');
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
-const OPTS = { slowMs: 6 * HOUR, fastMs: 2 * HOUR, dropCap: 3, decayPerDay: 10 };
+const OPTS = {
+  slowMs: 6 * HOUR, fastMs: 2 * HOUR, dropCap: 3,
+  foodPerDay: 2, gainPerDay: 25, decayPerDay: 25,
+};
 
 function animal(over) {
-  return Object.assign({ id: 'a1', type: 'cow', happiness: 100, happyAt: 0, lastPet: 0, lastDropTime: 0 }, over);
+  return Object.assign({ id: 'a1', type: 'cow', happiness: 50, lastDropTime: 0 }, over);
+}
+
+function tick(over) {
+  return F.planFarmTick(Object.assign({ animals: [animal()], dropCounts: {}, now: 0, foodStock: 0, foodAt: 0 }, OPTS, over));
 }
 
 /* ── farmCycleMs ── */
@@ -21,94 +28,97 @@ test('farmCycleMs interpolates slow→fast with happiness and clamps', () => {
   assert.equal(F.farmCycleMs(250, OPTS.slowMs, OPTS.fastMs), 2 * HOUR);
 });
 
-/* ── decayedHappiness ── */
+/* ── planFarmTick: feeding ── */
 
-test('decayedHappiness loses decayPerDay per elapsed day, floored at 0', () => {
-  assert.equal(F.decayedHappiness(80, 0, 0, 10), 80);
-  assert.equal(F.decayedHappiness(80, 0, 2 * DAY, 10), 60);
-  assert.equal(F.decayedHappiness(80, 0, 12 * HOUR, 10), 75); // fractional days
-  assert.equal(F.decayedHappiness(15, 0, 30 * DAY, 10), 0);
+test('full trough: herd eats, happiness rises, stock drains', () => {
+  // 1 animal × 2 units/day over 1 day = 2 units eaten, fed all day → +25 happiness
+  const r = tick({ foodStock: 10, now: DAY });
+  assert.equal(r.foodStock, 8);
+  assert.equal(r.animals[0].happiness, 75);
+  assert.equal(r.foodAt, DAY);
 });
 
-test('decayedHappiness handles missing anchor and clock skew', () => {
-  assert.equal(F.decayedHappiness(80, null, 5 * DAY, 10), 80); // no anchor → unchanged
-  assert.equal(F.decayedHappiness(80, 10 * DAY, 5 * DAY, 10), 80); // future anchor → no decay
+test('empty trough: happiness decays, floored at 0', () => {
+  const r = tick({ foodStock: 0, now: DAY });
+  assert.equal(r.animals[0].happiness, 25);
+  const r2 = tick({ foodStock: 0, now: 10 * DAY });
+  assert.equal(r2.animals[0].happiness, 0);
 });
 
-/* ── applyPet ── */
-
-test('applyPet boosts happiness (capped 100) and stamps lastPet/happyAt', () => {
-  const a = animal({ happiness: 50, lastPet: 0, happyAt: 0 });
-  const now = 2 * HOUR;
-  const r = F.applyPet(a, now, { boost: 15, cooldownMs: HOUR, decayPerDay: 10 });
-  assert.ok(r);
-  assert.equal(r.lastPet, now);
-  assert.equal(r.happyAt, now);
-  assert.ok(Math.abs(r.happiness - (50 - 10 * (2 / 24) + 15)) < 1e-9); // decay then boost
-  const full = F.applyPet(animal({ happiness: 95, lastPet: 0 }), 2 * HOUR, { boost: 15, cooldownMs: HOUR, decayPerDay: 0 });
-  assert.equal(full.happiness, 100);
+test('trough runs dry mid-window: gains for fed days, decays after', () => {
+  // 2 units = 1 fed day, then 1 hungry day: 50 + 25 − 25 = 50
+  const r = tick({ foodStock: 2, now: 2 * DAY });
+  assert.equal(r.animals[0].happiness, 50);
+  assert.equal(r.foodStock, 0);
 });
 
-test('applyPet returns null while on cooldown', () => {
-  const a = animal({ lastPet: HOUR });
-  assert.equal(F.applyPet(a, HOUR + 1000, { boost: 15, cooldownMs: HOUR, decayPerDay: 10 }), null);
+test('happiness caps at 100 while fed', () => {
+  const r = tick({ animals: [animal({ happiness: 95 })], foodStock: 100, now: DAY });
+  assert.equal(r.animals[0].happiness, 100);
 });
 
-/* ── planFarmProduction ── */
+test('herd size scales food demand', () => {
+  // 2 animals × 2/day × 1 day = 4 units
+  const r = tick({ animals: [animal(), animal({ id: 'a2' })], foodStock: 10, now: DAY });
+  assert.equal(r.foodStock, 6);
+});
 
-test('no elapsed time → no spawns, animals unchanged', () => {
-  const r = F.planFarmProduction(Object.assign({ animals: [animal()], dropCounts: {}, now: 0 }, OPTS));
+test('no animals: stock untouched, no spawns', () => {
+  const r = tick({ animals: [], foodStock: 10, now: 5 * DAY });
+  assert.equal(r.foodStock, 10);
+  assert.equal(r.spawns.length, 0);
+});
+
+/* ── planFarmTick: production ── */
+
+test('no elapsed time → no spawns', () => {
+  const r = tick({ foodStock: 10, now: 0 });
   assert.equal(r.spawns.length, 0);
   assert.equal(r.animals[0].lastDropTime, 0);
 });
 
 test('one full cycle spawns one drop and keeps the remainder', () => {
-  const a = animal({ happiness: 100, lastDropTime: 0, happyAt: null }); // fast cycle = 2h
-  const now = 2 * HOUR + 30 * 60 * 1000; // 1 cycle + 30min
-  const r = F.planFarmProduction(Object.assign({ animals: [a], dropCounts: {}, now: now }, OPTS));
+  // happiness 100 fed → cycle 2h; 2.5h elapsed → 1 spawn, clock at 2h
+  const a = animal({ happiness: 100 });
+  const r = tick({ animals: [a], foodStock: 100, now: 2 * HOUR + 30 * 60 * 1000 });
   assert.equal(r.spawns.length, 1);
   assert.deepEqual(r.spawns[0], { animalId: 'a1', type: 'cow' });
-  assert.equal(r.animals[0].lastDropTime, 2 * HOUR); // remainder kept
+  assert.equal(r.animals[0].lastDropTime, 2 * HOUR);
 });
 
-test('spawns are capped by dropCap minus existing uncollected drops', () => {
-  const a = animal({ happiness: 100, happyAt: null });
-  const now = 20 * HOUR; // 10 fast cycles
-  const r = F.planFarmProduction(Object.assign({ animals: [a], dropCounts: { a1: 1 }, now: now }, OPTS));
+test('spawns capped by dropCap minus uncollected; clock still advances (no banking)', () => {
+  const a = animal({ happiness: 100 });
+  const r = tick({ animals: [a], foodStock: 1000, now: 20 * HOUR, dropCounts: { a1: 1 } });
   assert.equal(r.spawns.length, 2); // cap 3 − 1 existing
-  assert.equal(r.animals[0].lastDropTime, now); // clock advances; excess cycles are lost (no banking)
+  assert.equal(r.animals[0].lastDropTime, 20 * HOUR); // 10 fast cycles consumed
 });
 
-test('animal already at cap spawns nothing but its clock still advances', () => {
-  const a = animal({ happiness: 100, happyAt: null });
-  const now = 5 * HOUR;
-  const r = F.planFarmProduction(Object.assign({ animals: [a], dropCounts: { a1: 3 }, now: now }, OPTS));
+test('animal at cap spawns nothing but its clock advances', () => {
+  const a = animal({ happiness: 100 });
+  const r = tick({ animals: [a], foodStock: 1000, now: 5 * HOUR, dropCounts: { a1: 3 } });
   assert.equal(r.spawns.length, 0);
-  assert.equal(r.animals[0].lastDropTime, 4 * HOUR); // 2 cycles consumed, remainder 1h
+  assert.equal(r.animals[0].lastDropTime, 4 * HOUR);
 });
 
 test('clock skew (lastDropTime in the future) resets to now without spawning', () => {
   const a = animal({ lastDropTime: 10 * HOUR });
-  const r = F.planFarmProduction(Object.assign({ animals: [a], dropCounts: {}, now: HOUR }, OPTS));
+  const r = tick({ animals: [a], foodStock: 0, now: HOUR });
   assert.equal(r.spawns.length, 0);
   assert.equal(r.animals[0].lastDropTime, HOUR);
 });
 
-test('happier animals out-produce sad ones over the same window', () => {
-  const happy = animal({ id: 'h', happiness: 100, happyAt: null });
-  const sad = animal({ id: 's', happiness: 0, happyAt: null });
-  const now = 12 * HOUR;
-  const r = F.planFarmProduction(Object.assign({ animals: [happy, sad], dropCounts: {}, now: now, dropCap: 99 }, OPTS, { dropCap: 99 }));
-  const hSpawns = r.spawns.filter(s => s.animalId === 'h').length;
-  const sSpawns = r.spawns.filter(s => s.animalId === 's').length;
-  assert.equal(hSpawns, 6); // 12h / 2h
-  assert.equal(sSpawns, 2); // 12h / 6h
+test('hungry farm produces slower than a fed one', () => {
+  const fed = tick({ animals: [animal({ id: 'f', happiness: 100 })], foodStock: 1000, now: 12 * HOUR, dropCap: 99 });
+  const hungry = tick({ animals: [animal({ id: 'h', happiness: 0 })], foodStock: 0, now: 12 * HOUR, dropCap: 99 });
+  assert.equal(fed.spawns.length, 6);    // 12h / 2h
+  assert.equal(hungry.spawns.length, 2); // 12h / 6h
 });
 
-test('production uses decayed happiness (stale happyAt slows the cycle)', () => {
-  // happiness 100 anchored 10 days ago, decay 10/day → effective 0 → slow cycle (6h)
-  const a = animal({ happiness: 100, happyAt: 0, lastDropTime: 10 * DAY });
-  const now = 10 * DAY + 6 * HOUR;
-  const r = F.planFarmProduction(Object.assign({ animals: [a], dropCounts: {}, now: now }, OPTS));
-  assert.equal(r.spawns.length, 1); // exactly one slow cycle, not three fast ones
+/* ── farmRefillUnits ── */
+
+test('farmRefillUnits fills to max when affordable, else what coins buy', () => {
+  assert.equal(F.farmRefillUnits(20, 100, 10000, 5), 80); // fill to max
+  assert.equal(F.farmRefillUnits(20, 100, 100, 5), 20);   // coins limit
+  assert.equal(F.farmRefillUnits(100, 100, 10000, 5), 0); // already full
+  assert.equal(F.farmRefillUnits(0, 100, 3, 5), 0);       // too broke for 1 unit
 });

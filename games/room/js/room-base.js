@@ -183,8 +183,9 @@
     const AUTOFEED_THRESHOLD = 50;  // refill a stat when it drops to/below this
     const AUTOFEED_TARGET = 100;    // refill back up to this
 
-    // Farm: outside area with animals that produce coin drops. Pet them to keep
-    // happiness up — happier animals produce faster (no feeding, no starvation).
+    // Farm: outside area with animals that produce coin drops. All animals eat
+    // from one shared food trough (refilled with coins) — fed animals get happier
+    // and produce faster, an empty trough makes happiness decay (no starvation death).
     const FARM_ANIMALS = [
       { id: 'goose', emoji: '🦆', name: 'Goose', cost: 500,  drop: { emoji: '🥚', name: 'Egg',       coins: 15  } },
       { id: 'pig',   emoji: '🐷', name: 'Pig',   cost: 1500, drop: { emoji: '🍄', name: 'Truffle',   coins: 40  } },
@@ -195,10 +196,21 @@
     const FARM_DROP_CAP = 3;                       // max uncollected drops per animal
     const FARM_CYCLE_SLOW_MS = 6 * 60 * 60 * 1000; // production cycle at happiness 0
     const FARM_CYCLE_FAST_MS = 2 * 60 * 60 * 1000; // production cycle at happiness 100
-    const FARM_PET_BOOST = 15;                     // happiness gained per pet
-    const FARM_PET_COOLDOWN_MS = 60 * 60 * 1000;   // one pet per animal per hour
-    const FARM_HAPPY_DECAY_PER_DAY = 10;           // happiness lost per day without petting
     const FARM_START_HAPPINESS = 60;               // happiness of a newly bought animal
+    const FARM_FOOD_MAX = 100;                     // trough capacity (units)
+    const FARM_FOOD_COST = 5;                      // coins per food unit on refill
+    const FARM_FOOD_PER_DAY = 2;                   // units each animal eats per day
+    const FARM_HAPPY_GAIN_PER_DAY = 25;            // happiness gained per fed day
+    const FARM_HAPPY_DECAY_PER_DAY = 25;           // happiness lost per hungry (empty-trough) day
+
+    // Farm decorations — bought from the farm panel, draggable on the pasture.
+    const FARM_DECORS = [
+      { id: 'fd_log',       emoji: '🪵', name: 'Log',       cost: 100 },
+      { id: 'fd_sunflower', emoji: '🌻', name: 'Sunflower', cost: 150 },
+      { id: 'fd_hay',       emoji: '🌾', name: 'Hay Bale',  cost: 200 },
+      { id: 'fd_pumpkin',   emoji: '🎃', name: 'Pumpkin',   cost: 250 },
+      { id: 'fd_coop',      emoji: '🛖', name: 'Coop',      cost: 600 },
+    ];
 
     const AFFECTION_MILESTONES = [
       { min: 0,    title: 'Stranger',      reward: 0 },

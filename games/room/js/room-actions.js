@@ -887,6 +887,9 @@
       // Mirror the host's farm too (farm entry + production are owner-gated).
       roomData.farmAnimals = Array.isArray(d.farmAnimals) ? d.farmAnimals : [];
       roomData.farmDrops = Array.isArray(d.farmDrops) ? d.farmDrops : [];
+      roomData.farmDecors = Array.isArray(d.farmDecors) ? d.farmDecors : [];
+      roomData.farmFood = d.farmFood || 0;
+      roomData.farmFoodAt = d.farmFoodAt || 0;
       // Load multi-layer data for visited room (visitor starts on floor 1)
       roomData.unlockedLayers = d.unlockedLayers ?? 1;
       const rawLayerData = d.layerData ? JSON.parse(JSON.stringify(d.layerData)) : {};
