@@ -405,8 +405,21 @@
        (Surfaces chosen so no text inverts to invisible; sidebar shell
        left intact to preserve its light-theme.)
        ══════════════════════════════════════════════════════════════ */
-    /* The board itself — warm cork with a soft edge vignette (framed feel) */
-    body, body.light-theme {
+    /* The board itself — the Dark/Light toggle (Settings) flips this:
+         · DARK mode (default) → walnut board at night
+         · LIGHT mode          → warm tan cork board
+       Paper notes & cards stay light in both (they read well on either board). */
+    body {
+      background-color:#241a10 !important;
+      background-image:
+        radial-gradient(circle at 50% 30%, rgba(0,0,0,0) 48%, rgba(0,0,0,0.45) 100%),
+        radial-gradient(rgba(150,104,52,0.16) 1px, transparent 1.6px),
+        radial-gradient(rgba(90,58,24,0.18) 1px, transparent 1.6px) !important;
+      background-size:100% 100%, 7px 7px, 12px 12px !important;
+      background-position:0 0, 0 0, 4px 5px !important;
+      background-attachment:fixed !important;
+    }
+    body.light-theme {
       background-color:#cdab6e !important;
       background-image:
         radial-gradient(circle at 50% 36%, rgba(60,40,18,0) 52%, rgba(55,36,16,0.26) 100%),
@@ -416,7 +429,8 @@
       background-position:0 0, 0 0, 4px 5px !important;
       background-attachment:fixed !important;
     }
-    .page-subtitle, body.light-theme .page-subtitle { color:rgba(45,32,12,0.62) !important; }
+    .page-subtitle { color:rgba(244,233,210,0.66) !important; }                 /* light on the walnut board */
+    body.light-theme .page-subtitle { color:rgba(45,32,12,0.62) !important; }   /* dark on the tan board */
 
     /* Floating controls (☰ collapse + ⚙ settings) → wooden board buttons,
        so they stop clashing with the cork as purple glass */
@@ -594,18 +608,6 @@
       box-shadow:0 4px 14px rgba(0,0,0,0.4) !important; color:#f4e9d2 !important;
     }
     .mood-fab.has-checked { background:linear-gradient(180deg,#4f9d6b,#2f7d4d) !important; }
-
-    /* Dark / Light theme toggle — stacked above the riddle button (206px) */
-    .theme-fab {
-      position: fixed; bottom: 264px; right: 18px; z-index: 310;
-      width: 48px; height: 48px; border: none; border-radius: 50%;
-      background: linear-gradient(180deg,#5b4026,#43301c);
-      color: #f4e9d2; font-size: 22px; cursor: pointer;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.4);
-      transition: transform 0.2s, box-shadow 0.2s;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .theme-fab:hover { transform: scale(1.1); box-shadow: 0 6px 20px rgba(0,0,0,0.5); }
 
     /* ══════════════════════════════════════════════════════════════
        Buttons & modals — the board's two materials only:
@@ -1192,9 +1194,6 @@
 
   <!-- Mood Check-in Widget -->
   <button class="mood-fab" id="moodFab" title="How are you feeling today?">😊</button>
-
-  <!-- Dark / Light theme toggle -->
-  <button class="theme-fab" id="themeFab" title="切换主题" aria-label="Toggle dark / light mode">🌙</button>
   <div class="mood-panel" id="moodPanel">
     <h4>How are you feeling today?</h4>
     <div id="moodCheckinArea">
