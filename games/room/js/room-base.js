@@ -205,11 +205,11 @@
 
     // Farm decorations — bought from the farm panel, draggable on the pasture.
     const FARM_DECORS = [
-      { id: 'fd_log',       emoji: '🪵', name: 'Log',       cost: 100 },
-      { id: 'fd_sunflower', emoji: '🌻', name: 'Sunflower', cost: 150 },
-      { id: 'fd_hay',       emoji: '🌾', name: 'Hay Bale',  cost: 200 },
-      { id: 'fd_pumpkin',   emoji: '🎃', name: 'Pumpkin',   cost: 250 },
-      { id: 'fd_coop',      emoji: '🛖', name: 'Coop',      cost: 600 },
+      { id: 'fd_log',       emoji: '🪵', name: 'Log',       cost: 100, scale: 1 },
+      { id: 'fd_sunflower', emoji: '🌻', name: 'Sunflower', cost: 150, scale: 1.1 },
+      { id: 'fd_hay',       emoji: '🌾', name: 'Hay Bale',  cost: 200, scale: 1 },
+      { id: 'fd_pumpkin',   emoji: '🎃', name: 'Pumpkin',   cost: 250, scale: 0.9 },
+      { id: 'fd_coop',      emoji: '🛖', name: 'Coop',      cost: 600, scale: 1.7 },
     ];
 
     const AFFECTION_MILESTONES = [

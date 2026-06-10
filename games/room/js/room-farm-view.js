@@ -300,17 +300,20 @@
 
         _drawFarmTrough(ctx, W, H, night);
 
-        // Decor (behind animals), drag-aware
-        ctx.textAlign = 'center';
+        // Decor (behind animals), drawn renderers, drag-aware
         for (const dc of (roomData.farmDecors || [])) {
           const def = FARM_DECORS.find(f => f.id === dc.type);
           if (!def) continue;
-          const size = Math.max(24, Math.min(W, H) * 0.055);
-          ctx.font = Math.round(size * (_farmDragDecorId === dc.id ? 1.15 : 1)) + 'px sans-serif';
-          ctx.fillText(def.emoji, dc.x * W, dc.y * H);
+          const size = Math.max(28, Math.min(W, H) * 0.07) * (def.scale || 1);
+          ctx.save();
+          ctx.translate(dc.x * W, dc.y * H);
+          if (_farmDragDecorId === dc.id) ctx.scale(1.15, 1.15); // lift while dragging
+          drawFarmDecor(ctx, dc.type, size);
+          ctx.restore();
         }
 
         // Drops (behind animals), gentle pulse
+        ctx.textAlign = 'center';
         const pulse = 1 + Math.sin(t / 300) * 0.08;
         for (const d of (roomData.farmDrops || [])) {
           const def = FARM_ANIMALS.find(f => f.id === d.type);
