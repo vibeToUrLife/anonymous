@@ -6,7 +6,7 @@
        Reuses the outside scene's sky/hills/fence drawers (shared globals).
        ═══════════════════════════════ */
     let isFarmView = false;
-    let _lastRoomTab = 'shop';   // header tab to restore when leaving the farm
+    let _farmTab = 'animals';   // active sub-tab inside the farm's own tab bar
     let _farmAnimFrame = null;
     let _farmTickInterval = null;
     let _farmAnimStates = {};   // ephemeral wander state per animal id (not saved)
@@ -123,19 +123,17 @@
     function _setFarmPanelMode(on) {
       const wrap = document.getElementById('panelWrap');
       if (wrap) wrap.classList.toggle('farm-mode', on);
-      // The farm is its own header tab now — keep the tab bar visible, just
-      // swap the tab panels for the farm panel and sync the active highlight.
+      // In the farm, the room's tabs are replaced by the farm's own tab bar.
+      const tabs = document.getElementById('tabsBar');
+      if (tabs) tabs.style.display = on ? 'none' : '';
       document.querySelectorAll('#panelWrap .tab-panel').forEach(p => { p.style.display = on ? 'none' : ''; });
       const fp = document.getElementById('farmPanel');
       if (fp) fp.style.display = on ? 'block' : 'none';
-      document.querySelectorAll('.tab-btn').forEach(b =>
-        b.classList.toggle('active', on ? b.dataset.tab === 'farm' : b.dataset.tab === _lastRoomTab));
     }
 
+    function switchFarmTab(id) { _farmTab = id; renderFarmPanel(); }
+
     function openFarm() {
-      // Remember which room tab to return to when the farm is closed.
-      const cur = document.querySelector('.tab-btn.active');
-      if (cur && cur.dataset.tab && cur.dataset.tab !== 'farm') _lastRoomTab = cur.dataset.tab;
       isFarmView = true;
       document.getElementById('farmView')?.classList.add('visible');
       _setFarmPanelMode(true);
@@ -359,10 +357,33 @@
         '</div>';
 
       const card = (s) => '<section class="farm-card">' + s + '</section>';
+      // The farm page is long, so it's split into its own tabs.
+      const FARM_TABS = [
+        { id: 'animals',  label: '🐮 Animals' },
+        { id: 'garden',   label: '🌱 Garden' },
+        { id: 'market',   label: '📦 Market' },
+        { id: 'upgrades', label: '⚙️ More' },
+      ];
+      const groups = {
+        animals:  card(foodHtml) + card(herdHtml) + card(shopHtml),
+        garden:   card(gardenHtml) + card(workshopHtml),
+        market:   card(stockHtml) + card(ordersHtml),
+        upgrades: card(upgradesHtml) + card(decorHtml),
+      };
+      const hints = {
+        animals:  'Keep the trough filled — fed animals are happy and produce faster!',
+        garden:   'Tap soil on the farm to plant the selected seed; process crops in the Workshop.',
+        market:   'Tap produce on the farm to collect it, then sell it or fill the daily orders.',
+        upgrades: 'Expand your farm, automate collecting, and drag decor to arrange it.',
+      };
+      if (!groups[_farmTab]) _farmTab = 'animals';
       panel.innerHTML =
         '<div class="farm-panel-head">🚜 Farm <span class="farm-panel-cap">' + animals.length + '/' + farmAnimalCap() + ' animals</span></div>' +
-        card(foodHtml) + card(ordersHtml) + card(stockHtml) + card(shopHtml) + card(herdHtml) + card(gardenHtml) + card(workshopHtml) + card(decorHtml) + card(upgradesHtml) +
-        '<div class="farm-panel-hint">Keep the trough filled — fed animals are happy and produce faster! Tap produce to collect, then sell it. Drag decor to arrange your farm.</div>';
+        '<div class="farm-tabs">' +
+          FARM_TABS.map(t => '<button class="farm-tab' + (t.id === _farmTab ? ' active' : '') + '" onclick="switchFarmTab(\'' + t.id + '\')">' + t.label + '</button>').join('') +
+        '</div>' +
+        groups[_farmTab] +
+        '<div class="farm-panel-hint">' + hints[_farmTab] + '</div>';
     }
 
     /* ── Actions ── */

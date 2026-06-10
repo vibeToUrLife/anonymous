@@ -2,10 +2,6 @@
        Tabs
        ═══════════════════════════════ */
     function switchTab(tabId) {
-      // Farm is its own view + panel — opening it handles the tab highlight.
-      if (tabId === 'farm') { openFarm(); return; }
-      // Leaving the farm for any room tab returns to the room first.
-      if (isFarmView) closeFarm();
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + tabId));
       if (viewingUid === currentUid) renderActiveTab(tabId);

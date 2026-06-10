@@ -727,9 +727,23 @@
         repeating-linear-gradient(90deg, rgba(0,0,0,.10) 0 1px, transparent 1px 23px),
         linear-gradient(180deg,#2b1f15,#221910);
     }
-    .panel-wrap.farm-mode .tab-panel{display:none}
+    .panel-wrap.farm-mode .tabs,.panel-wrap.farm-mode .tab-panel{display:none}
     .panel-wrap.farm-mode .farm-panel{display:block}
     .panel-wrap.farm-mode .panel-inner{background:transparent}
+
+    /* Farm's own tab bar — splits the long farm page into sections */
+    .farm-tabs{display:flex;gap:6px;margin-bottom:11px}
+    .farm-tab{
+      flex:1;min-width:0;padding:8px 4px;border:1px solid #6e4f2c;border-radius:11px;
+      background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.08));
+      color:rgba(244,233,210,.62);font-family:var(--farm-display);font-size:11.5px;font-weight:800;
+      letter-spacing:.2px;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;
+    }
+    .farm-tab:hover{color:var(--cream);background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(0,0,0,.06))}
+    .farm-tab.active{
+      color:#3a2710;background:linear-gradient(180deg,#f4c863,#e3a838);border-color:#c98f24;
+      box-shadow:inset 0 -1px 0 rgba(0,0,0,.2),0 2px 5px rgba(0,0,0,.3);
+    }
 
     /* Signature: carved wooden sign header */
     .farm-panel-head{
