@@ -96,6 +96,13 @@
           <button class="outside-back-btn" onclick="enterLayer(currentLayer)">← Inside</button>
           <div class="outside-hint">Tap a floor to enter it</div>
         </div>
+        <!-- Farm view — pasture with animals that produce coin drops -->
+        <div class="outside-view farm-view" id="farmView">
+          <canvas id="farmCanvas" style="position:absolute;inset:0;width:100%;height:100%;cursor:pointer;border-radius:18px"></canvas>
+          <div class="outside-title">🚜 My Farm</div>
+          <button class="outside-back-btn" onclick="closeFarm()">← Outside</button>
+          <div class="outside-hint">Tap animals to pet · tap produce to collect</div>
+        </div>
       </div>
     </div>
 
@@ -109,6 +116,9 @@
       <button class="tab-btn" data-tab="extras">✨ More</button>
       <button class="tab-btn" data-tab="visit">👀 Visit</button>
     </div>
+
+  <!-- Farm panel — replaces the room tabs while the farm view is open (coins are shared) -->
+  <div class="farm-panel" id="farmPanel"></div>
 
   <!-- Shop panel -->
   <div class="tab-panel active" id="panel-shop">
@@ -347,8 +357,10 @@
   <script src="room/js/room-base.js"></script>
   <script src="room/js/room-drops.js"></script>
   <script src="room/js/room-autofeed.js"></script>
+  <script src="room/js/room-farm.js"></script>
   <script src="room/js/room-state.js"></script>
   <script src="room/js/room-layers.js"></script>
+  <script src="room/js/room-farm-view.js"></script>
   <script src="room/js/room-firebase.js"></script>
   <script src="room/js/room-render.js"></script>
   <script src="room/js/room-actions.js"></script>

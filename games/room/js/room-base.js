@@ -183,6 +183,23 @@
     const AUTOFEED_THRESHOLD = 50;  // refill a stat when it drops to/below this
     const AUTOFEED_TARGET = 100;    // refill back up to this
 
+    // Farm: outside area with animals that produce coin drops. Pet them to keep
+    // happiness up — happier animals produce faster (no feeding, no starvation).
+    const FARM_ANIMALS = [
+      { id: 'goose', emoji: '🦆', name: 'Goose', cost: 500,  drop: { emoji: '🥚', name: 'Egg',       coins: 15  } },
+      { id: 'pig',   emoji: '🐷', name: 'Pig',   cost: 1500, drop: { emoji: '🍄', name: 'Truffle',   coins: 40  } },
+      { id: 'cow',   emoji: '🐄', name: 'Cow',   cost: 3000, drop: { emoji: '🥛', name: 'Milk',      coins: 75  } },
+      { id: 'horse', emoji: '🐎', name: 'Horse', cost: 6000, drop: { emoji: '🧲', name: 'Horseshoe', coins: 140 } },
+    ];
+    const FARM_MAX_ANIMALS = 20;                   // total animals on the farm, any mix
+    const FARM_DROP_CAP = 3;                       // max uncollected drops per animal
+    const FARM_CYCLE_SLOW_MS = 6 * 60 * 60 * 1000; // production cycle at happiness 0
+    const FARM_CYCLE_FAST_MS = 2 * 60 * 60 * 1000; // production cycle at happiness 100
+    const FARM_PET_BOOST = 15;                     // happiness gained per pet
+    const FARM_PET_COOLDOWN_MS = 60 * 60 * 1000;   // one pet per animal per hour
+    const FARM_HAPPY_DECAY_PER_DAY = 10;           // happiness lost per day without petting
+    const FARM_START_HAPPINESS = 60;               // happiness of a newly bought animal
+
     const AFFECTION_MILESTONES = [
       { min: 0,    title: 'Stranger',      reward: 0 },
       { min: 50,   title: 'Acquaintance',  reward: 20 },

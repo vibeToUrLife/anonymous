@@ -32,11 +32,12 @@
       roomData.plantPosition = ld.plantPosition || null;
       roomData.plant         = ld.plant != null ? ld.plant : null;
       roomData.floorStyle    = ld.floorStyle || 'floor_wood';
-      // Hide outside view and stop its animation loop
+      // Hide outside/farm views and stop their animation loops
       isOutsideView = false;
       document.getElementById('outsideView')?.classList.remove('visible');
       cancelAnimationFrame(_outsideAnimFrame);
       _outsideAnimFrame = null;
+      closeFarm();
       // Force full bg redraw (wall pattern may have changed)
       const bgc = document.getElementById('roomBgCanvas');
       if (bgc) bgc.dataset.init = '';
@@ -74,6 +75,8 @@
 
     // Stores floor hit-rects for canvas click handling: { floorNum: {x,y,w,h,unlocked} }
     let _outsideFloorRects = {};
+    let _farmGateRect = null;     // clickable barn area in the outside scene (own room only)
+    let _farmGateHover = false;
     // Pre-computed stable star positions (avoids flickering on re-render)
     let _outsideStars = null;
 
@@ -232,6 +235,10 @@
 
         // -- Floor hover indicator --
         _drawFloorHover(ctx, W, H);
+
+        // -- Farm barn: gate into the farm view (own room only) --
+        if (viewingUid === currentUid) _drawFarmBarn(ctx, W, H, night);
+        else _farmGateRect = null;
 
         // -- Falling leaves --
         _drawHDLeaves(ctx, W, H, t, windSway, night);
@@ -843,6 +850,69 @@
     }
 
     /** Attaches click and mousemove handlers on #outsideCanvas. */
+    /**
+     * Little red barn in the bottom-left foreground — the gate into the farm.
+     * Stores its clickable rect in _farmGateRect for the hover/click handlers.
+     */
+    function _drawFarmBarn(ctx, W, H, night) {
+      const bw = Math.min(W * 0.20, 120);          // barn body width
+      const bh = bw * 0.52;                        // barn body height
+      const bx = W * 0.04;
+      const by = H * 0.90 - bh;                    // body top (base sits at 0.90H)
+      const roofH = bh * 0.55;
+
+      ctx.save();
+      // Body
+      ctx.fillStyle = night ? '#7a2820' : '#c0392b';
+      ctx.fillRect(bx, by, bw, bh);
+      // Gambrel roof
+      ctx.fillStyle = night ? '#4a1812' : '#8e2418';
+      ctx.beginPath();
+      ctx.moveTo(bx - bw * 0.06, by);
+      ctx.lineTo(bx + bw * 0.22, by - roofH);
+      ctx.lineTo(bx + bw * 0.78, by - roofH);
+      ctx.lineTo(bx + bw * 1.06, by);
+      ctx.closePath();
+      ctx.fill();
+      // Door with white X-brace
+      const dw = bw * 0.34, dh = bh * 0.72, dx = bx + (bw - dw) / 2, dy = by + bh - dh;
+      ctx.fillStyle = night ? '#3a1410' : '#6e1c12';
+      ctx.fillRect(dx, dy, dw, dh);
+      ctx.strokeStyle = night ? 'rgba(255,255,255,.45)' : '#f5e8d8';
+      ctx.lineWidth = Math.max(1.5, bw * 0.022);
+      ctx.strokeRect(dx, dy, dw, dh);
+      ctx.beginPath();
+      ctx.moveTo(dx, dy); ctx.lineTo(dx + dw, dy + dh);
+      ctx.moveTo(dx + dw, dy); ctx.lineTo(dx, dy + dh);
+      ctx.stroke();
+      // A couple of residents peeking beside the barn
+      const animals = roomData.farmAnimals || [];
+      if (animals.length) {
+        ctx.font = Math.round(bw * 0.18) + 'px sans-serif';
+        ctx.textAlign = 'center';
+        const seen = [...new Set(animals.map(a => a.type))].slice(0, 2);
+        seen.forEach((type, i) => {
+          const def = FARM_ANIMALS.find(f => f.id === type);
+          if (def) ctx.fillText(def.emoji, bx + bw * (1.14 + i * 0.18), by + bh * 0.92);
+        });
+      }
+      // Sign
+      ctx.font = '700 ' + Math.max(10, Math.round(bw * 0.13)) + 'px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#fff';
+      ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 4;
+      ctx.fillText('🚜 Farm', bx + bw / 2, by - roofH - 6);
+      ctx.shadowBlur = 0;
+      // Hover glow
+      if (_farmGateHover) {
+        ctx.strokeStyle = 'rgba(247,201,126,.9)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(bx - 4, by - roofH - 4, bw + 8, bh + roofH + 8);
+      }
+      ctx.restore();
+      _farmGateRect = { x: bx - 4, y: by - roofH - 18, w: bw + 8, h: bh + roofH + 22 };
+    }
+
     function _attachOutsideClickHandler() {
       const cvs = document.getElementById('outsideCanvas');
       if (!cvs) return;
@@ -866,23 +936,32 @@
         return null;
       }
 
-      // Mousemove — update hovered floor for the hover indicator
+      /** True when (cx, cy) is inside the farm barn gate. */
+      function hitTestFarm(cx, cy) {
+        const r = _farmGateRect;
+        return !!r && cx >= r.x && cx <= r.x + r.w && cy >= r.y && cy <= r.y + r.h;
+      }
+
+      // Mousemove — update hovered floor / farm gate for the hover indicators
       cvs.onmousemove = (e) => {
         const { x, y } = canvasCoords(e);
         const floor = hitTestFloor(x, y);
         _outsideHoveredFloor = floor;
-        cvs.style.cursor = floor != null ? 'pointer' : 'default';
+        _farmGateHover = hitTestFarm(x, y);
+        cvs.style.cursor = (floor != null || _farmGateHover) ? 'pointer' : 'default';
       };
 
       // Mouse leaves canvas — clear hover state
       cvs.onmouseleave = () => {
         _outsideHoveredFloor = null;
+        _farmGateHover = false;
         cvs.style.cursor = 'default';
       };
 
-      // Click — enter floor or show locked message
+      // Click — enter the farm, enter a floor, or show locked message
       cvs.onclick = (e) => {
         const { x, y } = canvasCoords(e);
+        if (hitTestFarm(x, y)) { openFarm(); return; }
         const floor = hitTestFloor(x, y);
         if (floor == null) return;
         const r = _outsideFloorRects[floor];

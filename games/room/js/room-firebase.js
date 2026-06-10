@@ -10,6 +10,8 @@
         petCollections: roomData.petCollections || {},
         autoFeeder: roomData.autoFeeder || false,
         autoFeedOn: roomData.autoFeedOn || false,
+        farmAnimals: roomData.farmAnimals || [],
+        farmDrops: roomData.farmDrops || [],
         plant: roomData.plant,
         plantLevels: roomData.plantLevels,
         ownedPlants: roomData.ownedPlants,
@@ -48,6 +50,7 @@
        Init
        ═══════════════════════════════ */
     let _offlineCoinsCollected = false;
+    let _farmCatchupDone = false;
     let _plantCoinInterval = null;
     let _lastLocalSaveTime = 0;
     let _unsubRoomSnap = null;
@@ -149,6 +152,8 @@
         roomData.petCollections = d.petCollections || {};
         roomData.autoFeeder = d.autoFeeder || false;
         roomData.autoFeedOn = d.autoFeedOn || false;
+        roomData.farmAnimals = Array.isArray(d.farmAnimals) ? d.farmAnimals : [];
+        roomData.farmDrops = Array.isArray(d.farmDrops) ? d.farmDrops : [];
         _roomLoaded = true;
         // Decay hunger based on elapsed time (1% per 10 min)
         const lastUpdate = d.updatedAt ?? Date.now();
@@ -226,6 +231,18 @@
           }
           saveRoom();
         }
+        // Farm offline catch-up — advance every animal's production clock once
+        // per load; drops spawned while away land on the farm ground (capped).
+        if (!_farmCatchupDone && viewingUid === currentUid && (roomData.farmAnimals || []).length) {
+          _farmCatchupDone = true;
+          const _spawned = runFarmProduction();
+          if (_spawned > 0) {
+            saveRoom();
+            setTimeout(function () {
+              showToast('🚜 Your farm produced ' + _spawned + ' item' + (_spawned > 1 ? 's' : '') + ' while you were away!', 'success');
+            }, 1200);
+          }
+        }
         maybeGenerateDailyDrops();
         _roomLoaded = true;
       } else {
@@ -265,16 +282,18 @@
 
     async function initRoom() {
       _offlineCoinsCollected = false;
+      _farmCatchupDone = false;
       _roomLoaded = false;
       // Unsubscribe previous room listener (account switch)
       _unsubscribeRoomSnap();
       if (unsubVisitList) { unsubVisitList(); unsubVisitList = null; }
       // Reset roomData to defaults for clean account switch
-      roomData = { coins: 0, petDrops: [], petCollections: {}, autoFeeder: false, autoFeedOn: false, pets: [], plant: null, plantLevels: {}, plantPosition: null, ownedPlants: [], ownedDecors: [], placedDecors: [], ownedWalls: ['wall_default'], wallPattern: 'wall_default', ownedWindows: ['win_none','win_classic'], windowStyle: 'win_classic', ownedFloors: ['floor_wood'], floorStyle: 'floor_wood', ownedAccessories: [], displayName: getPlayerName(), lastCoinCollect: 0, loginStreak: 0, lastLoginDay: '', achievements: [], gachaPulls: 0, giftsGiven: 0, giftsReceived: 0, jukeboxTrack: null, jukeboxVol: 0.5, unlockedLayers: 1, layerData: {} };
+      roomData = { coins: 0, petDrops: [], petCollections: {}, autoFeeder: false, autoFeedOn: false, farmAnimals: [], farmDrops: [], pets: [], plant: null, plantLevels: {}, plantPosition: null, ownedPlants: [], ownedDecors: [], placedDecors: [], ownedWalls: ['wall_default'], wallPattern: 'wall_default', ownedWindows: ['win_none','win_classic'], windowStyle: 'win_classic', ownedFloors: ['floor_wood'], floorStyle: 'floor_wood', ownedAccessories: [], displayName: getPlayerName(), lastCoinCollect: 0, loginStreak: 0, lastLoginDay: '', achievements: [], gachaPulls: 0, giftsGiven: 0, giftsReceived: 0, jukeboxTrack: null, jukeboxVol: 0.5, unlockedLayers: 1, layerData: {} };
       // Reset to floor 1 when re-initialising (e.g. account switch)
       currentLayer = 1;
       isOutsideView = false;
       document.getElementById('outsideView')?.classList.remove('visible');
+      closeFarm();
       renderAll(); // Immediately show current user before Firestore loads
       initRoomDropZone();
       initDecorDrag();

@@ -884,6 +884,9 @@
       // (auto-feed never runs while viewing — it's owner-gated).
       roomData.autoFeeder = d.autoFeeder || false;
       roomData.autoFeedOn = d.autoFeedOn || false;
+      // Mirror the host's farm too (farm entry + production are owner-gated).
+      roomData.farmAnimals = Array.isArray(d.farmAnimals) ? d.farmAnimals : [];
+      roomData.farmDrops = Array.isArray(d.farmDrops) ? d.farmDrops : [];
       // Load multi-layer data for visited room (visitor starts on floor 1)
       roomData.unlockedLayers = d.unlockedLayers ?? 1;
       const rawLayerData = d.layerData ? JSON.parse(JSON.stringify(d.layerData)) : {};
@@ -909,6 +912,7 @@
       currentLayer = 1;
       isOutsideView = false;
       document.getElementById('outsideView')?.classList.remove('visible');
+      closeFarm();
       const visitLD = roomData.layerData[1] || {};
       roomData.wallPattern = visitLD.wallPattern || 'wall_default';
       roomData.windowStyle = visitLD.windowStyle || 'win_classic';
