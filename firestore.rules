@@ -36,9 +36,12 @@ service cloud.firestore {
     //          subwayOwnedEffects[] (string ids), subwaySelectedEffect (string),
     //          subwayItems: {shield,slowmo,magnet} (consumable counts). All owner-only writes;
     //          coins are spent on purchases and earned on game over via transaction.
-    //    NOTE: Daily 脑筋急转弯 (brain teaser) — riddleLastSolvedDay (string YYYY-MM-DD).
-    //          Solving the day's riddle awards a flat 100 coins ONCE per day via an
-    //          owner-only transaction that increments coins + sets riddleLastSolvedDay.
+    //    NOTE: Daily 脑筋急转弯 (brain teaser) — riddleLastSolvedDay (string YYYY-MM-DD)
+    //          + riddleLastRevealedDay (string YYYY-MM-DD). Solving the day's riddle
+    //          awards a flat 100 coins ONCE per day via an owner-only transaction that
+    //          increments coins + sets riddleLastSolvedDay. Both day-fields are read on
+    //          open to lock the riddle per-ACCOUNT (so the same account on a 2nd device
+    //          can't answer again), not just per-device localStorage.
     //    NOTE: Board cosmetics & coin sinks (金币乐园) — boardCosOwned[] (cosmetic ids),
     //          boardCosEquip {color,frame,badge,title} (equipped ids), coinsSpent (number —
     //          lifetime coins burned, powers the 土豪榜 leaderboard via orderBy). Coins are

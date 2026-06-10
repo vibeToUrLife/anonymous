@@ -134,11 +134,32 @@
     }
   }
 
-  function open() {
-    render();
+  // Pull today's done-state from the ACCOUNT (Firestore), not just this device.
+  // riddleLastSolvedDay / riddleLastRevealedDay are written per-account, so a
+  // riddle finished on one device locks every other device of the same account.
+  async function fetchAccountDone() {
+    if (typeof db === 'undefined' || typeof auth === 'undefined') return null;
+    const uid = auth.currentUser && auth.currentUser.uid;
+    if (!uid) return null;
+    try {
+      const doc = await db.collection('rooms').doc(uid).get();
+      const data = doc.exists ? doc.data() : {};
+      if (data.riddleLastSolvedDay === today) return 'solved';
+      if (data.riddleLastRevealedDay === today) return 'revealed';
+      return null;
+    } catch (e) { return null; }
+  }
+
+  async function open() {
+    render();   // paint immediately from the local cache…
     overlay.classList.add('show');
     fab.classList.remove('has-new');
     setTimeout(function () { if (!inputEl.disabled) inputEl.focus(); }, 60);
+    // …then reconcile with the account: if THIS account already finished today
+    // on another device, mirror that here and re-lock the UI.
+    const acct = await fetchAccountDone();
+    if (acct === 'solved' && doneState() !== 'solved') { setDone('solved'); render(); }
+    else if (acct === 'revealed' && !doneState()) { setDone('revealed'); render(); }
   }
   function close() { overlay.classList.remove('show'); }
 
@@ -189,9 +210,20 @@
     }
   }
 
+  // Best-effort: record on the account that today's answer was revealed, so the
+  // forfeit also syncs to the user's other devices.
+  async function markAccountRevealed() {
+    if (typeof db === 'undefined' || typeof auth === 'undefined') return;
+    const uid = auth.currentUser && auth.currentUser.uid;
+    if (!uid) return;
+    try {
+      await db.collection('rooms').doc(uid).set({ riddleLastRevealedDay: today }, { merge: true });
+    } catch (e) {}
+  }
+
   function reveal() {
     if (inputEl.disabled) return;
-    if (doneState() !== 'solved') setDone('revealed');   // viewing forfeits today's reward
+    if (doneState() !== 'solved') { setDone('revealed'); markAccountRevealed(); }   // viewing forfeits today's reward
     setPlayable(false);
     showAnswer();
     feedbackEl.textContent = '答案已揭晓，明天再来赚金币吧～';
