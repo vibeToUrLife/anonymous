@@ -2242,11 +2242,24 @@ soundToggle.addEventListener('change', () => {
     showToast(soundEnabled ? 'Sound on 🔊' : 'Sound muted 🔇', 'success');
 });
 
-// Theme toggle (light / dark)
-themeToggle.addEventListener('change', () => {
-    document.body.classList.toggle('light-theme', themeToggle.checked);
-    localStorage.setItem('theme', themeToggle.checked ? 'light' : 'dark');
-});
+// Theme toggle (light / dark) — shared by the Settings checkbox and the
+// floating sun/moon button; both stay in sync and persist the choice.
+const themeFab = document.getElementById('themeFab');
+function updateThemeFab() {
+    if (!themeFab) return;
+    const isLight = document.body.classList.contains('light-theme');
+    themeFab.textContent = isLight ? '☀️' : '🌙';
+    themeFab.title = isLight ? '切换到暗色模式' : '切换到亮色模式';
+}
+function applyTheme(light) {
+    document.body.classList.toggle('light-theme', light);
+    localStorage.setItem('theme', light ? 'light' : 'dark');
+    if (themeToggle) themeToggle.checked = light;
+    updateThemeFab();
+}
+themeToggle.addEventListener('change', () => applyTheme(themeToggle.checked));
+if (themeFab) themeFab.addEventListener('click', () => applyTheme(!document.body.classList.contains('light-theme')));
+updateThemeFab();
 
 // Font size selector
 function updateFontSizeBtns() {

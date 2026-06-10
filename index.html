@@ -595,6 +595,18 @@
     }
     .mood-fab.has-checked { background:linear-gradient(180deg,#4f9d6b,#2f7d4d) !important; }
 
+    /* Dark / Light theme toggle — stacked above the riddle button (206px) */
+    .theme-fab {
+      position: fixed; bottom: 264px; right: 18px; z-index: 310;
+      width: 48px; height: 48px; border: none; border-radius: 50%;
+      background: linear-gradient(180deg,#5b4026,#43301c);
+      color: #f4e9d2; font-size: 22px; cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+      transition: transform 0.2s, box-shadow 0.2s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .theme-fab:hover { transform: scale(1.1); box-shadow: 0 6px 20px rgba(0,0,0,0.5); }
+
     /* ══════════════════════════════════════════════════════════════
        Buttons & modals — the board's two materials only:
          · WOOD pills (cream text)   · GOLD pills (ink text, primary CTA)
@@ -1180,6 +1192,9 @@
 
   <!-- Mood Check-in Widget -->
   <button class="mood-fab" id="moodFab" title="How are you feeling today?">😊</button>
+
+  <!-- Dark / Light theme toggle -->
+  <button class="theme-fab" id="themeFab" title="切换主题" aria-label="Toggle dark / light mode">🌙</button>
   <div class="mood-panel" id="moodPanel">
     <h4>How are you feeling today?</h4>
     <div id="moodCheckinArea">
