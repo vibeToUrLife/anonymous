@@ -396,6 +396,7 @@
       roomData.coins -= AUTO_FEEDER_COST;
       roomData.autoFeeder = true;
       roomData.autoFeedOn = true;
+      runLiveAutoFeed();   // top up any already-hungry pet the moment it's installed
       await saveRoom();
       showToast('🤖 Auto-Feeder installed! Your pets will stay fed automatically.', 'success');
       renderAll();        // refresh coin counter
@@ -406,9 +407,11 @@
       if (viewingUid !== currentUid) return;
       if (!roomData.autoFeeder) return;
       roomData.autoFeedOn = !roomData.autoFeedOn;
+      const _fed = roomData.autoFeedOn && runLiveAutoFeed();   // feed hungry pets the moment it's switched on
       await saveRoom();
       showToast(roomData.autoFeedOn ? '🤖 Auto-Feeder ON' : '🤖 Auto-Feeder OFF', 'success');
       renderUpgrade();
+      if (_fed) renderAll();   // reflect refilled stats + spent coins
     }
 
     // Drag-and-drop food to pet

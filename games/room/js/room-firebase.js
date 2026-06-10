@@ -243,6 +243,26 @@
       renderAllDebounced();
     }
 
+    // Live Auto-Feeder top-up: refill any owned pet at/below threshold back to
+    // target, bounded by coins. Shared by the decay tick and the buy/toggle-on
+    // actions so enabling the device feeds an already-hungry pet immediately
+    // instead of waiting for the next 10-min tick. Returns true if any pet was
+    // fed (caller persists + re-renders).
+    function runLiveAutoFeed() {
+      if (!(roomData.autoFeeder && roomData.autoFeedOn) || viewingUid !== currentUid) return false;
+      const food = bestCoinsPerPoint(FOODS), drink = bestCoinsPerPoint(DRINKS);
+      let changed = false;
+      for (const pet of roomData.pets) {
+        const r = liveRefillPlan(pet, roomData.coins, food, drink, { threshold: AUTOFEED_THRESHOLD, target: AUTOFEED_TARGET });
+        if (r.coinsSpent > 0) {
+          pet.hunger = r.hunger; pet.thirst = r.thirst;
+          roomData.coins = Math.max(0, roomData.coins - r.coinsSpent);
+          changed = true;
+        }
+      }
+      return changed;
+    }
+
     async function initRoom() {
       _offlineCoinsCollected = false;
       _roomLoaded = false;
@@ -278,18 +298,7 @@
           }
           if ((pet.thirst ?? 100) > 0) { pet.thirst = (pet.thirst ?? 100) - 1; changed = true; }
         }
-        if (roomData.autoFeeder && roomData.autoFeedOn) {
-          const _afFood = bestCoinsPerPoint(FOODS), _afDrink = bestCoinsPerPoint(DRINKS);
-          for (const pet of roomData.pets) {
-            const _r = liveRefillPlan(pet, roomData.coins, _afFood, _afDrink, { threshold: AUTOFEED_THRESHOLD, target: AUTOFEED_TARGET });
-            if (_r.coinsSpent > 0) {
-              pet.hunger = _r.hunger;
-              pet.thirst = _r.thirst;
-              roomData.coins = Math.max(0, roomData.coins - _r.coinsSpent);
-              changed = true;
-            }
-          }
-        }
+        if (runLiveAutoFeed()) changed = true;
         if (changed) { await saveRoom(); renderAllDebounced(); }
       }, 10 * 60 * 1000);
 
