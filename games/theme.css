@@ -13,10 +13,10 @@
 
 :root {
   /* Surfaces */
-  --g-bg: linear-gradient(160deg, #FFE7D3 0%, #FFB8A0 55%, #FF8FB1 100%);
-  --g-card: #FFF6EC;                       /* cream panel */
-  --g-card-90: rgba(255, 246, 236, 0.92);  /* translucent card */
-  --g-board: #FBE6D4;                       /* game board tray */
+  --g-bg: linear-gradient(160deg, #FFC07A 0%, #FF8E68 50%, #F0608E 100%);
+  --g-card: #FFF1E2;                       /* cream panel */
+  --g-card-90: rgba(255, 241, 226, 0.94);  /* translucent card */
+  --g-board: #F6D9C0;                       /* game board tray */
   --g-slot: rgba(58, 42, 42, 0.06);         /* empty slot / faint fill */
 
   /* Ink */
@@ -38,9 +38,9 @@
   --g-danger: #E2553F;     /* sign-out / end-game / errors */
 
   /* Overlays & shadows */
-  --g-scrim: rgba(255, 231, 211, 0.88);     /* light frosted overlay */
-  --g-scrim-strong: rgba(255, 231, 211, 0.94);
-  --g-shadow: 0 10px 30px rgba(214, 120, 90, 0.18);
+  --g-scrim: rgba(255, 214, 184, 0.90);     /* warm frosted overlay */
+  --g-scrim-strong: rgba(255, 214, 184, 0.95);
+  --g-shadow: 0 10px 30px rgba(190, 95, 80, 0.26);
   --g-shadow-sm: 0 4px 14px rgba(214, 120, 90, 0.16);
 
   /* Type */
