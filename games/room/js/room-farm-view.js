@@ -678,29 +678,166 @@
 
     function _drawFarmTrough(ctx, W, H, night) {
       const tx = FARM_TROUGH_X * W, ty = FARM_TROUGH_Y * H;
-      const tw = Math.max(50, W * 0.10), th = tw * 0.32;
-      // Legs
-      ctx.fillStyle = night ? '#3a2a1a' : '#6e4e2e';
-      ctx.fillRect(tx - tw * 0.38, ty, tw * 0.08, th * 0.9);
-      ctx.fillRect(tx + tw * 0.30, ty, tw * 0.08, th * 0.9);
-      // Box
-      ctx.fillStyle = night ? '#4a3520' : '#8a5e36';
-      ctx.fillRect(tx - tw / 2, ty - th, tw, th);
-      ctx.strokeStyle = night ? '#2a1d10' : '#5e3e1e';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(tx - tw / 2, ty - th, tw, th);
-      // Grain fill scaled by stock
+      const tw = Math.max(52, W * 0.11), th = tw * 0.36;
+      const topY = ty - th, botY = ty;
+      const hTop = tw / 2, hBot = tw * 0.40;   // tapered: wider at the brim
       const pct = Math.max(0, Math.min(1, (roomData.farmFood || 0) / FARM_FOOD_MAX));
-      if (pct > 0) {
-        ctx.fillStyle = night ? '#a8862e' : '#e8c44a';
-        const gh = (th - 6) * pct;
-        ctx.fillRect(tx - tw / 2 + 3, ty - 3 - gh, tw - 6, gh);
+
+      // Warm hand-planed wood + iron + golden grain (muted after dark)
+      const wood   = night ? '#4a3520' : '#9a6a3c';
+      const woodLo = night ? '#2f2210' : '#6c4624';
+      const woodHi = night ? '#5d4327' : '#bb8550';
+      const rimCol = night ? '#6a4e2f' : '#caa066';
+      const iron   = night ? '#262220' : '#3a342e';
+      const ironHi = night ? '#46403a' : '#6a6258';
+      const grainA = night ? '#b48f34' : '#f4d262';
+      const grainB = night ? '#8a6a24' : '#d9a637';
+      const grainHi = night ? '#cda94e' : '#ffe8a3';
+
+      ctx.save();
+      ctx.lineJoin = 'round';
+      ctx.textAlign = 'center';
+
+      // Soft ground shadow
+      ctx.fillStyle = 'rgba(0,0,0,' + (night ? 0.34 : 0.20) + ')';
+      ctx.beginPath();
+      ctx.ellipse(tx, botY + th * 0.34, hTop * 1.08, th * 0.30, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Splayed legs
+      ctx.fillStyle = woodLo;
+      const legH = th * 0.9;
+      [-1, 1].forEach(s => {
+        const ax = tx + s * hBot * 0.9;
+        ctx.beginPath();
+        ctx.moveTo(ax - tw * 0.05, botY - 2);
+        ctx.lineTo(ax - tw * 0.04, botY + legH);
+        ctx.lineTo(ax + tw * 0.04, botY + legH);
+        ctx.lineTo(ax + tw * 0.06, botY - 2);
+        ctx.closePath();
+        ctx.fill();
+      });
+
+      // Body (tapered trough) with a vertical wood-grain gradient
+      const bodyPath = () => {
+        ctx.beginPath();
+        ctx.moveTo(tx - hTop, topY);
+        ctx.lineTo(tx + hTop, topY);
+        ctx.lineTo(tx + hBot, botY);
+        ctx.lineTo(tx - hBot, botY);
+        ctx.closePath();
+      };
+      const bodyGrad = ctx.createLinearGradient(0, topY, 0, botY);
+      bodyGrad.addColorStop(0, woodHi);
+      bodyGrad.addColorStop(0.4, wood);
+      bodyGrad.addColorStop(1, woodLo);
+      bodyPath(); ctx.fillStyle = bodyGrad; ctx.fill();
+
+      // Plank seams
+      ctx.strokeStyle = woodLo; ctx.globalAlpha = 0.45;
+      ctx.lineWidth = Math.max(1, tw * 0.012);
+      for (let k = 1; k <= 3; k++) {
+        const f = k / 4;
+        ctx.beginPath();
+        ctx.moveTo(tx - hTop + f * hTop * 2, topY + 2);
+        ctx.lineTo(tx - hBot + f * hBot * 2, botY - 2);
+        ctx.stroke();
       }
-      // Empty-trough alert
+      ctx.globalAlpha = 1;
+
+      // Heaped, textured grain — clipped to the inner opening
+      if (pct > 0) {
+        const innerTop = topY + th * 0.14, innerBot = botY - 2;
+        const ihTop = hTop * 0.78, ihBot = hBot * 0.82;
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(tx - ihTop, innerTop);
+        ctx.lineTo(tx + ihTop, innerTop);
+        ctx.lineTo(tx + ihBot, innerBot);
+        ctx.lineTo(tx - ihBot, innerBot);
+        ctx.closePath();
+        ctx.clip();
+        const level = innerBot - pct * (innerBot - innerTop);
+        const gg = ctx.createLinearGradient(0, level - th * 0.18, 0, innerBot);
+        gg.addColorStop(0, grainHi);
+        gg.addColorStop(0.45, grainA);
+        gg.addColorStop(1, grainB);
+        ctx.fillStyle = gg;
+        ctx.beginPath();
+        ctx.moveTo(tx - hTop, level + 3);
+        ctx.quadraticCurveTo(tx, level - th * 0.20, tx + hTop, level + 3);
+        ctx.lineTo(tx + hTop, innerBot + 2);
+        ctx.lineTo(tx - hTop, innerBot + 2);
+        ctx.closePath();
+        ctx.fill();
+        // kernels
+        ctx.fillStyle = night ? 'rgba(255,236,170,.45)' : 'rgba(110,72,18,.4)';
+        for (let s = 0; s < 12; s++) {
+          const sx = tx + (((s * 73) % 100) / 100 - 0.5) * ihTop * 1.7;
+          const sy = level + 3 + (((s * 47) % 100) / 100) * (innerBot - level);
+          ctx.fillRect(sx, sy, 1.7, 1.7);
+        }
+        // hay strands poking up (visible while not brim-full)
+        ctx.strokeStyle = grainB; ctx.lineWidth = 1.4;
+        [-0.3, 0.05, 0.34].forEach((hx, i) => {
+          ctx.beginPath();
+          ctx.moveTo(tx + hx * tw, level + 2);
+          ctx.lineTo(tx + hx * tw + (i - 1) * 3, level - th * 0.26);
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
+
+      // Front rim / lip (lighter bevel across the brim)
+      const rimH = th * 0.17;
+      ctx.fillStyle = rimCol;
+      ctx.beginPath();
+      ctx.moveTo(tx - hTop - 1.5, topY);
+      ctx.lineTo(tx + hTop + 1.5, topY);
+      ctx.lineTo(tx + hTop - 1, topY + rimH);
+      ctx.lineTo(tx - hTop + 1, topY + rimH);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = woodHi;
+      ctx.fillRect(tx - hTop - 1.5, topY, (hTop + 1.5) * 2, Math.max(1, rimH * 0.3));
+
+      // Iron straps with rivets at each end
+      [-0.82, 0.82].forEach(f => {
+        const xT = tx + f * hTop, xB = tx + f * hBot, bw = tw * 0.05;
+        ctx.fillStyle = iron;
+        ctx.beginPath();
+        ctx.moveTo(xT - bw, topY); ctx.lineTo(xT + bw, topY);
+        ctx.lineTo(xB + bw, botY); ctx.lineTo(xB - bw, botY);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = ironHi;
+        ctx.beginPath(); ctx.arc(xT, topY + th * 0.24, bw * 0.34, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(xB, botY - th * 0.24, bw * 0.34, 0, Math.PI * 2); ctx.fill();
+      });
+
+      // Crisp outline
+      bodyPath();
+      ctx.strokeStyle = woodLo;
+      ctx.lineWidth = Math.max(1.5, tw * 0.022);
+      ctx.stroke();
+
+      ctx.restore();
+
+      // Empty-trough alert — a little speech bubble so it reads at a glance
       if (pct === 0 && (roomData.farmAnimals || []).length) {
-        ctx.font = Math.round(th * 0.8) + 'px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('❗', tx, ty - th - 6);
+        const bx = tx, by = topY - th * 0.6, r = th * 0.4;
+        ctx.save();
+        ctx.fillStyle = night ? '#c14a3f' : '#e0613a';
+        ctx.beginPath(); ctx.ellipse(bx, by, r * 1.05, r * 0.85, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(bx - r * 0.3, by + r * 0.5);
+        ctx.lineTo(bx + r * 0.15, by + r * 1.15);
+        ctx.lineTo(bx + r * 0.4, by + r * 0.45);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold ' + Math.round(th * 0.55) + 'px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('!', bx, by + 1);
+        ctx.restore();
       }
     }
 
