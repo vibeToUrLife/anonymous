@@ -389,6 +389,28 @@
       updatePetStatusBar();
     }
 
+    async function buyAutoFeeder() {
+      if (viewingUid !== currentUid) return;
+      if (roomData.autoFeeder) return;
+      if (roomData.coins < AUTO_FEEDER_COST) return showToast('Not enough coins!', 'error');
+      roomData.coins -= AUTO_FEEDER_COST;
+      roomData.autoFeeder = true;
+      roomData.autoFeedOn = true;
+      await saveRoom();
+      showToast('🤖 Auto-Feeder installed! Your pets will stay fed automatically.', 'success');
+      renderAll();        // refresh coin counter
+      renderUpgrade();    // refresh the Feed panel
+    }
+
+    async function toggleAutoFeed() {
+      if (viewingUid !== currentUid) return;
+      if (!roomData.autoFeeder) return;
+      roomData.autoFeedOn = !roomData.autoFeedOn;
+      await saveRoom();
+      showToast(roomData.autoFeedOn ? '🤖 Auto-Feeder ON' : '🤖 Auto-Feeder OFF', 'success');
+      renderUpgrade();
+    }
+
     // Drag-and-drop food to pet
     function onFoodDragStart(e, foodId) {
       e.dataTransfer.setData('text/plain', foodId);

@@ -1545,6 +1545,29 @@
 
       if (activePets.length) {
         petHtml += '<div class="shop-section">';
+        // ── Auto-Feeder ──
+        const _afOwned = roomData.autoFeeder;
+        const _afOn = roomData.autoFeedOn;
+        petHtml += '<div style="background:rgba(255,210,61,0.08);border:1px solid rgba(255,210,61,0.25);border-radius:12px;padding:10px 12px;margin-bottom:12px">';
+        petHtml += '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">';
+        petHtml += '<div style="font-size:12px;font-weight:700;color:#ffd23d">🤖 Auto-Feeder</div>';
+        if (!_afOwned) {
+          const _afCan = roomData.coins >= AUTO_FEEDER_COST;
+          petHtml += '<button onclick="buyAutoFeeder()" ' + (_afCan ? '' : 'disabled') +
+            ' style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid rgba(255,210,61,0.4);' +
+            'background:' + (_afCan ? 'rgba(255,210,61,0.18)' : 'rgba(255,255,255,0.05)') + ';color:' +
+            (_afCan ? '#ffd23d' : 'rgba(255,255,255,0.35)') + ';cursor:' + (_afCan ? 'pointer' : 'not-allowed') + '">' +
+            coinSVG(11) + ' ' + AUTO_FEEDER_COST + ' · Buy</button>';
+        } else {
+          petHtml += '<button onclick="toggleAutoFeed()" style="font-size:11px;padding:6px 14px;border-radius:8px;border:1px solid ' +
+            (_afOn ? 'rgba(52,211,153,0.5)' : 'rgba(255,255,255,0.2)') + ';background:' +
+            (_afOn ? 'rgba(52,211,153,0.18)' : 'rgba(255,255,255,0.06)') + ';color:' +
+            (_afOn ? '#34d399' : 'rgba(255,255,255,0.5)') + ';cursor:pointer;font-weight:700">' +
+            (_afOn ? 'ON' : 'OFF') + '</button>';
+        }
+        petHtml += '</div>';
+        petHtml += '<div style="font-size:10px;color:rgba(255,255,255,0.45);margin-top:6px">Keeps every pet\'s hunger &amp; thirst topped up automatically — even while you\'re away. Spends your coins.</div>';
+        petHtml += '</div>';
         petHtml += '<div style="display:flex;justify-content:center;gap:16px;padding:6px 0 10px;flex-wrap:wrap">';
         activePets.forEach(pet => {
           const petDef = PETS.find(p => p.id === pet.type);
