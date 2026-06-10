@@ -19,7 +19,8 @@ function _farmBlush(ctx, s, x, y) {
   ctx.beginPath(); ctx.ellipse(x, y, s * 0.05, s * 0.03, 0, 0, Math.PI * 2); ctx.fill();
 }
 
-function drawCowPet(ctx, s, lp, moving) {
+function drawCowPet(ctx, s, lp, moving, pal) {
+  const coat = (pal && pal.coat) || '#faf6f0'; // body + face (variant recolours this)
   // Tail with tuft
   ctx.strokeStyle = '#f5f0ea'; ctx.lineWidth = s * 0.05; ctx.lineCap = 'round';
   ctx.beginPath();
@@ -32,7 +33,7 @@ function drawCowPet(ctx, s, lp, moving) {
   drawPetLegs(ctx, s, lp, moving, '#ece5dc');
 
   // Body — soft cream with patches
-  ctx.fillStyle = '#faf6f0';
+  ctx.fillStyle = coat;
   ctx.beginPath(); ctx.ellipse(0, 0, s * 0.5, s * 0.35, 0, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#4a4038';
   ctx.beginPath(); ctx.ellipse(-s * 0.2, -s * 0.12, s * 0.17, s * 0.12, 0.35, 0, Math.PI * 2); ctx.fill();
@@ -58,7 +59,7 @@ function drawCowPet(ctx, s, lp, moving) {
   ctx.beginPath(); ctx.ellipse(hx - s * 0.16, hy - s * 0.26, s * 0.05, s * 0.08, -0.5, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.ellipse(hx + s * 0.16, hy - s * 0.26, s * 0.05, s * 0.08, 0.5, 0, Math.PI * 2); ctx.fill();
   // Face
-  ctx.fillStyle = '#faf6f0';
+  ctx.fillStyle = coat;
   ctx.beginPath(); ctx.arc(hx, hy, s * 0.28, 0, Math.PI * 2); ctx.fill();
   // Patch over one eye
   ctx.fillStyle = '#4a4038';
@@ -81,7 +82,8 @@ function drawCowPet(ctx, s, lp, moving) {
   ctx.beginPath(); ctx.ellipse(hx, hy - s * 0.26, s * 0.08, s * 0.05, 0, 0, Math.PI * 2); ctx.fill();
 }
 
-function drawPigPet(ctx, s, lp, moving) {
+function drawPigPet(ctx, s, lp, moving, pal) {
+  const coat = (pal && pal.coat) || '#f9bcc9'; // body (variant recolours this)
   // Proper spiral curly tail
   ctx.strokeStyle = '#eda0b4'; ctx.lineWidth = s * 0.035; ctx.lineCap = 'round';
   ctx.beginPath();
@@ -93,7 +95,7 @@ function drawPigPet(ctx, s, lp, moving) {
   drawPetLegs(ctx, s, lp, moving, '#eda0b4');
 
   // Round body
-  ctx.fillStyle = '#f9bcc9';
+  ctx.fillStyle = coat;
   ctx.beginPath(); ctx.ellipse(0, 0, s * 0.48, s * 0.36, 0, 0, Math.PI * 2); ctx.fill();
   // Belly highlight
   ctx.fillStyle = 'rgba(255,255,255,0.35)';
@@ -140,10 +142,11 @@ function drawPigPet(ctx, s, lp, moving) {
   ctx.beginPath(); ctx.arc(hx + s * 0.1, hy + s * 0.17, s * 0.04, 0.4, Math.PI - 0.4); ctx.stroke();
 }
 
-function drawHorsePet(ctx, s, lp, moving) {
+function drawHorsePet(ctx, s, lp, moving, pal) {
   // Proper horse proportions: one continuous body+neck+head silhouette (so no
   // part can look detached), then legs, mane, tail and face layered on top.
-  const coat = '#b5814f', coatDark = '#946539', light = '#e8cda6', mane = '#523521', hoof = '#3a2a1a';
+  const coat = (pal && pal.coat) || '#b5814f', coatDark = '#946539', light = '#e8cda6';
+  const mane = (pal && pal.mane) || '#523521', hoof = '#3a2a1a';
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
   const sway = moving ? Math.sin(lp) * s * 0.05 : 0;
@@ -208,13 +211,14 @@ function drawHorsePet(ctx, s, lp, moving) {
   ctx.beginPath(); ctx.arc(s * 0.435, -s * 0.475, s * 0.014, 0, Math.PI * 2); ctx.fill();
 }
 
-/* Dispatch a farm animal type to its drawer (goose comes from goose.js). */
-function drawFarmAnimal(ctx, type, s, lp, moving) {
+/* Dispatch a farm animal type to its drawer (goose comes from goose.js).
+   `pal` is an optional coat-variant palette (see FARM_VARIANTS); null = default. */
+function drawFarmAnimal(ctx, type, s, lp, moving, pal) {
   switch (type) {
-    case 'cow':   drawCowPet(ctx, s, lp, moving); break;
-    case 'pig':   drawPigPet(ctx, s, lp, moving); break;
-    case 'horse': drawHorsePet(ctx, s, lp, moving); break;
-    case 'goose': drawGoosePet(ctx, s, lp, moving, 100, '', 0, 0, null); break;
+    case 'cow':   drawCowPet(ctx, s, lp, moving, pal); break;
+    case 'pig':   drawPigPet(ctx, s, lp, moving, pal); break;
+    case 'horse': drawHorsePet(ctx, s, lp, moving, pal); break;
+    case 'goose': drawGoosePet(ctx, s, lp, moving, 100, '', 0, 0, pal || null); break;
   }
 }
 

@@ -890,6 +890,15 @@
       roomData.farmDecors = Array.isArray(d.farmDecors) ? d.farmDecors : [];
       roomData.farmFood = d.farmFood || 0;
       roomData.farmFoodAt = d.farmFoodAt || 0;
+      roomData.farmStock = d.farmStock || {};
+      roomData.farmTotalCollected = d.farmTotalCollected || 0;
+      roomData.farmCapLevel = d.farmCapLevel || 0;
+      roomData.farmAutoCollect = d.farmAutoCollect || false;
+      roomData.farmVariants = d.farmVariants || {};
+      roomData.farmPlots = Array.isArray(d.farmPlots) ? d.farmPlots : [];
+      roomData.farmOrdersDay = d.farmOrdersDay || '';
+      roomData.farmOrdersDone = Array.isArray(d.farmOrdersDone) ? d.farmOrdersDone : [];
+      roomData.farmMachines = d.farmMachines || {};
       // Load multi-layer data for visited room (visitor starts on floor 1)
       roomData.unlockedLayers = d.unlockedLayers ?? 1;
       const rawLayerData = d.layerData ? JSON.parse(JSON.stringify(d.layerData)) : {};

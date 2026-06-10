@@ -11,6 +11,7 @@
     let _farmAnimStates = {};   // ephemeral wander state per animal id (not saved)
     let _farmParticles = [];    // floating hearts / +coins effects
     let _farmDropSeq = 0;
+    let _selectedCrop = 'wheat'; // crop planted when you tap an empty plot
 
     // Trough position on the pasture (normalized)
     const FARM_TROUGH_X = 0.14, FARM_TROUGH_Y = 0.58;
@@ -36,6 +37,8 @@
         foodPerDay: FARM_FOOD_PER_DAY,
         gainPerDay: FARM_HAPPY_GAIN_PER_DAY,
         decayPerDay: FARM_HAPPY_DECAY_PER_DAY,
+        levels: FARM_LEVELS,
+        levelSpeedup: FARM_LEVEL_SPEEDUP,
       });
       roomData.farmAnimals = plan.animals;
       roomData.farmFood = plan.foodStock;
@@ -50,7 +53,66 @@
           y: Math.max(0.50, Math.min(0.92, (a?.posY ?? 0.7) + (Math.random() - 0.5) * 0.12)),
         });
       }
+      if (roomData.farmAutoCollect) _autoCollectAll(); // straight into stock, no tapping
       return plan.spawns.length;
+    }
+
+    // Current animal cap (base + expansions).
+    function farmAnimalCap() {
+      return FARM_MAX_ANIMALS + 10 * (roomData.farmCapLevel || 0);
+    }
+
+    // Screen-normalized position of garden plot index i (a row near the bottom).
+    function _farmPlotPos(i) {
+      return { x: 0.30 + i * 0.085, y: 0.86 };
+    }
+
+    // Local YYYY-MM-DD for the daily orders seed.
+    function _farmToday() {
+      const d = new Date();
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    // Today's deterministic delivery orders (same for everyone that day).
+    function _farmOrders() {
+      const prices = farmProductPrices();
+      const prods = FARM_ORDER_PRODUCTS.map(id => ({ id: id, coins: prices[id] || 0 }));
+      return generateFarmOrders(_farmToday(), prods, FARM_ORDER_COUNT, FARM_ORDER_MARKUP, FARM_ORDER_BONUS);
+    }
+    // Roll the order board over to a new day; returns true if it changed.
+    function _ensureFarmOrders() {
+      const today = _farmToday();
+      if (roomData.farmOrdersDay !== today) {
+        roomData.farmOrdersDay = today;
+        roomData.farmOrdersDone = [];
+        return true;
+      }
+      return false;
+    }
+
+    // Coat-variant palette for an animal (null = default colours).
+    function _farmVariantPal(a) {
+      const list = (typeof FARM_VARIANTS !== 'undefined' && FARM_VARIANTS[a.type]) || [];
+      const v = list.find(x => x.id === a.variant);
+      return v ? (v.pal || null) : null;
+    }
+
+    // Move every ground drop into stock (+XP). Used by the Auto-Collector and on
+    // offline catch-up when it's owned. Returns how many were collected.
+    function _autoCollectAll() {
+      const drops = roomData.farmDrops || [];
+      if (!drops.length) return 0;
+      roomData.farmStock = roomData.farmStock || {};
+      for (const d of drops) {
+        const def = FARM_ANIMALS.find(f => f.id === d.type);
+        const pid = def ? def.drop.id : d.type;
+        roomData.farmStock[pid] = (roomData.farmStock[pid] || 0) + 1;
+        roomData.farmTotalCollected = (roomData.farmTotalCollected || 0) + 1;
+        const a = (roomData.farmAnimals || []).find(an => an.id === d.animalId);
+        if (a) a.collected = (a.collected || 0) + 1;
+      }
+      const n = drops.length;
+      roomData.farmDrops = [];
+      return n;
     }
 
     /* ── Open / close ── */
@@ -68,20 +130,26 @@
     }
 
     function openFarm() {
-      if (viewingUid !== currentUid) return;
       isFarmView = true;
       document.getElementById('farmView')?.classList.add('visible');
       _setFarmPanelMode(true);
-      if (runFarmProduction() > 0) saveRoom();
+      const isOwner = viewingUid === currentUid;
+      if (isOwner) {
+        const _ch1 = runFarmProduction() > 0;
+        const _ch2 = _ensureFarmOrders();
+        if (_ch1 || _ch2) saveRoom();
+      }
       renderFarmPanel();
       drawFarmCanvas();
-      // Herd eats + produces once a minute while the farm is open
+      // Herd eats + produces once a minute while the farm is open (owner only).
       clearInterval(_farmTickInterval);
-      _farmTickInterval = setInterval(() => {
-        if (document.hidden || !isFarmView) return;
-        if (runFarmProduction() > 0) saveRoom();
-        renderFarmPanel(); // keep food count + happiness fresh
-      }, 60 * 1000);
+      if (isOwner) {
+        _farmTickInterval = setInterval(() => {
+          if (document.hidden || !isFarmView) return;
+          if (runFarmProduction() > 0) saveRoom();
+          renderFarmPanel(); // keep food count + happiness fresh
+        }, 60 * 1000);
+      }
     }
 
     function closeFarm() {
@@ -98,12 +166,29 @@
     function renderFarmPanel() {
       const panel = document.getElementById('farmPanel');
       if (!panel) return;
+
+      // Visiting someone else's farm — read-only summary + a friendly cheer.
+      if (viewingUid !== currentUid) {
+        const herd = roomData.farmAnimals || [];
+        const counts = {};
+        for (const a of herd) counts[a.type] = (counts[a.type] || 0) + 1;
+        const herdLine = FARM_ANIMALS.filter(d => counts[d.id]).map(d => d.emoji + '×' + counts[d.id]).join('  ') || 'No animals yet';
+        panel.innerHTML =
+          '<div class="farm-panel-head">🚜 ' + (roomData.displayName || 'Their') + '\'s Farm</div>' +
+          '<div class="farm-shop-row"><span class="farm-shop-animal">' + herd.length + ' animals</span><span class="farm-shop-drop">' + (roomData.farmAnimals || []).reduce((m, a) => Math.max(m, animalLevel(a.collected, FARM_LEVELS)), 0) + ' top Lv</span></div>' +
+          '<div class="farm-shop-row"><span class="farm-shop-animal">' + herdLine + '</span></div>' +
+          '<div class="farm-shop-row"><span class="farm-shop-animal">🌻 ' + (roomData.farmDecors || []).length + ' decorations · 🌱 ' + (roomData.farmPlots || []).length + ' plots</span></div>' +
+          '<div class="farm-panel-hint">You\'re visiting — tap 👍 to cheer this farm!</div>' +
+          '<button class="farm-shop-buy" style="width:100%;margin-top:8px;padding:8px" onclick="cheerFarm()">👍 Cheer this farm</button>';
+        return;
+      }
+
       const animals = roomData.farmAnimals || [];
       const drops = roomData.farmDrops || [];
       const counts = {}, dropCounts = {};
       for (const a of animals) counts[a.type] = (counts[a.type] || 0) + 1;
       for (const d of drops) dropCounts[d.animalId] = (dropCounts[d.animalId] || 0) + 1;
-      const full = animals.length >= FARM_MAX_ANIMALS;
+      const full = animals.length >= farmAnimalCap();
 
       // Food trough: stock bar + refill button (fills the trough, coins permitting)
       const food = Math.floor(roomData.farmFood || 0);
@@ -119,6 +204,44 @@
           '</span>' +
           '<button class="farm-shop-buy" onclick="refillFarmFood()"' + (refillUnits <= 0 ? ' disabled' : '') + '>+' + refillUnits + ' · ' + (refillUnits * FARM_FOOD_COST) + '🪙</button>' +
         '</div>';
+
+      // Produce stock — collected products, each sellable (Sell / Sell all)
+      const prices = farmProductPrices(), meta = farmProductMeta();
+      const stock = roomData.farmStock || {};
+      const stockIds = Object.keys(stock).filter(k => stock[k] > 0);
+      const sellAllVal = farmSellAllValue(stock, prices);
+      const stockHtml =
+        '<div class="farm-section-title">📦 Produce' +
+          (sellAllVal > 0 ? ' <button class="farm-shop-buy" onclick="sellAllFarm()">Sell all · ' + sellAllVal + '🪙</button>' : '') +
+        '</div>' +
+        (!stockIds.length
+          ? '<div class="farm-panel-empty">Tap produce on the farm to collect it here.</div>'
+          : stockIds.map(id => {
+              const m = meta[id] || { emoji: '❓', name: id };
+              return '<div class="farm-shop-row">' +
+                '<span class="farm-shop-animal">' + m.emoji + ' ' + m.name + ' <small>×' + stock[id] + '</small></span>' +
+                '<span class="farm-shop-drop">' + (prices[id] || 0) + '🪙 ea</span>' +
+                '<button class="farm-shop-buy" onclick="sellFarmProduct(\'' + id + '\')">Sell ' + (stock[id] * (prices[id] || 0)) + '🪙</button>' +
+                '</div>';
+            }).join(''));
+
+      // Daily delivery orders
+      const ordersList = _farmOrders();
+      const ordersDone = roomData.farmOrdersDone || [];
+      const ordersHtml =
+        '<div class="farm-section-title">📋 Orders <span class="farm-panel-cap">resets daily</span></div>' +
+        ordersList.map((o, i) => {
+          const isDone = ordersDone.includes(i);
+          const canDo = !isDone && o.items.every(it => (stock[it.id] || 0) >= it.qty);
+          const itemsStr = o.items.map(it => { const mm = meta[it.id] || { emoji: '❓' }; return mm.emoji + '×' + it.qty; }).join('  ');
+          return '<div class="farm-shop-row">' +
+            '<span class="farm-shop-animal">' + itemsStr + '</span>' +
+            '<span class="farm-shop-drop">+' + o.reward + '🪙</span>' +
+            (isDone
+              ? '<span class="farm-shop-drop">✓ done</span>'
+              : '<button class="farm-shop-buy" onclick="fulfillFarmOrder(' + i + ')"' + (canDo ? '' : ' disabled') + '>Deliver</button>') +
+            '</div>';
+        }).join('');
 
       const shopHtml =
         '<div class="farm-section-title">🛒 Animal Shop</div>' +
@@ -140,11 +263,12 @@
               if (!def) return '';
               const h = Math.round(a.happiness);
               const color = h > 60 ? '#6dd56d' : h > 30 ? '#f2c94c' : '#eb5757';
+              const lvl = animalLevel(a.collected, FARM_LEVELS);
               const waiting = dropCounts[a.id] || 0;
               return '<div class="farm-herd-row">' +
                 '<span class="farm-herd-emoji">' + def.emoji + '</span>' +
                 '<span class="farm-herd-info">' +
-                  '<span class="farm-herd-name">' + def.name + ' · ' + h + '%</span>' +
+                  '<span class="farm-herd-name">' + def.name + ' <small>Lv' + lvl + '</small> · ' + h + '%</span>' +
                   '<span class="farm-herd-bar"><span style="width:' + h + '%;background:' + color + '"></span></span>' +
                 '</span>' +
                 '<span class="farm-herd-drops">' + (waiting ? def.drop.emoji + ' ×' + waiting : '') + '</span>' +
@@ -162,10 +286,73 @@
             '</div>';
         }).join('');
 
+      // Garden: plot count + Add-plot, and crop seeds you can select to plant
+      const plots = roomData.farmPlots || [];
+      const usedPlots = plots.filter(p => p.crop).length;
+      const gardenHtml =
+        '<div class="farm-section-title">🌱 Garden ' +
+          (plots.length < FARM_PLOT_MAX
+            ? '<button class="farm-shop-buy" onclick="addFarmPlot()"' + (roomData.coins < FARM_PLOT_COST ? ' disabled' : '') + '>+ Plot · ' + FARM_PLOT_COST + '🪙</button>'
+            : '<span class="farm-panel-cap">' + plots.length + ' plots</span>') +
+        '</div>' +
+        '<div class="farm-panel-empty" style="padding-bottom:2px">' + usedPlots + '/' + plots.length + ' plots planted · tap soil on the farm to plant the selected seed</div>' +
+        FARM_CROPS.map(c => {
+          const sel = _selectedCrop === c.id;
+          const yld = c.yield.food ? ('+' + c.yield.food + ' 🌾food') : (FARM_PRODUCTS[c.yield.product].emoji + ' ' + farmProductPrices()[c.yield.product] + '🪙');
+          return '<div class="farm-shop-row" style="' + (sel ? 'background:rgba(247,201,126,.12);border-radius:8px' : '') + '">' +
+            '<span class="farm-shop-animal">' + c.emoji + ' ' + c.name + ' <small>' + Math.round(c.growMs / 60000) + 'm → ' + yld + '</small></span>' +
+            '<button class="farm-shop-buy" onclick="selectFarmCrop(\'' + c.id + '\')">' + (sel ? '✓ Seed ' : 'Seed ') + c.seedCost + '🪙</button>' +
+            '</div>';
+        }).join('');
+
+      // Workshop: processing machines (buy → make → collect)
+      const machines = roomData.farmMachines || {};
+      const nowMs = Date.now();
+      const workshopHtml =
+        '<div class="farm-section-title">🏭 Workshop</div>' +
+        FARM_MACHINES.map(mc => {
+          const st = machines[mc.id] || {};
+          const inStr = Object.keys(mc.in).map(id => (meta[id] ? meta[id].emoji : id) + '×' + mc.in[id]).join('+');
+          const outM = meta[mc.out.id] || { emoji: '❓' };
+          const recipe = inStr + ' → ' + outM.emoji;
+          let right;
+          if (!st.owned) {
+            right = '<button class="farm-shop-buy" onclick="buyFarmMachine(\'' + mc.id + '\')"' + (roomData.coins < mc.cost ? ' disabled' : '') + '>' + mc.cost + '🪙</button>';
+          } else if (st.startedAt) {
+            const prog = cropProgress(st.startedAt, nowMs, mc.timeMs);
+            right = prog >= 1
+              ? '<button class="farm-shop-buy" onclick="collectFarmMachine(\'' + mc.id + '\')">Collect ' + outM.emoji + '</button>'
+              : '<span class="farm-shop-drop">' + Math.ceil((mc.timeMs - (nowMs - st.startedAt)) / 60000) + 'm</span>';
+          } else {
+            const canStart = Object.keys(mc.in).every(id => (stock[id] || 0) >= mc.in[id]);
+            right = '<button class="farm-shop-buy" onclick="startFarmMachine(\'' + mc.id + '\')"' + (canStart ? '' : ' disabled') + '>Make</button>';
+          }
+          return '<div class="farm-shop-row">' +
+            '<span class="farm-shop-animal">' + mc.emoji + ' ' + mc.name + ' <small>' + recipe + '</small></span>' + right +
+            '</div>';
+        }).join('');
+
+      const expLvl = roomData.farmCapLevel || 0;
+      const expandCost = expLvl < FARM_EXPAND_COSTS.length ? FARM_EXPAND_COSTS[expLvl] : null;
+      const upgradesHtml =
+        '<div class="farm-section-title">⚙️ Upgrades</div>' +
+        '<div class="farm-shop-row">' +
+          '<span class="farm-shop-animal">🏞️ Expand farm <small>cap ' + farmAnimalCap() + '</small></span>' +
+          (expandCost == null
+            ? '<span class="farm-shop-drop">MAX</span>'
+            : '<button class="farm-shop-buy" onclick="expandFarm()"' + (roomData.coins < expandCost ? ' disabled' : '') + '>+10 · ' + expandCost + '🪙</button>') +
+        '</div>' +
+        '<div class="farm-shop-row">' +
+          '<span class="farm-shop-animal">🤖 Auto-Collector <small>produce → stock</small></span>' +
+          (roomData.farmAutoCollect
+            ? '<span class="farm-shop-drop">✓ ON</span>'
+            : '<button class="farm-shop-buy" onclick="buyFarmAutoCollect()"' + (roomData.coins < FARM_AUTOCOLLECT_COST ? ' disabled' : '') + '>' + FARM_AUTOCOLLECT_COST + '🪙</button>') +
+        '</div>';
+
       panel.innerHTML =
-        '<div class="farm-panel-head">🚜 Farm <span class="farm-panel-cap">' + animals.length + '/' + FARM_MAX_ANIMALS + ' animals</span></div>' +
-        foodHtml + shopHtml + herdHtml + decorHtml +
-        '<div class="farm-panel-hint">Keep the trough filled — fed animals are happy and produce faster! Drag decor to arrange your farm.</div>';
+        '<div class="farm-panel-head">🚜 Farm <span class="farm-panel-cap">' + animals.length + '/' + farmAnimalCap() + ' animals</span></div>' +
+        foodHtml + ordersHtml + stockHtml + shopHtml + herdHtml + gardenHtml + workshopHtml + decorHtml + upgradesHtml +
+        '<div class="farm-panel-hint">Keep the trough filled — fed animals are happy and produce faster! Tap produce to collect, then sell it. Drag decor to arrange your farm.</div>';
     }
 
     /* ── Actions ── */
@@ -188,23 +375,59 @@
       const def = FARM_ANIMALS.find(f => f.id === typeId);
       if (!def) return;
       roomData.farmAnimals = roomData.farmAnimals || [];
-      if (roomData.farmAnimals.length >= FARM_MAX_ANIMALS) return showToast('Farm is full! (' + FARM_MAX_ANIMALS + ' max)', 'error');
+      if (roomData.farmAnimals.length >= farmAnimalCap()) return showToast('Farm is full! (' + farmAnimalCap() + ' max) — expand it for more.', 'error');
       if (roomData.coins < def.cost) return showToast('Not enough coins!', 'error');
       roomData.coins -= def.cost;
       const now = Date.now();
+      // Roll a coat variant (first = common default, second = rare).
+      const variants = FARM_VARIANTS[def.id] || [];
+      const variant = (variants.length > 1 && Math.random() < FARM_RARE_CHANCE) ? variants[1] : (variants[0] || { id: null });
       roomData.farmAnimals.push({
         id: 'fa' + now + '_' + Math.floor(Math.random() * 1e4),
         type: def.id,
+        variant: variant.id,
+        collected: 0,
         happiness: FARM_START_HAPPINESS,
         lastDropTime: now,
         posX: 0.15 + Math.random() * 0.7,
         posY: 0.55 + Math.random() * 0.3,
       });
+      roomData.farmVariants = roomData.farmVariants || {};
+      roomData.farmVariants[def.id + '_' + (variant.id || 'default')] = true;
       if (!roomData.farmFoodAt) roomData.farmFoodAt = now; // start the feeding clock
       await saveRoom();
-      showToast(def.emoji + ' ' + def.name + ' joined your farm!', 'success');
+      showToast((variant.rare ? '✨ Rare ' + variant.name + ' ' : def.emoji + ' ') + def.name + ' joined your farm!', 'success');
+      checkAchievements();
       renderFarmPanel();
       renderAll(); // refresh coin counter
+    }
+
+    async function expandFarm() {
+      if (viewingUid !== currentUid) return;
+      const lvl = roomData.farmCapLevel || 0;
+      if (lvl >= FARM_EXPAND_COSTS.length) return showToast('Farm is fully expanded!', '');
+      const cost = FARM_EXPAND_COSTS[lvl];
+      if (roomData.coins < cost) return showToast('Not enough coins!', 'error');
+      roomData.coins -= cost;
+      roomData.farmCapLevel = lvl + 1;
+      await saveRoom();
+      showToast('🏞️ Farm expanded — now holds ' + farmAnimalCap() + ' animals!', 'success');
+      checkAchievements();
+      renderFarmPanel();
+      renderAll();
+    }
+
+    async function buyFarmAutoCollect() {
+      if (viewingUid !== currentUid) return;
+      if (roomData.farmAutoCollect) return;
+      if (roomData.coins < FARM_AUTOCOLLECT_COST) return showToast('Not enough coins!', 'error');
+      roomData.coins -= FARM_AUTOCOLLECT_COST;
+      roomData.farmAutoCollect = true;
+      if (runFarmProduction() >= 0) { /* sweep any drops already on the ground */ }
+      await saveRoom();
+      showToast('🤖 Auto-Collector installed — produce goes straight to your stock!', 'success');
+      renderFarmPanel();
+      renderAll();
     }
 
     async function buyFarmDecor(typeId) {
@@ -226,15 +449,192 @@
       renderAll(); // refresh coin counter
     }
 
+    // Product metadata/prices keyed by product id, sourced from the animals'
+    // drops (processing adds more in a later phase).
+    function farmProductMeta() {
+      const m = {};
+      FARM_ANIMALS.forEach(a => { m[a.drop.id] = { emoji: a.drop.emoji, name: a.drop.name }; });
+      for (const id in FARM_PRODUCTS) m[id] = { emoji: FARM_PRODUCTS[id].emoji, name: FARM_PRODUCTS[id].name };
+      return m;
+    }
+    function farmProductPrices() {
+      const p = {};
+      FARM_ANIMALS.forEach(a => { p[a.drop.id] = a.drop.coins; });
+      for (const id in FARM_PRODUCTS) p[id] = FARM_PRODUCTS[id].coins;
+      return p;
+    }
+
+    // Tap a drop → it goes into farm stock (sell later / use for orders), and the
+    // producing animal gains collection XP toward its level.
+    /* ── Social ── */
+    // Cheer a friend's farm — cosmetic celebration (no cross-user writes, so no
+    // rules change). A coin/host-side reward would need a firestore.rules update.
+    function cheerFarm() {
+      if (viewingUid === currentUid) return;
+      for (let i = 0; i < 8; i++) {
+        _farmParticles.push({ text: ['👍', '❤️', '🎉', '✨'][i % 4], x: 0.2 + Math.random() * 0.6, y: 0.7 + Math.random() * 0.1, vy: -0.0012 - Math.random() * 0.0008, life: 1500, born: performance.now() });
+      }
+      showToast('👍 You cheered ' + (roomData.displayName || 'this') + '\'s farm!', 'success');
+    }
+
+    /* ── Workshop (processing machines) ── */
+    async function buyFarmMachine(id) {
+      if (viewingUid !== currentUid) return;
+      const mc = FARM_MACHINES.find(m => m.id === id);
+      if (!mc) return;
+      roomData.farmMachines = roomData.farmMachines || {};
+      if (roomData.farmMachines[id] && roomData.farmMachines[id].owned) return;
+      if (roomData.coins < mc.cost) return showToast('Not enough coins!', 'error');
+      roomData.coins -= mc.cost;
+      roomData.farmMachines[id] = { owned: true, startedAt: 0 };
+      await saveRoom();
+      showToast(mc.emoji + ' ' + mc.name + ' built!', 'success');
+      renderFarmPanel();
+      renderAll();
+    }
+
+    async function startFarmMachine(id) {
+      if (viewingUid !== currentUid) return;
+      const mc = FARM_MACHINES.find(m => m.id === id);
+      const st = (roomData.farmMachines || {})[id];
+      if (!mc || !st || !st.owned || st.startedAt) return;
+      const stockNow = roomData.farmStock || {};
+      if (!Object.keys(mc.in).every(k => (stockNow[k] || 0) >= mc.in[k])) return showToast('Not enough ingredients!', 'error');
+      Object.keys(mc.in).forEach(k => { stockNow[k] -= mc.in[k]; });
+      roomData.farmStock = stockNow;
+      st.startedAt = Date.now();
+      await saveRoom();
+      showToast(mc.emoji + ' ' + mc.name + ' started…', 'success');
+      renderFarmPanel();
+      renderAll();
+    }
+
+    async function collectFarmMachine(id) {
+      if (viewingUid !== currentUid) return;
+      const mc = FARM_MACHINES.find(m => m.id === id);
+      const st = (roomData.farmMachines || {})[id];
+      if (!mc || !st || !st.owned || !st.startedAt) return;
+      if (cropProgress(st.startedAt, Date.now(), mc.timeMs) < 1) return showToast('Still processing…', '');
+      roomData.farmStock = roomData.farmStock || {};
+      roomData.farmStock[mc.out.id] = (roomData.farmStock[mc.out.id] || 0) + mc.out.qty;
+      st.startedAt = 0;
+      await saveRoom();
+      const outM = farmProductMeta()[mc.out.id];
+      showToast('Collected ' + mc.out.qty + ' ' + (outM ? outM.emoji + ' ' + outM.name : mc.out.id) + '!', 'success');
+      renderFarmPanel();
+      renderAll();
+    }
+
+    /* ── Orders ── */
+    async function fulfillFarmOrder(idx) {
+      if (viewingUid !== currentUid) return;
+      _ensureFarmOrders();
+      const o = _farmOrders()[idx];
+      if (!o || (roomData.farmOrdersDone || []).includes(idx)) return;
+      const stockNow = roomData.farmStock || {};
+      if (!o.items.every(it => (stockNow[it.id] || 0) >= it.qty)) return showToast('Not enough produce for this order.', 'error');
+      o.items.forEach(it => { stockNow[it.id] -= it.qty; });
+      roomData.farmStock = stockNow;
+      roomData.coins += o.reward;
+      roomData.farmOrdersDone = [...(roomData.farmOrdersDone || []), idx];
+      await saveRoom();
+      showToast('📦 Order delivered! +' + o.reward + '🪙', 'success');
+      checkAchievements();
+      renderFarmPanel();
+      renderAll();
+    }
+
+    /* ── Garden ── */
+    function selectFarmCrop(id) { _selectedCrop = id; renderFarmPanel(); }
+
+    async function addFarmPlot() {
+      if (viewingUid !== currentUid) return;
+      roomData.farmPlots = roomData.farmPlots || [];
+      if (roomData.farmPlots.length >= FARM_PLOT_MAX) return showToast('Max plots reached!', '');
+      if (roomData.coins < FARM_PLOT_COST) return showToast('Not enough coins!', 'error');
+      roomData.coins -= FARM_PLOT_COST;
+      roomData.farmPlots.push({ id: 'fp' + Date.now() + '_' + Math.floor(Math.random() * 1e4), crop: null, plantedAt: 0 });
+      await saveRoom();
+      showToast('🌱 New garden plot added!', 'success');
+      renderFarmPanel();
+      renderAll();
+    }
+
+    // Tap a plot: plant the selected seed if empty, harvest if ripe, else show time.
+    function _plantOrHarvestPlot(plot, pos) {
+      const now = Date.now();
+      if (!plot.crop) {
+        const crop = FARM_CROPS.find(c => c.id === _selectedCrop);
+        if (!crop) return;
+        if (roomData.coins < crop.seedCost) return showToast('Not enough coins for ' + crop.name + ' seed!', 'error');
+        roomData.coins -= crop.seedCost;
+        plot.crop = crop.id; plot.plantedAt = now;
+        _farmParticles.push({ text: crop.emoji, x: pos.x, y: pos.y - 0.05, vy: -0.0008, life: 900, born: performance.now() });
+        saveRoom(); renderFarmPanel(); renderAll();
+        return;
+      }
+      const crop = FARM_CROPS.find(c => c.id === plot.crop);
+      if (!crop) { plot.crop = null; plot.plantedAt = 0; saveRoom(); return; }
+      if (cropProgress(plot.plantedAt, now, crop.growMs) < 1) {
+        const left = Math.ceil((crop.growMs - (now - plot.plantedAt)) / 60000);
+        return showToast(crop.emoji + ' ' + crop.name + ' growing — ' + left + 'm left', '');
+      }
+      // Ripe → harvest
+      if (crop.yield.food) {
+        roomData.farmFood = Math.min(FARM_FOOD_MAX, (roomData.farmFood || 0) + crop.yield.food);
+        if (!roomData.farmFoodAt) roomData.farmFoodAt = now;
+        _farmParticles.push({ text: '+' + crop.yield.food + ' 🌾', x: pos.x, y: pos.y - 0.05, vy: -0.0009, life: 1200, born: performance.now() });
+      } else {
+        roomData.farmStock = roomData.farmStock || {};
+        roomData.farmStock[crop.yield.product] = (roomData.farmStock[crop.yield.product] || 0) + crop.yield.qty;
+        const m = FARM_PRODUCTS[crop.yield.product];
+        _farmParticles.push({ text: '+' + crop.yield.qty + ' ' + (m ? m.emoji : ''), x: pos.x, y: pos.y - 0.05, vy: -0.0009, life: 1200, born: performance.now() });
+      }
+      plot.crop = null; plot.plantedAt = 0;
+      saveRoom(); renderFarmPanel(); renderAll();
+    }
+
     function _collectFarmDrop(drop) {
       const def = FARM_ANIMALS.find(f => f.id === drop.type);
-      const coins = def ? def.drop.coins : 0;
+      const prodId = def ? def.drop.id : drop.type;
       roomData.farmDrops = (roomData.farmDrops || []).filter(d => d.id !== drop.id);
-      roomData.coins += coins;
-      _farmParticles.push({ text: '+' + coins + '🪙', x: drop.x, y: drop.y - 0.04, vy: -0.0009, life: 1300, born: performance.now() });
+      roomData.farmStock = roomData.farmStock || {};
+      roomData.farmStock[prodId] = (roomData.farmStock[prodId] || 0) + 1;
+      roomData.farmTotalCollected = (roomData.farmTotalCollected || 0) + 1;
+      const animal = (roomData.farmAnimals || []).find(a => a.id === drop.animalId);
+      if (animal) animal.collected = (animal.collected || 0) + 1;
+      _farmParticles.push({ text: '+1 ' + (def ? def.drop.emoji : ''), x: drop.x, y: drop.y - 0.04, vy: -0.0009, life: 1200, born: performance.now() });
       saveRoom();
-      renderFarmPanel(); // waiting-drop counts + affordability changed
-      renderAll(); // refresh coin counter
+      checkAchievements();
+      renderFarmPanel();
+    }
+
+    async function sellFarmProduct(prodId) {
+      if (viewingUid !== currentUid) return;
+      const qty = (roomData.farmStock || {})[prodId] || 0;
+      if (qty <= 0) return;
+      const price = farmProductPrices()[prodId] || 0;
+      roomData.coins += qty * price;
+      roomData.farmStock[prodId] = 0;
+      await saveRoom();
+      const m = farmProductMeta()[prodId];
+      showToast('Sold ' + qty + ' ' + (m ? m.emoji + ' ' + m.name : prodId) + ' for ' + (qty * price) + '🪙', 'success');
+      checkAchievements();
+      renderFarmPanel();
+      renderAll();
+    }
+
+    async function sellAllFarm() {
+      if (viewingUid !== currentUid) return;
+      const total = farmSellAllValue(roomData.farmStock || {}, farmProductPrices());
+      if (total <= 0) return showToast('No produce to sell.', '');
+      roomData.coins += total;
+      roomData.farmStock = {};
+      await saveRoom();
+      showToast('Sold all produce for ' + total + '🪙!', 'success');
+      checkAchievements();
+      renderFarmPanel();
+      renderAll();
     }
 
     /* ── Scene ── */
@@ -271,6 +671,45 @@
         ctx.textAlign = 'center';
         ctx.fillText('❗', tx, ty - th - 6);
       }
+    }
+
+    // Garden plots: brown soil tiles; growing crops show a progress bar, ripe
+    // crops bob with a ✨ to invite a harvest tap.
+    function _drawFarmPlots(ctx, W, H, t) {
+      const plots = roomData.farmPlots || [];
+      const now = Date.now();
+      const tile = Math.max(22, Math.min(W, H) * 0.05);
+      ctx.textAlign = 'center';
+      plots.forEach((plot, i) => {
+        const pos = _farmPlotPos(i);
+        const px = pos.x * W, py = pos.y * H;
+        // Soil
+        ctx.fillStyle = '#6b4a2e';
+        ctx.fillRect(px - tile / 2, py - tile / 2, tile, tile);
+        ctx.fillStyle = '#5a3d24';
+        ctx.fillRect(px - tile / 2, py - tile / 2, tile, tile * 0.18);
+        ctx.strokeStyle = '#4a3018'; ctx.lineWidth = 2;
+        ctx.strokeRect(px - tile / 2, py - tile / 2, tile, tile);
+        if (!plot.crop) return;
+        const crop = FARM_CROPS.find(c => c.id === plot.crop);
+        if (!crop) return;
+        const prog = cropProgress(plot.plantedAt, now, crop.growMs);
+        if (prog >= 1) {
+          const bob = Math.sin(t / 250 + i) * 2;
+          ctx.font = Math.round(tile * 0.9) + 'px sans-serif';
+          ctx.fillText(crop.emoji, px, py + tile * 0.32 + bob);
+          ctx.font = Math.round(tile * 0.4) + 'px sans-serif';
+          ctx.fillText('✨', px + tile * 0.42, py - tile * 0.34 + bob);
+        } else {
+          // Sprout + growth bar
+          ctx.font = Math.round(tile * (0.3 + prog * 0.5)) + 'px sans-serif';
+          ctx.fillText('🌱', px, py + tile * 0.28);
+          ctx.fillStyle = 'rgba(0,0,0,.35)';
+          ctx.fillRect(px - tile * 0.4, py + tile * 0.42, tile * 0.8, 4);
+          ctx.fillStyle = '#6dd56d';
+          ctx.fillRect(px - tile * 0.4, py + tile * 0.42, tile * 0.8 * prog, 4);
+        }
+      });
     }
 
     function drawFarmCanvas() {
@@ -311,6 +750,7 @@
         _drawHDTree(ctx, W * 0.94, H * 0.46, H * 0.15, windSway * 0.7, night);
 
         _drawFarmTrough(ctx, W, H, night);
+        _drawFarmPlots(ctx, W, H, t);
 
         // Decor (behind animals), drawn renderers, drag-aware
         for (const dc of (roomData.farmDecors || [])) {
@@ -357,7 +797,7 @@
           ctx.save();
           ctx.translate(px, py + bob);
           if (!st.facingRight) ctx.scale(-1, 1); // drawers face right
-          drawFarmAnimal(ctx, a.type, size, t / 120, st.moving);
+          drawFarmAnimal(ctx, a.type, size, t / 120, st.moving, _farmVariantPal(a));
           ctx.restore();
           // Mini happiness bar
           const h = Math.max(0, Math.min(100, a.happiness));
@@ -458,6 +898,13 @@
         const rect = cvs.getBoundingClientRect();
         const cx = (e.clientX - rect.left) / rect.width;
         const cy = (e.clientY - rect.top) / rect.height;
+
+        // Garden plots first (fixed tiles — clearest intent)
+        const plots = roomData.farmPlots || [];
+        for (let i = 0; i < plots.length; i++) {
+          const pos = _farmPlotPos(i);
+          if (Math.hypot(pos.x - cx, pos.y - cy) < 0.05) { _plantOrHarvestPlot(plots[i], pos); return; }
+        }
 
         // Drops take priority (they're the payout)
         let hitDrop = null, hitDist = Infinity;

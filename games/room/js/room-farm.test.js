@@ -123,6 +123,65 @@ test('farmRefillUnits fills to max when affordable, else what coins buy', () => 
   assert.equal(F.farmRefillUnits(0, 100, 3, 5), 0);       // too broke for 1 unit
 });
 
+/* ── animalLevel ── */
+
+test('animalLevel maps collected count to a 1-based level', () => {
+  const L = [0, 10, 30, 60, 100];
+  assert.equal(F.animalLevel(0, L), 1);
+  assert.equal(F.animalLevel(9, L), 1);
+  assert.equal(F.animalLevel(10, L), 2);
+  assert.equal(F.animalLevel(59, L), 3);
+  assert.equal(F.animalLevel(60, L), 4);
+  assert.equal(F.animalLevel(9999, L), 5);
+  assert.equal(F.animalLevel(undefined, L), 1);
+});
+
+/* ── cropProgress ── */
+
+test('cropProgress goes 0→1 over growMs and clamps', () => {
+  assert.equal(F.cropProgress(0, 0, HOUR), 0);
+  assert.equal(F.cropProgress(0, HOUR / 2, HOUR), 0.5);
+  assert.equal(F.cropProgress(0, HOUR, HOUR), 1);
+  assert.equal(F.cropProgress(0, 5 * HOUR, HOUR), 1); // clamp
+  assert.equal(F.cropProgress(null, HOUR, HOUR), 0);  // unplanted
+});
+
+/* ── generateFarmOrders ── */
+
+test('generateFarmOrders is deterministic per seed and well-formed', () => {
+  const products = [{ id: 'egg', coins: 15 }, { id: 'milk', coins: 75 }, { id: 'carrot', coins: 35 }];
+  const a = F.generateFarmOrders('2026-06-10', products, 3, 1.4, 20);
+  const b = F.generateFarmOrders('2026-06-10', products, 3, 1.4, 20);
+  assert.deepEqual(a, b);                       // same day → same orders
+  assert.equal(a.length, 3);
+  const c = F.generateFarmOrders('2026-06-11', products, 3, 1.4, 20);
+  assert.notDeepEqual(a, c);                    // different day → different orders
+  a.forEach(o => {
+    assert.ok(o.items.length >= 1 && o.items.length <= 2);
+    o.items.forEach(it => { assert.ok(it.qty >= 1 && it.qty <= 3); assert.ok(products.some(p => p.id === it.id)); });
+    assert.ok(o.reward > 0);
+  });
+});
+
+/* ── farmSellAllValue ── */
+
+test('farmSellAllValue sums qty × unit price across the stock', () => {
+  const prices = { egg: 15, milk: 75, cheese: 160 };
+  assert.equal(F.farmSellAllValue({ egg: 3, milk: 2 }, prices), 3 * 15 + 2 * 75);
+  assert.equal(F.farmSellAllValue({}, prices), 0);
+  assert.equal(F.farmSellAllValue({ egg: 1, unknown: 5 }, prices), 15); // unknown product = 0
+});
+
+/* ── level speeds up production ── */
+
+test('a higher-level animal out-produces a level-1 animal over the same window', () => {
+  const L = [0, 10, 30, 60, 100];
+  const base = { id: 'a1', type: 'cow', happiness: 100, lastDropTime: 0 };
+  const lvl1 = F.planFarmTick(Object.assign({ animals: [Object.assign({}, base, { collected: 0 })], dropCounts: {}, now: 12 * HOUR, foodStock: 1000, foodAt: 0, levels: L, levelSpeedup: 0.08, dropCap: 99 }, OPTS, { dropCap: 99 }));
+  const lvl5 = F.planFarmTick(Object.assign({ animals: [Object.assign({}, base, { collected: 200 })], dropCounts: {}, now: 12 * HOUR, foodStock: 1000, foodAt: 0, levels: L, levelSpeedup: 0.08, dropCap: 99 }, OPTS, { dropCap: 99 }));
+  assert.ok(lvl5.spawns.length > lvl1.spawns.length, 'level 5 should produce more drops than level 1');
+});
+
 test('farmRefillUnits returns whole units even when foodStock is fractional', () => {
   // foodStock drifts to a float after production; the gap must be floored so the
   // coin charge (units * cost) never becomes fractional.

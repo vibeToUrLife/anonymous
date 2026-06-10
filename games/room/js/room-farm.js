@@ -21,6 +21,61 @@
     return slowMs + (fastMs - slowMs) * h;
   }
 
+  // Animal level (1-based) from how many drops it has produced over its life.
+  // `levels` is an ascending array of collected-count thresholds.
+  function animalLevel(collected, levels) {
+    let lvl = 1;
+    for (let i = 0; i < levels.length; i++) if ((collected || 0) >= levels[i]) lvl = i + 1;
+    return lvl;
+  }
+
+  // Stable string hash (same as the daily-riddle pick) for deterministic seeds.
+  function _hashStr(s) {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; }
+    return Math.abs(h);
+  }
+  // Tiny seeded PRNG (LCG) so a day maps to the same orders for everyone.
+  function _seededRng(seed) {
+    let s = seed >>> 0;
+    return function () { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  }
+
+  // Deterministic daily delivery orders. `products` is [{id, coins}] of eligible
+  // goods. Each order asks for 1-2 products (qty 1-3) and pays raw value × markup
+  // plus a flat bonus. Same (seedStr, products) → identical orders.
+  function generateFarmOrders(seedStr, products, count, markup, bonus) {
+    const rng = _seededRng(_hashStr(seedStr + 'orders'));
+    const orders = [];
+    for (let o = 0; o < count; o++) {
+      const pool = products.slice();
+      const n = Math.min(pool.length, 1 + Math.floor(rng() * 2));
+      const items = [];
+      let raw = 0;
+      for (let k = 0; k < n; k++) {
+        const prod = pool.splice(Math.floor(rng() * pool.length), 1)[0];
+        const qty = 1 + Math.floor(rng() * 3);
+        items.push({ id: prod.id, qty: qty });
+        raw += qty * prod.coins;
+      }
+      orders.push({ items: items, reward: Math.ceil(raw * (markup || 1.4)) + (bonus || 0) });
+    }
+    return orders;
+  }
+
+  // Crop growth fraction 0..1 from planting time to ripe.
+  function cropProgress(plantedAt, now, growMs) {
+    if (plantedAt == null || !(growMs > 0)) return 0;
+    return Math.max(0, Math.min(1, (now - plantedAt) / growMs));
+  }
+
+  // Total coins for selling an entire stock; prices maps product id → unit coins.
+  function farmSellAllValue(stock, prices) {
+    let total = 0;
+    for (const k in stock) total += (stock[k] || 0) * (prices[k] || 0);
+    return total;
+  }
+
   // Advance the whole farm from its last accounting to `now`:
   //   1. The herd eats from the shared trough (foodPerDay units per animal).
   //      Fed time raises every animal's happiness by gainPerDay; once the
@@ -47,7 +102,10 @@
         a.happiness + fedDays * opts.gainPerDay - hungryDays * opts.decayPerDay));
       const last = a.lastDropTime != null ? a.lastDropTime : now;
       if (last > now) return Object.assign({}, a, { happiness: happiness, lastDropTime: now }); // clock skew
-      const cycle = farmCycleMs(happiness, opts.slowMs, opts.fastMs);
+      // Higher-level animals produce faster (cycle shortened by levelSpeedup/level).
+      const level = animalLevel(a.collected, opts.levels || [0]);
+      const speedMult = 1 + (opts.levelSpeedup || 0) * (level - 1);
+      const cycle = farmCycleMs(happiness, opts.slowMs, opts.fastMs) / speedMult;
       const cycles = Math.floor((now - last) / cycle);
       if (cycles <= 0) return Object.assign({}, a, { happiness: happiness });
       const capacity = Math.max(0, opts.dropCap - (opts.dropCounts[a.id] || 0));
@@ -64,5 +122,5 @@
     return Math.max(0, Math.min(Math.floor(foodMax - foodStock), Math.floor(coins / costPerUnit)));
   }
 
-  return { farmCycleMs, planFarmTick, farmRefillUnits };
+  return { farmCycleMs, animalLevel, cropProgress, generateFarmOrders, farmSellAllValue, planFarmTick, farmRefillUnits };
 });

@@ -236,9 +236,8 @@
         // -- Floor hover indicator --
         _drawFloorHover(ctx, W, H);
 
-        // -- Farm barn: gate into the farm view (own room only) --
-        if (viewingUid === currentUid) _drawFarmBarn(ctx, W, H, night);
-        else _farmGateRect = null;
+        // -- Farm barn: gate into the farm view (own farm, or a friend's read-only) --
+        _drawFarmBarn(ctx, W, H, night);
 
         // -- Falling leaves --
         _drawHDLeaves(ctx, W, H, t, windSway, night);

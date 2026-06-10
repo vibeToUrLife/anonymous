@@ -187,11 +187,63 @@
     // from one shared food trough (refilled with coins) — fed animals get happier
     // and produce faster, an empty trough makes happiness decay (no starvation death).
     const FARM_ANIMALS = [
-      { id: 'goose', emoji: '🦆', name: 'Goose', cost: 500,  drop: { emoji: '🥚', name: 'Egg',       coins: 15  } },
-      { id: 'pig',   emoji: '🐷', name: 'Pig',   cost: 1500, drop: { emoji: '🍄', name: 'Truffle',   coins: 40  } },
-      { id: 'cow',   emoji: '🐄', name: 'Cow',   cost: 3000, drop: { emoji: '🥛', name: 'Milk',      coins: 75  } },
-      { id: 'horse', emoji: '🐎', name: 'Horse', cost: 6000, drop: { emoji: '🧲', name: 'Horseshoe', coins: 140 } },
+      { id: 'goose', emoji: '🦆', name: 'Goose', cost: 500,  drop: { id: 'egg',       emoji: '🥚', name: 'Egg',       coins: 15  } },
+      { id: 'pig',   emoji: '🐷', name: 'Pig',   cost: 1500, drop: { id: 'truffle',   emoji: '🍄', name: 'Truffle',   coins: 40  } },
+      { id: 'cow',   emoji: '🐄', name: 'Cow',   cost: 3000, drop: { id: 'milk',      emoji: '🥛', name: 'Milk',      coins: 75  } },
+      { id: 'horse', emoji: '🐎', name: 'Horse', cost: 6000, drop: { id: 'horseshoe', emoji: '🧲', name: 'Horseshoe', coins: 140 } },
     ];
+    // Animals level up by total drops collected from them; higher level = faster
+    // production (see room-farm.js planFarmTick / animalLevel).
+    const FARM_LEVELS = [0, 10, 30, 70, 150];   // collected thresholds → Lv1..Lv5
+    const FARM_LEVEL_SPEEDUP = 0.10;            // +10% production speed per level above 1
+    const FARM_EXPAND_COSTS = [5000, 15000];    // raise the animal cap by +10 per expansion
+    const FARM_AUTOCOLLECT_COST = 4000;         // one-time: auto-collects produce into stock
+
+    // Coat variants: each new animal is the common variant unless it rolls the
+    // rare one (FARM_RARE_CHANCE). The first entry per type is the default (no
+    // palette → drawer uses its built-in colours); rare entries override colours.
+    // Non-animal sellable products (crops + processed goods). Animal drops keep
+    // their price on FARM_ANIMALS[].drop; the farm view merges both into one
+    // product registry for selling / orders / processing.
+    const FARM_PRODUCTS = {
+      carrot: { emoji: '🥕', name: 'Carrot', coins: 35 },
+      corn:   { emoji: '🌽', name: 'Corn',   coins: 70 },
+      cheese: { emoji: '🧀', name: 'Cheese', coins: 200 },
+      bread:  { emoji: '🍞', name: 'Bread',  coins: 110 },
+      cake:   { emoji: '🍰', name: 'Cake',   coins: 260 },
+    };
+
+    // Crops grown in garden plots. wheat refills the trough (closes the food
+    // loop); others yield a sellable product.
+    const FARM_CROPS = [
+      { id: 'wheat',  emoji: '🌾', name: 'Wheat',  seedCost: 10, growMs: 60 * 60 * 1000,  yield: { food: 12 } },
+      { id: 'carrot', emoji: '🥕', name: 'Carrot', seedCost: 25, growMs: 90 * 60 * 1000,  yield: { product: 'carrot', qty: 1 } },
+      { id: 'corn',   emoji: '🌽', name: 'Corn',   seedCost: 50, growMs: 120 * 60 * 1000, yield: { product: 'corn', qty: 1 } },
+    ];
+    const FARM_PLOT_MAX = 8;       // most garden plots you can own
+    const FARM_PLOT_COST = 300;    // coins per added plot
+
+    const FARM_ORDER_COUNT = 3;          // daily delivery orders
+    const FARM_ORDER_MARKUP = 1.5;       // reward = raw product value × this …
+    const FARM_ORDER_BONUS = 25;         // … plus this flat bonus per order
+    // Products eligible for orders (kept to obtainable mid-tier goods).
+    const FARM_ORDER_PRODUCTS = ['egg', 'truffle', 'milk', 'carrot', 'corn'];
+
+    // Processing machines: one-time buy, then turn raw produce into pricier goods
+    // over a timer (one job at a time). `in` maps product id → qty consumed.
+    const FARM_MACHINES = [
+      { id: 'dairy', emoji: '🧀', name: 'Dairy',     cost: 2000, in: { milk: 1 },          out: { id: 'cheese', qty: 1 }, timeMs: 30 * 60 * 1000 },
+      { id: 'bakery', emoji: '🍞', name: 'Bakery',    cost: 2500, in: { corn: 1 },          out: { id: 'bread',  qty: 1 }, timeMs: 30 * 60 * 1000 },
+      { id: 'oven',  emoji: '🍰', name: 'Cake Oven', cost: 5000, in: { egg: 2, milk: 1 },  out: { id: 'cake',   qty: 1 }, timeMs: 60 * 60 * 1000 },
+    ];
+
+    const FARM_RARE_CHANCE = 0.15;
+    const FARM_VARIANTS = {
+      goose: [ { id: 'white',   name: 'White',   rare: false }, { id: 'golden', name: 'Golden', rare: true, pal: { body: '#f3d676', wing: '#e6c45a', beak: '#e08a2c', leg: '#d8842c' } } ],
+      pig:   [ { id: 'pink',    name: 'Pink',    rare: false }, { id: 'golden', name: 'Golden', rare: true, pal: { coat: '#f0cf8a', ear: '#e0b96a' } } ],
+      cow:   [ { id: 'classic', name: 'Classic', rare: false }, { id: 'brown',  name: 'Brown',  rare: true, pal: { coat: '#e8c89a', light: '#d8b681', patch: '#6b4a2e' } } ],
+      horse: [ { id: 'bay',     name: 'Bay',     rare: false }, { id: 'black',  name: 'Black',  rare: true, pal: { coat: '#4a3f3a', mane: '#241f1b' } } ],
+    };
     const FARM_MAX_ANIMALS = 20;                   // total animals on the farm, any mix
     const FARM_DROP_CAP = 3;                       // max uncollected drops per animal
     const FARM_CYCLE_SLOW_MS = 6 * 60 * 60 * 1000; // production cycle at happiness 0
@@ -492,6 +544,12 @@
       { id: 'ach_acc_3',         icon: '🎩', name: 'Fashionista',        desc: 'Own 3 accessories',           check: (d) => (d.ownedAccessories || []).length >= 3 },
       { id: 'ach_gacha_5',       icon: '🎰', name: 'Lucky Player',       desc: 'Pull gacha 5 times',          check: (d) => (d.gachaPulls || 0) >= 5 },
       { id: 'ach_gift_given',    icon: '🎁', name: 'Generous',           desc: 'Send a gift to someone',      check: (d) => (d.giftsGiven || 0) >= 1 },
+      { id: 'ach_farm_first',    icon: '🚜', name: 'Farmer',             desc: 'Buy your first farm animal',  check: (d) => (d.farmAnimals || []).length >= 1 },
+      { id: 'ach_farm_all',      icon: '🐄', name: 'Full Barn',          desc: 'Own all 4 farm animals',      check: (d) => new Set((d.farmAnimals || []).map(a => a.type)).size >= 4 },
+      { id: 'ach_farm_100',      icon: '🥚', name: 'Harvest Hand',       desc: 'Collect 100 produce',         check: (d) => (d.farmTotalCollected || 0) >= 100 },
+      { id: 'ach_farm_1k',       icon: '🌾', name: 'Master Farmer',      desc: 'Collect 1,000 produce',       check: (d) => (d.farmTotalCollected || 0) >= 1000 },
+      { id: 'ach_farm_lv5',      icon: '⭐', name: 'Prize Livestock',    desc: 'Raise a farm animal to Lv5',  check: (d) => (d.farmAnimals || []).some(a => animalLevel(a.collected, FARM_LEVELS) >= 5) },
+      { id: 'ach_farm_expand',   icon: '🏞️', name: 'Land Baron',         desc: 'Expand your farm',            check: (d) => (d.farmCapLevel || 0) >= 1 },
     ];
 
     /* ═══════════════════════════════
