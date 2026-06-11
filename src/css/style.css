@@ -1,4 +1,10 @@
 
+/* Declare the app's own theming so Edge's "Automatic Dark Mode for Web
+   Contents" stops force-inverting the page — that inversion was turning
+   the dark/wooden theme's faint text into dark-on-dark (invisible in Edge). */
+:root { color-scheme: dark; }
+body.light-theme { color-scheme: light; }
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
