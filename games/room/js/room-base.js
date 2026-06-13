@@ -221,8 +221,10 @@
       sausage: { emoji: '🌭', name: 'Sausage', coins: 130 },
       bacon:   { emoji: '🥓', name: 'Bacon',   coins: 180 },
       ham:     { emoji: '🍖', name: 'Ham',     coins: 240 },
+      tools:   { emoji: '🔧', name: 'Tools',   coins: 170 },   // Forge: from horseshoes
+      bell:    { emoji: '🔔', name: 'Bell',    coins: 360 },   // Forge: from horseshoes
     };
-    // Meat yielded when an animal is butchered (retired), by tier.
+    // Base meat from butchering, by tier (the animal's level adds more — see _meatYield).
     const FARM_MEAT_YIELD = { goose: 1, pig: 2, cow: 3, horse: 4 };
 
     // Crops grown in garden plots. wheat refills the trough (closes the food
@@ -259,11 +261,16 @@
       { id: 'oven', emoji: '🍰', name: 'Cake Oven', cost: 5000, recipes: [
         { in: { egg: 2, milk: 1 }, out: { id: 'cake',    qty: 1 }, timeMs: 60 * M },
         { in: { egg: 1, corn: 1 }, out: { id: 'pancake', qty: 1 }, timeMs: 35 * M },
+        { in: { carrot: 2 },       out: { id: 'cake',    qty: 1 }, timeMs: 45 * M },  // carrot cake
       ] },
       { id: 'butcher', emoji: '🔪', name: 'Butcher', cost: 2500, recipes: [
         { in: { meat: 1 }, out: { id: 'sausage', qty: 1 }, timeMs: 20 * M },
         { in: { meat: 1 }, out: { id: 'bacon',   qty: 1 }, timeMs: 30 * M },
         { in: { meat: 2 }, out: { id: 'ham',     qty: 1 }, timeMs: 40 * M },
+      ] },
+      { id: 'forge', emoji: '🔨', name: 'Forge', cost: 3000, recipes: [   // turns horseshoes into goods
+        { in: { horseshoe: 1 }, out: { id: 'tools', qty: 1 }, timeMs: 30 * M },
+        { in: { horseshoe: 2 }, out: { id: 'bell',  qty: 1 }, timeMs: 50 * M },
       ] },
     ];
     // Each built machine runs jobs in parallel slots. Building gives 1 slot; buy

@@ -514,6 +514,10 @@
     function _ownsButcher() {
       return !!(roomData.farmMachines && roomData.farmMachines.butcher && roomData.farmMachines.butcher.owned);
     }
+    // Meat from butchering = tier base + 1 per level above 1 (bigger/older = more meat).
+    function _meatYield(a) {
+      return (FARM_MEAT_YIELD[a.type] || 1) + Math.max(0, animalLevel(a.collected, FARM_LEVELS) - 1);
+    }
     function askButcher(id) {
       if (!_ownsButcher()) { showToast('🔪 Build the Butcher first — Garden tab → Build Machines.', 'error'); switchFarmTab('garden'); return; }
       _farmButcherConfirmId = id; renderFarmPanel();
@@ -526,7 +530,7 @@
       const animals = roomData.farmAnimals || [];
       const a = animals.find(x => x.id === id);
       if (!a) { renderFarmPanel(); return; }
-      const yield_ = FARM_MEAT_YIELD[a.type] || 1;
+      const yield_ = _meatYield(a);
       roomData.farmAnimals = animals.filter(x => x.id !== id);
       roomData.farmDrops = (roomData.farmDrops || []).filter(d => d.animalId !== id); // drop its pending produce
       delete _farmAnimStates[id];
@@ -1024,7 +1028,7 @@
     }
 
     // Fixed slot position for machine `slot` (its hut, drawn when owned).
-    function _workshopPos(slot) { return { x: 0.30 + slot * 0.13, y: 0.45 }; }
+    function _workshopPos(slot) { return { x: 0.24 + slot * 0.12, y: 0.45 }; }
 
     // Zones animals must not walk into: owned machine huts + the cart (when here).
     function _farmBlockedZones() {
@@ -1282,7 +1286,8 @@
       const color = h > 60 ? '#6dd56d' : h > 30 ? '#f2c94c' : '#eb5757';
       const mark = a.variant === 'rgb' ? ' 🌈' : ((FARM_VARIANTS[a.type] || []).some(v => v.id === a.variant && v.rare) ? ' ✨' : '');
       const waiting = (roomData.farmDrops || []).filter(d => d.type === a.type).length;   // pooled per type
-      const meat = FARM_MEAT_YIELD[a.type] || 1;
+      const meatBase = FARM_MEAT_YIELD[a.type] || 1;
+      const meat = _meatYield(a);   // tier base + (level − 1)
       // Production: current cycle (faster when happy / higher level) + next-drop countdown.
       const cycleMs = farmCycleMs(a.happiness, FARM_CYCLE_SLOW_MS, FARM_CYCLE_FAST_MS) / (1 + FARM_LEVEL_SPEEDUP * (lvl - 1));
       let prodLine;
@@ -1297,7 +1302,7 @@
       const lvlInfo = nextThresh != null ? ((a.collected || 0) + '/' + nextThresh + ' to Lv' + (lvl + 1)) : 'max level';
       let actions;
       if (_animalButcherConfirm) {
-        actions = '<div class="ws-status">Butcher ' + def.name + '? You get 🥩×' + meat + ' — the animal is gone for good.</div>' +
+        actions = '<div class="ws-status">Butcher ' + def.name + '? You get 🥩×' + meat + ' (tier ' + meatBase + ' + Lv bonus ' + (meat - meatBase) + ') — gone for good.</div>' +
           '<button class="cp-crop" style="justify-content:center;font-weight:800;background:var(--g-danger);color:#fff" onclick="confirmButcherAnimal()">✓ Butcher</button>' +
           '<button class="cp-crop" style="justify-content:center" onclick="cancelAnimalButcher()">✗ Keep it</button>';
       } else if (_ownsButcher()) {
