@@ -236,7 +236,7 @@
       { id: 'carrot', emoji: '🥕', name: 'Carrot', seedCost: 25, growMs: 90 * 60 * 1000,  yield: { product: 'carrot', qty: 1 } },
       { id: 'corn',   emoji: '🌽', name: 'Corn',   seedCost: 50, growMs: 120 * 60 * 1000, yield: { product: 'corn', qty: 1 } },
     ];
-    const FARM_PLOT_MAX = 8;       // most garden plots you can own
+    const FARM_PLOT_MAX = 20;      // most garden plots you can own
     const FARM_PLOT_COST = 300;    // coins per added plot
 
     const FARM_ORDER_COUNT = 3;          // daily delivery orders

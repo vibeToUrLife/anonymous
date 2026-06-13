@@ -94,8 +94,11 @@
     }
 
     // Screen-normalized position of garden plot index i (a row near the bottom).
+    // Plots laid out in rows of 10 across the soil strip (fits up to FARM_PLOT_MAX).
     function _farmPlotPos(i) {
-      return { x: 0.30 + i * 0.085, y: 0.86 };
+      const perRow = 10;
+      const col = i % perRow, row = Math.floor(i / perRow);
+      return { x: 0.09 + col * 0.087, y: 0.82 + row * 0.075 };
     }
 
     // Local YYYY-MM-DD for the daily orders seed.
@@ -376,8 +379,9 @@
         '</div>' +
         '<div class="farm-panel-empty" style="padding-bottom:2px">' + usedPlots + '/' + plots.length + ' planted · ' + ripePlots + ' ripe</div>' +
         '<div class="farm-howto">' +
-          '👆 Tap an empty plot to choose a seed · ✋ drag to plant several.<br>' +
-          '⏳ Tap any ripe crop to harvest <b>everything that\'s ready</b> at once.' +
+          '👆 Tap a plot to pick a seed.<br>' +
+          '✋ <b>Hold and drag</b> across plots to plant a whole row at once.<br>' +
+          '⏳ Tap any ripe crop to harvest <b>everything that\'s ready</b>.' +
         '</div>';
 
       // Build Machines: buy here; built ones appear on the farm where you operate them.
@@ -831,20 +835,17 @@
     function openCropPicker(plotIndex) {
       const picker = document.getElementById('cropPicker');
       if (!picker) return;
-      const prices = farmProductPrices();
       picker.innerHTML =
         '<div class="cp-head">🌱 Plant what?</div>' +
         FARM_CROPS.map(c => {
-          const yld = c.yield.food
-            ? ('+' + c.yield.food + ' 🌾 food')
-            : ((FARM_PRODUCTS[c.yield.product] ? FARM_PRODUCTS[c.yield.product].emoji : '') + ' ' + (prices[c.yield.product] || 0) + '🪙');
           const afford = roomData.coins >= c.seedCost;
           return '<button class="cp-crop"' + (afford ? '' : ' disabled') + ' onclick="pickCrop(' + plotIndex + ',\'' + c.id + '\')">' +
             '<span class="cp-emoji">' + c.emoji + '</span>' +
-            '<span class="cp-info"><b>' + c.name + '</b><small>' + _fmtFarmTime(c.growMs) + ' → ' + yld + '</small></span>' +
+            '<span class="cp-info"><b>' + c.name + '</b><small>grows in ' + _fmtFarmTime(c.growMs) + '</small></span>' +
             '<span class="cp-cost">' + c.seedCost + '🪙</span>' +
             '</button>';
         }).join('') +
+        '<div class="farm-panel-empty" style="padding:2px 2px 0">✋ Hold &amp; drag across plots to plant a whole row.</div>' +
         '<button class="cp-close" onclick="closeCropPicker()">Close</button>';
       picker.style.display = 'block';
     }
