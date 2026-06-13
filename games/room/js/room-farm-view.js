@@ -1479,6 +1479,86 @@
       return _farmAnimStates[a.id];
     }
 
+    // Group the herd into one fenced pen per animal type. Pen WIDTHS are proportional
+    // to each type's count, so animal density stays even and every animal is visible.
+    // Pure normalized (0..1) geometry — no canvas size needed.
+    const FARM_PEN_PLURAL = { goose: 'Geese', pig: 'Pigs', cow: 'Cows', horse: 'Horses' };
+    function _buildAnimalPens(herd, penTop, penBot) {
+      const order = ['goose', 'pig', 'cow', 'horse'];
+      const counts = {};
+      for (const a of herd) counts[a.type] = (counts[a.type] || 0) + 1;
+      const types = order.filter(tp => counts[tp] > 0);
+      const byType = {}, list = [];
+      if (!types.length) return { list, byType };
+      const PX0 = 0.05, PX1 = 0.95, GAP = 0.012;
+      const span = (PX1 - PX0) - GAP * (types.length - 1);
+      const total = types.reduce((s, tp) => s + counts[tp], 0);
+      const MINW = 0.13;                                   // floor so a tiny herd still gets a tappable pen
+      let w = types.map(tp => Math.max(MINW, (counts[tp] / total) * span));
+      const wSum = w.reduce((s, v) => s + v, 0);
+      w = w.map(v => v * span / wSum);                     // renormalize back to the span
+      const padX = 0.012, padTop = 0.036, padBot = 0.012;
+      let x = PX0;
+      types.forEach((tp, i) => {
+        const def = FARM_ANIMALS.find(f => f.id === tp) || { emoji: '🐾', name: tp };
+        const pen = {
+          type: tp, emoji: def.emoji, label: FARM_PEN_PLURAL[tp] || def.name, count: counts[tp],
+          x0: x, x1: x + w[i], y0: penTop, y1: penBot,
+          ix0: x + padX, ix1: x + w[i] - padX, iy0: penTop + padTop, iy1: penBot - padBot,
+        };
+        byType[tp] = pen; list.push(pen);
+        x += w[i] + GAP;
+      });
+      return { list, byType };
+    }
+
+    // Draw the pens (grass panel + wooden rail + label tab) behind the animals.
+    function _drawAnimalPens(ctx, W, H, pens, night) {
+      for (const p of pens) {
+        const x = p.x0 * W, y = p.y0 * H, w = (p.x1 - p.x0) * W, h = (p.y1 - p.y0) * H;
+        const r = Math.min(14, w * 0.2, h * 0.3);
+        ctx.save();
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h);
+        ctx.fillStyle = night ? 'rgba(80,120,60,0.16)' : 'rgba(150,200,90,0.14)';   // soft paddock tint
+        ctx.fill();
+        ctx.lineWidth = Math.max(2.5, W * 0.006);                                     // wooden rail
+        ctx.strokeStyle = night ? '#5a4326' : '#8a5a30';
+        ctx.stroke();
+        ctx.lineWidth = Math.max(1, W * 0.0022);
+        ctx.strokeStyle = night ? 'rgba(255,255,255,0.10)' : 'rgba(255,240,210,0.35)';
+        ctx.stroke();
+        ctx.restore();
+        const ps = Math.max(4, W * 0.011);                                            // corner posts
+        ctx.fillStyle = night ? '#4a3620' : '#714a26';
+        [[x, y], [x + w, y], [x, y + h], [x + w, y + h]].forEach(c => {
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(c[0] - ps / 2, c[1] - ps / 2, ps, ps, 2); else ctx.rect(c[0] - ps / 2, c[1] - ps / 2, ps, ps);
+          ctx.fill();
+        });
+      }
+    }
+
+    // Pen name tabs — drawn AFTER the animals so the count is never hidden behind a herd.
+    function _drawPenLabels(ctx, W, H, pens, night) {
+      for (const p of pens) {
+        const x = p.x0 * W, y = p.y0 * H, w = (p.x1 - p.x0) * W;
+        const fs = Math.max(11, Math.min(16, W * 0.03));
+        ctx.font = '800 ' + Math.round(fs) + 'px sans-serif';
+        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        let txt = p.emoji + ' ' + p.label + ' ' + p.count;
+        if (ctx.measureText(txt).width + 18 > w) txt = p.emoji + ' ' + p.count;       // narrow pen -> drop the name
+        const tw = ctx.measureText(txt).width, tpad = 8, th = fs + 8;
+        const tx = x + 6, ty = y - th + 2;                                            // sit just above the pen rail
+        ctx.fillStyle = night ? 'rgba(20,14,6,0.88)' : 'rgba(40,26,12,0.86)';
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(tx, ty, tw + tpad * 2, th, th / 2); else ctx.rect(tx, ty, tw + tpad * 2, th);
+        ctx.fill();
+        ctx.fillStyle = '#ffe9b0';
+        ctx.fillText(txt, tx + tpad, ty + th / 2 + 0.5);
+      }
+    }
+
     function _drawFarmTrough(ctx, W, H, night) {
       const trLvl = roomData.farmTroughLevel || 0;
       const tx = FARM_TROUGH_X * W, ty = FARM_TROUGH_Y * H;
@@ -1842,20 +1922,33 @@
         _drawWorkshopMachines(ctx, W, H, t, night);   // huts behind the herd
         const _blocked = _farmBlockedZones();           // workshop + cart: animals keep out
         const _herd = roomData.farmAnimals || [];
+        // Group the herd into one fenced pen per type, then keep each animal in its pen.
+        const _pens = _buildAnimalPens(_herd, penTop, penBot);
+        _drawAnimalPens(ctx, W, H, _pens.list, night);
+        // Even, comfortable animal size: derived from the pasture area and herd size.
+        const _bandH = (penBot - penTop) * H, _bandW = 0.90 * W;
+        const _aSize = Math.max(28, Math.min(Math.min(W, H) * 0.085, _bandH * 0.80,
+                                Math.sqrt((_bandW * _bandH * 0.6) / Math.max(1, _herd.length))));
         let _ai = 0;
         for (const a of _herd) {
           const idx = _ai++;
           const st = _farmAnimState(a, idx, _herd.length);
+          const pen = _pens.byType[a.type];
+          if (pen && st.penHome !== a.type) {       // first sight: scatter randomly inside the pen (no edge clustering)
+            st.x = pen.ix0 + Math.random() * (pen.ix1 - pen.ix0);
+            st.y = pen.iy0 + Math.random() * (pen.iy1 - pen.iy0);
+            st.tx = st.x; st.ty = st.y; st.penHome = a.type;
+          }
           if (t > st.nextWander) {
-            // each animal roams within its own lane -> stays spread across the pasture
-            const lane = (idx + 0.5) / Math.max(1, _herd.length);
-            const laneW = 0.80 / Math.max(1, _herd.length);
-            st.tx = Math.max(0.08, Math.min(0.92, 0.10 + lane * 0.80 + (Math.random() - 0.5) * laneW));
-            st.ty = penTop + Math.random() * (penBot - penTop);
-            // don't pick a spot on the workshop or the cart — re-roll if blocked
-            for (let _try = 0; _try < 6 && _inBlocked(st.tx, st.ty, _blocked, 0.02); _try++) {
-              st.tx = Math.max(0.08, Math.min(0.92, 0.10 + Math.random() * 0.80));
-              st.ty = penTop + Math.random() * (penBot - penTop);
+            // roam to a random spot inside this animal's own pen (avoid huts/cart)
+            if (pen) {
+              const pw = Math.max(0.001, pen.ix1 - pen.ix0), ph = Math.max(0.001, pen.iy1 - pen.iy0);
+              st.tx = pen.ix0 + Math.random() * pw;
+              st.ty = pen.iy0 + Math.random() * ph;
+              for (let _try = 0; _try < 6 && _inBlocked(st.tx, st.ty, _blocked, 0.02); _try++) {
+                st.tx = pen.ix0 + Math.random() * pw;
+                st.ty = pen.iy0 + Math.random() * ph;
+              }
             }
             st.nextWander = t + 4000 + Math.random() * 8000;
           }
@@ -1867,7 +1960,12 @@
             st.y += (dy / dist) * 0.0009;
             st.facingRight = dx > 0;
           }
-          // shove the animal out of any blocked zone it drifted into
+          // keep the animal inside its own pen (also re-homes it if the pen shifts)
+          if (pen) {
+            st.x = Math.max(pen.ix0, Math.min(pen.ix1, st.x));
+            st.y = Math.max(pen.iy0, Math.min(pen.iy1, st.y));
+          }
+          // shove the animal out of any blocked zone it drifted into (huts/cart)
           for (const z of _blocked) {
             const bdx = st.x - z.x, bdy = st.y - z.y, bd = Math.hypot(bdx, bdy), minR = z.r + 0.02;
             if (bd < minR) {
@@ -1876,9 +1974,8 @@
               st.nextWander = Math.min(st.nextWander, t + 300);
             }
           }
-          st.y = Math.max(penTop, Math.min(penBot, st.y));
           const px = st.x * W, py = st.y * H;
-          const size = Math.max(34, Math.min(W, H) * 0.085);
+          const size = _aSize;
           const bob = Math.sin(t / 400 + st.x * 20) * 2;
           // soft ground shadow under the animal -> grounds it in the 3D field
           ctx.fillStyle = night ? 'rgba(0,0,0,.30)' : 'rgba(30,62,20,.24)';
@@ -1910,6 +2007,7 @@
           ctx.fillStyle = '#ffd23d';
           ctx.fillText(lvTxt, px, ly + lh / 2 + 0.5);
         }
+        _drawPenLabels(ctx, W, H, _pens.list, night);   // pen name tabs on top of the herd
 
         // Merchant cart: rolling-off animation → present wagon → away signpost
         if (viewingUid === currentUid) {
