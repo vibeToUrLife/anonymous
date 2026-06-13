@@ -1,60 +1,61 @@
 /* ───────────────────────────────────────────────────────────────
-   theme.css — "Midnight" modern-dark shared theme for all minigames.
+   theme.css — Clay "Bubble Pop" (dark arcade) shared theme for all minigames.
 
-   A sleek charcoal identity with a warm coral accent and gold coins.
-   Pages reference these tokens, so re-theming the whole arcade
-   (light ⇄ dark) is a one-file change.
+   Mirrors the home app's DARK mode: warm cocoa surfaces, brand orange
+   accents, soft clay shadows, Baloo 2 display. Pages reference these
+   tokens, so re-theming the whole arcade is a one-file change.
 
    Gameplay-functional colors (2048 tiles, tetris/snake pieces, game
-   canvases, etc.) live in each page, not here — this file only owns
-   the shared chrome palette.
+   canvases, the room/farm scene art, etc.) live in each page, not here —
+   this file only owns the shared chrome palette.
    ─────────────────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap');
 
 :root {
-  /* Surfaces */
-  --g-bg: linear-gradient(160deg, #171B22 0%, #0E1117 100%);
-  --g-card: #1B212B;                       /* elevated panel */
-  --g-card-90: rgba(27, 33, 43, 0.92);     /* translucent panel */
-  --g-card-hover: #252D38;                 /* hover elevation for cream/dark surfaces */
-  --g-board: #20262F;                       /* game board tray */
+  /* Surfaces — warm cocoa (matches home [data-theme="dark"]) */
+  --g-bg: radial-gradient(1100px 560px at 50% -8%, rgba(251,146,60,0.10), transparent 62%), #1b140e;
+  --g-card: #2a201a;                       /* elevated panel */
+  --g-card-90: rgba(42, 32, 26, 0.92);     /* translucent panel */
+  --g-card-hover: #34281f;                  /* hover elevation */
+  --g-board: #211913;                       /* game board tray */
   --g-slot: rgba(255, 255, 255, 0.05);      /* empty slot / faint fill */
-  --g-input-bg: #11151B;                    /* form fields */
+  --g-input-bg: #211913;                    /* form fields */
 
   /* Ink */
-  --g-ink: #E7EAF0;        /* primary text — near-white */
-  --g-ink-soft: #9BA6B4;   /* labels */
-  --g-ink-faint: #6B7585;  /* faint captions */
+  --g-ink: #f1e8dd;        /* primary text */
+  --g-ink-soft: #c3b3a2;   /* labels */
+  --g-ink-faint: #8c7c6c;  /* faint captions */
 
   /* Lines & states */
-  --g-border: rgba(255, 255, 255, 0.10);
+  --g-border: rgba(255, 228, 194, 0.10);
   --g-hover: rgba(255, 255, 255, 0.06);
 
-  /* Accents */
-  --g-accent: #FF7A5C;     /* coral */
-  --g-accent-2: #F2A154;   /* warm orange */
-  --g-accent-grad: linear-gradient(135deg, #FF9A6B, #FF7A5C);
-  --g-title-grad: linear-gradient(90deg, #FF8E6B, #FFB27A); /* vivid title/score text on dark */
+  /* Accents — brand orange + blue */
+  --g-accent: #fb923c;     /* brand orange (dark primary) */
+  --g-accent-2: #fdba74;   /* warm orange (dark primary-deep) */
+  --g-accent-grad: linear-gradient(135deg, #fb923c, #fdba74);
+  --g-title-grad: linear-gradient(90deg, #fdba74, #fb923c); /* vivid title/score text */
+  --g-blue: #60a5fa;       /* secondary accent */
   --g-coin: #F7C97E;       /* coin gold */
   --g-coin-ink: #FBD08A;   /* coin numbers — bright gold on dark */
-  --g-danger: #FF6B5C;     /* sign-out / end-game / errors */
+  --g-danger: #f87171;     /* sign-out / end-game / errors */
 
-  /* Overlays & shadows */
-  --g-scrim: rgba(8, 10, 14, 0.72);         /* dark frosted overlay */
-  --g-scrim-strong: rgba(8, 10, 14, 0.86);
-  --g-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
-  --g-shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.45);
+  /* Overlays & shadows — soft clay */
+  --g-scrim: rgba(10, 6, 3, 0.72);          /* warm frosted overlay */
+  --g-scrim-strong: rgba(10, 6, 3, 0.86);
+  --g-shadow: 6px 6px 16px rgba(0, 0, 0, 0.5), -4px -4px 12px rgba(255, 255, 255, 0.04);
+  --g-shadow-sm: 4px 4px 11px rgba(0, 0, 0, 0.45), -3px -3px 9px rgba(255, 255, 255, 0.035);
 
   /* Type */
-  --g-display: 'Space Grotesk', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --g-display: 'Baloo 2', 'Noto Sans SC', 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
-/* Elevated card with a thin coral top-edge accent — the theme's
+/* Elevated clay card with a thin brand top-edge accent — the theme's
    signature surface. Opt-in: add class="cozy-card" or use the token vars. */
 .cozy-card {
   background: var(--g-card);
   border: 1px solid var(--g-border);
-  border-top: 2px solid rgba(255, 122, 92, 0.55);
+  border-top: 2px solid rgba(251, 146, 60, 0.55);
   border-radius: 20px;
   box-shadow: var(--g-shadow);
 }

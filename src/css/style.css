@@ -15,8 +15,8 @@ body {
     overflow-x: hidden;
 }
 
-/* â”€â”€ Header â”€â”€ */
-/* â”€â”€ Heading logo wrapper â”€â”€ */
+/* ── Header ── */
+/* ── Heading logo wrapper ── */
 .page-title-wrapper {
     display: flex;
     align-items: center;
@@ -45,7 +45,7 @@ body {
     padding-bottom: 20px;
 }
 
-/* â”€â”€ Input area (fixed bottom) â”€â”€ */
+/* ── Input area (fixed bottom) ── */
 .input-area {
     position: fixed;
     bottom: 0;
@@ -90,7 +90,7 @@ body {
 .input-area button:hover { opacity: 0.9; }
 .input-area button:active { transform: scale(0.96); }
 
-/* â”€â”€ Attach image button â”€â”€ */
+/* ── Attach image button ── */
 .attach-btn {
     width: 48px;
     min-width: 48px;
@@ -109,7 +109,7 @@ body {
 .attach-btn:hover { background: rgba(255,255,255,0.18); }
 .attach-btn:active { transform: scale(0.92); }
 
-/* â”€â”€ GIF picker â”€â”€ */
+/* ── GIF picker ── */
 .gif-btn {
     width: 48px;
     min-width: 48px;
@@ -199,7 +199,7 @@ body {
     padding: 20px;
 }
 
-/* â”€â”€ Image preview strip â”€â”€ */
+/* ── Image preview strip ── */
 .img-preview-strip {
     display: none;
     position: fixed;
@@ -233,7 +233,7 @@ body {
     justify-content: center;
 }
 
-/* â”€â”€ Bubble image â”€â”€ */
+/* ── Bubble image ── */
 .bubble-img {
     display: block;
     width: 100%;
@@ -247,7 +247,7 @@ body {
 }
 .bubble-img:hover { transform: scale(1.03); }
 
-/* â”€â”€ Image lightbox â”€â”€ */
+/* ── Image lightbox ── */
 .lightbox {
     position: fixed;
     inset: 0;
@@ -305,7 +305,7 @@ body {
 }
 .lightbox .lightbox-close:hover { background: rgba(255,255,255,0.15); }
 
-/* â”€â”€ Bubble reply section â”€â”€ */
+/* ── Bubble reply section ── */
 .bubble-reactions {
     display: flex;
     flex-wrap: wrap;
@@ -513,7 +513,7 @@ body {
     opacity: 0.4;
     margin-left: 6px;
 }
-/* Anonymous toggle â€” inline inside reply input row */
+/* Anonymous toggle — inline inside reply input row */
 .ans-anon-toggle, .reply-anon-toggle {
     display: flex;
     align-items: center;
@@ -621,7 +621,7 @@ body {
 }
 .reply-img:hover { opacity: 0.85; }
 
-/* â”€â”€ Bubble container â”€â”€ */
+/* ── Bubble container ── */
 .bubble-wrap {
     display: flex;
     flex-wrap: wrap;
@@ -633,7 +633,7 @@ body {
     min-height: calc(100vh - 130px);
 }
 
-/* â”€â”€ Bubble â”€â”€ */
+/* ── Bubble ── */
 .bubble {
     position: relative;
     max-width: 280px;
@@ -670,7 +670,7 @@ body {
     50%      { transform: translateY(-4px) scale(1.15); }
 }
 
-/* â”€â”€ Bubble HP bar (game-style) â”€â”€ */
+/* ── Bubble HP bar (game-style) ── */
 .bubble-hp-wrapper {
     margin-bottom: 8px;
 }
@@ -708,7 +708,7 @@ body {
     );
 }
 
-/* 16 colour variants â€” soft muted pastels with varied gradients */
+/* 16 colour variants — soft muted pastels with varied gradients */
 .bubble.c0  { background: linear-gradient(135deg, #6d4ba0cc, #8b6fc0cc); }
 .bubble.c1  { background: linear-gradient(160deg, #c4506acc, #e08090cc); }
 .bubble.c2  { background: linear-gradient(120deg, #2a8a7fcc, #4db8a8cc); }
@@ -726,9 +726,9 @@ body {
 .bubble.c14 { background: linear-gradient(160deg, #355c7dcc, #6c5b7bcc); }
 .bubble.c15 { background: linear-gradient(135deg, #e8a87ccc, #d4a76acc); }
 
-/* Bubble shape variants â€” 4 fun shapes */
+/* Bubble shape variants — 4 fun shapes */
 
-/* shape0: Speech bubble â€” tail at bottom-left */
+/* shape0: Speech bubble — tail at bottom-left */
 .bubble.shape0 { border-radius: 24px 24px 24px 4px; position: relative; }
 .bubble.shape0::after {
     content: '';
@@ -761,7 +761,7 @@ body {
 .bubble.shape0:nth-child(even) { border-radius: 24px 24px 4px 24px; }
 .bubble.shape0:nth-child(even)::after { left: auto; right: 16px; }
 
-/* shape1: Cloud â€” extra rounded with puffs */
+/* shape1: Cloud — extra rounded with puffs */
 .bubble.shape1 {
     border-radius: 50px;
     position: relative;
@@ -793,7 +793,7 @@ body {
 }
 .bubble.shape1:nth-child(even) { border-radius: 50px; }
 
-/* shape2: Home â€” pointed roof at top */
+/* shape2: Home — pointed roof at top */
 .bubble.shape2 {
     border-radius: 4px 4px 16px 16px;
     position: relative;
@@ -830,7 +830,7 @@ body {
 .bubble.shape2.c15::before { border-bottom-color: #e8a87ccc; }
 .bubble.shape2:nth-child(even) { border-radius: 4px 4px 16px 16px; }
 
-/* shape3: Cat â€” pointy ears on top */
+/* shape3: Cat — pointy ears on top */
 .bubble.shape3 {
     border-radius: 6px 6px 24px 24px;
     position: relative;
@@ -907,7 +907,7 @@ body {
     60%      { transform: translateY(3px) scale(0.99); }
 }
 
-/* â”€â”€ Empty state â”€â”€ */
+/* ── Empty state ── */
 .empty-state {
     width: 100%;
     text-align: center;
@@ -917,7 +917,7 @@ body {
 }
 .empty-state .icon { font-size: 56px; display: block; margin-bottom: 14px; }
 
-/* â”€â”€ Toast notification â”€â”€ */
+/* ── Toast notification ── */
 .toast {
     position: fixed;
     top: 20px;
@@ -935,7 +935,7 @@ body {
 .toast.success { background: rgba(58,176,162,0.93); color: #fff; }
 .toast.error   { background: rgba(224,99,119,0.93); color: #fff; }
 
-/* â”€â”€ Sidebar toggle button â”€â”€ */
+/* ── Sidebar toggle button ── */
 .sidebar-toggle {
     position: fixed;
     top: 14px;
@@ -958,7 +958,7 @@ body {
 .sidebar-toggle:hover { background: rgba(123, 94, 167, 1); }
 .sidebar-toggle:active { transform: scale(0.92); }
 
-/* â”€â”€ Settings gear button (top-right) â”€â”€ */
+/* ── Settings gear button (top-right) ── */
 .settings-btn {
     position: fixed;
     top: 14px;
@@ -1003,7 +1003,7 @@ body {
     60% { transform: scale(1.05) rotate(-8deg); }
 }
 
-/* â”€â”€ Settings modal â”€â”€ */
+/* ── Settings modal ── */
 .settings-overlay {
     position: fixed; inset: 0; z-index: 9000;
     display: flex; align-items: center; justify-content: center;
@@ -1156,7 +1156,7 @@ body {
     color: rgba(255,255,255,0.3); line-height: 1.6;
 }
 
-/* Theme overrides â€” light mode */
+/* Theme overrides — light mode */
 body.light-theme {
     background: linear-gradient(135deg, #e8e4f0, #f0eef5, #dde4f0);
     color: #333;
@@ -1249,7 +1249,7 @@ body.light-theme .settings-cache-btn {
 }
 body.light-theme .settings-about { color: rgba(0,0,0,0.35); }
 
-/* Light mode â€” sidebar sections, food, countdown, spin */
+/* Light mode — sidebar sections, food, countdown, spin */
 body.light-theme .sidebar-section h3 { color: rgba(0,0,0,0.5); }
 body.light-theme .sidebar-section { border-bottom-color: rgba(0,0,0,0.06); }
 body.light-theme .random-result { background: rgba(0,0,0,0.04); color: #b8860b; }
@@ -1319,7 +1319,7 @@ body.light-theme .empty-state { color: rgba(0,0,0,0.3); }
 body.light-theme .bubble-footer { color: rgba(0,0,0,0.4); }
 body.light-theme .input-area button { color: #fff; }
 
-/* Light mode â€” sidebar game links */
+/* Light mode — sidebar game links */
 body.light-theme .sidebar-section a:not(.game-card) {
     background: rgba(0,0,0,0.04) !important;
     color: #333 !important;
@@ -1366,7 +1366,7 @@ body.font-large .bubble .reply-item { font-size: 15px; }
 body.no-animations .bubble-deco { display: none !important; }
 body.no-animations .bubble { animation: none !important; opacity: 1 !important; }
 
-/* â”€â”€ Left sidebar â”€â”€ */
+/* ── Left sidebar ── */
 .sidebar {
     position: fixed;
     top: 0;
@@ -1428,7 +1428,7 @@ body.sidebar-open { overflow: hidden; touch-action: none; }
     margin-bottom: 12px;
 }
 
-/* â”€â”€ Random pick â”€â”€ */
+/* ── Random pick ── */
 .random-btn {
     width: 100%;
     padding: 14px;
@@ -1482,14 +1482,14 @@ body.sidebar-open { overflow: hidden; touch-action: none; }
     100% { transform: scale(1); opacity: 1; }
 }
 
-/* â”€â”€ Spin action buttons â”€â”€ */
+/* ── Spin action buttons ── */
 .spin-actions {
     display: none;
     gap: 8px;
     margin-top: 10px;
 }
 
-/* â”€â”€ Spin result popup overlay â”€â”€ */
+/* ── Spin result popup overlay ── */
 .spin-result-overlay {
     position: fixed;
     inset: 0;
@@ -1569,7 +1569,7 @@ body.light-theme .spin-result-food { color: #b8860b; }
     color: #fff;
 }
 
-/* â”€â”€ Restore removed â”€â”€ */
+/* ── Restore removed ── */
 .restore-btn {
     width: 100%;
     padding: 10px;
@@ -1586,7 +1586,7 @@ body.light-theme .spin-result-food { color: #b8860b; }
 .restore-btn.show { display: block; }
 .restore-btn:hover { color: #fff; border-color: rgba(255,255,255,0.3); }
 
-/* â”€â”€ Vote list â”€â”€ */
+/* ── Vote list ── */
 .vote-list {
     list-style: none;
     display: flex;
@@ -1676,7 +1676,7 @@ body.light-theme .spin-result-food { color: #b8860b; }
     color: #58c5b5;
 }
 
-/* â”€â”€ Food input row â”€â”€ */
+/* ── Food input row ── */
 .food-input-row {
     display: flex;
     gap: 8px;
@@ -1708,7 +1708,7 @@ body.light-theme .spin-result-food { color: #b8860b; }
 .food-input-row button:hover { opacity: 0.9; }
 .food-input-row button:active { transform: scale(0.9); }
 
-/* â”€â”€ Countdown timer â”€â”€ */
+/* ── Countdown timer ── */
 .countdown-display {
     text-align: center;
     padding: 18px 14px;
@@ -1798,7 +1798,7 @@ body.light-theme .spin-result-food { color: #b8860b; }
     margin-top: 6px;
 }
 
-/* â”€â”€ Celebration overlay â”€â”€ */
+/* ── Celebration overlay ── */
 .celebration-overlay {
     position: fixed;
     inset: 0;
@@ -1871,7 +1871,7 @@ body.light-theme .spin-result-food { color: #b8860b; }
     100% { opacity: 0; transform: translateY(110vh) rotate(720deg); }
 }
 
-/* â”€â”€ Main content offset when sidebar open (desktop) â”€â”€ */
+/* ── Main content offset when sidebar open (desktop) ── */
 body.sidebar-open .page-title-wrapper,
 body.sidebar-open .page-subtitle,
 body.sidebar-open .bubble-wrap {
@@ -1879,7 +1879,7 @@ body.sidebar-open .bubble-wrap {
     transition: margin-left 0.3s ease;
 }
 
-/* â”€â”€ Walking pet on bottom bar â”€â”€ */
+/* ── Walking pet on bottom bar ── */
 .walking-pet {
     position: fixed;
     bottom: 68px;
@@ -1921,7 +1921,7 @@ body.sidebar-open .bubble-wrap {
     100% { opacity: 0; transform: translateX(-50%) translateY(-8px); }
 }
 
-/* Click reaction â€” happy jump + spin */
+/* Click reaction — happy jump + spin */
 .walking-pet.click-react .pet-cat-svg {
     animation: svgClickReact 0.7s ease 1 !important;
 }
@@ -1947,7 +1947,7 @@ body.sidebar-open .bubble-wrap {
     100% { opacity: 0; transform: translate(var(--hx), -35px) scale(0.6); }
 }
 
-/* SVG cat â€” tail wag */
+/* SVG cat — tail wag */
 .cat-svg-tail {
     transform-origin: 38px 22px;
     animation: svgTailWag 1.2s ease-in-out infinite;
@@ -1957,7 +1957,7 @@ body.sidebar-open .bubble-wrap {
     50%      { transform: rotate(12deg); }
 }
 
-/* SVG cat â€” leg walk cycle (active only during walk phase) */
+/* SVG cat — leg walk cycle (active only during walk phase) */
 .walking-pet.walking .cat-svg-leg-fl,
 .walking-pet.walking .cat-svg-paw-fl { animation: svgLegF 0.35s ease-in-out infinite; transform-origin: 13.75px 32px; }
 .walking-pet.walking .cat-svg-leg-fr,
@@ -1985,7 +1985,7 @@ body.sidebar-open .bubble-wrap {
     50%      { transform: translateY(-1.5px); }
 }
 
-/* Idle state â€” no leg/body animation, just tail wag */
+/* Idle state — no leg/body animation, just tail wag */
 .walking-pet:not(.walking) .cat-svg-leg-fl,
 .walking-pet:not(.walking) .cat-svg-leg-fr,
 .walking-pet:not(.walking) .cat-svg-leg-bl,
@@ -1997,7 +1997,7 @@ body.sidebar-open .bubble-wrap {
     animation: none;
 }
 
-/* Sitting action â€” body tilts slightly */
+/* Sitting action — body tilts slightly */
 .walking-pet.sitting .pet-cat-svg {
     animation: svgSit 3s ease-in-out 1;
 }
@@ -2006,7 +2006,7 @@ body.sidebar-open .bubble-wrap {
     15%, 85% { transform: rotate(-3deg) translateY(2px); }
 }
 
-/* Licking paw action â€” head bobs down */
+/* Licking paw action — head bobs down */
 .walking-pet.licking .cat-svg-head-group {
     animation: svgLick 0.6s ease-in-out 4;
 }
@@ -2015,7 +2015,7 @@ body.sidebar-open .bubble-wrap {
     50%      { transform: translateY(2px) rotate(5deg); }
 }
 
-/* Sleeping action â€” gentle breathing */
+/* Sleeping action — gentle breathing */
 .walking-pet.sleeping .pet-cat-svg {
     animation: svgSleep 2s ease-in-out infinite;
 }
@@ -2036,7 +2036,7 @@ body.sidebar-open .bubble-wrap {
     100% { transform: translateY(0) scaleY(0.95); }
 }
 
-/* Stretch action â€” cat elongates forward */
+/* Stretch action — cat elongates forward */
 .walking-pet.stretching .pet-cat-svg {
     animation: svgStretch 2.5s ease-in-out 1;
 }
@@ -2046,7 +2046,7 @@ body.sidebar-open .bubble-wrap {
     80%      { transform: scaleX(0.95) scaleY(1.05); }
 }
 
-/* Look around action â€” head tilts side to side */
+/* Look around action — head tilts side to side */
 .walking-pet.looking .cat-svg-head-group {
     animation: svgLookAround 2.5s ease-in-out 1;
 }
@@ -2057,7 +2057,7 @@ body.sidebar-open .bubble-wrap {
     80%      { transform: rotate(-3deg); }
 }
 
-/* Running â€” faster leg animation */
+/* Running — faster leg animation */
 .walking-pet.running .cat-svg-leg-fl,
 .walking-pet.running .cat-svg-paw-fl { animation: svgLegF 0.18s ease-in-out infinite; transform-origin: 13.75px 32px; }
 .walking-pet.running .cat-svg-leg-fr,
@@ -2073,7 +2073,7 @@ body.sidebar-open .bubble-wrap {
 /* Zzz text hidden by default */
 .cat-svg-zzz { display: none; }
 
-/* â”€â”€ Responsive â”€â”€ */
+/* ── Responsive ── */
 @media (max-width: 480px) {
     .page-title { font-size: 22px; }
     .bubble-wrap { padding: 16px 12px 156px; }
@@ -2154,7 +2154,7 @@ body.sidebar-open .bubble-wrap {
     .poll-btn { font-size: 18px; }
 }
 
-/* â”€â”€ Login gate overlay â”€â”€ */
+/* ── Login gate overlay ── */
 .login-overlay {
     position: fixed;
     inset: 0;
@@ -2237,7 +2237,7 @@ body.sidebar-open .bubble-wrap {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* â”€â”€ Mood Check-in Widget â”€â”€ */
+/* ── Mood Check-in Widget ── */
 .mood-fab {
     position: fixed;
     bottom: 90px;
@@ -2350,9 +2350,9 @@ body.sidebar-open .bubble-wrap {
 .chess-invite-box .ci-reject{flex:1;padding:12px;border:1px solid rgba(255,80,80,.3);border-radius:12px;background:transparent;color:#ff6b6b;font-size:15px;font-weight:600;cursor:pointer}
 @keyframes chessInvFade{from{opacity:0}to{opacity:1}}
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════════════
    Poll feature
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════════════ */
 /* Poll creation button */
 .poll-btn {
     width: 48px;

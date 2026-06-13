@@ -63,7 +63,7 @@ body{background:var(--g-bg);background-attachment:fixed;color:var(--g-ink);font-
 .bet-btn:hover{border-color:rgba(255,122,92,.5);background:rgba(255,122,92,.1)}
 .bet-btn.selected{border-color:var(--g-accent);background:rgba(255,122,92,.2);color:var(--g-accent)}
 .bet-btn:disabled{opacity:.4;cursor:not-allowed}
-.create-go{width:100%;padding:12px;border:none;border-radius:12px;background:linear-gradient(135deg,#FF9A6B,#FF7A5C);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:transform .15s}
+.create-go{width:100%;padding:12px;border:none;border-radius:12px;background:var(--g-accent-grad);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:transform .15s}
 .create-go:hover{transform:scale(1.02)}
 .create-go:disabled{opacity:.5;cursor:not-allowed}
 
@@ -181,7 +181,7 @@ canvas#chessBoard{display:block;border-radius:8px;touch-action:none}
 .win-btn{flex:1;padding:12px 16px;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s}
 .win-btn:hover{transform:scale(1.04)}
 .win-btn:active{transform:scale(.97)}
-.win-btn-again{background:linear-gradient(135deg,#FF9A6B,#FF7A5C);color:#fff}
+.win-btn-again{background:var(--g-accent-grad);color:#fff}
 .win-btn-lobby{background:var(--g-card);color:var(--g-ink);border:1px solid var(--g-border)}
 .win-btn-lobby:hover{background: var(--g-card-hover)}
 .win-bet-picker{margin-top:14px;opacity:0;animation:winCoinsFade .3s ease forwards}

@@ -1,12 +1,12 @@
-﻿/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   interactive.css â€” Styles for the live, interactive board features:
+/* ════════════════════════════════════════════════════════════
+   interactive.css — Styles for the live, interactive board features:
      1. Live presence & typing bar
      2. Floating live reactions
      3. Bubble Playground (physics overlay)
    Loaded after style.css; includes light-theme overrides.
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ════════════════════════════════════════════════════════════ */
 
-/* â”€â”€ 1. Live bar (presence + typing + reactions + playground) â”€â”€ */
+/* ── 1. Live bar (presence + typing + reactions + playground) ── */
 .live-bar {
   display: flex;
   align-items: center;
@@ -54,7 +54,7 @@
   30%           { opacity: 1; }
 }
 
-/* â”€â”€ 2. Reaction bar (buttons in the live bar) â”€â”€ */
+/* ── 2. Reaction bar (buttons in the live bar) ── */
 .reaction-bar { display: inline-flex; gap: 4px; }
 .reaction-btn {
   border: none;
@@ -91,7 +91,7 @@
   100% { opacity: 0;  transform: translateY(-92vh) translateX(var(--drift)) scale(1); }
 }
 
-/* â”€â”€ 3. Playground toggle button â”€â”€ */
+/* ── 3. Playground toggle button ── */
 .pg-toggle {
   border: 1px solid rgba(200, 182, 255, 0.4);
   background: rgba(200, 182, 255, 0.12);
@@ -106,7 +106,7 @@
 .pg-toggle:hover { background: rgba(200, 182, 255, 0.22); transform: translateY(-1px); }
 .pg-toggle.active { background: var(--accent); color: #2a1f4a; }
 
-/* â”€â”€ 3. Playground overlay â”€â”€ */
+/* ── 3. Playground overlay ── */
 #pgOverlay {
   position: fixed;
   inset: 0;
@@ -204,7 +204,7 @@
   100% { opacity: 0; transform: translate(-50%, -50%) translate(var(--px), var(--py))       scale(0.3); }
 }
 
-/* â”€â”€ Light-theme overrides â”€â”€ */
+/* ── Light-theme overrides ── */
 body.light-theme .live-presence { background: rgba(0, 0, 0, 0.05); color: #555; }
 body.light-theme .live-presence b { color: var(--primary-deep); }
 body.light-theme .live-typing { color: rgba(0, 0, 0, 0.5); }
@@ -217,9 +217,9 @@ body.light-theme .pg-toggle {
 }
 body.light-theme .pg-toggle.active { background: var(--accent); color: #2a1f4a; }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   4. Daily è„‘ç­‹æ€¥è½¬å¼¯ (brain teaser) â€” FAB + overlay
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ════════════════════════════════════════════════════════════
+   4. Daily 脑筋急转弯 (brain teaser) — FAB + overlay
+   ════════════════════════════════════════════════════════════ */
 .riddle-fab {
   position: fixed;
   bottom: 206px;            /* stacked directly above the feedback button (148px) */
@@ -394,9 +394,9 @@ body.light-theme .riddle-feedback { color: rgba(0, 0, 0, 0.7); }
 body.light-theme .riddle-answer { color: #b45309; background: rgba(245, 158, 11, 0.14); }
 body.light-theme .riddle-reward { color: rgba(0, 0, 0, 0.45); }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   5. é‡‘å¸ä¹å›­ Coin Center (shop / gacha / slot) + boost + cosmetics
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ════════════════════════════════════════════════════════════
+   5. 金币乐园 Coin Center (shop / gacha / slot) + boost + cosmetics
+   ════════════════════════════════════════════════════════════ */
 .cc-overlay {
   position: fixed; inset: 0; z-index: 600;
   display: none; align-items: center; justify-content: center;
@@ -498,7 +498,7 @@ body.light-theme .riddle-reward { color: rgba(0, 0, 0, 0.45); }
 .cc-boost-opts { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
 .cc-boost-opts .cc-btn { width: 100%; padding: 11px; font-size: 14px; }
 
-/* â”€â”€ Cosmetics shown on the board bubbles â”€â”€ */
+/* ── Cosmetics shown on the board bubbles ── */
 .cos-badge { margin-right: 4px; }
 .cos-title { font-size: 10px; font-weight: 700; color: #fde68a; background: rgba(245,158,11,0.22); padding: 1px 7px; border-radius: 8px; margin-left: 6px; vertical-align: middle; }
 .cos-name-rainbow {
@@ -514,20 +514,20 @@ body.light-theme .riddle-reward { color: rgba(0, 0, 0, 0.45); }
 .bubble.cos-frame-neon   { border: 2px solid #22d3ee; box-shadow: 0 0 14px rgba(34,211,238,0.5); }
 .bubble.cos-frame-star   { border: 2px solid #c084fc; box-shadow: 0 0 16px rgba(192,132,252,0.55); }
 
-/* â”€â”€ Boosted (pinned) bubble â”€â”€ */
+/* ── Boosted (pinned) bubble ── */
 .bubble.boosted {
   border: 2px solid #f5b301 !important;
   box-shadow: 0 0 0 2px rgba(245,179,1,0.25), 0 8px 28px rgba(245,179,1,0.35) !important;
 }
 .bubble.boosted::before {
-  content: 'ðŸ“Œ ç½®é¡¶';
+  content: '📌 置顶';
   position: absolute; top: -10px; left: 12px;
   background: linear-gradient(135deg, #fbbf24, #f59e0b);
   color: #2a1f4a; font-size: 10px; font-weight: 800;
   padding: 2px 8px; border-radius: 10px; z-index: 3;
 }
 
-/* The ç½®é¡¶ button in a bubble footer */
+/* The 置顶 button in a bubble footer */
 .boost-toggle {
   background: none; border: none; cursor: pointer;
   color: #f5b301; font-size: 12px; font-weight: 600; padding: 2px 4px;
@@ -556,14 +556,14 @@ body.light-theme .cc-bet { background: rgba(0,0,0,0.05); color: #333; border-col
 body.light-theme .cc-pool-name { color: #333; }
 body.light-theme .cc-pool-pct { color: #b45309; }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   6. More coin sinks: åœŸè±ªæ¦œ / å…¨å±ç‰¹æ•ˆ / æ±‚ç­¾ / Bubble Awards
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
-/* Tab bar now holds 6 tabs â€” let it wrap to 2 rows. */
+/* ════════════════════════════════════════════════════════════
+   6. More coin sinks: 土豪榜 / 全屏特效 / 求签 / Bubble Awards
+   ════════════════════════════════════════════════════════════ */
+/* Tab bar now holds 6 tabs — let it wrap to 2 rows. */
 .cc-tabs { flex-wrap: wrap; }
 .cc-tab { flex: 1 1 28%; }
 
-/* åœŸè±ªæ¦œ leaderboard */
+/* 土豪榜 leaderboard */
 .cc-lb { margin: 4px 0 10px; }
 .cc-lb-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,0.05); margin-bottom: 5px; }
 .cc-lb-row.me { background: rgba(245,179,1,0.18); border: 1px solid rgba(245,179,1,0.5); }
@@ -573,11 +573,11 @@ body.light-theme .cc-pool-pct { color: #b45309; }
 .cc-burn-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 .cc-burn-btns .cc-btn { width: auto; padding: 9px 16px; }
 
-/* å…¨å±ç‰¹æ•ˆ super reaction */
+/* 全屏特效 super reaction */
 .cc-super-btns { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
 .cc-super-btn { width: 100%; padding: 14px; font-size: 15px; }
 
-/* æ±‚ç­¾ fortune */
+/* 求签 fortune */
 .cc-fortune { text-align: center; }
 .cc-fortune-icon { font-size: 56px; margin: 8px 0; animation: ccBob 2.4s ease-in-out infinite; }
 .cc-fortune .cc-btn.buy { width: auto; padding: 11px 28px; font-size: 15px; }
@@ -588,7 +588,7 @@ body.light-theme .cc-pool-pct { color: #b45309; }
 .cc-fortune-line { font-size: 14px; color: #fff; }
 .cc-fortune-bonus { margin-top: 8px; font-size: 13px; color: #34d399; font-weight: 700; }
 
-/* æ±‚ç­¾ draw animation: shaking ç­¾ç­’ â†’ reveal */
+/* 求签 draw animation: shaking 签筒 → reveal */
 .cc-fortune-draw { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 14px 0; }
 .cc-fortune-shake { font-size: 70px; transform-origin: 50% 80%; animation: fortuneShake 0.42s ease-in-out infinite; }
 @keyframes fortuneShake {
@@ -606,7 +606,7 @@ body.light-theme .cc-pool-pct { color: #b45309; }
   100% { opacity: 1; transform: scale(1) rotate(0); }
 }
 
-/* Awards shown on a bubble + the æ‰“èµ button */
+/* Awards shown on a bubble + the 打赏 button */
 .bubble-awards-row { display: inline-block; font-size: 15px; line-height: 1.4; margin: 2px 0 3px; padding: 2px 8px; border-radius: 10px; background: rgba(245,179,1,0.14); }
 .bubble-awards-row:empty { display: none; }
 .bubble-award-givers { font-size: 11px; color: #fbbf24; margin: 0 0 4px; line-height: 1.3; }
@@ -615,7 +615,7 @@ body.light-theme .cc-pool-pct { color: #b45309; }
 .award-pop { animation: awardPop 0.5s cubic-bezier(0.2,0.9,0.3,1.5); }
 @keyframes awardPop { 0% { transform: scale(0.6); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
 
-/* æ‰“èµ popup â€” attractive award cards */
+/* 打赏 popup — attractive award cards */
 .cc-award-pop { max-width: 360px; padding: 22px 18px; text-align: center; }
 .cc-award-pop .cc-title { display: block; margin-bottom: 6px; }
 .cc-award-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
@@ -640,7 +640,7 @@ body.light-theme .cc-award-note { color: rgba(0,0,0,0.5); }
 .super-flash { position: absolute; inset: 0; will-change: opacity; animation: superFlash 0.75s ease-out forwards; }
 @keyframes superFlash { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
 
-/* Fireworks: rocket â†’ flash â†’ glowing gravity sparks */
+/* Fireworks: rocket → flash → glowing gravity sparks */
 .fw-rocket { position: absolute; width: 4px; height: 16px; border-radius: 3px; will-change: transform; animation: fwRocket 0.48s ease-out forwards; }
 @keyframes fwRocket { from { transform: translateY(55vh); opacity: 1; } to { transform: translateY(0); opacity: 0.7; } }
 .fw-flash { position: absolute; width: 34px; height: 34px; border-radius: 50%; transform: translate(-50%,-50%); filter: blur(6px); will-change: transform, opacity; animation: fwFlash 0.5s ease-out forwards; }
@@ -664,7 +664,7 @@ body.light-theme .cc-lb-row { background: rgba(0,0,0,0.03); }
 body.light-theme .cc-lb-name, body.light-theme .cc-fortune-line { color: #333; }
 body.light-theme .cc-fortune-card { background: rgba(0,0,0,0.03); }
 
-/* Confirm dialog (e.g. çƒ§é’±å†²æ¦œ) */
+/* Confirm dialog (e.g. 烧钱冲榜) */
 .cc-confirm-msg { font-size: 14px; color: #fff; margin: 12px 0 18px; line-height: 1.7; }
 .cc-confirm-msg b { color: #fde68a; }
 .cc-warn { color: #f87171; font-size: 12px; }
@@ -672,5 +672,5 @@ body.light-theme .cc-fortune-card { background: rgba(0,0,0,0.03); }
 .cc-confirm-btns .cc-btn { flex: 1; padding: 11px; }
 body.light-theme .cc-confirm-msg { color: #333; }
 
-/* åœŸè±ªæ¦œ "this page only" reminder */
+/* 土豪榜 "this page only" reminder */
 .cc-board-note { margin: 4px 0 12px; padding: 8px 10px; background: rgba(245,179,1,0.1); border-radius: 8px; line-height: 1.5; }
