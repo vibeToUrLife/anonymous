@@ -295,8 +295,10 @@
     const FARM_CYCLE_SLOW_MS = 6 * 60 * 60 * 1000; // production cycle at happiness 0
     const FARM_CYCLE_FAST_MS = 2 * 60 * 60 * 1000; // production cycle at happiness 100
     const FARM_START_HAPPINESS = 60;               // happiness of a newly bought animal
-    const FARM_FOOD_MAX = 100;                     // trough capacity (units)
+    const FARM_FOOD_MAX = 100;                     // base trough capacity (units)
     const FARM_FOOD_COST = 5;                      // coins per food unit on refill
+    const FARM_TROUGH_STEP = 60;                   // +capacity per trough upgrade
+    const FARM_TROUGH_COSTS = [3000, 8000, 18000]; // upgrade cost per level (max 3 → +180)
     const FARM_FOOD_PER_DAY = 18;                  // units each animal eats/day — total drain scales with herd size (more animals → trough empties faster)
     const FARM_HAPPY_GAIN_PER_DAY = 25;            // happiness gained per fed day
     const FARM_HAPPY_DECAY_PER_DAY = 25;           // happiness lost per hungry (empty-trough) day

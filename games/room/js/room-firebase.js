@@ -25,6 +25,7 @@
         farmOrdersDone: roomData.farmOrdersDone || [],
         farmMachines: roomData.farmMachines || {},
         farmCartLeftAt: roomData.farmCartLeftAt || 0,
+        farmTroughLevel: roomData.farmTroughLevel || 0,
         plant: roomData.plant,
         plantLevels: roomData.plantLevels,
         ownedPlants: roomData.ownedPlants,
@@ -180,6 +181,7 @@
         roomData.farmOrdersDone = Array.isArray(d.farmOrdersDone) ? d.farmOrdersDone : [];
         roomData.farmMachines = d.farmMachines || {};
         roomData.farmCartLeftAt = d.farmCartLeftAt || 0;
+        roomData.farmTroughLevel = d.farmTroughLevel || 0;
         _roomLoaded = true;
         // Decay hunger based on elapsed time (1% per 10 min)
         const lastUpdate = d.updatedAt ?? Date.now();
@@ -328,7 +330,7 @@
       _unsubscribeRoomSnap();
       if (unsubVisitList) { unsubVisitList(); unsubVisitList = null; }
       // Reset roomData to defaults for clean account switch
-      roomData = { coins: 0, petDrops: [], petCollections: {}, autoFeeder: false, autoFeedOn: false, farmAnimals: [], farmDrops: [], farmDecors: [], farmFood: 0, farmFoodAt: 0, farmStock: {}, farmTotalCollected: 0, farmCapLevel: 0, farmAutoCollect: false, farmVariants: {}, farmPlots: [], farmOrdersDay: '', farmOrdersDone: [], farmMachines: {}, farmCartLeftAt: 0, pets: [], plant: null, plantLevels: {}, plantPosition: null, ownedPlants: [], ownedDecors: [], placedDecors: [], ownedWalls: ['wall_default'], wallPattern: 'wall_default', ownedWindows: ['win_none','win_classic'], windowStyle: 'win_classic', ownedFloors: ['floor_wood'], floorStyle: 'floor_wood', ownedAccessories: [], displayName: getPlayerName(), lastCoinCollect: 0, loginStreak: 0, lastLoginDay: '', achievements: [], gachaPulls: 0, giftsGiven: 0, giftsReceived: 0, jukeboxTrack: null, jukeboxVol: 0.5, unlockedLayers: 1, layerData: {} };
+      roomData = { coins: 0, petDrops: [], petCollections: {}, autoFeeder: false, autoFeedOn: false, farmAnimals: [], farmDrops: [], farmDecors: [], farmFood: 0, farmFoodAt: 0, farmStock: {}, farmTotalCollected: 0, farmCapLevel: 0, farmAutoCollect: false, farmVariants: {}, farmPlots: [], farmOrdersDay: '', farmOrdersDone: [], farmMachines: {}, farmCartLeftAt: 0, farmTroughLevel: 0, pets: [], plant: null, plantLevels: {}, plantPosition: null, ownedPlants: [], ownedDecors: [], placedDecors: [], ownedWalls: ['wall_default'], wallPattern: 'wall_default', ownedWindows: ['win_none','win_classic'], windowStyle: 'win_classic', ownedFloors: ['floor_wood'], floorStyle: 'floor_wood', ownedAccessories: [], displayName: getPlayerName(), lastCoinCollect: 0, loginStreak: 0, lastLoginDay: '', achievements: [], gachaPulls: 0, giftsGiven: 0, giftsReceived: 0, jukeboxTrack: null, jukeboxVol: 0.5, unlockedLayers: 1, layerData: {} };
       // Reset to floor 1 when re-initialising (e.g. account switch)
       currentLayer = 1;
       isOutsideView = false;

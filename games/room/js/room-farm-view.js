@@ -83,6 +83,11 @@
       return added;
     }
 
+    // Current trough capacity (base + upgrades).
+    function farmFoodMax() {
+      return FARM_FOOD_MAX + (roomData.farmTroughLevel || 0) * FARM_TROUGH_STEP;
+    }
+
     // Current animal cap (base + expansions).
     function farmAnimalCap() {
       return FARM_MAX_ANIMALS + 10 * (roomData.farmCapLevel || 0);
@@ -237,15 +242,16 @@
       const full = animals.length >= farmAnimalCap();
 
       // Food trough: stock bar + refill button (fills the trough, coins permitting)
+      const foodMax = farmFoodMax();
       const food = Math.floor(roomData.farmFood || 0);
-      const foodPct = Math.round((food / FARM_FOOD_MAX) * 100);
-      const refillUnits = farmRefillUnits(food, FARM_FOOD_MAX, roomData.coins, FARM_FOOD_COST);
+      const foodPct = Math.round((food / foodMax) * 100);
+      const refillUnits = Math.min(Math.max(0, Math.ceil(foodMax - (roomData.farmFood || 0))), Math.floor(roomData.coins / FARM_FOOD_COST));
       const foodColor = foodPct > 40 ? '#6dd56d' : foodPct > 15 ? '#f2c94c' : '#eb5757';
       const foodHtml =
         '<div class="farm-section-title">🌾 Food Trough</div>' +
         '<div class="farm-food-row">' +
           '<span class="farm-herd-info">' +
-            '<span class="farm-herd-name">' + food + ' / ' + FARM_FOOD_MAX + '</span>' +
+            '<span class="farm-herd-name">' + food + ' / ' + foodMax + '</span>' +
             '<span class="farm-herd-bar"><span style="width:' + foodPct + '%;background:' + foodColor + '"></span></span>' +
           '</span>' +
           '<button class="farm-shop-buy" onclick="refillFarmFood()"' + (refillUnits <= 0 ? ' disabled' : '') + '>+' + refillUnits + ' · ' + (refillUnits * FARM_FOOD_COST) + '🪙</button>' +
@@ -393,6 +399,8 @@
 
       const expLvl = roomData.farmCapLevel || 0;
       const expandCost = expLvl < FARM_EXPAND_COSTS.length ? FARM_EXPAND_COSTS[expLvl] : null;
+      const trLvl = roomData.farmTroughLevel || 0;
+      const trCost = trLvl < FARM_TROUGH_COSTS.length ? FARM_TROUGH_COSTS[trLvl] : null;
       const upgradesHtml =
         '<div class="farm-section-title">⚙️ Upgrades</div>' +
         '<div class="farm-shop-row">' +
@@ -402,6 +410,13 @@
             : '<button class="farm-shop-buy" onclick="expandFarm()"' + (roomData.coins < expandCost ? ' disabled' : '') + '>+10 · ' + expandCost + '🪙</button>') +
         '</div>' +
         '<div class="farm-panel-empty" style="padding:2px 0 4px">Pushes the crop fence down — more grass for a bigger herd.</div>' +
+        '<div class="farm-shop-row">' +
+          '<span class="farm-shop-animal">🪣 Bigger trough <small>Lv ' + trLvl + '/' + FARM_TROUGH_COSTS.length + ' · holds ' + farmFoodMax() + ' food</small></span>' +
+          (trCost == null
+            ? '<span class="farm-shop-drop">MAX</span>'
+            : '<button class="farm-shop-buy" onclick="buyFarmTrough()"' + (roomData.coins < trCost ? ' disabled' : '') + '>+' + FARM_TROUGH_STEP + ' · ' + trCost + '🪙</button>') +
+        '</div>' +
+        '<div class="farm-panel-empty" style="padding:2px 0 4px">A bigger trough holds more food, so it lasts longer between refills.</div>' +
         '<div class="farm-shop-row">' +
           '<span class="farm-shop-animal">🤖 Auto-Collector <small>produce → stock</small></span>' +
           (roomData.farmAutoCollect
@@ -442,14 +457,17 @@
     /* ── Actions ── */
     async function refillFarmFood() {
       if (viewingUid !== currentUid) return;
-      const food = roomData.farmFood || 0;
-      const units = farmRefillUnits(food, FARM_FOOD_MAX, roomData.coins, FARM_FOOD_COST);
-      if (units <= 0) return showToast(roomData.coins < FARM_FOOD_COST ? 'Not enough coins!' : 'Trough is already full!', 'error');
+      const food = roomData.farmFood || 0, max = farmFoodMax();
+      const gap = max - food;
+      if (gap < 0.5) return showToast('Trough is already full!', '');
+      const affordable = Math.floor(roomData.coins / FARM_FOOD_COST);
+      if (affordable <= 0) return showToast('Not enough coins!', 'error');
+      const units = Math.min(Math.ceil(gap), affordable);          // whole units toward the brim
       roomData.coins -= units * FARM_FOOD_COST;
-      roomData.farmFood = food + units;
+      roomData.farmFood = Math.min(max, food + units);             // clamp so it reaches exactly max
       roomData.farmFoodAt = roomData.farmFoodAt || Date.now();
       await saveRoom();
-      showToast('🌾 Added ' + units + ' food to the trough!', 'success');
+      showToast('🌾 Filled the trough! (+' + units + ')', 'success');
       renderFarmPanel();
       renderAll(); // refresh coin counter
     }
@@ -531,6 +549,21 @@
       roomData.farmCapLevel = lvl + 1;
       await saveRoom();
       showToast('🏞️ Farm expanded — now holds ' + farmAnimalCap() + ' animals!', 'success');
+      checkAchievements();
+      renderFarmPanel();
+      renderAll();
+    }
+
+    async function buyFarmTrough() {
+      if (viewingUid !== currentUid) return;
+      const lvl = roomData.farmTroughLevel || 0;
+      if (lvl >= FARM_TROUGH_COSTS.length) return showToast('Trough is fully upgraded!', '');
+      const cost = FARM_TROUGH_COSTS[lvl];
+      if (roomData.coins < cost) return showToast('Not enough coins!', 'error');
+      roomData.coins -= cost;
+      roomData.farmTroughLevel = lvl + 1;
+      await saveRoom();
+      showToast('🪣 Bigger trough — now holds ' + farmFoodMax() + ' food!', 'success');
       checkAchievements();
       renderFarmPanel();
       renderAll();
@@ -731,7 +764,7 @@
         if (cropProgress(plot.plantedAt, now, crop.growMs) < 1) continue;
         const pos = _farmPlotPos(i);
         if (crop.yield.food) {
-          roomData.farmFood = Math.min(FARM_FOOD_MAX, (roomData.farmFood || 0) + crop.yield.food);
+          roomData.farmFood = Math.min(farmFoodMax(), (roomData.farmFood || 0) + crop.yield.food);
           if (!roomData.farmFoodAt) roomData.farmFoodAt = now;
           _farmParticles.push({ text: '+' + crop.yield.food + ' 🌾', x: pos.x, y: pos.y - 0.05, vy: -0.0009, life: 1200, born: performance.now() });
         } else {
@@ -1440,17 +1473,20 @@
     }
 
     function _drawFarmTrough(ctx, W, H, night) {
+      const trLvl = roomData.farmTroughLevel || 0;
       const tx = FARM_TROUGH_X * W, ty = FARM_TROUGH_Y * H;
-      const tw = Math.max(52, W * 0.11), th = tw * 0.36;
+      const tw = Math.max(52, W * 0.11) * (1 + trLvl * 0.14), th = tw * 0.36;  // grows with upgrades
       const topY = ty - th, botY = ty;
       const hTop = tw / 2, hBot = tw * 0.40;   // tapered: wider at the brim
-      const pct = Math.max(0, Math.min(1, (roomData.farmFood || 0) / FARM_FOOD_MAX));
+      const pct = Math.max(0, Math.min(1, (roomData.farmFood || 0) / farmFoodMax()));
 
       // Warm hand-planed wood + iron + golden grain (muted after dark)
       const wood   = night ? '#4a3520' : '#9a6a3c';
       const woodLo = night ? '#2f2210' : '#6c4624';
       const woodHi = night ? '#5d4327' : '#bb8550';
-      const rimCol = night ? '#6a4e2f' : '#caa066';
+      // Rim tier: bronze → silver → gold as you upgrade the trough
+      const RIM_TIERS = night ? ['#6a4e2f', '#7d7d86', '#b9923a', '#d9b84a'] : ['#caa066', '#cdd2da', '#e8c45a', '#ffd86b'];
+      const rimCol = RIM_TIERS[Math.min(trLvl, RIM_TIERS.length - 1)];
       const iron   = night ? '#262220' : '#3a342e';
       const ironHi = night ? '#46403a' : '#6a6258';
       const grainA = night ? '#b48f34' : '#f4d262';
@@ -1973,7 +2009,7 @@
           const p = pos(e);
           let tip = '';
           if (Math.hypot(p.x - FARM_TROUGH_X, p.y - FARM_TROUGH_Y) < 0.08) {
-            tip = '🌾 Food  ' + Math.floor(roomData.farmFood || 0) + ' / ' + FARM_FOOD_MAX;
+            tip = '🌾 Food  ' + Math.floor(roomData.farmFood || 0) + ' / ' + farmFoodMax();
           } else {
             const plots = roomData.farmPlots || [];
             for (let i = 0; i < plots.length; i++) {
