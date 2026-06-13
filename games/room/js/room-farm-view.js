@@ -1842,14 +1842,14 @@
         _drawWorkshopMachines(ctx, W, H, t, night);   // huts behind the herd
         const _blocked = _farmBlockedZones();           // workshop + cart: animals keep out
         const _herd = roomData.farmAnimals || [];
-        let _ai = 0;
-        for (const a of _herd) {
-          const idx = _ai++;
-          const st = _farmAnimState(a, idx, _herd.length);
+        const _shown = Math.min(_herd.length, FARM_MAX_SHOWN);   // only draw a readable subset; the rest "rest in the barn"
+        for (let idx = 0; idx < _shown; idx++) {
+          const a = _herd[idx];
+          const st = _farmAnimState(a, idx, _shown);
           if (t > st.nextWander) {
             // each animal roams within its own lane -> stays spread across the pasture
-            const lane = (idx + 0.5) / Math.max(1, _herd.length);
-            const laneW = 0.80 / Math.max(1, _herd.length);
+            const lane = (idx + 0.5) / Math.max(1, _shown);
+            const laneW = 0.80 / Math.max(1, _shown);
             st.tx = Math.max(0.08, Math.min(0.92, 0.10 + lane * 0.80 + (Math.random() - 0.5) * laneW));
             st.ty = penTop + Math.random() * (penBot - penTop);
             // don't pick a spot on the workshop or the cart — re-roll if blocked
@@ -1878,7 +1878,7 @@
           }
           st.y = Math.max(penTop, Math.min(penBot, st.y));
           const px = st.x * W, py = st.y * H;
-          const size = Math.max(34, Math.min(W, H) * 0.085);
+          const size = Math.max(30, Math.min(W, H) * (_shown > 8 ? 0.068 : 0.085));  // shrink a touch when the pasture is busy
           const bob = Math.sin(t / 400 + st.x * 20) * 2;
           // soft ground shadow under the animal -> grounds it in the 3D field
           ctx.fillStyle = night ? 'rgba(0,0,0,.30)' : 'rgba(30,62,20,.24)';
@@ -1909,6 +1909,21 @@
           if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(lx, ly, lw, lh, lh / 2); ctx.fill(); } else ctx.fillRect(lx, ly, lw, lh);
           ctx.fillStyle = '#ffd23d';
           ctx.fillText(lvTxt, px, ly + lh / 2 + 0.5);
+        }
+
+        // "+N resting" badge so a big herd reads clearly without packing the pasture
+        const _hidden = _herd.length - _shown;
+        if (_hidden > 0) {
+          const rtxt = '🐮 +' + _hidden + ' resting';
+          const rfs = Math.round(Math.max(11, Math.min(W, H) * 0.026));
+          ctx.font = '700 ' + rfs + 'px sans-serif';
+          ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+          const rpad = 10, rbh = rfs + 12, rtw = ctx.measureText(rtxt).width;
+          const rbx = 0.04 * W, rby = penTop * H + 3;
+          ctx.fillStyle = 'rgba(20,12,6,.60)';
+          if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(rbx, rby, rtw + rpad * 2, rbh, rbh / 2); ctx.fill(); } else ctx.fillRect(rbx, rby, rtw + rpad * 2, rbh);
+          ctx.fillStyle = '#ffe9b0';
+          ctx.fillText(rtxt, rbx + rpad, rby + rbh / 2 + 0.5);
         }
 
         // Merchant cart: rolling-off animation → present wagon → away signpost
