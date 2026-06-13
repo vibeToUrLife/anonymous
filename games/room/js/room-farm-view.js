@@ -883,22 +883,37 @@
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
       };
     }
+    // Build the cart's wanted-list, PREFERRING products you currently have in
+    // stock (so there's always something to sell), padded with random others.
+    function _cartBuildWanted(visitStart) {
+      const meta = farmProductMeta(), stock = roomData.farmStock || {};
+      const rng = _mulberry32(Math.floor(visitStart / 60000) >>> 0);
+      const shuffle = (arr) => { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const t = arr[i]; arr[i] = arr[j]; arr[j] = t; } return arr; };
+      let pool = shuffle(Object.keys(meta).filter(id => (stock[id] || 0) > 0));   // what you own first
+      if (pool.length < FARM_CART_WANT_COUNT) {
+        pool = pool.concat(shuffle(Object.keys(meta).filter(id => pool.indexOf(id) < 0)));
+      }
+      return pool.slice(0, Math.min(FARM_CART_WANT_COUNT, pool.length))
+        .map(id => ({ id: id, qty: 1 + Math.floor(rng() * FARM_CART_MAX_QTY) }));
+    }
+    let _cartWanted = null, _cartWantedFor = -1;   // cache the visit's wanted-list (stable while present)
     // Cart state for `now`: the cart PARKS and waits (present) until you sell to
-    // it; after a sale it leaves for FARM_CART_COOLDOWN_MS, then returns with a
-    // fresh wanted-list. `farmCartLeftAt` (persisted) = when it last left.
+    // it; after a sale it leaves for FARM_CART_COOLDOWN_MS, then returns.
+    // `farmCartLeftAt` (persisted) = when it last left.
     function _farmCart(now) {
       now = now || Date.now();
       const left = roomData.farmCartLeftAt || 0;
       const present = !left || (now - left) >= FARM_CART_COOLDOWN_MS;
-      // Wanted-list is stable for the whole visit; it changes only when a new
-      // visit begins (farmCartLeftAt changes after a sale).
       const visitStart = left ? (left + FARM_CART_COOLDOWN_MS) : 0;
-      const ids = Object.keys(farmProductMeta());     // all sellable products
-      const rng = _mulberry32(Math.floor(visitStart / 60000) >>> 0);
-      for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const tmp = ids[i]; ids[i] = ids[j]; ids[j] = tmp; }
-      // Each wanted item has a small quota (1..MAX) — the cart only buys that many.
-      const wanted = ids.slice(0, Math.min(FARM_CART_WANT_COUNT, ids.length))
-        .map(id => ({ id: id, qty: 1 + Math.floor(rng() * FARM_CART_MAX_QTY) }));
+      let wanted;
+      if (present) {
+        // Snapshot the wanted-list once per visit (your stock at arrival), so it
+        // stays stable as you sell it down.
+        if (_cartWantedFor !== visitStart || !_cartWanted) { _cartWanted = _cartBuildWanted(visitStart); _cartWantedFor = visitStart; }
+        wanted = _cartWanted;
+      } else {
+        wanted = _cartBuildWanted(visitStart);   // away: a live preview of what it'll want
+      }
       return {
         present: present,
         wanted: wanted,
