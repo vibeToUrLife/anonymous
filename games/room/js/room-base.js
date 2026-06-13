@@ -241,12 +241,17 @@
       { id: 'oven',  emoji: '🍰', name: 'Cake Oven', cost: 5000, in: { egg: 2, milk: 1 },  out: { id: 'cake',    qty: 1 }, timeMs: 60 * 60 * 1000 },
       { id: 'butcher', emoji: '🔪', name: 'Butcher',  cost: 2500, in: { meat: 1 },          out: { id: 'sausage', qty: 1 }, timeMs: 20 * 60 * 1000 },
     ];
+    // Each built machine runs jobs in parallel slots. Building gives 1 slot; buy
+    // more (each makes a product independently) up to the max.
+    const FARM_SLOT_COST = 10000;  // coins to open one more production slot
+    const FARM_MAX_SLOTS = 4;      // most slots a single machine can have
 
     // Travelling merchant cart: parks on the farm and WAITS until you sell to it,
     // then leaves for a cooldown before returning with a fresh wanted-list. Selling
     // happens only at the cart, and only for the items it wants that visit.
     const FARM_CART_COOLDOWN_MS = 4 * 60 * 60 * 1000; // after a sale, gone this long
-    const FARM_CART_WANT_COUNT = 3;                   // how many products it buys per visit
+    const FARM_CART_WANT_COUNT = 3;                   // how many product types it buys per visit
+    const FARM_CART_MAX_QTY = 4;                      // most of each item it will buy (quota 1..this)
 
     const FARM_RARE_CHANCE = 0.15;
     const FARM_RGB_CHANCE = 0.03;   // very rare rainbow coat — cosmetic jackpot

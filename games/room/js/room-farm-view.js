@@ -242,7 +242,7 @@
       const stockIds = Object.keys(stock).filter(k => stock[k] > 0)
         .sort((a, b) => { const ia = _order.indexOf(a), ib = _order.indexOf(b); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
       const cart = _farmCart();
-      const wantMeta = cart.wanted.map(id => (meta[id] || { emoji: '❓' }).emoji).join(' ');
+      const wantMeta = cart.wanted.map(w => (meta[w.id] || { emoji: '❓' }).emoji + '×' + w.qty).join('  ');
       const cartHtml =
         '<div class="farm-section-title">🛒 Merchant Cart</div>' +
         (cart.present
@@ -258,7 +258,7 @@
           ? '<div class="farm-panel-empty">Tap produce on the farm to collect it here.</div>'
           : stockIds.map(id => {
               const m = meta[id] || { emoji: '❓', name: id };
-              const wanted = cart.present && cart.wanted.includes(id);
+              const wanted = cart.present && cart.wanted.some(w => w.id === id);
               return '<div class="farm-shop-row">' +
                 '<span class="farm-shop-animal">' + m.emoji + ' ' + m.name + ' <small>×' + stock[id] + '</small>' + (wanted ? ' <span class="farm-want-tag">cart wants</span>' : '') + '</span>' +
                 '<span class="farm-shop-drop">' + (prices[id] || 0) + '🪙 ea</span>' +
@@ -578,7 +578,20 @@
       showToast('👍 You cheered ' + (roomData.displayName || 'this') + '\'s farm!', 'success');
     }
 
-    /* ── Workshop (processing machines) ── */
+    /* ── Workshop (processing machines, parallel slots) ── */
+    // Normalize a machine to the slot model, migrating the old single-job shape
+    // ({owned, startedAt}) to {owned, slots, jobs:[startedAt,…]}. Returns it or null.
+    function _machineState(id) {
+      const m = (roomData.farmMachines || {})[id];
+      if (!m || !m.owned) return null;
+      if (!m.slots) m.slots = 1;
+      if (!Array.isArray(m.jobs)) m.jobs = [m.startedAt || 0];   // migrate old single job
+      while (m.jobs.length < m.slots) m.jobs.push(0);
+      if (m.jobs.length > m.slots) m.jobs.length = m.slots;
+      if ('startedAt' in m) delete m.startedAt;                  // drop legacy field
+      return m;
+    }
+
     async function buyFarmMachine(id) {
       if (viewingUid !== currentUid) return;
       const mc = FARM_MACHINES.find(m => m.id === id);
@@ -587,43 +600,52 @@
       if (roomData.farmMachines[id] && roomData.farmMachines[id].owned) return;
       if (roomData.coins < mc.cost) return showToast('Not enough coins!', 'error');
       roomData.coins -= mc.cost;
-      roomData.farmMachines[id] = { owned: true, startedAt: 0 };
+      roomData.farmMachines[id] = { owned: true, slots: 1, jobs: [0] };
       await saveRoom();
       showToast(mc.emoji + ' ' + mc.name + ' built! Tap it on your farm to make goods.', 'success');
       renderFarmPanel();
       renderAll();
     }
 
-    async function startFarmMachine(id) {
+    async function buyMachineSlot(id) {
       if (viewingUid !== currentUid) return;
-      const mc = FARM_MACHINES.find(m => m.id === id);
-      const st = (roomData.farmMachines || {})[id];
-      if (!mc || !st || !st.owned || st.startedAt) return;
+      const m = _machineState(id);
+      if (!m) return;
+      if (m.slots >= FARM_MAX_SLOTS) return showToast('Max ' + FARM_MAX_SLOTS + ' slots reached!', '');
+      if (roomData.coins < FARM_SLOT_COST) return showToast('Not enough coins! (' + FARM_SLOT_COST + '🪙)', 'error');
+      roomData.coins -= FARM_SLOT_COST;
+      m.slots += 1; m.jobs.push(0);
+      await saveRoom();
+      showToast('🧰 New production slot opened!', 'success');
+      renderWorkshopModal(); renderFarmPanel(); renderAll();
+    }
+
+    async function startMachineSlot(id, slot) {
+      if (viewingUid !== currentUid) return;
+      const mc = FARM_MACHINES.find(m => m.id === id), m = _machineState(id);
+      if (!mc || !m || m.jobs[slot]) return;
       const stockNow = roomData.farmStock || {};
       if (!Object.keys(mc.in).every(k => (stockNow[k] || 0) >= mc.in[k])) return showToast('Not enough ingredients!', 'error');
       Object.keys(mc.in).forEach(k => { stockNow[k] -= mc.in[k]; });
       roomData.farmStock = stockNow;
-      st.startedAt = Date.now();
+      m.jobs[slot] = Date.now();
       await saveRoom();
       showToast(mc.emoji + ' ' + mc.name + ' started…', 'success');
-      renderFarmPanel(); renderWorkshopModal();
-      renderAll();
+      renderWorkshopModal(); renderFarmPanel(); renderAll();
     }
 
-    async function collectFarmMachine(id) {
+    async function collectMachineSlot(id, slot) {
       if (viewingUid !== currentUid) return;
-      const mc = FARM_MACHINES.find(m => m.id === id);
-      const st = (roomData.farmMachines || {})[id];
-      if (!mc || !st || !st.owned || !st.startedAt) return;
-      if (cropProgress(st.startedAt, Date.now(), mc.timeMs) < 1) return showToast('Still processing…', '');
+      const mc = FARM_MACHINES.find(m => m.id === id), m = _machineState(id);
+      if (!mc || !m || !m.jobs[slot]) return;
+      if (cropProgress(m.jobs[slot], Date.now(), mc.timeMs) < 1) return showToast('Still processing…', '');
       roomData.farmStock = roomData.farmStock || {};
       roomData.farmStock[mc.out.id] = (roomData.farmStock[mc.out.id] || 0) + mc.out.qty;
-      st.startedAt = 0;
+      m.jobs[slot] = 0;
       await saveRoom();
       const outM = farmProductMeta()[mc.out.id];
       showToast('Collected ' + mc.out.qty + ' ' + (outM ? outM.emoji + ' ' + outM.name : mc.out.id) + '!', 'success');
-      renderFarmPanel(); renderWorkshopModal();
-      renderAll();
+      renderWorkshopModal(); renderFarmPanel(); renderAll();
     }
 
     /* ── Orders ── */
@@ -862,9 +884,12 @@
       const ids = Object.keys(farmProductMeta());     // all sellable products
       const rng = _mulberry32(Math.floor(visitStart / 60000) >>> 0);
       for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const tmp = ids[i]; ids[i] = ids[j]; ids[j] = tmp; }
+      // Each wanted item has a small quota (1..MAX) — the cart only buys that many.
+      const wanted = ids.slice(0, Math.min(FARM_CART_WANT_COUNT, ids.length))
+        .map(id => ({ id: id, qty: 1 + Math.floor(rng() * FARM_CART_MAX_QTY) }));
       return {
         present: present,
-        wanted: ids.slice(0, Math.min(FARM_CART_WANT_COUNT, ids.length)),
+        wanted: wanted,
         nextInMs: present ? 0 : (FARM_CART_COOLDOWN_MS - (now - left)),
       };
     }
@@ -928,22 +953,58 @@
         const st = machines[m.id];
         if (!st || !st.owned) return;
         const p = _workshopPos(slot);
-        const cx = p.x * W, cy = p.y * H, s = Math.max(30, Math.min(W, H) * 0.08);
+        const cx = p.x * W, cy = p.y * H, s = Math.max(30, Math.min(W, H) * 0.085);
+        const wallW = s * 0.78, wallH = s * 0.52, D = s * 0.24, dy = D * 0.5;
+        const fx = cx - wallW / 2, fy = cy - s * 0.04;   // front wall top-left
         ctx.save();
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillStyle = night ? 'rgba(0,0,0,.30)' : 'rgba(30,62,20,.22)';        // shadow
-        ctx.beginPath(); ctx.ellipse(cx, cy + s * 0.42, s * 0.5, s * 0.13, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#d9b483';                                               // hut body
-        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(cx - s * 0.4, cy - s * 0.16, s * 0.8, s * 0.54, s * 0.08); ctx.fill(); }
-        ctx.fillStyle = 'rgba(0,0,0,.10)';
-        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(cx - s * 0.4, cy + s * 0.2, s * 0.8, s * 0.18, s * 0.07); ctx.fill(); }
-        ctx.fillStyle = '#b8553f';                                               // roof
-        ctx.beginPath(); ctx.moveTo(cx - s * 0.5, cy - s * 0.12); ctx.lineTo(cx, cy - s * 0.5); ctx.lineTo(cx + s * 0.5, cy - s * 0.12); ctx.closePath(); ctx.fill();
-        ctx.font = Math.round(s * 0.42) + 'px serif';                            // machine emoji
-        ctx.fillText(m.emoji, cx, cy + s * 0.08);
-        if (st.startedAt) {                                                      // cooking ⏳ / ready ✅
-          ctx.font = Math.round(s * 0.3) + 'px serif';
-          ctx.fillText(now - st.startedAt >= m.timeMs ? '✅' : '⏳', cx + s * 0.36, cy - s * 0.34);
+        // ground shadow
+        ctx.fillStyle = night ? 'rgba(0,0,0,.34)' : 'rgba(30,62,20,.24)';
+        ctx.beginPath(); ctx.ellipse(cx + D * 0.4, cy + s * 0.5, s * 0.62, s * 0.14, 0, 0, Math.PI * 2); ctx.fill();
+        // right side wall (3D depth) — darker
+        ctx.fillStyle = night ? '#6f4e33' : '#a9794d';
+        ctx.beginPath();
+        ctx.moveTo(fx + wallW, fy); ctx.lineTo(fx + wallW + D, fy - dy);
+        ctx.lineTo(fx + wallW + D, fy - dy + wallH); ctx.lineTo(fx + wallW, fy + wallH); ctx.closePath(); ctx.fill();
+        // front wall + warm gradient
+        const wg = ctx.createLinearGradient(0, fy, 0, fy + wallH);
+        wg.addColorStop(0, night ? '#9a7048' : '#e8c79a'); wg.addColorStop(1, night ? '#7c5734' : '#cda06f');
+        ctx.fillStyle = wg; ctx.fillRect(fx, fy, wallW, wallH);
+        // plank seams + base shadow
+        ctx.strokeStyle = 'rgba(0,0,0,.07)'; ctx.lineWidth = 1;
+        for (let yy = fy + wallH * 0.33; yy < fy + wallH; yy += wallH * 0.33) { ctx.beginPath(); ctx.moveTo(fx, yy); ctx.lineTo(fx + wallW, yy); ctx.stroke(); }
+        ctx.fillStyle = 'rgba(0,0,0,.10)'; ctx.fillRect(fx, fy + wallH * 0.82, wallW, wallH * 0.18);
+        // door
+        ctx.fillStyle = night ? '#3a2a1c' : '#7a4a2c';
+        const dw = wallW * 0.34, dh = wallH * 0.62, dx = cx - dw / 2, ddy = fy + wallH - dh;
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(dx, ddy, dw, dh, dw * 0.45); ctx.fill(); } else ctx.fillRect(dx, ddy, dw, dh);
+        ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.beginPath(); ctx.arc(dx + dw * 0.78, ddy + dh * 0.5, s * 0.015, 0, Math.PI * 2); ctx.fill(); // knob
+        // 3D roof — receding right slope + front gable + ridge
+        const rTop = fy - s * 0.36, rOver = s * 0.12;
+        ctx.fillStyle = night ? '#6e2f24' : '#9b4636';        // right slope (shaded)
+        ctx.beginPath();
+        ctx.moveTo(fx + wallW + rOver, fy); ctx.lineTo(cx, rTop);
+        ctx.lineTo(cx + D, rTop - dy); ctx.lineTo(fx + wallW + rOver + D, fy - dy); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = night ? '#8a3a2b' : '#c25b43';        // front gable
+        ctx.beginPath(); ctx.moveTo(fx - rOver, fy); ctx.lineTo(cx, rTop); ctx.lineTo(fx + wallW + rOver, fy); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,.20)'; ctx.lineWidth = 1.5;     // ridge highlight
+        ctx.beginPath(); ctx.moveTo(cx, rTop); ctx.lineTo(cx + D, rTop - dy); ctx.stroke();
+        // round sign with the machine emoji on the gable
+        ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(cx, fy - s * 0.04, s * 0.17, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,.15)'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.font = Math.round(s * 0.22) + 'px serif'; ctx.fillText(m.emoji, cx, fy - s * 0.03);
+        // cooking steam ↑ / ready ✅ (any slot)
+        const jobs = Array.isArray(st.jobs) ? st.jobs : [st.startedAt || 0];
+        const anyReady = jobs.some(j => j && now - j >= m.timeMs);
+        const anyCook = jobs.some(j => j && now - j < m.timeMs);
+        if (anyReady) {
+          ctx.font = Math.round(s * 0.28) + 'px serif'; ctx.fillText('✅', fx + wallW + D * 0.5, rTop + s * 0.04);
+        } else if (anyCook) {
+          ctx.fillStyle = 'rgba(255,255,255,.55)';
+          for (let k = 0; k < 3; k++) {
+            const yy = rTop - s * 0.08 - k * s * 0.13 - ((t / 50) % (s * 0.13));
+            ctx.beginPath(); ctx.arc(cx + D + Math.sin(t / 300 + k) * s * 0.04, yy, s * 0.055 - k * s * 0.008, 0, Math.PI * 2); ctx.fill();
+          }
         }
         ctx.restore();
       });
@@ -969,22 +1030,23 @@
       const cart = _farmCart();
       if (!_cartSheetOpen || !cart.present) { el.style.display = 'none'; _cartSheetOpen = _cartSheetOpen && cart.present; return; }
       const meta = farmProductMeta(), prices = farmProductPrices(), stock = roomData.farmStock || {};
-      const rows = cart.wanted.map(id => {
-        const m = meta[id] || { emoji: '❓', name: id };
-        const qty = stock[id] || 0;
-        const val = qty * (prices[id] || 0);
-        return '<button class="cp-crop"' + (qty > 0 ? '' : ' disabled') + ' onclick="sellToCart(\'' + id + '\')">' +
+      const rows = cart.wanted.map(w => {
+        const m = meta[w.id] || { emoji: '❓', name: w.id };
+        const have = stock[w.id] || 0;
+        const sellN = Math.min(have, w.qty);          // cart only buys up to its quota
+        const val = sellN * (prices[w.id] || 0);
+        return '<button class="cp-crop"' + (sellN > 0 ? '' : ' disabled') + ' onclick="sellToCart(\'' + w.id + '\')">' +
           '<span class="cp-emoji">' + m.emoji + '</span>' +
-          '<span class="cp-info"><b>' + m.name + '</b><small>' + (prices[id] || 0) + '🪙 ea · you have ' + qty + '</small></span>' +
-          '<span class="cp-cost">' + (qty > 0 ? '+' + val + '🪙' : '—') + '</span>' +
+          '<span class="cp-info"><b>' + m.name + '</b><small>wants ×' + w.qty + ' · you have ' + have + ' · ' + (prices[w.id] || 0) + '🪙 ea</small></span>' +
+          '<span class="cp-cost">' + (sellN > 0 ? 'Sell ' + sellN + ' +' + val + '🪙' : '—') + '</span>' +
           '</button>';
       }).join('');
-      const anyToSell = cart.wanted.some(id => (stock[id] || 0) > 0);
+      const anyToSell = cart.wanted.some(w => (stock[w.id] || 0) > 0);
       el.innerHTML =
         '<div class="cp-head">🛒 Merchant Cart</div>' +
-        '<div class="farm-panel-empty" style="padding:0 2px 6px">Buying this visit only. It waits until you sell — then it\'s off for 4h.</div>' +
+        '<div class="farm-panel-empty" style="padding:0 2px 6px">It buys a set amount of each. Sell what it wants — then it\'s off for 4h.</div>' +
         rows +
-        (anyToSell ? '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="sellAllToCart()">💰 Sell all wanted</button>' : '') +
+        (anyToSell ? '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="sellAllToCart()">💰 Sell all it wants</button>' : '') +
         '<button class="cp-close" onclick="closeCartSheet()">Close</button>';
       el.style.display = 'block';
     }
@@ -993,16 +1055,18 @@
       if (viewingUid !== currentUid) return;
       const cart = _farmCart();
       if (!cart.present) { closeCartSheet(); return showToast('The cart has left — it\'ll be back later.', ''); }
-      if (!cart.wanted.includes(prodId)) return showToast('The cart isn\'t buying that this visit.', '');
-      const qty = (roomData.farmStock || {})[prodId] || 0;
-      if (qty <= 0) return showToast('None to sell.', '');
+      const want = cart.wanted.find(w => w.id === prodId);
+      if (!want) return showToast('The cart isn\'t buying that this visit.', '');
+      const have = (roomData.farmStock || {})[prodId] || 0;
+      const sellN = Math.min(have, want.qty);          // capped at the quota
+      if (sellN <= 0) return showToast('None to sell.', '');
       const price = farmProductPrices()[prodId] || 0;
-      roomData.coins += qty * price;
-      roomData.farmStock[prodId] = 0;
+      roomData.coins += sellN * price;
+      roomData.farmStock[prodId] = have - sellN;
       _cartSoldThisVisit = true;   // cart leaves when the sheet is closed
       await saveRoom();
       const m = farmProductMeta()[prodId];
-      showToast('Sold ' + qty + ' ' + (m ? m.emoji + ' ' + m.name : prodId) + ' for ' + (qty * price) + '🪙', 'success');
+      showToast('Sold ' + sellN + ' ' + (m ? m.emoji + ' ' + m.name : prodId) + ' for ' + (sellN * price) + '🪙', 'success');
       checkAchievements();
       renderCartSheet(); renderFarmPanel(); renderAll();
     }
@@ -1012,9 +1076,9 @@
       if (!cart.present) { closeCartSheet(); return showToast('The cart has left — it\'ll be back later.', ''); }
       const stock = roomData.farmStock || {}, prices = farmProductPrices();
       let total = 0, sold = 0;
-      for (const id of cart.wanted) {
-        const qty = stock[id] || 0;
-        if (qty > 0) { total += qty * (prices[id] || 0); sold += qty; stock[id] = 0; }
+      for (const w of cart.wanted) {
+        const sellN = Math.min(stock[w.id] || 0, w.qty);   // each capped at its quota
+        if (sellN > 0) { total += sellN * (prices[w.id] || 0); sold += sellN; stock[w.id] = (stock[w.id] || 0) - sellN; }
       }
       if (!sold) return showToast('Nothing the cart wants right now.', '');
       roomData.coins += total;
@@ -1082,28 +1146,33 @@
       const meta = farmProductMeta(), st = (roomData.farmMachines || {})[mc.id] || {}, stock = roomData.farmStock || {}, now = Date.now();
       const inStr = Object.keys(mc.in).map(id => (meta[id] ? meta[id].emoji : id) + '×' + mc.in[id]).join(' + ');
       const outM = meta[mc.out.id] || { emoji: '❓', name: mc.out.id };
+      const m = _machineState(mc.id);
+      const canStart = Object.keys(mc.in).every(id => (stock[id] || 0) >= mc.in[id]);
       let body;
-      if (!st.owned) {
+      if (!m) {
         body = '<div class="ws-status">Not built yet — build it in the 🌱 Garden tab.</div>';
-      } else if (st.startedAt) {
-        if (cropProgress(st.startedAt, now, mc.timeMs) >= 1) {
-          body = '<div class="ws-status">✅ Ready to collect!</div>' +
-            '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="collectFarmMachine(\'' + mc.id + '\')">Collect ' + outM.emoji + ' ' + outM.name + '</button>';
-        } else {
-          body = '<div class="ws-status">⏳ Making ' + outM.name + '… ' + Math.ceil((mc.timeMs - (now - st.startedAt)) / 60000) + 'm left</div>';
-        }
       } else {
         const have = Object.keys(mc.in).map(id => (meta[id] ? meta[id].emoji : id) + ' ' + (stock[id] || 0) + '/' + mc.in[id]).join('   ');
-        const canStart = Object.keys(mc.in).every(id => (stock[id] || 0) >= mc.in[id]);
-        body = '<div class="ws-status">You have: ' + have + '</div>' +
-          '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="startFarmMachine(\'' + mc.id + '\')"' + (canStart ? '' : ' disabled') + '>Make ' + outM.emoji + ' ' + outM.name + '</button>';
+        // One row per production slot
+        const slots = m.jobs.map((job, i) => {
+          let right;
+          if (!job) right = '<button class="farm-shop-buy" onclick="startMachineSlot(\'' + mc.id + '\',' + i + ')"' + (canStart ? '' : ' disabled') + '>Make</button>';
+          else if (cropProgress(job, now, mc.timeMs) >= 1) right = '<button class="farm-shop-buy" onclick="collectMachineSlot(\'' + mc.id + '\',' + i + ')">Collect ' + outM.emoji + '</button>';
+          else right = '<span class="farm-shop-drop">⏳ ' + Math.ceil((mc.timeMs - (now - job)) / 60000) + 'm</span>';
+          return '<div class="ws-slot"><span class="ws-slot-no">Slot ' + (i + 1) + '</span>' +
+            '<span class="ws-slot-state">' + (!job ? 'idle' : cropProgress(job, now, mc.timeMs) >= 1 ? '✅ ready' : 'making ' + outM.emoji) + '</span>' + right + '</div>';
+        }).join('');
+        const slotBtn = m.slots < FARM_MAX_SLOTS
+          ? '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="buyMachineSlot(\'' + mc.id + '\')"' + (roomData.coins < FARM_SLOT_COST ? ' disabled' : '') + '>🧰 Open slot · ' + FARM_SLOT_COST + '🪙 (' + m.slots + '/' + FARM_MAX_SLOTS + ')</button>'
+          : '<div class="ws-status">All ' + FARM_MAX_SLOTS + ' slots open.</div>';
+        body = '<div class="ws-status">You have: ' + have + '</div>' + slots + slotBtn;
       }
       const butcherNote = mc.id === 'butcher'
         ? '<div class="ws-status" style="margin-top:8px">🔪 To butcher an animal for meat, open the 🐮 Animals tab and tap 🔪 on the animal.</div>' : '';
       el.innerHTML =
         '<div class="ws-box">' +
           '<div class="ws-head">' + mc.emoji + ' ' + mc.name + '</div>' +
-          '<div class="ws-sub">' + inStr + ' → ' + outM.emoji + ' ' + outM.name + '</div>' +
+          '<div class="ws-sub">' + inStr + ' → ' + outM.emoji + ' ' + outM.name + ' · each slot makes one</div>' +
           body + butcherNote +
           '<button class="cp-close" onclick="closeWorkshopModal()">Close</button>' +
         '</div>';
