@@ -22,6 +22,8 @@
     let _cartVisitKey = -1;           // visitStart of the run _cartSold belongs to
     let _cartLeaveStart = 0;          // Date.now() when the wagon began rolling off (0 = not leaving)
     const CART_LEAVE_MS = 1600;       // roll-off animation length
+    let _animalModalId = null;        // animal whose status panel is open
+    let _animalButcherConfirm = false;// awaiting butcher confirmation in the animal panel
     let _workshopModalOpen = false;   // single-machine modal visible?
     let _workshopModalId = null;      // which machine's modal is open
     let _makeChoiceSlot = null;       // slot index currently choosing a recipe (or null)
@@ -180,6 +182,7 @@
       closeCartSheet();
       closeRgbPreview();
       closeWorkshopModal();
+      closeAnimalModal();
       _hideFarmTip();
       document.getElementById('farmView')?.classList.remove('visible');
       _setFarmPanelMode(false);
@@ -1219,6 +1222,55 @@
       if (el) el.style.display = 'none';
     }
 
+    // ── Animal status panel — tap an animal to see its stats, pet it, or butcher it.
+    function openAnimalModal(id) { _animalModalId = id; _animalButcherConfirm = false; renderAnimalModal(); }
+    function closeAnimalModal() { _animalModalId = null; _animalButcherConfirm = false; const el = document.getElementById('animalModal'); if (el) el.style.display = 'none'; }
+    function askAnimalButcher() { _animalButcherConfirm = true; renderAnimalModal(); }
+    function cancelAnimalButcher() { _animalButcherConfirm = false; renderAnimalModal(); }
+    function confirmButcherAnimal() { const id = _animalModalId; closeAnimalModal(); butcherAnimal(id); }
+    function petAnimal() {
+      const a = (roomData.farmAnimals || []).find(x => x.id === _animalModalId);
+      const st = a && _farmAnimStates[a.id];
+      if (st) _farmParticles.push({ text: a.happiness > 30 ? '❤️' : '🌾', x: st.x, y: st.y - 0.08, vy: -0.0008, life: 1000, born: performance.now() });
+    }
+    function renderAnimalModal() {
+      const el = document.getElementById('animalModal');
+      if (!el) return;
+      const a = (roomData.farmAnimals || []).find(x => x.id === _animalModalId);
+      if (!_animalModalId || !a) { el.style.display = 'none'; return; }
+      const def = FARM_ANIMALS.find(f => f.id === a.type) || { emoji: '❓', name: a.type, drop: { emoji: '', coins: 0 } };
+      const lvl = animalLevel(a.collected, FARM_LEVELS);
+      const h = Math.round(a.happiness);
+      const color = h > 60 ? '#6dd56d' : h > 30 ? '#f2c94c' : '#eb5757';
+      const mark = a.variant === 'rgb' ? ' 🌈' : ((FARM_VARIANTS[a.type] || []).some(v => v.id === a.variant && v.rare) ? ' ✨' : '');
+      const waiting = (roomData.farmDrops || []).filter(d => d.animalId === a.id).length;
+      const meat = FARM_MEAT_YIELD[a.type] || 1;
+      const nextThresh = FARM_LEVELS[lvl];                                  // threshold for next level
+      const lvlInfo = nextThresh != null ? ((a.collected || 0) + '/' + nextThresh + ' to Lv' + (lvl + 1)) : 'max level';
+      let actions;
+      if (_animalButcherConfirm) {
+        actions = '<div class="ws-status">Butcher ' + def.name + '? You get 🥩×' + meat + ' — the animal is gone for good.</div>' +
+          '<button class="cp-crop" style="justify-content:center;font-weight:800;background:var(--g-danger);color:#fff" onclick="confirmButcherAnimal()">✓ Butcher</button>' +
+          '<button class="cp-crop" style="justify-content:center" onclick="cancelAnimalButcher()">✗ Keep it</button>';
+      } else if (_ownsButcher()) {
+        actions = '<button class="cp-crop" style="justify-content:center" onclick="petAnimal()">❤️ Pet</button>' +
+          '<button class="cp-crop" style="justify-content:center;color:#f87171" onclick="askAnimalButcher()">🔪 Butcher for meat (🥩×' + meat + ')</button>';
+      } else {
+        actions = '<button class="cp-crop" style="justify-content:center" onclick="petAnimal()">❤️ Pet</button>' +
+          '<div class="ws-status">🔪 Build the Butcher (Garden tab) to butcher animals.</div>';
+      }
+      el.innerHTML =
+        '<div class="ws-box">' +
+          '<div class="ws-head">' + def.emoji + ' ' + def.name + mark + '</div>' +
+          '<div class="ws-sub">Lv ' + lvl + ' · ' + lvlInfo + (waiting ? ' · ' + def.drop.emoji + '×' + waiting + ' waiting' : '') + '</div>' +
+          '<div class="ws-status" style="margin:2px 0 6px">Happiness <b style="color:' + color + '">' + h + '%</b></div>' +
+          '<div style="height:8px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden;margin:0 0 12px"><div style="height:100%;width:' + h + '%;background:' + color + '"></div></div>' +
+          actions +
+          '<button class="cp-close" onclick="closeAnimalModal()">Close</button>' +
+        '</div>';
+      el.style.display = 'flex';
+    }
+
     // ── Single-machine modal — tap a machine's hut on the farm to make goods with
     // just THAT machine (start a batch / collect it). Machines are BUILT in the
     // Garden tab; this modal only operates an already-built one.
@@ -1958,17 +2010,14 @@
         }
         if (hitDrop) { _collectFarmDrop(hitDrop); return; }
 
-        // Tap an animal — a friendly reaction (happiness comes from food, not taps)
-        let hitAnimal = null, aDist = Infinity;
+        // Tap an animal → open its status panel (stats + pet / butcher)
+        let hitAnimal = null, aDist = 0.10;
         for (const a of (roomData.farmAnimals || [])) {
           const st = _farmAnimStates[a.id];
           if (!st) continue;
           const dist = Math.hypot(st.x - cx, st.y - cy);
-          if (dist < 0.09 && dist < aDist) { aDist = dist; hitAnimal = a; }
+          if (dist < aDist) { aDist = dist; hitAnimal = a; }
         }
-        if (hitAnimal) {
-          const st = _farmAnimStates[hitAnimal.id];
-          _farmParticles.push({ text: hitAnimal.happiness > 30 ? '❤️' : '🌾', x: st.x, y: st.y - 0.08, vy: -0.0008, life: 1000, born: performance.now() });
-        }
+        if (hitAnimal) openAnimalModal(hitAnimal.id);
       };
     }
