@@ -24,6 +24,7 @@
         farmOrdersDay: roomData.farmOrdersDay || '',
         farmOrdersDone: roomData.farmOrdersDone || [],
         farmMachines: roomData.farmMachines || {},
+        farmCartLeftAt: roomData.farmCartLeftAt || 0,
         plant: roomData.plant,
         plantLevels: roomData.plantLevels,
         ownedPlants: roomData.ownedPlants,
