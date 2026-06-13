@@ -218,19 +218,21 @@
       pie:     { emoji: '🥧', name: 'Pie',     coins: 200 },
       cake:    { emoji: '🍰', name: 'Cake',    coins: 260 },
       pancake: { emoji: '🥞', name: 'Pancake', coins: 160 },
-      sausage: { emoji: '🌭', name: 'Sausage', coins: 130 },
-      bacon:   { emoji: '🥓', name: 'Bacon',   coins: 180 },
-      ham:     { emoji: '🍖', name: 'Ham',     coins: 240 },
-      tools:   { emoji: '🔧', name: 'Tools',   coins: 170 },   // Forge: from horseshoes
-      bell:    { emoji: '🔔', name: 'Bell',    coins: 360 },   // Forge: from horseshoes
+      sausage:  { emoji: '🌭', name: 'Sausage',  coins: 130 },
+      bacon:    { emoji: '🥓', name: 'Bacon',    coins: 180 },
+      ham:      { emoji: '🍖', name: 'Ham',      coins: 240 },
+      tools:    { emoji: '🔧', name: 'Tools',    coins: 170 },   // Forge: from horseshoes
+      bell:     { emoji: '🔔', name: 'Bell',     coins: 360 },   // Forge: from horseshoes
+      wheat:    { emoji: '🌾', name: 'Wheat',    coins: 20 },    // crop — Bakery ingredient
+      baguette: { emoji: '🥖', name: 'Baguette', coins: 170 },   // Bakery: from wheat
     };
     // Base meat from butchering, by tier (the animal's level adds more — see _meatYield).
     const FARM_MEAT_YIELD = { goose: 1, pig: 2, cow: 3, horse: 4 };
 
-    // Crops grown in garden plots. wheat refills the trough (closes the food
-    // loop); others yield a sellable product.
+    // Crops grown in garden plots — each yields a sellable product that also
+    // feeds the workshop (wheat → Bakery, carrot → Cake Oven, corn → Bakery).
     const FARM_CROPS = [
-      { id: 'wheat',  emoji: '🌾', name: 'Wheat',  seedCost: 10, growMs: 60 * 60 * 1000,  yield: { food: 12 } },
+      { id: 'wheat',  emoji: '🌾', name: 'Wheat',  seedCost: 10, growMs: 60 * 60 * 1000,  yield: { product: 'wheat', qty: 1 } },
       { id: 'carrot', emoji: '🥕', name: 'Carrot', seedCost: 25, growMs: 90 * 60 * 1000,  yield: { product: 'carrot', qty: 1 } },
       { id: 'corn',   emoji: '🌽', name: 'Corn',   seedCost: 50, growMs: 120 * 60 * 1000, yield: { product: 'corn', qty: 1 } },
     ];
@@ -241,7 +243,7 @@
     const FARM_ORDER_MARKUP = 1.5;       // reward = raw product value × this …
     const FARM_ORDER_BONUS = 25;         // … plus this flat bonus per order
     // Products eligible for orders (kept to obtainable mid-tier goods).
-    const FARM_ORDER_PRODUCTS = ['egg', 'truffle', 'milk', 'carrot', 'corn'];
+    const FARM_ORDER_PRODUCTS = ['egg', 'truffle', 'milk', 'carrot', 'corn', 'wheat'];
 
     // Processing machines: one-time buy, then turn raw produce into pricier goods
     // over a timer (one job at a time). `in` maps product id → qty consumed.
@@ -254,9 +256,10 @@
         { in: { milk: 2 }, out: { id: 'butter', qty: 1 }, timeMs: 45 * M },
       ] },
       { id: 'bakery', emoji: '🍞', name: 'Bakery', cost: 2500, recipes: [
-        { in: { corn: 1 }, out: { id: 'bread',  qty: 1 }, timeMs: 30 * M },
-        { in: { corn: 1 }, out: { id: 'cookie', qty: 1 }, timeMs: 25 * M },
-        { in: { corn: 2 }, out: { id: 'pie',    qty: 1 }, timeMs: 45 * M },
+        { in: { corn: 1 },  out: { id: 'bread',    qty: 1 }, timeMs: 30 * M },
+        { in: { corn: 1 },  out: { id: 'cookie',   qty: 1 }, timeMs: 25 * M },
+        { in: { corn: 2 },  out: { id: 'pie',      qty: 1 }, timeMs: 45 * M },
+        { in: { wheat: 2 }, out: { id: 'baguette', qty: 1 }, timeMs: 35 * M },
       ] },
       { id: 'oven', emoji: '🍰', name: 'Cake Oven', cost: 5000, recipes: [
         { in: { egg: 2, milk: 1 }, out: { id: 'cake',    qty: 1 }, timeMs: 60 * M },
