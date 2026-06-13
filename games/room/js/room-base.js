@@ -290,7 +290,8 @@
       horse: [ { id: 'bay',     name: 'Bay',     rare: false }, { id: 'black',  name: 'Black',  rare: true, pal: { coat: '#4a3f3a', mane: '#241f1b' } }, { id: 'rgb', name: 'RGB', rgb: true, pal: { coat: '#9b7afc', mane: '#ff5db1' } } ],
     };
     const FARM_MAX_ANIMALS = 20;                   // total animals on the farm, any mix
-    const FARM_DROP_CAP = 3;                       // max uncollected drops per animal
+    const FARM_DROP_CAP = 3;                       // (legacy) max uncollected drops per animal
+    const FARM_PRODUCE_CAP = 20;                   // max uncollected produce per ANIMAL TYPE — production pauses at this until you collect
     const FARM_CYCLE_SLOW_MS = 6 * 60 * 60 * 1000; // production cycle at happiness 0
     const FARM_CYCLE_FAST_MS = 2 * 60 * 60 * 1000; // production cycle at happiness 100
     const FARM_START_HAPPINESS = 60;               // happiness of a newly bought animal

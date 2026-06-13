@@ -24,6 +24,7 @@
     const CART_LEAVE_MS = 1600;       // roll-off animation length
     let _animalModalId = null;        // animal whose status panel is open
     let _animalButcherConfirm = false;// awaiting butcher confirmation in the animal panel
+    let _lastProduceN = -1;           // last pending-produce count shown on the Collect button
     let _workshopModalOpen = false;   // single-machine modal visible?
     let _workshopModalId = null;      // which machine's modal is open
     let _makeChoiceSlot = null;       // slot index currently choosing a recipe (or null)
@@ -40,8 +41,12 @@
     function runFarmProduction() {
       if (viewingUid !== currentUid || !(roomData.farmAnimals || []).length) return 0;
       roomData.farmDrops = roomData.farmDrops || [];
+      // Produce is pooled PER ANIMAL TYPE and capped at FARM_PRODUCE_CAP. Feed the
+      // type pool to planFarmTick (per-animal) so a type's animals stop at the cap.
+      const typeCount = {};
+      for (const d of roomData.farmDrops) typeCount[d.type] = (typeCount[d.type] || 0) + 1;
       const dropCounts = {};
-      for (const d of roomData.farmDrops) dropCounts[d.animalId] = (dropCounts[d.animalId] || 0) + 1;
+      for (const a of roomData.farmAnimals) dropCounts[a.id] = typeCount[a.type] || 0;
       const plan = planFarmTick({
         animals: roomData.farmAnimals,
         dropCounts: dropCounts,
@@ -50,7 +55,7 @@
         now: Date.now(),
         slowMs: FARM_CYCLE_SLOW_MS,
         fastMs: FARM_CYCLE_FAST_MS,
-        dropCap: FARM_DROP_CAP,
+        dropCap: FARM_PRODUCE_CAP,
         foodPerDay: FARM_FOOD_PER_DAY,
         gainPerDay: FARM_HAPPY_GAIN_PER_DAY,
         decayPerDay: FARM_HAPPY_DECAY_PER_DAY,
@@ -60,7 +65,11 @@
       roomData.farmAnimals = plan.animals;
       roomData.farmFood = plan.foodStock;
       roomData.farmFoodAt = plan.foodAt;
+      let added = 0;
+      const live = Object.assign({}, typeCount);
       for (const s of plan.spawns) {
+        if ((live[s.type] || 0) >= FARM_PRODUCE_CAP) continue;   // this type's pool is full
+        live[s.type] = (live[s.type] || 0) + 1; added++;
         const a = plan.animals.find(an => an.id === s.animalId);
         roomData.farmDrops.push({
           id: 'fd' + Date.now() + '_' + (_farmDropSeq++),
@@ -71,7 +80,7 @@
         });
       }
       if (roomData.farmAutoCollect) _autoCollectAll(); // straight into stock, no tapping
-      return plan.spawns.length;
+      return added;
     }
 
     // Current animal cap (base + expansions).
@@ -183,6 +192,7 @@
       closeRgbPreview();
       closeWorkshopModal();
       closeAnimalModal();
+      closeProduceModal();
       _hideFarmTip();
       document.getElementById('farmView')?.classList.remove('visible');
       _setFarmPanelMode(false);
@@ -1228,11 +1238,6 @@
     function askAnimalButcher() { _animalButcherConfirm = true; renderAnimalModal(); }
     function cancelAnimalButcher() { _animalButcherConfirm = false; renderAnimalModal(); }
     function confirmButcherAnimal() { const id = _animalModalId; closeAnimalModal(); butcherAnimal(id); }
-    function petAnimal() {
-      const a = (roomData.farmAnimals || []).find(x => x.id === _animalModalId);
-      const st = a && _farmAnimStates[a.id];
-      if (st) _farmParticles.push({ text: a.happiness > 30 ? '❤️' : '🌾', x: st.x, y: st.y - 0.08, vy: -0.0008, life: 1000, born: performance.now() });
-    }
     function renderAnimalModal() {
       const el = document.getElementById('animalModal');
       if (!el) return;
@@ -1243,17 +1248,17 @@
       const h = Math.round(a.happiness);
       const color = h > 60 ? '#6dd56d' : h > 30 ? '#f2c94c' : '#eb5757';
       const mark = a.variant === 'rgb' ? ' 🌈' : ((FARM_VARIANTS[a.type] || []).some(v => v.id === a.variant && v.rare) ? ' ✨' : '');
-      const waiting = (roomData.farmDrops || []).filter(d => d.animalId === a.id).length;
+      const waiting = (roomData.farmDrops || []).filter(d => d.type === a.type).length;   // pooled per type
       const meat = FARM_MEAT_YIELD[a.type] || 1;
       // Production: current cycle (faster when happy / higher level) + next-drop countdown.
       const cycleMs = farmCycleMs(a.happiness, FARM_CYCLE_SLOW_MS, FARM_CYCLE_FAST_MS) / (1 + FARM_LEVEL_SPEEDUP * (lvl - 1));
       let prodLine;
-      if (waiting >= FARM_DROP_CAP) {
-        prodLine = def.drop.emoji + ' ' + def.drop.name + ' — full (' + waiting + '/' + FARM_DROP_CAP + '), collect to resume';
+      if (waiting >= FARM_PRODUCE_CAP) {
+        prodLine = def.drop.emoji + ' ' + def.drop.name + ' — full (' + waiting + '/' + FARM_PRODUCE_CAP + ') · collect to resume';
       } else {
         const next = Math.max(0, (a.lastDropTime || Date.now()) + cycleMs - Date.now());
         prodLine = 'Makes ' + def.drop.emoji + ' ' + def.drop.name + ' every ~' + _fmtFarmTime(cycleMs) +
-          ' · next in ' + (next <= 0 ? 'soon' : _fmtFarmTime(next)) + (waiting ? ' (' + waiting + ' ready)' : '');
+          ' · next in ' + (next <= 0 ? 'soon' : _fmtFarmTime(next)) + ' · ' + waiting + '/' + FARM_PRODUCE_CAP + ' waiting';
       }
       const nextThresh = FARM_LEVELS[lvl];                                  // threshold for next level
       const lvlInfo = nextThresh != null ? ((a.collected || 0) + '/' + nextThresh + ' to Lv' + (lvl + 1)) : 'max level';
@@ -1263,21 +1268,76 @@
           '<button class="cp-crop" style="justify-content:center;font-weight:800;background:var(--g-danger);color:#fff" onclick="confirmButcherAnimal()">✓ Butcher</button>' +
           '<button class="cp-crop" style="justify-content:center" onclick="cancelAnimalButcher()">✗ Keep it</button>';
       } else if (_ownsButcher()) {
-        actions = '<button class="cp-crop" style="justify-content:center" onclick="petAnimal()">❤️ Pet</button>' +
-          '<button class="cp-crop" style="justify-content:center;color:#f87171" onclick="askAnimalButcher()">🔪 Butcher for meat (🥩×' + meat + ')</button>';
+        actions = '<button class="cp-crop" style="justify-content:center;color:#f87171" onclick="askAnimalButcher()">🔪 Butcher for meat (🥩×' + meat + ')</button>';
       } else {
-        actions = '<button class="cp-crop" style="justify-content:center" onclick="petAnimal()">❤️ Pet</button>' +
-          '<div class="ws-status">🔪 Build the Butcher (Garden tab) to butcher animals.</div>';
+        actions = '<div class="ws-status">🔪 Build the Butcher (Garden tab) to butcher animals.</div>';
       }
       el.innerHTML =
         '<div class="ws-box">' +
           '<div class="ws-head">' + def.emoji + ' ' + def.name + mark + '</div>' +
-          '<div class="ws-sub">Lv ' + lvl + ' · ' + lvlInfo + (waiting ? ' · ' + def.drop.emoji + '×' + waiting + ' waiting' : '') + '</div>' +
+          '<div class="ws-sub">Lv ' + lvl + ' · ' + lvlInfo + '</div>' +
           '<div class="ws-status" style="margin:2px 0 6px">Happiness <b style="color:' + color + '">' + h + '%</b></div>' +
           '<div style="height:8px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden;margin:0 0 8px"><div style="height:100%;width:' + h + '%;background:' + color + '"></div></div>' +
           '<div class="ws-status" style="margin:0 0 12px">' + prodLine + '</div>' +
           actions +
           '<button class="cp-close" onclick="closeAnimalModal()">Close</button>' +
+        '</div>';
+      el.style.display = 'flex';
+    }
+
+    // ── Produce modal — how much each animal type has made (capped per type) + collect.
+    let _produceModalOpen = false;
+    function openProduceModal() { _produceModalOpen = true; renderProduceModal(); }
+    function closeProduceModal() { _produceModalOpen = false; const el = document.getElementById('produceModal'); if (el) el.style.display = 'none'; }
+    async function collectProduceType(type) {
+      if (viewingUid !== currentUid) return;
+      const drops = (roomData.farmDrops || []).filter(d => d.type === type);
+      if (!drops.length) return;
+      const def = FARM_ANIMALS.find(f => f.id === type);
+      const pid = def ? def.drop.id : type;
+      roomData.farmStock = roomData.farmStock || {};
+      roomData.farmStock[pid] = (roomData.farmStock[pid] || 0) + drops.length;
+      roomData.farmTotalCollected = (roomData.farmTotalCollected || 0) + drops.length;
+      drops.forEach(d => { const an = (roomData.farmAnimals || []).find(x => x.id === d.animalId); if (an) an.collected = (an.collected || 0) + 1; });
+      roomData.farmDrops = (roomData.farmDrops || []).filter(d => d.type !== type);
+      await saveRoom();
+      showToast('Collected ' + drops.length + ' ' + (def ? def.drop.emoji + ' ' + def.drop.name : type) + '!', 'success');
+      checkAchievements(); renderProduceModal(); renderFarmPanel(); renderAll();
+    }
+    async function collectAllProduce() {
+      if (viewingUid !== currentUid) return;
+      const n = _autoCollectAll();   // every drop → stock (+XP)
+      if (!n) return;
+      await saveRoom();
+      showToast('Collected ' + n + ' produce!', 'success');
+      checkAchievements(); renderProduceModal(); renderFarmPanel(); renderAll();
+    }
+    function renderProduceModal() {
+      const el = document.getElementById('produceModal');
+      if (!el) return;
+      if (!_produceModalOpen) { el.style.display = 'none'; return; }
+      const counts = {};
+      for (const d of (roomData.farmDrops || [])) counts[d.type] = (counts[d.type] || 0) + 1;
+      const owned = [];
+      (roomData.farmAnimals || []).forEach(a => { if (owned.indexOf(a.type) < 0) owned.push(a.type); });
+      const order = FARM_ANIMALS.map(d => d.id).filter(id => owned.indexOf(id) >= 0);
+      const rows = order.length ? order.map(type => {
+        const def = FARM_ANIMALS.find(f => f.id === type) || { drop: { emoji: '❓', name: type } };
+        const n = counts[type] || 0;
+        return '<div class="ws-slot">' +
+          '<span class="ws-slot-no">' + def.drop.emoji + ' ' + def.drop.name + '</span>' +
+          '<span class="ws-slot-state">' + n + '/' + FARM_PRODUCE_CAP + (n >= FARM_PRODUCE_CAP ? ' · full!' : '') + '</span>' +
+          '<button class="farm-shop-buy" onclick="collectProduceType(\'' + type + '\')"' + (n > 0 ? '' : ' disabled') + '>Collect</button>' +
+          '</div>';
+      }).join('') : '<div class="ws-status">No animals yet — buy one in the Animals tab.</div>';
+      const total = Object.keys(counts).reduce((s, k) => s + counts[k], 0);
+      el.innerHTML =
+        '<div class="ws-box">' +
+          '<div class="ws-head">🧺 Produce</div>' +
+          '<div class="ws-sub">Each animal type holds up to ' + FARM_PRODUCE_CAP + ' — collect to keep them producing.</div>' +
+          rows +
+          (total > 0 ? '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="collectAllProduce()">📦 Collect all (' + total + ')</button>' : '') +
+          '<button class="cp-close" onclick="closeProduceModal()">Close</button>' +
         '</div>';
       el.style.display = 'flex';
     }
@@ -1711,15 +1771,26 @@
         _drawFarmTrough(ctx, W, H, night);
         _drawFarmPlots(ctx, W, H, t);
 
-        // Drops (behind animals), gentle pulse
+        // Drops on the ground (visual juice) — collected via the Produce modal.
+        // Cap how many we draw so a full pool (up to 20/type) doesn't clutter.
         ctx.textAlign = 'center';
         const pulse = 1 + Math.sin(t / 300) * 0.08;
-        for (const d of (roomData.farmDrops || [])) {
-          const def = FARM_ANIMALS.find(f => f.id === d.type);
+        const _dd = roomData.farmDrops || [];
+        for (let i = 0; i < Math.min(_dd.length, 14); i++) {
+          const def = FARM_ANIMALS.find(f => f.id === _dd[i].type);
           if (!def) continue;
           const size = Math.max(20, Math.min(W, H) * 0.045) * pulse;
           ctx.font = Math.round(size) + 'px sans-serif';
-          ctx.fillText(def.drop.emoji, d.x * W, d.y * H);
+          ctx.fillText(def.drop.emoji, _dd[i].x * W, _dd[i].y * H);
+        }
+        // Floating "Collect" button reflects total pending produce
+        if (_dd.length !== _lastProduceN) {
+          _lastProduceN = _dd.length;
+          const _pb = document.getElementById('farmProduceBtn');
+          if (_pb) _pb.style.display = _dd.length > 0 ? 'block' : 'none';
+          const _pn = document.getElementById('farmProduceN');
+          if (_pn) _pn.textContent = _dd.length;
+          if (_produceModalOpen) renderProduceModal();
         }
 
         // Animals: wander + drawn renderers, mini happiness bar above
@@ -2013,13 +2084,10 @@
           return;
         }
 
-        // Drops take priority (they're the payout)
-        let hitDrop = null, hitDist = Infinity;
+        // Tapping any produce on the ground opens the Produce modal (collect there).
         for (const d of (roomData.farmDrops || [])) {
-          const dist = Math.hypot(d.x - cx, d.y - cy);
-          if (dist < 0.07 && dist < hitDist) { hitDist = dist; hitDrop = d; }
+          if (Math.hypot(d.x - cx, d.y - cy) < 0.07) { openProduceModal(); return; }
         }
-        if (hitDrop) { _collectFarmDrop(hitDrop); return; }
 
         // Tap an animal → open its status panel (stats + pet / butcher)
         let hitAnimal = null, aDist = 0.10;
