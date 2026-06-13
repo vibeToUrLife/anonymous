@@ -1,0 +1,106 @@
+/* components.css — Clay "Bubble Pop" component library.
+   Built ONLY from theme.css tokens (no raw hex). Loaded AFTER style.css/
+   interactive.css so it governs on equal specificity; surfaces migrate to
+   these classes/selectors as the inline corkboard block is emptied. */
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.btn{
+  font-family:var(--font-display); font-weight:700; font-size:var(--fs-sm);
+  padding:10px 16px; border:none; border-radius:14px; cursor:pointer;
+  display:inline-flex; gap:6px; align-items:center; justify-content:center;
+  min-height:40px; line-height:1; color:var(--ink);
+  transition:transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease), filter var(--dur) var(--ease);
+}
+.btn:active{ transform:scale(.97); }
+.btn:disabled{ opacity:.5; cursor:not-allowed; }
+.btn--primary{ background:linear-gradient(135deg,var(--primary),var(--primary-deep)); color:var(--on-primary); box-shadow:var(--acc-shadow); }
+.btn--primary:hover{ filter:brightness(1.03); }
+.btn--secondary{ background:var(--surface); color:var(--primary-deep); box-shadow:var(--clay-up-sm); }
+.btn--ghost{ background:transparent; color:var(--ink-soft); box-shadow:none; }
+.btn--danger{ background:var(--surface); color:var(--bad); box-shadow:var(--clay-up-sm); }
+
+/* ── Surfaces ────────────────────────────────────────────── */
+.clay-card{ background:var(--surface); border-radius:var(--r); box-shadow:var(--clay-up); }
+.clay-card--sm{ background:var(--surface); border-radius:var(--r-sm); box-shadow:var(--clay-up-sm); }
+.clay-inset{ background:var(--sunken); border-radius:var(--r-sm); box-shadow:var(--clay-in); }
+
+/* ── Fields ──────────────────────────────────────────────── */
+.clay-field{
+  background:var(--surface); color:var(--ink); border:none; border-radius:14px;
+  box-shadow:var(--clay-in); padding:11px 14px; font-family:var(--font-body); font-size:var(--fs-sm);
+  outline:none; min-height:44px; width:100%;
+}
+.clay-field::placeholder{ color:var(--ink-faint); }
+
+/* ── Icon button ─────────────────────────────────────────── */
+.clay-ic{
+  width:36px; height:36px; min-width:36px; border-radius:11px; border:none; cursor:pointer;
+  display:grid; place-items:center; background:var(--surface); color:var(--primary);
+  box-shadow:var(--clay-up-sm); transition:transform var(--dur) var(--ease);
+}
+.clay-ic:active{ transform:scale(.94); }
+.clay-ic svg{ width:18px; height:18px; }
+
+/* ── Pills & chips ───────────────────────────────────────── */
+.pill{
+  font-size:var(--fs-xs); font-weight:700; padding:5px 10px; border-radius:var(--pill);
+  background:var(--bg); color:var(--ink-soft); box-shadow:var(--clay-up-sm);
+  display:inline-flex; gap:4px; align-items:center; cursor:pointer; border:none;
+}
+.pill--on{ background:var(--primary-tint); color:var(--primary-deep); }
+.chip{
+  font-size:var(--fs-sm); font-weight:700; padding:7px 12px; border-radius:var(--pill);
+  background:var(--surface); color:var(--primary-deep); box-shadow:var(--clay-up-sm);
+  display:inline-flex; gap:5px; align-items:center; cursor:pointer; border:none;
+}
+.chip--accent{ background:linear-gradient(135deg,var(--primary),var(--primary-deep)); color:var(--on-primary); box-shadow:var(--acc-shadow); }
+
+/* ── Toggle switch ───────────────────────────────────────── */
+.clay-toggle{
+  width:46px; height:27px; border-radius:var(--pill); background:var(--sunken);
+  box-shadow:var(--clay-in); position:relative; flex:none; cursor:pointer; border:none; padding:0;
+}
+.clay-toggle::after{
+  content:''; position:absolute; top:3px; left:3px; width:21px; height:21px; border-radius:50%;
+  background:#fff; box-shadow:1px 1px 3px rgba(0,0,0,.25); transition:left var(--dur) var(--ease);
+}
+.clay-toggle--on{ background:linear-gradient(135deg,var(--primary),var(--primary-deep)); box-shadow:var(--acc-shadow); }
+.clay-toggle--on::after{ left:22px; }
+
+/* ── Avatar chips (rotating tints) ───────────────────────── */
+.ava{ width:28px; height:28px; border-radius:10px; display:grid; place-items:center; font-size:14px; flex:none; background:var(--primary-tint); }
+.ava--accent{ background:var(--accent-soft); }
+
+/* ── FAB dock ────────────────────────────────────────────── */
+.clay-dock{
+  position:fixed; right:14px; bottom:calc(78px + env(safe-area-inset-bottom,0px));
+  display:flex; flex-direction:column; gap:10px; align-items:center; z-index:310;
+}
+.clay-dock__btn{
+  width:46px; height:46px; border-radius:16px; display:grid; place-items:center;
+  background:var(--surface); color:var(--primary-deep); box-shadow:var(--clay-up);
+  font-size:19px; cursor:pointer; border:none; text-decoration:none;
+  transition:transform var(--dur) var(--ease);
+}
+.clay-dock__btn:active{ transform:scale(.94); }
+.clay-dock__btn--main{ background:linear-gradient(135deg,var(--primary),var(--primary-deep)); color:var(--on-primary); box-shadow:var(--acc-shadow); }
+
+/* ── Glass overlays (modals/sheets/dialogs only) ─────────── */
+.scrim{ background:var(--scrim); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
+.glass-sheet{
+  background:var(--glass-bg); backdrop-filter:blur(var(--glass-blur)); -webkit-backdrop-filter:blur(var(--glass-blur));
+  border:1px solid var(--glass-border); border-radius:var(--r-lg); box-shadow:0 20px 50px rgba(0,0,0,.45); color:var(--ink);
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .glass-sheet{ background:var(--surface); }
+}
+
+/* ── Bento grid (games hub — defined now, used in Plan 2) ── */
+.bento{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; grid-auto-rows:84px; }
+.tile{
+  border-radius:var(--r); background:var(--surface); box-shadow:var(--clay-up); padding:13px;
+  display:flex; flex-direction:column; justify-content:space-between; cursor:pointer; overflow:hidden;
+}
+.tile--feat{ grid-column:span 2; grid-row:span 2; background:linear-gradient(140deg,var(--primary),var(--primary-deep)); color:var(--on-primary); }
+.tile--wide{ grid-column:span 2; }
+@media (max-width:640px){ .bento{ grid-template-columns:repeat(2,1fr); } }

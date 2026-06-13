@@ -7,41 +7,24 @@
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
   <link rel="stylesheet" href="./src/css/style.css?v=3">
   <link rel="stylesheet" href="./src/css/interactive.css?v=1">
+  <!-- Clay "Bubble Pop" design system: tokens + component library (load last so they govern) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="./src/css/theme.css?v=1">
+  <link rel="stylesheet" href="./src/css/components.css?v=1">
   <style>
-    body.light-theme .sidebar-section a:not(.game-card) { background: rgba(0,0,0,0.04) !important; color: #333 !important; }
-    body.light-theme .sidebar-section a:not(.game-card):hover { background: rgba(0,0,0,0.08) !important; }
-    body.light-theme .sidebar-section a:not(.game-card) div,
-    body.light-theme .sidebar-section a:not(.game-card) div div { color: #333 !important; }
-    body.light-theme .sidebar-section a:not(.game-card) div div:last-child { color: rgba(0,0,0,0.45) !important; }
-    body.light-theme .collapse-toggle { background: rgba(0,0,0,0.04) !important; color: #333 !important; }
-    body.light-theme .collapse-toggle span { color: #333 !important; }
-    body.light-theme .collapse-arrow { color: rgba(0,0,0,0.4) !important; }
-    body.light-theme .sidebar-body { color: #333; }
-    body.light-theme .sidebar-header { color: #333 !important; }
-    body.light-theme .sidebar-section h3 { color: rgba(0,0,0,0.5) !important; }
-    body.light-theme .sidebar-section { border-bottom-color: rgba(0,0,0,0.06) !important; }
-    body.light-theme .sidebar { background: rgba(245,243,250,0.97) !important; }
-    body.light-theme .random-result { background: rgba(0,0,0,0.04) !important; color: #b8860b !important; }
-    body.light-theme .vote-item { background: rgba(0,0,0,0.03) !important; color: #333 !important; }
-    body.light-theme .vote-item .vote-text { color: rgba(0,0,0,0.8) !important; }
-    body.light-theme .countdown-label { color: rgba(0,0,0,0.45) !important; }
-    body.light-theme .countdown-display { background: rgba(0,0,0,0.04) !important; color: #333 !important; }
-    body.light-theme .countdown-schedule { color: rgba(0,0,0,0.4) !important; }
-    body.light-theme .food-input-row input { background: rgba(0,0,0,0.04) !important; color: #333 !important; border-color: rgba(0,0,0,0.12) !important; }
-    body.light-theme .restore-btn { color: rgba(0,0,0,0.5) !important; border-color: rgba(0,0,0,0.12) !important; }
-    body.light-theme .reset-info { color: rgba(0,0,0,0.4) !important; }
-    body.light-theme .vote-empty { color: rgba(0,0,0,0.3) !important; }
-    body.light-theme .poll-question { color: #222 !important; }
-    body.light-theme .poll-option-row { background: rgba(0,0,0,0.04) !important; border-color: rgba(0,0,0,0.08) !important; }
-    body.light-theme .poll-option-row:hover { background: rgba(0,0,0,0.07) !important; }
-    body.light-theme .poll-option-row.voted { border-color: rgba(90,70,180,0.4) !important; background: rgba(90,70,180,0.06) !important; }
-    body.light-theme .poll-option-text { color: #333 !important; }
-    body.light-theme .poll-vote-count { color: rgba(0,0,0,0.5) !important; }
-    body.light-theme .poll-total { color: rgba(0,0,0,0.4) !important; }
-    body.light-theme .poll-add-row input { background: rgba(0,0,0,0.04) !important; color: #333 !important; border-color: rgba(0,0,0,0.1) !important; }
-    body.light-theme .poll-creator { background: rgba(245,243,250,0.97) !important; border-color: rgba(0,0,0,0.1) !important; }
-    body.light-theme .poll-creator-header { color: #333 !important; border-bottom-color: rgba(0,0,0,0.06) !important; }
-    body.light-theme .poll-question-input, body.light-theme .poll-option-input { background: rgba(0,0,0,0.04) !important; color: #333 !important; border-color: rgba(0,0,0,0.1) !important; }
+    /* Poll rows (creator + shared) → tokens, both themes.
+       (Sidebar light-theme overrides removed — the clay sidebar rules below
+       are token-driven and cover both themes.) */
+    .poll-question { color: var(--ink) !important; }
+    .poll-option-row { background: var(--sunken) !important; border-color: var(--border) !important; }
+    .poll-option-row:hover { background: var(--primary-tint) !important; }
+    .poll-option-row.voted { border-color: var(--primary) !important; background: var(--primary-tint) !important; }
+    .poll-option-text { color: var(--ink-soft) !important; }
+    .poll-vote-count { color: var(--ink-faint) !important; }
+    .poll-total { color: var(--ink-faint) !important; }
+    .poll-add-row input { background: var(--sunken) !important; color: var(--ink) !important; border: none !important; box-shadow: var(--clay-in) !important; }
+    .poll-creator-header { color: var(--primary-deep) !important; border-bottom-color: var(--border) !important; }
 
     /* ── Feedback FAB ── */
     .feedback-fab {
@@ -66,61 +49,43 @@
     }
     .feedback-fab:hover { transform: scale(1.1); box-shadow: 0 6px 24px rgba(59,130,246,0.5); }
 
-    /* ── Daily Quote Banner ── */
+    /* ── Daily Quote Banner (clay card) ── */
     .daily-quote-banner {
       max-width: 600px;
       margin: 18px auto 0;
       padding: 14px 20px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
-      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--r);
+      background: var(--surface);
+      box-shadow: var(--clay-up);
+      border-left: 5px solid var(--primary);
       text-align: center;
       position: relative;
       overflow: hidden;
-    }
-    .daily-quote-banner::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: linear-gradient(135deg, rgba(168,85,247,0.06) 0%, rgba(59,130,246,0.06) 100%);
-      pointer-events: none;
     }
     .daily-quote-label {
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 1.2px;
       text-transform: uppercase;
-      color: rgba(168,85,247,0.6);
+      color: var(--primary-deep);
       margin-bottom: 6px;
     }
     .daily-quote-text {
       font-size: 14px;
       line-height: 1.6;
-      color: rgba(255,255,255,0.7);
+      color: var(--ink);
       font-style: italic;
       position: relative;
     }
-    /* Light theme */
-    body.light-theme .daily-quote-banner {
-      background: linear-gradient(135deg, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.01) 100%);
-      border-color: rgba(0,0,0,0.06);
-    }
-    body.light-theme .daily-quote-banner::before {
-      background: linear-gradient(135deg, rgba(168,85,247,0.04) 0%, rgba(59,130,246,0.04) 100%);
-    }
-    body.light-theme .daily-quote-label { color: rgba(168,85,247,0.5); }
-    body.light-theme .daily-quote-text { color: rgba(0,0,0,0.55); }
 
-    /* ── Quote Comment Section ── */
+    /* ── Quote Comment Section (clay; tokens flip light/dark) ── */
     .qc-toggle {
       background: none; border: none; cursor: pointer;
-      color: rgba(255,255,255,0.4); font-size: 12px;
+      color: var(--ink-faint); font-size: 12px;
       margin-top: 8px; padding: 4px 8px; border-radius: 8px;
       transition: color 0.2s, background 0.2s;
     }
-    .qc-toggle:hover { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.06); }
-    body.light-theme .qc-toggle { color: rgba(0,0,0,0.35); }
-    body.light-theme .qc-toggle:hover { color: rgba(0,0,0,0.6); background: rgba(0,0,0,0.04); }
+    .qc-toggle:hover { color: var(--primary-deep); background: var(--primary-tint); }
 
     .qc-section {
       max-height: 0; overflow: hidden; opacity: 0;
@@ -132,49 +97,37 @@
       overflow-y: auto;
     }
     .qc-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
-    .qc-empty { color: rgba(255,255,255,0.3); font-size: 12px; text-align: center; padding: 10px 0; }
-    body.light-theme .qc-empty { color: rgba(0,0,0,0.3); }
+    .qc-empty { color: var(--ink-faint); font-size: 12px; text-align: center; padding: 10px 0; }
 
     .qc-item {
       position: relative;
-      background: rgba(255,255,255,0.04); border-radius: 8px;
+      background: var(--sunken); border-radius: 10px;
       padding: 6px 10px; text-align: left;
     }
-    body.light-theme .qc-item { background: rgba(0,0,0,0.03); }
-    .qc-name { font-size: 11px; font-weight: 600; color: rgba(168,85,247,0.7); margin-right: 6px; }
-    .qc-time { font-size: 10px; color: rgba(255,255,255,0.25); }
-    body.light-theme .qc-time { color: rgba(0,0,0,0.25); }
-    .qc-text { font-size: 13px; color: rgba(255,255,255,0.65); margin-top: 2px; word-break: break-word; }
-    body.light-theme .qc-text { color: rgba(0,0,0,0.6); }
+    .qc-name { font-size: 11px; font-weight: 700; color: var(--primary-deep); margin-right: 6px; }
+    .qc-time { font-size: 10px; color: var(--ink-faint); }
+    .qc-text { font-size: 13px; color: var(--ink); margin-top: 2px; word-break: break-word; }
     .qc-delete {
       position: absolute; top: 4px; right: 6px;
       background: none; border: none; cursor: pointer;
-      color: rgba(255,255,255,0.2); font-size: 11px; padding: 2px 4px; border-radius: 4px;
+      color: var(--ink-faint); font-size: 11px; padding: 2px 4px; border-radius: 4px;
       transition: color 0.2s;
     }
-    .qc-delete:hover { color: #f87171; }
-    body.light-theme .qc-delete { color: rgba(0,0,0,0.2); }
-    body.light-theme .qc-delete:hover { color: #ef4444; }
+    .qc-delete:hover { color: var(--bad); }
 
     .qc-input-row { display: flex; gap: 6px; }
     .qc-input {
-      flex: 1; padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);
-      background: rgba(255,255,255,0.05); color: #fff; font-size: 13px; outline: none;
-      transition: border-color 0.2s;
+      flex: 1; padding: 9px 12px; border-radius: 12px; border: none;
+      background: var(--sunken); box-shadow: var(--clay-in); color: var(--ink); font-size: 13px; outline: none;
     }
-    .qc-input:focus { border-color: rgba(168,85,247,0.4); }
-    .qc-input::placeholder { color: rgba(255,255,255,0.25); }
-    body.light-theme .qc-input {
-      background: rgba(0,0,0,0.04); color: #333; border-color: rgba(0,0,0,0.1);
-    }
-    body.light-theme .qc-input::placeholder { color: rgba(0,0,0,0.3); }
+    .qc-input::placeholder { color: var(--ink-faint); }
     .qc-send {
-      padding: 8px 14px; border: none; border-radius: 10px;
-      background: linear-gradient(135deg, #a855f7, #6366f1);
-      color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
-      transition: opacity 0.2s;
+      padding: 9px 16px; border: none; border-radius: 12px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-deep));
+      color: var(--on-primary); font-size: 13px; font-weight: 700; cursor: pointer;
+      box-shadow: var(--acc-shadow); transition: filter 0.2s;
     }
-    .qc-send:hover { opacity: 0.85; }
+    .qc-send:hover { filter: brightness(1.03); }
     .qc-send:disabled { opacity: 0.5; cursor: not-allowed; }
 
     .qc-anon-toggle {
@@ -182,14 +135,13 @@
       margin-top: 6px; cursor: pointer; user-select: none;
     }
     .qc-anon-toggle input[type="checkbox"] {
-      width: 14px; height: 14px; accent-color: #a855f7; cursor: pointer;
+      width: 14px; height: 14px; accent-color: var(--primary); cursor: pointer;
     }
-    .qc-anon-text { font-size: 11px; color: rgba(255,255,255,0.4); }
-    body.light-theme .qc-anon-text { color: rgba(0,0,0,0.4); }
+    .qc-anon-text { font-size: 11px; color: var(--ink-faint); }
 
     .qc-toast {
       position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
-      background: rgba(0,0,0,0.8); color: #fff; padding: 8px 18px;
+      background: var(--ink); color: var(--bg); padding: 8px 18px;
       border-radius: 10px; font-size: 13px; pointer-events: none;
       opacity: 0; transition: opacity 0.3s; z-index: 9999;
     }
@@ -199,47 +151,38 @@
     .access-gate {
       position: fixed; inset: 0; z-index: 10000;
       display: flex; align-items: center; justify-content: center;
-      background: linear-gradient(135deg, #0f0c29 0%, #1a1a2e 50%, #16213e 100%);
+      background: radial-gradient(1100px 560px at 50% -8%, var(--primary-tint), transparent 62%), var(--bg);
     }
     .access-gate.hidden { display: none; }
     .access-gate-box {
       text-align: center;
       padding: 40px 32px;
-      border-radius: 20px;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--r-lg);
       max-width: 360px;
       width: 90%;
     }
     .access-gate-icon { font-size: 48px; margin-bottom: 12px; }
-    .access-gate-box h2 { color: #fff; font-size: 20px; margin: 0 0 8px; }
-    .access-gate-box p { color: rgba(255,255,255,0.5); font-size: 13px; margin: 0 0 20px; }
+    .access-gate-box h2 { color: var(--ink); font-size: 20px; margin: 0 0 8px; }
+    .access-gate-box p { color: var(--ink-soft); font-size: 13px; margin: 0 0 20px; }
     .access-code-input {
       width: 100%; box-sizing: border-box;
-      padding: 12px 16px; border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.15);
-      background: rgba(255,255,255,0.06);
-      color: #fff; font-size: 15px; text-align: center;
-      outline: none; transition: border-color 0.2s;
+      padding: 12px 16px; border-radius: 12px; border: none;
+      background: var(--sunken); box-shadow: var(--clay-in);
+      color: var(--ink); font-size: 15px; text-align: center; outline: none;
     }
-    .access-code-input:focus { border-color: rgba(168,85,247,0.5); }
-    .access-code-input::placeholder { color: rgba(255,255,255,0.3); }
+    .access-code-input::placeholder { color: var(--ink-faint); }
     .access-enter-btn {
       margin-top: 14px; width: 100%; padding: 12px;
-      border: none; border-radius: 12px;
-      background: linear-gradient(135deg, #a855f7, #6366f1);
-      color: #fff; font-size: 15px; font-weight: 600;
-      cursor: pointer; transition: opacity 0.2s;
+      border-radius: 12px; font-size: 15px; cursor: pointer;
     }
-    .access-enter-btn:hover { opacity: 0.85; }
-    .access-error { color: #f87171; font-size: 12px; margin-top: 10px; min-height: 18px; }
+    .access-error { color: var(--bad); font-size: 12px; margin-top: 10px; min-height: 18px; }
 
     /* ── What's New overlay ── */
     .whats-new-overlay {
       position: fixed; inset: 0; z-index: 9500;
       display: flex; align-items: center; justify-content: center;
-      background: rgba(0,0,0,0.55);
-      backdrop-filter: blur(4px);
+      background: var(--scrim);
+      backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
       animation: fadeIn 0.25s ease;
     }
     .whats-new-overlay.hidden { display: none; }
@@ -247,16 +190,16 @@
     .whats-new-box {
       max-width: 360px; width: 90%;
       padding: 28px 24px 22px;
-      border-radius: 20px;
-      background: linear-gradient(145deg, rgba(30,20,60,0.98), rgba(20,15,50,0.98));
-      border: 1px solid rgba(168,85,247,0.3);
-      box-shadow: 0 12px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(168,85,247,0.1);
+      border-radius: var(--r-lg);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--clay-up); color: var(--ink);
     }
     .whats-new-badge {
       display: inline-block;
       font-size: 13px; font-weight: 800; letter-spacing: 0.5px;
-      color: #fff;
-      background: linear-gradient(135deg, #a855f7, #6366f1);
+      color: var(--on-primary);
+      background: linear-gradient(135deg, var(--primary), var(--primary-deep));
       border-radius: 20px; padding: 4px 12px;
       margin-bottom: 16px;
     }
@@ -266,64 +209,47 @@
     }
     .whats-new-list li {
       font-size: 13px; line-height: 1.6;
-      color: rgba(255,255,255,0.75);
+      color: var(--ink-soft);
       padding: 10px 12px;
-      background: rgba(255,255,255,0.05);
+      background: var(--sunken);
       border-radius: 10px;
-      border-left: 3px solid rgba(168,85,247,0.5);
+      border-left: 3px solid var(--primary);
     }
-    .whats-new-list li strong { color: #fff; }
+    .whats-new-list li strong { color: var(--ink); }
     .whats-new-kbd {
       display: inline-block; font-size: 13px;
-      background: rgba(255,255,255,0.1);
+      background: var(--sunken);
       border-radius: 5px; padding: 0 5px;
     }
     .whats-new-close {
       width: 100%; padding: 11px;
       border: none; border-radius: 12px;
-      background: linear-gradient(135deg, #a855f7, #6366f1);
-      color: #fff; font-size: 14px; font-weight: 700;
-      cursor: pointer; transition: opacity 0.2s;
+      background: linear-gradient(135deg, var(--primary), var(--primary-deep));
+      color: var(--on-primary); font-size: 14px; font-weight: 700;
+      cursor: pointer; box-shadow: var(--acc-shadow); transition: filter 0.2s;
     }
-    .whats-new-close:hover { opacity: 0.85; }
-    body.light-theme .whats-new-box {
-      background: linear-gradient(145deg, rgba(245,242,255,0.99), rgba(235,230,255,0.99));
-      border-color: rgba(120,60,200,0.25);
-    }
-    body.light-theme .whats-new-list li { color: rgba(0,0,0,0.65); background: rgba(0,0,0,0.04); }
-    body.light-theme .whats-new-list li strong { color: #222; }
-    body.light-theme .whats-new-kbd { background: rgba(0,0,0,0.08); }
+    .whats-new-close:hover { filter: brightness(1.03); }
 
     /* ── What's New dev editor (Settings) ── */
     .wn-editor-input, .wn-editor-textarea {
       width: 100%; box-sizing: border-box;
       padding: 8px 12px; border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.06);
-      color: #fff; font-size: 12px; outline: none;
-      transition: border-color 0.2s;
+      border: none; background: var(--sunken); box-shadow: var(--clay-in);
+      color: var(--ink); font-size: 12px; outline: none;
       font-family: inherit;
     }
-    .wn-editor-input:focus, .wn-editor-textarea:focus { border-color: rgba(168,85,247,0.45); }
-    .wn-editor-input::placeholder, .wn-editor-textarea::placeholder { color: rgba(255,255,255,0.3); }
+    .wn-editor-input::placeholder, .wn-editor-textarea::placeholder { color: var(--ink-faint); }
     .wn-editor-textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
-    .wn-editor-hint { font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 3px; }
+    .wn-editor-hint { font-size: 10px; color: var(--ink-faint); margin-top: 3px; }
     .wn-editor-save {
       margin-top: 8px; width: 100%; padding: 9px;
       border: none; border-radius: 10px;
-      background: linear-gradient(135deg, #a855f7, #6366f1);
-      color: #fff; font-size: 13px; font-weight: 700;
-      cursor: pointer; transition: opacity 0.2s;
+      background: linear-gradient(135deg, var(--primary), var(--primary-deep));
+      color: var(--on-primary); font-size: 13px; font-weight: 700;
+      cursor: pointer; box-shadow: var(--acc-shadow);
     }
-    .wn-editor-save:hover { opacity: 0.85; }
     .wn-editor-save:disabled { opacity: 0.5; cursor: not-allowed; }
-    .wn-editor-status { font-size: 11px; margin-top: 6px; min-height: 16px; color: rgba(168,85,247,0.85); }
-    body.light-theme .wn-editor-input, body.light-theme .wn-editor-textarea {
-      background: rgba(0,0,0,0.04); color: #333; border-color: rgba(0,0,0,0.1);
-    }
-    body.light-theme .wn-editor-input::placeholder, body.light-theme .wn-editor-textarea::placeholder { color: rgba(0,0,0,0.3); }
-    body.light-theme .wn-editor-hint { color: rgba(0,0,0,0.35); }
-    body.light-theme .wn-editor-status { color: rgba(100,40,180,0.8); }
+    .wn-editor-status { font-size: 11px; margin-top: 6px; min-height: 16px; color: var(--primary-deep); }
 
     /* ══════════════════════════════════════════════════════════════
        Sticky-Note Corkboard — the board is a corkboard; entries are
@@ -334,66 +260,41 @@
     .page-title-wrapper { display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:8px; }
     .page-logo { width:58px; height:auto; image-rendering:pixelated; filter:drop-shadow(0 3px 5px rgba(0,0,0,0.35)); }
 
-    /* Hero — a hand-written paper note, pinned (the signature) */
+    /* Hero — a clean Baloo 2 wordmark on the clay board (no paper, no pin) */
     .page-title {
-      display:inline-block; position:relative; margin:0; max-width:90vw; text-align:center;
-      font-family:"Segoe Print","Bradley Hand","Comic Sans MS",cursive;
-      font-size:clamp(20px,5vw,30px); font-weight:700; letter-spacing:0.2px; line-height:1.2;
-      padding:14px 26px 12px; border-radius:3px; transform:rotate(-1.6deg);
-      background:#fdf0c4;
-      color:#2b2440; -webkit-text-fill-color:#2b2440; -webkit-background-clip:border-box; background-clip:border-box;
-      box-shadow:0 7px 16px rgba(0,0,0,0.32);
+      display:inline-block; position:relative; margin:0; max-width:92vw; text-align:center;
+      font-family:var(--font-display); font-weight:800; letter-spacing:0.2px; line-height:1.15;
+      font-size:clamp(22px,5.5vw,30px);
+      padding:0; border-radius:0; transform:none; box-shadow:none; background:none;
+      color:var(--ink); -webkit-text-fill-color:var(--ink); background-clip:border-box;
     }
-    .page-title::before { /* push-pin */
-      content:''; position:absolute; top:-9px; left:50%; transform:translateX(-50%);
-      width:14px; height:14px; border-radius:50%;
-      background:radial-gradient(circle at 35% 30%, #ff9a8a, #d23b2c 70%);
-      box-shadow:0 2px 3px rgba(0,0,0,0.4);
-    }
-    .page-subtitle { text-align:center; color:rgba(255,255,255,0.5); font-size:12px; margin:4px 0 0; font-style:italic; }
-    body.light-theme .page-subtitle { color:rgba(0,0,0,0.45); }
-    /* paper note in light theme too (beats style.css's gradient-text rule) */
-    body.light-theme .page-title {
-      background:#fdf0c4; color:#2b2440; -webkit-text-fill-color:#2b2440;
-      -webkit-background-clip:border-box; background-clip:border-box;
-    }
+    .page-subtitle { text-align:center; color:var(--ink-faint); font-size:var(--fs-sm); margin:6px 0 0; font-style:normal; }
+    /* keep the title solid ink in light theme too (beats style.css's gradient-text rule) */
+    body.light-theme .page-title { color:var(--ink); -webkit-text-fill-color:var(--ink); background:none; }
 
-    /* Cork surface behind the games board */
+    /* Surface behind the games board → soft sunken clay tray */
     #miniGamesBody {
-      background-color:#c19a5b;
-      background-image:
-        radial-gradient(rgba(110,75,35,0.28) 1px, transparent 1.4px),
-        radial-gradient(rgba(80,52,22,0.20) 1px, transparent 1.4px);
-      background-size:7px 7px, 12px 12px; background-position:0 0, 4px 5px;
-      border-radius:12px; padding:14px 12px;
-      box-shadow:inset 0 0 0 4px #7c5b30, inset 0 2px 12px rgba(0,0,0,0.3);
+      background:var(--sunken);
+      border-radius:var(--r-sm); padding:14px 12px;
+      box-shadow:var(--clay-in);
     }
 
-    /* Game/room links — paper notes taped to the board (replaces inline styles) */
+    /* Game/room links → clay rows with a tinted emoji avatar */
     .game-card {
       display:flex; align-items:center; gap:11px; position:relative;
       padding:12px 14px; text-decoration:none; cursor:pointer;
-      color:#2b2440; background:#fdf0c4; border-radius:3px;
-      box-shadow:0 4px 8px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.55);
-      transform:rotate(-1.4deg);
-      transition:transform 0.14s ease, box-shadow 0.2s ease;
+      color:var(--ink); background:var(--surface); border-radius:var(--r-sm);
+      box-shadow:var(--clay-up-sm);
+      transition:transform 0.14s var(--ease), box-shadow 0.2s ease;
     }
-    .game-card:nth-of-type(even) { transform:rotate(1.3deg); background:#d6efd4; }
-    .game-card:nth-of-type(3n)   { background:#ffd9c9; }
-    .game-card:nth-of-type(4n)   { background:#d4e8ff; }
-    .game-card::before { /* tape strip across the top */
-      content:''; position:absolute; top:-6px; left:50%;
-      width:44px; height:15px; transform:translateX(-50%) rotate(-3deg);
-      background:rgba(255,255,255,0.4); border:1px solid rgba(255,255,255,0.5);
-      box-shadow:0 1px 2px rgba(0,0,0,0.12);
-    }
-    .game-card:hover { transform:rotate(0deg) translateY(-2px); box-shadow:0 9px 18px rgba(0,0,0,0.34); }
-    .game-card:focus-visible { outline:3px solid #2b2440; outline-offset:3px; }
-    .game-card-emoji { font-size:24px; line-height:1; }
+    .game-card:hover { transform:translateY(-2px); box-shadow:var(--clay-up); }
+    .game-card:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
+    .game-card-emoji { font-size:24px; line-height:1; width:34px; height:34px; display:grid; place-items:center; border-radius:11px; background:var(--primary-tint); }
+    .game-card:nth-of-type(even) .game-card-emoji { background:var(--accent-soft); }
     .game-card > div { flex:1; min-width:0; }
-    .game-card-title { font-size:14px; font-weight:700; color:#2b2440;
-      font-family:"Segoe Print","Bradley Hand","Comic Sans MS",cursive; letter-spacing:0.2px; }
-    .game-card-sub { font-size:11px; color:rgba(43,36,64,0.62); }
+    .game-card-title { font-size:14px; font-weight:700; color:var(--ink);
+      font-family:var(--font-display); letter-spacing:0.2px; }
+    .game-card-sub { font-size:11px; color:var(--ink-faint); }
 
     @media (prefers-reduced-motion: reduce) {
       .game-card, .game-card:hover { transition:none; }
@@ -405,294 +306,234 @@
        (Surfaces chosen so no text inverts to invisible; sidebar shell
        left intact to preserve its light-theme.)
        ══════════════════════════════════════════════════════════════ */
-    /* The board itself — the Dark/Light toggle (Settings) flips this:
-         · DARK mode (default) → walnut board at night
-         · LIGHT mode          → warm tan cork board
-       Paper notes & cards stay light in both (they read well on either board). */
+    /* Board background — warm clay with a soft top glow.
+       Tokens (theme.css) flip light/dark automatically; no per-theme rule needed. */
     body {
-      background-color:#241a10 !important;
-      background-image:
-        radial-gradient(circle at 50% 30%, rgba(0,0,0,0) 48%, rgba(0,0,0,0.45) 100%),
-        radial-gradient(rgba(150,104,52,0.16) 1px, transparent 1.6px),
-        radial-gradient(rgba(90,58,24,0.18) 1px, transparent 1.6px) !important;
-      background-size:100% 100%, 7px 7px, 12px 12px !important;
-      background-position:0 0, 0 0, 4px 5px !important;
-      background-attachment:fixed !important;
+      background:
+        radial-gradient(1100px 560px at 50% -8%, var(--primary-tint), transparent 62%),
+        var(--bg);
+      background-attachment:fixed;
     }
-    body.light-theme {
-      background-color:#cdab6e !important;
-      background-image:
-        radial-gradient(circle at 50% 36%, rgba(60,40,18,0) 52%, rgba(55,36,16,0.26) 100%),
-        radial-gradient(rgba(120,82,38,0.30) 1px, transparent 1.6px),
-        radial-gradient(rgba(90,58,24,0.22) 1px, transparent 1.6px) !important;
-      background-size:100% 100%, 7px 7px, 12px 12px !important;
-      background-position:0 0, 0 0, 4px 5px !important;
-      background-attachment:fixed !important;
-    }
-    .page-subtitle { color:rgba(244,233,210,0.66) !important; }                 /* light on the walnut board */
-    body.light-theme .page-subtitle { color:rgba(45,32,12,0.62) !important; }   /* dark on the tan board */
 
-    /* Floating controls (☰ collapse + ⚙ settings) → wooden board buttons,
-       so they stop clashing with the cork as purple glass */
+    /* Floating ☰ / ⚙ controls → soft clay chips on the board */
     .sidebar-toggle, .settings-btn {
-      background:linear-gradient(180deg,#5b4026,#43301c) !important;
-      color:#f4e9d2 !important; border:1px solid #6e4f2c !important;
+      background:var(--surface) !important;
+      color:var(--primary-deep) !important; border:1px solid var(--border) !important;
       backdrop-filter:none !important;
-      box-shadow:0 3px 7px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.12) !important;
+      box-shadow:var(--clay-up-sm) !important;
     }
-    .sidebar-toggle:hover, .settings-btn:hover { background:linear-gradient(180deg,#6b4d2e,#4f3a22) !important; }
+    .sidebar-toggle:hover, .settings-btn:hover { box-shadow:var(--clay-up) !important; filter:brightness(1.02); }
 
-    /* Logo: recolour the purple pixel speech-bubble to wood + cream so the hero
-       (logo + paper title) reads as one board element, not a leftover accent */
-    .page-logo .logo-body, body.light-theme .page-logo .logo-body { fill:#6b4a2e !important; }
-    .page-logo .logo-dot,  body.light-theme .page-logo .logo-dot  { fill:#f4e9d2 !important; }
+    /* Logo pixel speech-bubble → clay orange + cream, so the hero reads as one mark */
+    .page-logo .logo-body, body.light-theme .page-logo .logo-body { fill:var(--primary) !important; }
+    .page-logo .logo-dot,  body.light-theme .page-logo .logo-dot  { fill:var(--surface) !important; }
 
-    /* ── Answers as pinned paper notes — the board's signature is the push-pin ──
-       Surfaces forced to paper + ink in BOTH themes; border/shadow left
+    /* ════════════════ Clay "Bubble Pop" answer notes ════════════════
+       Soft clay cards. Surface/ink come from tokens, so light/dark switch
+       automatically. background/color/radius use !important to beat the base
+       glassy bubble + per-colour gradients; border & box-shadow are left
        non-!important so paid cosmetic frames (gold/neon/star) still win. */
     .bubble {
-      color:#2b2440 !important;
-      background-color:var(--paper,#fdf0c4) !important;
-      background-image:radial-gradient(circle at 50% 12px,
-        rgba(255,255,255,.55) 0 2px, var(--pin,#d8504b) 2.5px 6px,
-        rgba(60,20,18,.5) 6px 7.5px, transparent 8px) !important;
-      background-repeat:no-repeat !important;
-      background-position:center top !important;
+      color:var(--ink) !important;
+      background:var(--surface) !important;
       backdrop-filter:none !important;
-      padding-top:30px !important;
-      border:1px solid rgba(70,45,20,.18);
-      border-radius:4px !important;
-      box-shadow:0 8px 16px rgba(45,28,10,.3);
-      transform:rotate(-1.2deg);
-      animation:floatIn 0.4s ease-out forwards;   /* drop the wobble */
+      padding:15px 16px 13px !important;
+      border:1px solid var(--border);
+      border-left:4px solid var(--primary);
+      border-radius:var(--r) !important;
+      box-shadow:var(--clay-up);
+      transform:none;
+      animation:floatIn 0.4s var(--ease) forwards;
     }
-    .bubble:nth-of-type(even) { transform:rotate(1.3deg); }
-    .bubble:hover { transform:rotate(0deg) scale(1.04) !important; box-shadow:0 12px 26px rgba(45,28,10,.4) !important; }
-    @media (prefers-reduced-motion: reduce) { .bubble, .bubble:hover { animation:none !important; } }
+    .bubble:nth-of-type(even) { border-left-color:var(--accent); }
+    .bubble:hover { transform:translateY(-3px); box-shadow:var(--clay-up); }
+    @media (prefers-reduced-motion: reduce) { .bubble, .bubble:hover { animation:none !important; transform:none; } }
+    /* cosmetic frames own all four edges → drop the accent edge so they read cleanly */
+    .bubble.cos-frame-simple, .bubble.cos-frame-gold,
+    .bubble.cos-frame-neon, .bubble.cos-frame-star { border-left-width:1px; }
 
-    /* hide the old speech-bubble tails — paper notes are pinned, not spoken */
+    /* hide the old speech-bubble tails — clay notes have no tail */
     .bubble.shape0::after,
     .bubble.shape1::before, .bubble.shape1::after,
     .bubble.shape2::before,
     .bubble.shape3::before, .bubble.shape3::after { display:none !important; }
 
-    /* paper + pin colour pairs (warm sticky-note set, rotating pin colours) */
-    .bubble.c0 {--paper:#fdf0c4;--pin:#d8504b}  .bubble.c1 {--paper:#ffd9c9;--pin:#3f7cc4}
-    .bubble.c2 {--paper:#d6efd4;--pin:#e0a32e}  .bubble.c3 {--paper:#d4e8ff;--pin:#d8504b}
-    .bubble.c4 {--paper:#fbe5a6;--pin:#4f9d6b}  .bubble.c5 {--paper:#f6d6e6;--pin:#3f7cc4}
-    .bubble.c6 {--paper:#cdeee4;--pin:#d8504b}  .bubble.c7 {--paper:#e6ddf6;--pin:#e0a32e}
-    .bubble.c8 {--paper:#fde3c4;--pin:#4f9d6b}  .bubble.c9 {--paper:#ffd9c9;--pin:#d8504b}
-    .bubble.c10{--paper:#d4e8ff;--pin:#e0a32e}  .bubble.c11{--paper:#e6ddf6;--pin:#3f7cc4}
-    .bubble.c12{--paper:#d6efd4;--pin:#d8504b}  .bubble.c13{--paper:#f6d6e6;--pin:#4f9d6b}
-    .bubble.c14{--paper:#dbe7f2;--pin:#d8504b}  .bubble.c15{--paper:#fde3c4;--pin:#3f7cc4}
-
-    /* on-paper chrome → ink instead of white (both themes) */
-    .bubble-footer, body.light-theme .bubble-footer { color:rgba(43,36,64,.6) !important; }
-    .reply-toggle, .reply-to-reply-toggle,
-    body.light-theme .reply-toggle, body.light-theme .reply-to-reply-toggle { color:rgba(43,36,64,.7) !important; }
-    .reply-toggle:hover, .reply-to-reply-toggle:hover { color:#2b2440 !important; background:rgba(0,0,0,.06) !important; }
-    .replies-container, body.light-theme .replies-container { border-top-color:rgba(70,45,20,.18) !important; }
-    .replies-container > .reply-item, body.light-theme .replies-container > .reply-item,
-    .reply-item, body.light-theme .reply-item {
-      color:#3a3358 !important; background:rgba(120,80,30,.07) !important; border-color:rgba(70,45,20,.14) !important;
+    /* on-card chrome → token ink (light/dark via tokens) */
+    .bubble-footer { color:var(--ink-faint) !important; }
+    .reply-toggle, .reply-to-reply-toggle { color:var(--primary-deep) !important; }
+    .reply-toggle:hover, .reply-to-reply-toggle:hover { color:var(--primary) !important; background:var(--primary-tint) !important; }
+    .replies-container { border-top-color:var(--border) !important; }
+    .replies-container > .reply-item, .reply-item {
+      color:var(--ink) !important; background:var(--sunken) !important; border-color:var(--border) !important;
     }
     .reply-item.is-nested { background:transparent !important; }
-    .reply-children, body.light-theme .reply-children { border-left-color:rgba(70,45,20,.2) !important; }
-    .reply-time, .reply-anon-text, body.light-theme .reply-anon-text { color:rgba(43,36,64,.45) !important; }
-    /* Sender name on paper:
+    .reply-children { border-left-color:var(--border) !important; }
+    .reply-time, .reply-anon-text { color:var(--ink-faint) !important; }
+    /* Sender name:
          · no cosmetic   → clean ink, no chip (the common case)
-         · colour bought → dark name-tag chip so light colours (mint/pink/gold) stay
-           legible; the inline cosmetic colour supplies the text (NO !important so it wins)
-         · rainbow       → excluded (it needs its own gradient bg for clip-to-text) + shadow */
-    .answer-sender:not(.cos-name-rainbow), .reply-sender:not(.cos-name-rainbow),
-    body.light-theme .answer-sender:not(.cos-name-rainbow), body.light-theme .reply-sender:not(.cos-name-rainbow) {
-      color:#2b2440; background:transparent;
+         · colour bought → dark name-tag chip so light cosmetic colours stay legible;
+           the inline cosmetic colour supplies the text (NO !important so it wins)
+         · rainbow       → excluded (needs its own gradient bg for clip-to-text) + shadow */
+    .answer-sender:not(.cos-name-rainbow), .reply-sender:not(.cos-name-rainbow) {
+      color:var(--ink); background:transparent;
     }
     .answer-sender[style*="color:"], .reply-sender[style*="color:"] {
-      background:rgba(43,30,16,.82) !important; border-radius:6px; padding:0 6px;
+      background:rgba(20,12,4,.82) !important; border-radius:6px; padding:0 6px;
     }
-    .cos-name-rainbow { text-shadow:0 1px 2px rgba(0,0,0,.5); }
-    .cos-title { color:#3a2a10 !important; background:#f1c85b !important; }
-    .bubble.cos-frame-simple { border-color:rgba(60,40,20,.5) !important; }
-    /* reaction chips inside a note → ink on paper */
-    .bubble .reaction-btn, body.light-theme .bubble .reaction-btn { background:rgba(60,40,15,.08) !important; border-color:rgba(70,45,20,.2) !important; color:#3a3358 !important; }
-    .bubble .reaction-btn:hover { background:rgba(60,40,15,.16) !important; border-color:rgba(70,45,20,.34) !important; }
-    .bubble .reaction-btn.reacted { background:rgba(216,80,75,.16) !important; border-color:rgba(216,80,75,.5) !important; color:#b23b36 !important; }
-    .bubble .reaction-add, body.light-theme .bubble .reaction-add { border-color:rgba(70,45,20,.3) !important; color:rgba(43,36,64,.45) !important; }
-    .bubble .reaction-add:hover { background:rgba(60,40,15,.1) !important; color:#2b2440 !important; }
+    .cos-name-rainbow { text-shadow:0 1px 2px rgba(0,0,0,.4); }
+    /* keep paid cosmetics legible on the white clay card (base colours vanish on --surface) */
+    .cos-title { color:#2a1c08 !important; background:#f1c85b !important; }
+    .bubble.cos-frame-simple { border-color:var(--ink-faint) !important; }
+    /* reaction chips inside a note → clay pills */
+    .bubble .reaction-btn { background:var(--bg) !important; border:1px solid var(--border) !important; color:var(--ink-soft) !important; }
+    .bubble .reaction-btn:hover { background:var(--primary-tint) !important; border-color:var(--primary) !important; }
+    .bubble .reaction-btn.reacted { background:var(--primary-tint) !important; border-color:var(--primary) !important; color:var(--primary-deep) !important; }
+    .bubble .reaction-add { border-color:var(--border) !important; color:var(--ink-faint) !important; }
+    .bubble .reaction-add:hover { background:var(--primary-tint) !important; color:var(--primary-deep) !important; }
     /* HP bar inside a note */
-    .bubble .bubble-hp, body.light-theme .bubble .bubble-hp { background:rgba(60,40,15,.16) !important; border-color:rgba(70,45,20,.2) !important; }
-    .bubble .bubble-hp-label, body.light-theme .bubble .bubble-hp-label { color:rgba(43,36,64,.6) !important; }
-    /* reply input row + nested send/attach → warm field + wood pill */
-    .reply-input-row input, .poll-add-row input,
-    body.light-theme .reply-input-row input {
-      background:#fff8e6 !important; color:#2b2440 !important; border-color:rgba(70,45,20,.25) !important;
+    .bubble .bubble-hp { background:var(--sunken) !important; border-color:var(--border) !important; }
+    .bubble .bubble-hp-label { color:var(--ink-faint) !important; }
+    /* reply input row + nested send/attach → clay field + primary pill */
+    .reply-input-row input, .poll-add-row input {
+      background:var(--sunken) !important; color:var(--ink) !important; border:none !important; box-shadow:var(--clay-in) !important;
     }
-    .reply-input-row input::placeholder, .poll-add-row input::placeholder { color:rgba(43,36,64,.4) !important; }
-    .reply-input-row .reply-send-btn, .reply-attach, .poll-add-row button,
-    body.light-theme .reply-input-row .reply-send-btn, body.light-theme .reply-attach {
-      background:linear-gradient(180deg,#5b4026,#43301c) !important; color:#f4e9d2 !important;
+    .reply-input-row input::placeholder, .poll-add-row input::placeholder { color:var(--ink-faint) !important; }
+    .reply-input-row .reply-send-btn, .reply-attach, .poll-add-row button {
+      background:linear-gradient(135deg,var(--primary),var(--primary-deep)) !important; color:var(--on-primary) !important; border:none !important;
     }
-    /* a poll shown inside a note → ink */
-    .bubble .poll-question { color:#2b2440 !important; }
-    .bubble .poll-option-text, body.light-theme .bubble .poll-option-text { color:#3a3358 !important; }
-    .bubble .poll-option-row, body.light-theme .bubble .poll-option-row { background:rgba(60,40,15,.06) !important; border-color:rgba(70,45,20,.16) !important; }
-    .bubble .poll-option-bar { background:rgba(224,163,46,.22) !important; }
-    .bubble .poll-vote-count, .bubble .poll-total { color:rgba(43,36,64,.5) !important; }
-    /* award / boost text on paper → warm brown (gold reads poorly on cream) */
-    .bubble-award-givers, .award-toggle, .boost-toggle { color:#9a6a1e !important; }
+    /* a poll shown inside a note */
+    .bubble .poll-question { color:var(--ink) !important; }
+    .bubble .poll-option-text { color:var(--ink-soft) !important; }
+    .bubble .poll-option-row { background:var(--sunken) !important; border-color:var(--border) !important; }
+    .bubble .poll-option-bar { background:var(--primary-tint) !important; }
+    .bubble .poll-vote-count, .bubble .poll-total { color:var(--ink-faint) !important; }
+    /* award / boost text on a note */
+    .bubble-award-givers, .award-toggle, .boost-toggle { color:var(--warn) !important; }
 
-    /* ══ DARK MODE: paper notes become dark kraft with light ink ══════
-       Additive overrides — each is more specific than the light rule above,
-       so they apply ONLY when NOT in light-theme. Light mode is untouched.
-       Border/shadow left non-!important so paid cosmetic frames still win. */
-    body:not(.light-theme) .bubble {
-      --paper:#2e2214 !important;          /* same warm tone as the walnut board, lifted just enough to read as a note */
-      color:#f0e8d6 !important;            /* light ink */
-      border-color:rgba(255,228,194,0.12);
-      box-shadow:0 8px 18px rgba(0,0,0,0.5);
-    }
-    body:not(.light-theme) .bubble-footer { color:rgba(236,228,210,0.55) !important; }
-    body:not(.light-theme) .reply-toggle,
-    body:not(.light-theme) .reply-to-reply-toggle { color:rgba(236,228,210,0.72) !important; }
-    body:not(.light-theme) .reply-toggle:hover,
-    body:not(.light-theme) .reply-to-reply-toggle:hover { color:#fff !important; background:rgba(255,255,255,0.08) !important; }
-    body:not(.light-theme) .replies-container { border-top-color:rgba(255,255,255,0.1) !important; }
-    body:not(.light-theme) .reply-item,
-    body:not(.light-theme) .replies-container > .reply-item {
-      color:#e7e0d0 !important; background:rgba(255,255,255,0.05) !important; border-color:rgba(255,255,255,0.08) !important;
-    }
-    body:not(.light-theme) .reply-item.is-nested { background:transparent !important; }
-    body:not(.light-theme) .reply-children { border-left-color:rgba(255,255,255,0.12) !important; }
-    body:not(.light-theme) .reply-time,
-    body:not(.light-theme) .reply-anon-text { color:rgba(236,228,210,0.42) !important; }
-    body:not(.light-theme) .answer-sender:not(.cos-name-rainbow),
-    body:not(.light-theme) .reply-sender:not(.cos-name-rainbow) { color:#f3ecdb; }
-    /* reaction chips on a dark note */
-    body:not(.light-theme) .bubble .reaction-btn { background:rgba(255,255,255,0.06) !important; border-color:rgba(255,255,255,0.14) !important; color:#e7e0d0 !important; }
-    body:not(.light-theme) .bubble .reaction-btn:hover { background:rgba(255,255,255,0.12) !important; border-color:rgba(255,255,255,0.24) !important; }
-    body:not(.light-theme) .bubble .reaction-add { border-color:rgba(255,255,255,0.2) !important; color:rgba(236,228,210,0.5) !important; }
-    body:not(.light-theme) .bubble .reaction-add:hover { background:rgba(255,255,255,0.08) !important; color:#fff !important; }
-    body:not(.light-theme) .bubble .bubble-hp { background:rgba(255,255,255,0.1) !important; border-color:rgba(255,255,255,0.14) !important; }
-    body:not(.light-theme) .bubble .bubble-hp-label { color:rgba(236,228,210,0.6) !important; }
-    /* a poll shown inside a dark note */
-    body:not(.light-theme) .bubble .poll-question { color:#f3ecdb !important; }
-    body:not(.light-theme) .bubble .poll-option-text { color:#e7e0d0 !important; }
-    body:not(.light-theme) .bubble .poll-option-row { background:rgba(255,255,255,0.05) !important; border-color:rgba(255,255,255,0.1) !important; }
-    body:not(.light-theme) .bubble .poll-vote-count,
-    body:not(.light-theme) .bubble .poll-total { color:rgba(236,228,210,0.5) !important; }
-    body:not(.light-theme) .bubble-award-givers,
-    body:not(.light-theme) .award-toggle,
-    body:not(.light-theme) .boost-toggle { color:#e0a64a !important; }
-    /* reply input row on a dark note */
-    body:not(.light-theme) .reply-input-row input {
-      background:rgba(255,255,255,0.06) !important; color:#ece4d2 !important; border-color:rgba(255,255,255,0.16) !important;
-    }
-    body:not(.light-theme) .reply-input-row input::placeholder { color:rgba(236,228,210,0.4) !important; }
-    /* daily quote — dark kraft card to match the notes */
-    body:not(.light-theme) .daily-quote-banner { background:#2a2318 !important; border-color:rgba(255,255,255,0.1) !important; }
-    body:not(.light-theme) .daily-quote-text { color:#ece4d2 !important; }
-    body:not(.light-theme) .daily-quote-label { color:#e0a64a !important; }
+    /* (Dark mode is handled entirely by tokens now — no separate kraft block.) */
 
-    /* Daily quote — a pinned kraft card */
-    .daily-quote-banner {
-      background:#fdf0c4 !important; border:1px solid rgba(0,0,0,0.1) !important;
-      box-shadow:0 6px 16px rgba(0,0,0,0.3) !important; transform:rotate(-0.6deg);
+    /* ── Live bar + composer (clay) ── */
+    .live-bar { background:var(--surface) !important; border:1px solid var(--border) !important; border-radius:var(--r) !important; box-shadow:var(--clay-up-sm) !important; color:var(--ink) !important; }
+    .input-area { background:var(--bg) !important; border-top:1px solid var(--border) !important; backdrop-filter:none !important; }
+
+    /* Board buttons + live-bar children — id-scoped so they beat the shared
+       wood/gold pill rules (those still serve the modals until Batch C/D). */
+    #liveBar .live-presence { background:var(--bg) !important; color:var(--ink-soft) !important; }
+    #liveBar .live-presence b { color:var(--primary-deep) !important; }
+    #liveBar .live-typing { color:var(--ink-faint) !important; }
+    #pgToggle, #coinCenterBtn {
+      background:var(--bg) !important; color:var(--primary-deep) !important;
+      border:1px solid var(--border) !important; box-shadow:var(--clay-up-sm) !important;
+      -webkit-text-fill-color:var(--primary-deep) !important;
     }
-    .daily-quote-banner::before { display:none !important; }  /* kill the purple wash */
-    .daily-quote-label { color:#b06a2a !important; }
-    .daily-quote-text { color:#2b2440 !important; }
+    #pgToggle:hover, #coinCenterBtn:hover { background:var(--primary-tint) !important; }
+    #reactionBar .reaction-btn { background:var(--bg) !important; border:1px solid var(--border) !important; color:var(--ink-soft) !important; }
+    #reactionBar .reaction-btn:hover { background:var(--primary-tint) !important; }
+    #answerInput {
+      background:var(--sunken) !important; color:var(--ink) !important;
+      border:none !important; box-shadow:var(--clay-in) !important; border-radius:16px !important;
+    }
+    #answerInput::placeholder { color:var(--ink-faint) !important; }
+    #attachBtn, #gifBtn, #pollBtn {
+      background:var(--surface) !important; color:var(--primary-deep) !important;
+      border:1px solid var(--border) !important; box-shadow:var(--clay-up-sm) !important;
+      -webkit-text-fill-color:var(--primary-deep) !important;
+    }
+    #sendBtn {
+      background:linear-gradient(135deg,var(--primary),var(--primary-deep)) !important;
+      color:var(--on-primary) !important; -webkit-text-fill-color:var(--on-primary) !important;
+      border:none !important; box-shadow:var(--acc-shadow) !important; font-weight:700 !important;
+    }
 
-    /* Live bar + composer — warm wood strips (light text stays readable) */
-    .live-bar { background:linear-gradient(180deg,#5b4026,#43301c) !important; border:1px solid #6e4f2c !important; border-radius:12px !important; }
-    .input-area { background:linear-gradient(180deg,#43301c,#2e2113) !important; border-top:1px solid #6e4f2c !important; }
-    .input-area textarea { background:#fdf6e0 !important; color:#2b2440 !important; border-color:rgba(0,0,0,0.15) !important; }
-    .input-area textarea::placeholder { color:rgba(43,36,64,0.45) !important; }
-    /* Dark mode: the composer field goes dark too (matches the dark notes) */
-    body:not(.light-theme) .input-area textarea { background:#2e2214 !important; color:#f0e8d6 !important; border-color:rgba(255,228,194,0.16) !important; }
-    body:not(.light-theme) .input-area textarea::placeholder { color:rgba(236,228,210,0.45) !important; }
-
-    /* Login + access gate — a paper note pinned to the cork (first impression) */
+    /* Login + access gate — clay cards (first impression) */
     .login-box, .access-gate-box {
-      background:#fdf0c4 !important; color:#2b2440 !important;
-      border:1px solid rgba(0,0,0,0.12) !important; backdrop-filter:none !important;
-      box-shadow:0 12px 32px rgba(0,0,0,0.45) !important;
+      background:var(--surface) !important; color:var(--ink) !important;
+      border:1px solid var(--border) !important; backdrop-filter:none !important;
+      box-shadow:var(--clay-up) !important; border-radius:var(--r-lg) !important;
     }
     .login-box h2, .access-gate-box h2 {
-      color:#2b2440 !important; -webkit-text-fill-color:#2b2440 !important; background:none !important;
+      color:var(--ink) !important; -webkit-text-fill-color:var(--ink) !important; background:none !important;
+      font-family:var(--font-display) !important;
     }
-    .login-box p, .access-gate-box p, .access-gate-box h2 + p { color:rgba(43,36,64,0.7) !important; }
+    .login-box p, .access-gate-box p, .access-gate-box h2 + p { color:var(--ink-soft) !important; }
 
-    /* ── Sidebar → wooden board panel (cream text), identical in both themes ── */
+    /* ── Sidebar → clay panel (tokens flip light/dark) ── */
     .sidebar, body.light-theme .sidebar {
-      background:linear-gradient(180deg,#2e2117,#241a11) !important;
-      border-right:1px solid #6e4f2c !important; color:#f4e9d2 !important; backdrop-filter:none !important;
+      background:var(--surface) !important;
+      border-right:1px solid var(--border) !important; color:var(--ink) !important; backdrop-filter:none !important;
     }
-    .sidebar-header, body.light-theme .sidebar-header { color:#fff6de !important; text-shadow:0 1px 0 #6b4a23; }
-    .sidebar-body, body.light-theme .sidebar-body { color:#f4e9d2 !important; }
-    .sidebar-section, body.light-theme .sidebar-section { border-bottom-color:rgba(255,255,255,0.08) !important; }
-    .sidebar-section h3, body.light-theme .sidebar-section h3 { color:#eab64f !important; }
-    /* collapse toggles (Food & Vote / Mini Games) — wooden sub-bars */
-    .collapse-toggle, body.light-theme .collapse-toggle { background:rgba(0,0,0,0.22) !important; color:#f4e9d2 !important; }
+    .sidebar-header, body.light-theme .sidebar-header { color:var(--ink) !important; -webkit-text-fill-color:var(--ink) !important; background:none !important; text-shadow:none !important; font-family:var(--font-display) !important; }
+    .sidebar-body, body.light-theme .sidebar-body { color:var(--ink) !important; }
+    .sidebar-section, body.light-theme .sidebar-section { border-bottom-color:var(--border) !important; }
+    .sidebar-section h3, body.light-theme .sidebar-section h3 { color:var(--primary-deep) !important; }
+    /* collapse toggles (Food & Vote / Mini Games) — clay sub-bars */
+    .collapse-toggle, body.light-theme .collapse-toggle { background:var(--sunken) !important; color:var(--ink) !important; box-shadow:var(--clay-up-sm) !important; border:none !important; }
     .collapse-toggle span, .collapse-arrow,
-    body.light-theme .collapse-toggle span, body.light-theme .collapse-arrow { color:#f4e9d2 !important; }
+    body.light-theme .collapse-toggle span, body.light-theme .collapse-arrow { color:var(--ink-soft) !important; }
     /* countdown */
-    .countdown-display, body.light-theme .countdown-display { background:rgba(0,0,0,0.25) !important; color:#f4e9d2 !important; }
-    .countdown-digits { color:#fff6de !important; }
-    .countdown-label, body.light-theme .countdown-label { color:rgba(244,233,210,0.6) !important; }
-    .countdown-schedule { color:rgba(244,233,210,0.45) !important; }
+    .countdown-display, body.light-theme .countdown-display { background:var(--sunken) !important; color:var(--ink) !important; box-shadow:var(--clay-in) !important; }
+    .countdown-digits { color:var(--primary-deep) !important; }
+    .countdown-label, body.light-theme .countdown-label { color:var(--ink-faint) !important; }
+    .countdown-schedule { color:var(--ink-faint) !important; }
     .countdown-input-row input[type="time"], body.light-theme .countdown-input-row input[type="time"] {
-      background:rgba(0,0,0,0.25) !important; color:#f4e9d2 !important; border-color:#6e4f2c !important; color-scheme:dark !important;
+      background:var(--sunken) !important; color:var(--ink) !important; border:none !important; box-shadow:var(--clay-in) !important; color-scheme:light dark !important;
     }
     /* food list + spin */
     .food-input-row input, body.light-theme .food-input-row input {
-      background:rgba(0,0,0,0.25) !important; color:#f4e9d2 !important; border-color:#6e4f2c !important;
+      background:var(--sunken) !important; color:var(--ink) !important; border:none !important; box-shadow:var(--clay-in) !important;
     }
-    .food-input-row input::placeholder, body.light-theme .food-input-row input::placeholder { color:rgba(244,233,210,0.4) !important; }
-    .random-result, body.light-theme .random-result { background:rgba(0,0,0,0.25) !important; color:#eab64f !important; }
-    .restore-btn, body.light-theme .restore-btn { color:rgba(244,233,210,0.6) !important; border-color:#6e4f2c !important; }
-    .reset-info, .vote-empty { color:rgba(244,233,210,0.45) !important; }
+    .food-input-row input::placeholder, body.light-theme .food-input-row input::placeholder { color:var(--ink-faint) !important; }
+    .random-result, body.light-theme .random-result { background:var(--primary-tint) !important; color:var(--primary-deep) !important; }
+    .restore-btn, body.light-theme .restore-btn { color:var(--ink-faint) !important; border-color:var(--border) !important; }
+    .reset-info, .vote-empty { color:var(--ink-faint) !important; }
     .vote-item, body.light-theme .vote-item {
-      background:rgba(255,255,255,0.05) !important; border-color:rgba(255,255,255,0.08) !important; color:#f4e9d2 !important;
+      background:var(--sunken) !important; border-color:var(--border) !important; color:var(--ink) !important;
     }
-    .vote-item .vote-text, body.light-theme .vote-item .vote-text { color:#f4e9d2 !important; }
+    .vote-item .vote-text, body.light-theme .vote-item .vote-text { color:var(--ink) !important; }
+    /* non-game sidebar links (e.g. My Room) → clay rows */
+    .sidebar-section a:not(.game-card), body.light-theme .sidebar-section a:not(.game-card) { background:var(--sunken) !important; color:var(--ink) !important; }
+    .sidebar-section a:not(.game-card):hover, body.light-theme .sidebar-section a:not(.game-card):hover { background:var(--primary-tint) !important; }
 
-    /* Floating action buttons → wooden, to match the board */
-    .feedback-fab, .riddle-fab, .mood-fab {
-      background:linear-gradient(180deg,#5b4026,#43301c) !important;
-      box-shadow:0 4px 14px rgba(0,0,0,0.4) !important; color:#f4e9d2 !important;
+    /* ── Floating action buttons → clay dock ── */
+    .feedback-fab {
+      background:linear-gradient(135deg,var(--primary),var(--primary-deep)) !important;
+      box-shadow:var(--acc-shadow) !important; color:var(--on-primary) !important;
     }
-    .mood-fab.has-checked { background:linear-gradient(180deg,#4f9d6b,#2f7d4d) !important; }
+    .riddle-fab, .mood-fab {
+      background:var(--surface) !important; box-shadow:var(--clay-up) !important; color:var(--primary-deep) !important;
+    }
+    .mood-fab.has-checked { background:linear-gradient(135deg,var(--good),#15803d) !important; color:#fff !important; }
 
     /* ══════════════════════════════════════════════════════════════
-       Buttons & modals — the board's two materials only:
-         · WOOD pills (cream text)   · GOLD pills (ink text, primary CTA)
-       Panels swap dark→wood / light→kraft, so text contrast is preserved
-       in each theme automatically; accent retints are for cohesion only.
+       Buttons & modals — Clay "Bubble Pop". Tokens flip light/dark, so
+       there are no separate light-theme rules. Two button materials:
+         · CLAY pills (surface + clay shadow, primary-deep text)  · PRIMARY CTA (orange gradient)
+       Panels are solid clay (settings is frosted glass); backdrops are the scrim.
        ══════════════════════════════════════════════════════════════ */
 
     /* ── Pill buttons ─────────────────────────────────────────────── */
-    /* Wood (neutral / secondary) */
+    /* Clay (neutral / secondary) */
     .access-enter-btn, .settings-cache-btn, .settings-close-btn, .settings-select button,
     .poll-btn, .poll-add-option-btn, .riddle-btn, .cc-tab, .cc-bet, .cc-btn.own,
     .pg-toggle, .food-input-row button, .countdown-input-row button, .countdown-clear,
     .mood-emoji-btn, .attach-btn, .gif-btn, .vote-item .vote-btn {
-      background:linear-gradient(180deg,#5b4026,#43301c) !important;
-      color:#f4e9d2 !important; border:1px solid #6e4f2c !important;
+      background:var(--surface) !important;
+      color:var(--primary-deep) !important; border:1px solid var(--border) !important;
+      box-shadow:var(--clay-up-sm) !important; -webkit-text-fill-color:var(--primary-deep) !important;
     }
     .access-enter-btn:hover, .settings-cache-btn:hover, .settings-close-btn:hover,
     .poll-btn:hover, .riddle-btn:hover, .cc-tab:hover, .pg-toggle:hover,
     .food-input-row button:hover, .countdown-input-row button:hover, .vote-item .vote-btn:hover {
-      background:linear-gradient(180deg,#6b4d2e,#4f3a22) !important;
+      box-shadow:var(--clay-up) !important; filter:brightness(1.02);
     }
-    /* Gold (primary CTA) */
+    /* Primary CTA */
     .input-area button, .settings-name-row button, .poll-submit-btn, .riddle-btn.primary,
     .cc-btn.buy, .cc-tab.active, .cc-bet.active, .settings-select button.active,
     .random-btn, .spin-result-close, .cc-super-btn, .cc-pool-btn,
     .ci-accept, .vote-item .vote-btn.voted, .pg-toggle.active {
-      background:linear-gradient(180deg,#f1c85b,#e0a32e) !important;
-      color:#3a2a10 !important; border:1px solid #c98f24 !important; font-weight:700 !important;
-      -webkit-text-fill-color:#3a2a10 !important;
+      background:linear-gradient(135deg,var(--primary),var(--primary-deep)) !important;
+      color:var(--on-primary) !important; border:none !important; font-weight:700 !important;
+      -webkit-text-fill-color:var(--on-primary) !important; box-shadow:var(--acc-shadow) !important;
     }
     /* Pressable feel */
     .access-enter-btn:active, .input-area button:active, .settings-name-row button:active,
@@ -700,93 +541,81 @@
     .random-btn:active, .spin-result-close:active, .poll-btn:active, .vote-item .vote-btn:active {
       transform:translateY(1px) scale(.99) !important;
     }
-    /* Destructive stays red, just reshaped onto the board */
-    .settings-logout-btn, .spin-actions .remove-btn, .ci-reject { border-radius:12px !important; }
+    /* Destructive */
+    .settings-logout-btn, .spin-actions .remove-btn, .ci-reject { border-radius:12px !important; color:var(--bad) !important; }
 
-    /* Icon close buttons (✕) → small wood discs, red on hover */
+    /* Icon close buttons (✕) → clay discs, red on hover */
     .poll-creator-close, .riddle-close, .cc-close, .pg-close, .gif-picker-close,
     body.light-theme .riddle-close, body.light-theme .cc-close, body.light-theme .gif-picker-close {
-      background:rgba(0,0,0,.3) !important; color:#f4e9d2 !important; border:1px solid #6e4f2c !important;
+      background:var(--surface) !important; color:var(--ink-soft) !important; border:1px solid var(--border) !important; box-shadow:var(--clay-up-sm) !important;
     }
     .poll-creator-close:hover, .riddle-close:hover, .cc-close:hover, .pg-close:hover, .gif-picker-close:hover {
-      background:#9a3b34 !important; color:#fff !important;
+      background:var(--bad) !important; color:#fff !important;
     }
 
     /* ── Modal panels ─────────────────────────────────────────────── */
-    /* Warm-dim every backdrop */
+    /* Dim + blur every backdrop with the scrim */
     .settings-overlay, .spin-result-overlay, .riddle-overlay, .cc-overlay,
     body.light-theme .settings-overlay, body.light-theme .spin-result-overlay {
-      background:rgba(28,18,8,.74) !important; backdrop-filter:blur(4px) !important;
+      background:var(--scrim) !important; backdrop-filter:blur(4px) !important; -webkit-backdrop-filter:blur(4px) !important;
     }
-    #pgOverlay { background:radial-gradient(circle at 50% 26%, rgba(74,50,24,.94), rgba(26,17,8,.97)) !important; }
+    #pgOverlay { background:var(--scrim) !important; }
 
-    /* Dark theme → wooden panels (existing white text stays readable) */
-    .settings-box, .spin-result-box, .riddle-card, .cc-card, .mood-panel, .gif-picker,
+    /* Settings → frosted glass sheet */
+    .settings-box {
+      background:var(--glass-bg) !important; backdrop-filter:blur(var(--glass-blur)) !important; -webkit-backdrop-filter:blur(var(--glass-blur)) !important;
+      border:1px solid var(--glass-border) !important; color:var(--ink) !important;
+      box-shadow:0 20px 50px rgba(0,0,0,.4) !important;
+    }
+    @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+      .settings-box { background:var(--surface) !important; }
+    }
+    /* Other panels → solid clay cards (readable in both themes) */
+    .spin-result-box, .riddle-card, .cc-card, .mood-panel, .gif-picker,
     .poll-creator, .chess-invite-box, .reaction-picker-popup {
-      background:linear-gradient(170deg,#33261a,#241a11) !important;
-      border:1px solid #6e4f2c !important; backdrop-filter:none !important;
-      box-shadow:0 18px 48px rgba(0,0,0,.55) !important;
+      background:var(--surface) !important;
+      border:1px solid var(--border) !important; backdrop-filter:none !important;
+      box-shadow:var(--clay-up) !important; color:var(--ink) !important; border-radius:var(--r-lg) !important;
     }
-    /* Light theme → kraft-paper panels (existing dark text stays readable) */
-    body.light-theme .settings-box, body.light-theme .spin-result-box,
-    body.light-theme .riddle-card, body.light-theme .cc-card, body.light-theme .mood-panel,
-    body.light-theme .gif-picker, body.light-theme .reaction-picker-popup {
-      background:#fdf0c4 !important; border:1px solid rgba(70,45,20,.25) !important;
-      box-shadow:0 16px 40px rgba(45,28,10,.4) !important;
-    }
-    /* poll-creator & chess have no light-text support → wood in both themes */
-    body.light-theme .poll-creator, body.light-theme .chess-invite-box {
-      background:linear-gradient(170deg,#33261a,#241a11) !important; border:1px solid #6e4f2c !important;
-    }
-    /* chess title inherits body colour (dark in light theme) → force cream on its wood box */
-    .chess-invite-box h3, body.light-theme .chess-invite-box h3 { color:#f4e9d2 !important; }
+    .chess-invite-box h3, body.light-theme .chess-invite-box h3 { color:var(--ink) !important; }
 
-    /* Titles that used transparent gradient-fill → solid, theme-aware
-       (cos-name-rainbow intentionally untouched — it's a paid cosmetic) */
+    /* Panel titles → solid ink (cos-name-rainbow stays — it's a paid cosmetic) */
     .settings-box h3, .cc-title, .pg-title {
-      background:none !important; -webkit-text-fill-color:#fff6de !important; color:#fff6de !important;
+      background:none !important; -webkit-text-fill-color:var(--ink) !important; color:var(--ink) !important;
+      font-family:var(--font-display) !important;
     }
-    body.light-theme .settings-box h3, body.light-theme .cc-title {
-      -webkit-text-fill-color:#3a2a10 !important; color:#3a2a10 !important;
-    }
-    /* Accents on wood-in-both surfaces (sidebar / poll / chess / pg) → gold both themes */
+    /* Accents → primary / token */
     .poll-creator-header, body.light-theme .poll-creator-header,
     .pg-coins, .vote-item .vote-count, body.light-theme .vote-item .vote-count,
-    .live-presence b, body.light-theme .live-presence b { color:#eab64f !important; }
-    /* Accents on dark→wood / light→kraft panels → gold on wood, brown on kraft */
-    .riddle-head, .cc-sec, .cc-coins { color:#eab64f !important; }
-    body.light-theme .riddle-head, body.light-theme .cc-sec, body.light-theme .cc-coins { color:#9a6a1e !important; }
-    .riddle-hint { color:#eab64f !important; background:rgba(234,182,79,.12) !important; }
-    body.light-theme .riddle-hint { color:#9a6a1e !important; background:rgba(154,106,30,.1) !important; }
+    .live-presence b, body.light-theme .live-presence b { color:var(--primary-deep) !important; }
+    .riddle-head, .cc-sec, .cc-coins,
+    body.light-theme .riddle-head, body.light-theme .cc-sec, body.light-theme .cc-coins { color:var(--primary-deep) !important; }
+    .riddle-hint, body.light-theme .riddle-hint { color:var(--primary-deep) !important; background:var(--primary-tint) !important; }
 
-    /* live-bar children (the bar itself is wood in both themes) — keep cream */
-    body.light-theme .live-presence { background:rgba(255,255,255,.06) !important; color:#f4e9d2 !important; }
-    body.light-theme .live-typing { color:rgba(244,233,210,.6) !important; }
-
-    /* Panel inputs → warm field (dark on wood panels, kraft on light) */
-    .settings-name-row input, .poll-question-input, .poll-option-input, .riddle-input, .gif-picker-header input {
-      background:rgba(0,0,0,.26) !important; color:#f4e9d2 !important; border:1px solid #6e4f2c !important;
+    /* Panel inputs → clay field */
+    .settings-name-row input, .poll-question-input, .poll-option-input, .riddle-input, .gif-picker-header input,
+    body.light-theme .settings-name-row input, body.light-theme .riddle-input, body.light-theme .gif-picker-header input {
+      background:var(--sunken) !important; color:var(--ink) !important; border:none !important; box-shadow:var(--clay-in) !important;
     }
     .settings-name-row input::placeholder, .poll-question-input::placeholder,
     .poll-option-input::placeholder, .riddle-input::placeholder, .gif-picker-header input::placeholder {
-      color:rgba(244,233,210,.45) !important;
-    }
-    body.light-theme .settings-name-row input, body.light-theme .riddle-input, body.light-theme .gif-picker-header input {
-      background:#fff8e6 !important; color:#2b2440 !important; border:1px solid rgba(70,45,20,.25) !important;
+      color:var(--ink-faint) !important;
     }
 
-    /* Inner cards / rows / toggles → warm tints, theme-aware */
-    .settings-row, .cc-item, .cc-pull, .cc-lb-row, .cc-fortune-card { background:rgba(0,0,0,.2) !important; border-color:#5e4426 !important; }
+    /* Inner cards / rows / toggles → token tints */
+    .settings-row, .cc-item, .cc-pull, .cc-lb-row, .cc-fortune-card,
     body.light-theme .settings-row, body.light-theme .cc-item, body.light-theme .cc-pull,
-    body.light-theme .cc-lb-row, body.light-theme .cc-fortune-card { background:rgba(120,80,30,.08) !important; border-color:rgba(70,45,20,.16) !important; }
-    .settings-toggle input:checked + .slider { background:#e0a32e !important; }
-    .settings-select button.active, .poll-btn.active, .mood-emoji-btn.selected { border-color:#e0a32e !important; }
-    .poll-option-row.voted, .cc-lb-row.me, .cc-fortune-card.rare { border-color:rgba(224,163,46,.55) !important; }
+    body.light-theme .cc-lb-row, body.light-theme .cc-fortune-card { background:var(--sunken) !important; border-color:var(--border) !important; }
+    .settings-toggle input:checked + .slider { background:linear-gradient(135deg,var(--primary),var(--primary-deep)) !important; }
+    .settings-select button.active, .poll-btn.active, .mood-emoji-btn.selected { border-color:var(--primary) !important; }
+    .poll-option-row.voted, .cc-lb-row.me, .cc-fortune-card.rare { border-color:var(--primary) !important; }
   </style>
 </head>
 <body>
-  <!-- Apply theme before first paint (default = light) to avoid a flash -->
-  <script>if(localStorage.getItem('theme')!=='dark')document.body.classList.add('light-theme');</script>
+  <!-- Apply theme before first paint (default = light) to avoid a flash.
+       Sets data-theme on <html> for the token system; keeps body.light-theme
+       in sync for legacy corkboard rules still present during the migration. -->
+  <script>(function(){try{var t=localStorage.getItem('theme')==='dark'?'dark':'light';document.documentElement.setAttribute('data-theme',t);if(t==='light')document.body&&document.body.classList.add('light-theme');}catch(e){}})();</script>
 
   <!-- Access code gate — must enter correct code to proceed -->
   <div class="access-gate" id="accessGate">
@@ -1307,6 +1136,8 @@
   <script src="./src/js/firebase-config.js"></script>
   <script src="./src/js/daily-quotes.js"></script>
   <script src="./src/js/quote-comments.js"></script>
+  <!-- Clay design system theme controller (must load before app.js wires the toggle) -->
+  <script src="./src/js/theme.js"></script>
   <script src="./src/js/app.js"></script>
   <!-- Live, interactive board features (load after app.js for shared db/auth) -->
   <script src="./src/js/board-live-logic.js"></script>

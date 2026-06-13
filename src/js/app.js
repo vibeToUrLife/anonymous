@@ -2043,7 +2043,7 @@ const settingsNameStatus = document.getElementById('settingsNameStatus');
 settingsBtn.addEventListener('click', () => {
     notifToggle.checked = notifEnabled;
     soundToggle.checked = soundEnabled;
-    themeToggle.checked = document.body.classList.contains('light-theme');
+    themeToggle.checked = (window.Theme ? Theme.getTheme() : (localStorage.getItem('theme') === 'dark' ? 'dark' : 'light')) === 'light';
     animToggle.checked = !document.body.classList.contains('no-animations');
     settingsNameInput.value = (auth.currentUser ? localStorage.getItem('flappy_custom_name_' + auth.currentUser.uid) : null) || auth.currentUser?.displayName || '';
     settingsNameStatus.textContent = '';
@@ -2242,10 +2242,12 @@ soundToggle.addEventListener('change', () => {
     showToast(soundEnabled ? 'Sound on 🔊' : 'Sound muted 🔇', 'success');
 });
 
-// Theme toggle (light / dark)
+// Theme toggle (light / dark) — routed through the Theme controller so it sets
+// data-theme on <html> (token system) and keeps the legacy class in sync.
 themeToggle.addEventListener('change', () => {
-    document.body.classList.toggle('light-theme', themeToggle.checked);
-    localStorage.setItem('theme', themeToggle.checked ? 'light' : 'dark');
+    const t = themeToggle.checked ? 'light' : 'dark';
+    if (window.Theme) Theme.setTheme(t);
+    else { document.body.classList.toggle('light-theme', themeToggle.checked); localStorage.setItem('theme', t); }
 });
 
 // Font size selector
