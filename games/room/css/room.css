@@ -140,6 +140,10 @@
       background: var(--g-card-hover); color: var(--g-accent);
     }
 
+    /* Outside / Farm view: hide the whole side panel so the scene fills the
+       entire stage. Toggled by _syncRoomPanel() in room-layers.js. */
+    .main-wrap.no-panel .panel-wrap { display: none; }
+
     /* ── Tabs ── */
     .tabs {
       margin: 0; padding: 10px 16px 0; width: 100%;
@@ -445,6 +449,8 @@
       .panel-wrap.collapsed .panel-inner {
         display: none;
       }
+      /* Outside/farm: room fills the whole screen on mobile too */
+      .main-wrap.no-panel .room-container { height: calc(100vh - 60px); }
       /* Toggle becomes horizontal bar at top of panel */
       .panel-toggle {
         position: relative; left: auto; top: auto; transform: none;
@@ -715,17 +721,16 @@
     .outside-hint{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);font-size:10px;color:rgba(255,255,255,.45);pointer-events:none;z-index:5;white-space:nowrap}
     /* Farm view — stacked above the outside view */
     .farm-view{z-index:46}
-    /* ══ Farm panel — "Pocket Market Stall": warm wood + hay, its own identity ══ */
+    /* ══ Farm panel — Clay "Bubble Pop" market stall (warm cocoa + orange) ══ */
     .farm-panel{
       display:none; padding:12px 10px 16px;
-      --hay:#eab64f; --leaf:#86bf4b; --tomato:#e0613a; --cream:#f4e9d2;
-      --farm-display:ui-rounded,"Segoe UI",system-ui,sans-serif;
+      --hay:var(--g-accent-2); --leaf:#86bf4b; --tomato:#e0613a; --cream:var(--g-ink);
+      --farm-display:var(--g-display);
       color:var(--cream);
-      /* sun-glow + faint vertical wood grain over warm bark */
+      /* warm orange sun-glow over the clay-dark card */
       background:
-        radial-gradient(130% 55% at 50% -12%, rgba(234,182,79,.12), transparent 62%),
-        repeating-linear-gradient(90deg, rgba(0,0,0,.10) 0 1px, transparent 1px 23px),
-        linear-gradient(180deg,#2b1f15,#221910);
+        radial-gradient(130% 55% at 50% -12%, rgba(251,146,60,.12), transparent 62%),
+        linear-gradient(180deg,var(--g-card),var(--g-board));
     }
     .panel-wrap.farm-mode .tabs,.panel-wrap.farm-mode .tab-panel{display:none}
     .panel-wrap.farm-mode .farm-panel{display:block}
@@ -734,109 +739,109 @@
     /* Farm's own tab bar — splits the long farm page into sections */
     .farm-tabs{display:flex;gap:6px;margin-bottom:11px}
     .farm-tab{
-      flex:1;min-width:0;padding:8px 4px;border:1px solid #6e4f2c;border-radius:11px;
-      background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.08));
-      color:rgba(244,233,210,.62);font-family:var(--farm-display);font-size:11.5px;font-weight:800;
+      flex:1;min-width:0;padding:8px 4px;border:1px solid var(--g-border);border-radius:11px;
+      background:rgba(255,255,255,.04);
+      color:var(--g-ink-soft);font-family:var(--farm-display);font-size:11.5px;font-weight:800;
       letter-spacing:.2px;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;
     }
-    .farm-tab:hover{color:var(--cream);background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(0,0,0,.06))}
+    .farm-tab:hover{color:var(--cream);background:rgba(255,255,255,.08)}
     .farm-tab.active{
-      color:#3a2710;background:linear-gradient(180deg,#f4c863,#e3a838);border-color:#c98f24;
-      box-shadow:inset 0 -1px 0 rgba(0,0,0,.2),0 2px 5px rgba(0,0,0,.3);
+      color:#2a1c08;background:var(--g-accent-grad);border-color:transparent;
+      box-shadow:var(--g-shadow-sm);
     }
 
-    /* Signature: carved wooden sign header */
+    /* Signature: clay sign header */
     .farm-panel-head{
       font-family:var(--farm-display); font-size:20px; font-weight:800; letter-spacing:.5px;
-      color:#fff6de; text-shadow:0 1px 0 #6b4a23,0 2px 5px rgba(0,0,0,.5);
+      color:var(--g-ink); text-shadow:none;
       display:flex; justify-content:space-between; align-items:center; gap:10px;
       padding:12px 14px; margin:0 0 12px; border-radius:14px;
-      background:linear-gradient(180deg,#5b4026,#42301c);
-      border:1px solid #6e4f2c;
-      box-shadow:inset 0 1px 0 rgba(255,255,255,.14),inset 0 -2px 4px rgba(0,0,0,.3),0 3px 9px rgba(0,0,0,.4);
+      background:var(--g-card);
+      border:1px solid var(--g-border); border-top:2px solid rgba(251,146,60,.55);
+      box-shadow:var(--g-shadow-sm);
     }
     .farm-panel-cap{
       font-family:var(--farm-display); font-size:11px; font-weight:800; letter-spacing:.3px;
-      color:#3a2710; background:linear-gradient(180deg,#f4c863,#e3a838);
+      color:#2a1c08; background:var(--g-accent-grad);
       padding:4px 10px; border-radius:999px; white-space:nowrap;
-      box-shadow:inset 0 -1px 0 rgba(0,0,0,.2),0 1px 2px rgba(0,0,0,.3);
+      box-shadow:var(--g-shadow-sm);
     }
 
     /* Section "crate" cards */
     .farm-card{
-      background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.07));
-      border:1px solid rgba(255,255,255,.08); border-radius:13px;
+      background:rgba(255,255,255,.04);
+      border:1px solid var(--g-border); border-radius:13px;
       padding:9px 12px 11px; margin-bottom:9px;
-      box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 2px 7px rgba(0,0,0,.22);
+      box-shadow:var(--g-shadow-sm);
     }
     .farm-section-title{
       font-family:var(--farm-display); font-size:12px; font-weight:800; letter-spacing:.7px;
-      text-transform:uppercase; color:var(--hay);
+      text-transform:uppercase; color:var(--g-accent-2);
       display:flex; align-items:center; justify-content:space-between; gap:8px;
-      margin:0 0 6px; padding-bottom:6px; border-bottom:2px dotted rgba(234,182,79,.32);
+      margin:0 0 6px; padding-bottom:6px; border-bottom:2px dotted rgba(251,146,60,.32);
     }
 
-    /* Rows — feed-sack dotted separators, quiet by default */
+    /* Rows — dotted separators, quiet by default */
     .farm-shop-row,.farm-herd-row,.farm-food-row{
       display:flex; align-items:center; gap:8px; padding:6px 2px; font-size:12px;
-      color:var(--cream); border-top:1px dotted rgba(255,255,255,.1);
+      color:var(--cream); border-top:1px dotted var(--g-border);
     }
     .farm-shop-row:first-of-type,.farm-herd-row:first-of-type,.farm-food-row:first-of-type{border-top:none}
     .farm-shop-animal{flex:1;min-width:0}
-    .farm-shop-animal small{color:rgba(244,233,210,.5)}
-    .farm-shop-drop{font-size:10px;color:rgba(244,233,210,.6);white-space:nowrap;font-variant-numeric:tabular-nums}
+    .farm-shop-animal small{color:var(--g-ink-faint)}
+    .farm-shop-drop{font-size:10px;color:var(--g-ink-soft);white-space:nowrap;font-variant-numeric:tabular-nums}
 
-    /* Action buttons — little pressable wooden signs (one accent: hay) */
+    /* Action buttons — pressable clay pills (brand orange) */
     .farm-shop-buy{
       font-family:var(--farm-display); font-size:11px; font-weight:800; letter-spacing:.2px;
       padding:5px 12px; border:none; border-radius:999px; cursor:pointer; white-space:nowrap;
-      color:#3a2710; background:linear-gradient(180deg,#f4c863,#e3a838);
-      box-shadow:0 2px 0 #a9781f,0 3px 6px rgba(0,0,0,.3);
-      font-variant-numeric:tabular-nums; transition:transform .08s,box-shadow .08s;
+      color:#2a1c08; background:var(--g-accent-grad);
+      box-shadow:var(--g-shadow-sm);
+      font-variant-numeric:tabular-nums; transition:transform .08s,box-shadow .08s,filter .08s;
     }
-    .farm-shop-buy:hover{transform:translateY(-1px);box-shadow:0 3px 0 #a9781f,0 5px 9px rgba(0,0,0,.32)}
-    .farm-shop-buy:active{transform:translateY(2px);box-shadow:0 0 0 #a9781f}
-    .farm-shop-buy:disabled{background:rgba(255,255,255,.09);color:rgba(244,233,210,.35);box-shadow:none;cursor:not-allowed;transform:none}
+    .farm-shop-buy:hover{transform:translateY(-1px);filter:brightness(1.04);box-shadow:var(--g-shadow)}
+    .farm-shop-buy:active{transform:translateY(1px)}
+    .farm-shop-buy:disabled{background:rgba(255,255,255,.09);color:var(--g-ink-faint);box-shadow:none;cursor:not-allowed;transform:none;filter:none}
 
     /* Herd + jar-style progress bars */
     .farm-herd-emoji{font-size:20px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.45))}
     .farm-herd-info{flex:1;min-width:0}
     .farm-herd-name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .farm-herd-name small{font-family:var(--farm-display);color:var(--hay);font-weight:800}
+    .farm-herd-name small{font-family:var(--farm-display);color:var(--g-accent-2);font-weight:800}
     .farm-herd-bar{height:7px;background:rgba(0,0,0,.32);border-radius:999px;overflow:hidden;margin-top:4px;box-shadow:inset 0 1px 2px rgba(0,0,0,.45)}
     .farm-herd-bar span{display:block;height:100%;border-radius:999px;transition:width .35s ease}
-    .farm-herd-drops{font-size:10px;color:var(--hay);white-space:nowrap;font-weight:700;font-variant-numeric:tabular-nums}
+    .farm-herd-drops{font-size:10px;color:var(--g-accent-2);white-space:nowrap;font-weight:700;font-variant-numeric:tabular-nums}
 
-    .farm-panel-hint{font-size:10px;color:rgba(244,233,210,.5);margin-top:4px;padding:9px 4px 0;border-top:1px dotted rgba(255,255,255,.12);line-height:1.55}
-    .farm-panel-empty{font-size:11px;color:rgba(244,233,210,.45);padding:4px 0}
-    .farm-howto{font-size:11px;line-height:1.8;color:rgba(244,233,210,.74);padding:6px 2px 2px}
+    .farm-panel-hint{font-size:10px;color:var(--g-ink-faint);margin-top:4px;padding:9px 4px 0;border-top:1px dotted var(--g-border);line-height:1.55}
+    .farm-panel-empty{font-size:11px;color:var(--g-ink-faint);padding:4px 0}
+    .farm-howto{font-size:11px;line-height:1.8;color:var(--g-ink-soft);padding:6px 2px 2px}
 
     /* Hover tooltip over the farm canvas (crop time / trough food) */
     .farm-tip{
       position:absolute;z-index:60;pointer-events:none;
-      background:rgba(20,14,8,.92);color:#f4e9d2;font-size:11px;font-weight:600;
-      padding:5px 9px;border:1px solid #6e4f2c;border-radius:8px;white-space:nowrap;
-      box-shadow:0 3px 10px rgba(0,0,0,.5);
+      background:var(--g-card);color:var(--g-ink);font-size:11px;font-weight:600;
+      padding:5px 9px;border:1px solid var(--g-border);border-radius:8px;white-space:nowrap;
+      box-shadow:var(--g-shadow-sm);
     }
 
     /* Tap-a-plot crop picker */
     .crop-picker{
       position:absolute;left:50%;bottom:15%;transform:translateX(-50%);z-index:70;
       width:min(86%,320px);max-height:58%;overflow-y:auto;
-      background:linear-gradient(180deg,#2f2217,#231a10);border:1px solid #6e4f2c;border-radius:16px;
-      padding:12px 12px 12px;box-shadow:0 12px 34px rgba(0,0,0,.6);
+      background:linear-gradient(180deg,var(--g-card),var(--g-board));border:1px solid var(--g-border);border-radius:16px;
+      padding:12px 12px 12px;box-shadow:var(--g-shadow);
     }
-    .cp-head{font-family:var(--farm-display);font-size:14px;font-weight:800;color:#fff6de;text-align:center;margin-bottom:10px;letter-spacing:.4px}
+    .cp-head{font-family:var(--farm-display);font-size:14px;font-weight:800;color:var(--g-ink);text-align:center;margin-bottom:10px;letter-spacing:.4px}
     .cp-crop{
       display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin-bottom:7px;padding:8px 10px;cursor:pointer;
-      background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.08));border:1px solid rgba(255,255,255,.1);border-radius:11px;color:#f4e9d2;
+      background:rgba(255,255,255,.04);border:1px solid var(--g-border);border-radius:11px;color:var(--g-ink);
     }
-    .cp-crop:hover{background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(0,0,0,.05));border-color:#eab64f}
+    .cp-crop:hover{background:rgba(255,255,255,.08);border-color:var(--g-accent)}
     .cp-crop:disabled{opacity:.45;cursor:not-allowed}
     .cp-emoji{font-size:22px;line-height:1}
     .cp-info{flex:1;display:flex;flex-direction:column;min-width:0}
     .cp-info b{font-size:13px}
-    .cp-info small{font-size:10px;color:rgba(244,233,210,.6)}
-    .cp-cost{font-family:var(--farm-display);font-weight:800;font-size:12px;color:#3a2710;background:linear-gradient(180deg,#f4c863,#e3a838);padding:3px 9px;border-radius:999px;white-space:nowrap}
-    .cp-close{display:block;width:100%;margin-top:2px;padding:7px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(255,255,255,.05);color:rgba(244,233,210,.7);font-size:12px;font-weight:600;cursor:pointer}
+    .cp-info small{font-size:10px;color:var(--g-ink-soft)}
+    .cp-cost{font-family:var(--farm-display);font-weight:800;font-size:12px;color:#2a1c08;background:var(--g-accent-grad);padding:3px 9px;border-radius:999px;white-space:nowrap}
+    .cp-close{display:block;width:100%;margin-top:2px;padding:7px;border:1px solid var(--g-border);border-radius:10px;background:rgba(255,255,255,.05);color:var(--g-ink-soft);font-size:12px;font-weight:600;cursor:pointer}
     .cp-close:hover{background:rgba(255,255,255,.1)}

@@ -137,6 +137,7 @@
       isFarmView = true;
       document.getElementById('farmView')?.classList.add('visible');
       _setFarmPanelMode(true);
+      _syncRoomPanel();   // hide the side panel; widens the stage before we draw
       const isOwner = viewingUid === currentUid;
       if (isOwner) {
         let _changed = false;
@@ -164,6 +165,9 @@
       _hideFarmTip();
       document.getElementById('farmView')?.classList.remove('visible');
       _setFarmPanelMode(false);
+      // Returning to the outside view keeps the panel hidden (still outside);
+      // returning all the way inside (via enterLayer) brings it back.
+      _syncRoomPanel();
       cancelAnimationFrame(_farmAnimFrame);
       _farmAnimFrame = null;
       clearInterval(_farmTickInterval);
@@ -731,9 +735,11 @@
     }
 
     /* ── Scene ── */
-    function _farmAnimState(a) {
+    function _farmAnimState(a, idx, n) {
       if (!_farmAnimStates[a.id]) {
-        _farmAnimStates[a.id] = { x: a.posX ?? 0.5, y: a.posY ?? 0.7, tx: a.posX ?? 0.5, ty: a.posY ?? 0.7, nextWander: 0, facingRight: Math.random() < 0.5, moving: false };
+        const ix = (idx != null && n) ? (0.10 + ((idx + 0.5) / n) * 0.80) : (a.posX ?? 0.5);
+        const iy = 0.54 + (idx != null ? (idx % 3) * 0.04 : Math.random() * 0.08);
+        _farmAnimStates[a.id] = { x: ix, y: iy, tx: ix, ty: iy, nextWander: 0, facingRight: Math.random() < 0.5, moving: false };
       }
       return _farmAnimStates[a.id];
     }
@@ -913,31 +919,75 @@
       plots.forEach((plot, i) => {
         const pos = _farmPlotPos(i);
         const px = pos.x * W, py = pos.y * H;
-        // Soil
-        ctx.fillStyle = '#6b4a2e';
-        ctx.fillRect(px - tile / 2, py - tile / 2, tile, tile);
-        ctx.fillStyle = '#5a3d24';
-        ctx.fillRect(px - tile / 2, py - tile / 2, tile, tile * 0.18);
-        ctx.strokeStyle = '#4a3018'; ctx.lineWidth = 2;
-        ctx.strokeRect(px - tile / 2, py - tile / 2, tile, tile);
+        // 3D raised garden bed: front (wooden) face for depth + top soil face
+        const _x0 = px - tile / 2, _y0 = py - tile / 2, _r = Math.max(3, tile * 0.16);
+        const _depth = tile * 0.30;
+        ctx.fillStyle = '#43301c';                                   // front face
+        ctx.fillRect(_x0, _y0 + tile - _r, tile, _depth + _r);
+        ctx.fillStyle = 'rgba(0,0,0,0.22)';
+        ctx.fillRect(_x0, _y0 + tile + _depth - 2, tile, 2);
+        ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = 1;     // plank seam on the side
+        ctx.beginPath(); ctx.moveTo(_x0 + 2, _y0 + tile + _depth * 0.5); ctx.lineTo(_x0 + tile - 2, _y0 + tile + _depth * 0.5); ctx.stroke();
+        const _tg = ctx.createLinearGradient(0, _y0, 0, _y0 + tile);  // top soil face
+        _tg.addColorStop(0, '#8a6038'); _tg.addColorStop(1, '#6b4a2c');
+        ctx.fillStyle = _tg;
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(_x0, _y0, tile, tile, _r); ctx.fill(); }
+        else ctx.fillRect(_x0, _y0, tile, tile);
+        ctx.fillStyle = 'rgba(255,255,255,.08)';
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(_x0, _y0, tile, tile * 0.30, _r); ctx.fill(); }
+        else ctx.fillRect(_x0, _y0, tile, tile * 0.16);
+        ctx.strokeStyle = 'rgba(40,26,12,.28)'; ctx.lineWidth = 1;    // tilled lines
+        for (let ly = _y0 + tile * 0.38; ly < _y0 + tile - 2; ly += tile * 0.26) { ctx.beginPath(); ctx.moveTo(_x0 + 3, ly); ctx.lineTo(_x0 + tile - 3, ly); ctx.stroke(); }
+        ctx.strokeStyle = '#5a3c22'; ctx.lineWidth = 1.5;            // wooden frame edge
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(_x0, _y0, tile, tile, _r); ctx.stroke(); }
+        else ctx.strokeRect(_x0, _y0, tile, tile);
         if (!plot.crop) return;
         const crop = FARM_CROPS.find(c => c.id === plot.crop);
         if (!crop) return;
         const prog = cropProgress(plot.plantedAt, now, crop.growMs);
-        if (prog >= 1) {
-          const bob = Math.sin(t / 250 + i) * 2;
-          ctx.font = Math.round(tile * 0.9) + 'px sans-serif';
-          ctx.fillText(crop.emoji, px, py + tile * 0.32 + bob);
-          ctx.font = Math.round(tile * 0.4) + 'px sans-serif';
-          ctx.fillText('✨', px + tile * 0.42, py - tile * 0.34 + bob);
+        const ccx = px, baseY = _y0 + tile * 0.55;   // "ground" on the bed's top face
+        if (prog < 1) {
+          // Growing sprout — stem + leaves, scales with progress (shape, always visible)
+          const gh = tile * (0.25 + prog * 0.55);
+          ctx.strokeStyle = '#3f8f2a'; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(ccx, baseY); ctx.lineTo(ccx, baseY - gh); ctx.stroke();
+          ctx.fillStyle = '#6cc24a';
+          ctx.beginPath(); ctx.ellipse(ccx - 4, baseY - gh * 0.70, 4.5, 2.6, -0.7, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.ellipse(ccx + 4, baseY - gh * 0.55, 4.5, 2.6, 0.7, 0, Math.PI * 2); ctx.fill();
+          // growth bar
+          ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(ccx - tile * 0.4, _y0 + tile + 2, tile * 0.8, 4);
+          ctx.fillStyle = '#86d957'; ctx.fillRect(ccx - tile * 0.4, _y0 + tile + 2, tile * 0.8 * prog, 4);
         } else {
-          // Sprout + growth bar
-          ctx.font = Math.round(tile * (0.3 + prog * 0.5)) + 'px sans-serif';
-          ctx.fillText('🌱', px, py + tile * 0.28);
-          ctx.fillStyle = 'rgba(0,0,0,.35)';
-          ctx.fillRect(px - tile * 0.4, py + tile * 0.42, tile * 0.8, 4);
-          ctx.fillStyle = '#6dd56d';
-          ctx.fillRect(px - tile * 0.4, py + tile * 0.42, tile * 0.8 * prog, 4);
+          // Ready crop — drawn icon per type (no emoji dependency)
+          const bob = Math.sin(t / 250 + i) * 2;
+          const s = tile * 0.5;
+          ctx.save(); ctx.translate(ccx, baseY - s * 0.45 + bob);
+          if (crop.id === 'carrot') {
+            ctx.fillStyle = '#e8772e';
+            ctx.beginPath(); ctx.moveTo(-s * 0.34, -s * 0.45); ctx.lineTo(s * 0.34, -s * 0.45); ctx.lineTo(0, s * 0.6); ctx.closePath(); ctx.fill();
+            ctx.fillStyle = '#3f9a35';
+            for (const dx of [-0.18, 0, 0.18]) { ctx.beginPath(); ctx.ellipse(dx * s, -s * 0.58, s * 0.10, s * 0.26, dx * 2, 0, Math.PI * 2); ctx.fill(); }
+          } else if (crop.id === 'corn') {
+            ctx.fillStyle = '#f2c733';
+            ctx.beginPath(); ctx.ellipse(0, 0, s * 0.30, s * 0.55, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = 'rgba(150,110,20,.5)'; ctx.lineWidth = 1;
+            for (let ky = -s * 0.4; ky < s * 0.4; ky += 4) { ctx.beginPath(); ctx.moveTo(-s * 0.22, ky); ctx.lineTo(s * 0.22, ky); ctx.stroke(); }
+            ctx.fillStyle = '#3f9a35';
+            ctx.beginPath(); ctx.ellipse(-s * 0.28, s * 0.05, s * 0.15, s * 0.5, -0.3, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(s * 0.28, s * 0.05, s * 0.15, s * 0.5, 0.3, 0, Math.PI * 2); ctx.fill();
+          } else { // wheat / default — golden bundle
+            ctx.strokeStyle = '#d9a72a'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+            for (const a2 of [-0.45, 0, 0.45]) { ctx.beginPath(); ctx.moveTo(0, s * 0.55); ctx.lineTo(Math.sin(a2) * s * 0.5, -s * 0.55); ctx.stroke(); }
+            ctx.fillStyle = '#f0c64a';
+            for (const a2 of [-0.45, 0, 0.45]) { ctx.beginPath(); ctx.ellipse(Math.sin(a2) * s * 0.5, -s * 0.5, s * 0.12, s * 0.22, a2, 0, Math.PI * 2); ctx.fill(); }
+          }
+          ctx.restore();
+          // sparkle (drawn star, not emoji)
+          ctx.fillStyle = '#fff4b0';
+          const spx = ccx + tile * 0.42, spy = baseY - s * 0.95 + bob;
+          ctx.beginPath();
+          for (let k = 0; k < 8; k++) { const ang = k * Math.PI / 4; const rr = (k % 2) ? 1.2 : 3.4; ctx.lineTo(spx + Math.cos(ang) * rr, spy + Math.sin(ang) * rr); }
+          ctx.closePath(); ctx.fill();
         }
       });
     }
@@ -974,20 +1024,47 @@
 
         // Animal pasture — grass from the horizon down to the dividing fence
         const grass = ctx.createLinearGradient(0, H * 0.42, 0, gy);
-        grass.addColorStop(0, night ? '#1d4028' : '#7ec850');
-        grass.addColorStop(1, night ? '#15301e' : '#5aa838');
+        grass.addColorStop(0, night ? '#22432b' : '#9ed26b');    // soft sunny top
+        grass.addColorStop(0.5, night ? '#1a3622' : '#79c052');
+        grass.addColorStop(1, night ? '#13291a' : '#5ba23c');    // richer deep bottom
         ctx.fillStyle = grass;
         ctx.fillRect(0, H * 0.42, W, gy - H * 0.42);
 
+        // 3D mown field — alternating stripes converging to the horizon point
+        ctx.save();
+        ctx.beginPath(); ctx.rect(0, H * 0.42, W, gy - H * 0.42); ctx.clip();
+        const vpx = W / 2, vpy = H * 0.40;
+        const gSeg = 12, gSpread = W * 1.7, gx0 = W / 2 - gSpread / 2;
+        for (let i = 0; i < gSeg; i++) {
+          const xA = gx0 + (i / gSeg) * gSpread, xB = gx0 + ((i + 1) / gSeg) * gSpread;
+          ctx.fillStyle = (i % 2)
+            ? (night ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.11)')
+            : (night ? 'rgba(0,0,0,0.13)' : 'rgba(18,70,16,0.13)');
+          ctx.beginPath(); ctx.moveTo(xA, gy); ctx.lineTo(xB, gy); ctx.lineTo(vpx, vpy); ctx.closePath(); ctx.fill();
+        }
+        // horizontal depth bands (tighter toward the horizon)
+        ctx.strokeStyle = night ? 'rgba(0,0,0,0.14)' : 'rgba(18,70,16,0.16)'; ctx.lineWidth = 1;
+        for (let k = 1; k <= 5; k++) { const f = k / 6; const yy = gy - (gy - H * 0.42) * (f * f); ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(W, yy); ctx.stroke(); }
+        ctx.restore();
+
         // Crop garden — a tilled soil band below the dividing fence
         const soil = ctx.createLinearGradient(0, gy, 0, H);
-        soil.addColorStop(0, night ? '#3a2c18' : '#7a5a32');
-        soil.addColorStop(1, night ? '#241a0e' : '#5c4022');
+        soil.addColorStop(0, night ? '#41301b' : '#8a6238');     // warmer tilled earth
+        soil.addColorStop(1, night ? '#251b0e' : '#5e4324');
         ctx.fillStyle = soil;
         ctx.fillRect(0, gy, W, H - gy);
-        ctx.strokeStyle = night ? 'rgba(0,0,0,.28)' : 'rgba(70,46,22,.32)';
-        ctx.lineWidth = 1;
-        for (let fy = gy + 7; fy < H - 2; fy += 9) { ctx.beginPath(); ctx.moveTo(0, fy); ctx.lineTo(W, fy); ctx.stroke(); }
+        // 3D tilled rows — alternating stripes converging to the dividing fence
+        ctx.save();
+        ctx.beginPath(); ctx.rect(0, gy, W, H - gy); ctx.clip();
+        const sSeg = 16, sSpread = W * 1.5, sx0 = W / 2 - sSpread / 2;
+        for (let i = 0; i < sSeg; i++) {
+          const xA = sx0 + (i / sSeg) * sSpread, xB = sx0 + ((i + 1) / sSeg) * sSpread;
+          ctx.fillStyle = (i % 2) ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.14)';
+          ctx.beginPath(); ctx.moveTo(xA, H); ctx.lineTo(xB, H); ctx.lineTo(W / 2, gy); ctx.closePath(); ctx.fill();
+        }
+        ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 1;
+        for (let fy = gy + (H - gy) * 0.42; fy < H - 2; fy += (H - gy) * 0.30) { ctx.beginPath(); ctx.moveTo(0, fy); ctx.lineTo(W, fy); ctx.stroke(); }
+        ctx.restore();
 
         // Fences: top of the pasture, the dividing 围栏 (farm | crops), bottom edge
         _drawFence(ctx, W * 0.02, H * 0.46, W * 0.96, night);
@@ -1013,10 +1090,16 @@
         // Animals: wander + drawn renderers, mini happiness bar above
         // Animals stay in the pasture, above the dividing fence (crops are below).
         const penTop = 0.50, penBot = Math.max(0.60, divY - 0.05);
-        for (const a of (roomData.farmAnimals || [])) {
-          const st = _farmAnimState(a);
+        const _herd = roomData.farmAnimals || [];
+        let _ai = 0;
+        for (const a of _herd) {
+          const idx = _ai++;
+          const st = _farmAnimState(a, idx, _herd.length);
           if (t > st.nextWander) {
-            st.tx = 0.08 + Math.random() * 0.84;
+            // each animal roams within its own lane -> stays spread across the pasture
+            const lane = (idx + 0.5) / Math.max(1, _herd.length);
+            const laneW = 0.80 / Math.max(1, _herd.length);
+            st.tx = Math.max(0.08, Math.min(0.92, 0.10 + lane * 0.80 + (Math.random() - 0.5) * laneW));
             st.ty = penTop + Math.random() * (penBot - penTop);
             st.nextWander = t + 4000 + Math.random() * 8000;
           }
@@ -1032,6 +1115,11 @@
           const px = st.x * W, py = st.y * H;
           const size = Math.max(34, Math.min(W, H) * 0.085);
           const bob = Math.sin(t / 400 + st.x * 20) * 2;
+          // soft ground shadow under the animal -> grounds it in the 3D field
+          ctx.fillStyle = night ? 'rgba(0,0,0,.30)' : 'rgba(30,62,20,.24)';
+          ctx.beginPath();
+          ctx.ellipse(px, py + size * 0.30, size * 0.40, size * 0.12, 0, 0, Math.PI * 2);
+          ctx.fill();
           ctx.save();
           ctx.translate(px, py + bob);
           if (!st.facingRight) ctx.scale(-1, 1); // drawers face right
