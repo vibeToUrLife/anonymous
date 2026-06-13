@@ -20,9 +20,12 @@
     let _cartSoldThisVisit = false;   // sold to the cart this visit → it leaves on close
     let _cartSold = {};               // units sold per item this visit (enforces the quota)
     let _cartVisitKey = -1;           // visitStart of the run _cartSold belongs to
+    let _cartLeaveStart = 0;          // Date.now() when the wagon began rolling off (0 = not leaving)
+    const CART_LEAVE_MS = 1600;       // roll-off animation length
     let _workshopModalOpen = false;   // single-machine modal visible?
     let _workshopModalId = null;      // which machine's modal is open
     let _makeChoiceSlot = null;       // slot index currently choosing a recipe (or null)
+    let _slotConfirm = false;         // awaiting confirmation to open (buy) a new slot
     const FARM_CART_X = 0.84, FARM_CART_Y = 0.50; // where the cart parks (normalized)
 
     // Trough position on the pasture (normalized)
@@ -619,6 +622,7 @@
       if (roomData.coins < FARM_SLOT_COST) return showToast('Not enough coins! (' + FARM_SLOT_COST + '🪙)', 'error');
       roomData.coins -= FARM_SLOT_COST;
       m.slots += 1; m.jobs.push(0);
+      _slotConfirm = false;
       await saveRoom();
       showToast('🧰 New production slot opened!', 'success');
       renderWorkshopModal(); renderFarmPanel(); renderAll();
@@ -903,11 +907,13 @@
       };
     }
 
-    // Draw the parked merchant wagon on the pasture (called from the render loop).
-    function _drawMerchantCart(ctx, W, H, t) {
-      const cx = FARM_CART_X * W, cy = FARM_CART_Y * H;
+    // Draw the parked merchant wagon. offsetX/alpha let the render loop slide it
+    // off-screen + fade it for the leave animation.
+    function _drawMerchantCart(ctx, W, H, t, offsetX, alpha) {
+      const cx = (FARM_CART_X + (offsetX || 0)) * W, cy = FARM_CART_Y * H;
       const s = Math.max(40, Math.min(W, H) * 0.11);
       ctx.save();
+      if (alpha != null) ctx.globalAlpha = alpha;
       ctx.fillStyle = 'rgba(30,62,20,.22)';                      // ground shadow
       ctx.beginPath(); ctx.ellipse(cx, cy + s * 0.44, s * 0.58, s * 0.14, 0, 0, Math.PI * 2); ctx.fill();
       // wheels
@@ -933,6 +939,25 @@
       ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.fillStyle = '#fff';
       ctx.strokeText('Tap to sell!', cx, cy - s * 0.64 + bob);
       ctx.fillText('Tap to sell!', cx, cy - s * 0.64 + bob);
+      ctx.restore();
+    }
+
+    // Draw a signpost where the cart parks while it's AWAY — tap it for the
+    // countdown + what the next cart will want.
+    function _drawCartAway(ctx, W, H, t, cart) {
+      const cx = FARM_CART_X * W, cy = FARM_CART_Y * H, s = Math.max(34, Math.min(W, H) * 0.095);
+      ctx.save();
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(30,62,20,.18)';                       // shadow
+      ctx.beginPath(); ctx.ellipse(cx, cy + s * 0.42, s * 0.4, s * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#7a5230';                                  // post
+      ctx.fillRect(cx - s * 0.05, cy - s * 0.28, s * 0.1, s * 0.7);
+      ctx.fillStyle = '#caa46a';                                  // sign board
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(cx - s * 0.42, cy - s * 0.52, s * 0.84, s * 0.4, s * 0.06); ctx.fill(); }
+      ctx.fillStyle = 'rgba(0,0,0,.12)'; if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(cx - s * 0.42, cy - s * 0.18, s * 0.84, s * 0.06, s * 0.03); ctx.fill(); }
+      ctx.font = Math.round(s * 0.24) + 'px serif'; ctx.fillText('🛒', cx, cy - s * 0.4);
+      ctx.font = '800 ' + Math.round(Math.max(9, s * 0.13)) + 'px sans-serif'; ctx.fillStyle = '#4a3320';
+      ctx.fillText(_fmtFarmTime(cart.nextInMs), cx, cy - s * 0.22);
       ctx.restore();
     }
 
@@ -1030,18 +1055,31 @@
       if (cart.visitStart !== _cartVisitKey) { _cartSold = {}; _cartVisitKey = cart.visitStart; }  // fresh visit
       _cartSheetOpen = true; renderCartSheet();
     }
-    function closeCartSheet() {
+    function _hideCartSheet() {
       _cartSheetOpen = false;
       const el = document.getElementById('cartSheet');
       if (el) el.style.display = 'none';
-      // Sold something this visit → the cart's business is done; send it off for
-      // the cooldown. (Sold nothing → it just waits here for next time.)
-      if (_cartSoldThisVisit) {
-        _cartSoldThisVisit = false;
-        roomData.farmCartLeftAt = Date.now();
-        saveRoom();
-        renderFarmPanel();
-      }
+    }
+    function closeCartSheet() {
+      // Sold via single taps this visit → roll the cart off (no auto next-modal).
+      if (_cartSoldThisVisit) { _departCart(false); return; }
+      _hideCartSheet();
+    }
+    // Send the cart off: start the roll-off animation + 4h cooldown. showNext pops
+    // the next-cart info modal once the wagon has left.
+    function _departCart(showNext) {
+      roomData.farmCartLeftAt = Date.now();
+      _cartSoldThisVisit = false; _cartSold = {};
+      _cartLeaveStart = Date.now();
+      _hideCartSheet();
+      saveRoom();
+      renderFarmPanel();
+      if (showNext) setTimeout(function () { if (isFarmView) { _cartSheetOpen = true; renderCartSheet(); } }, CART_LEAVE_MS + 120);
+    }
+    async function dismissCart() {
+      if (viewingUid !== currentUid) return;
+      showToast('🛒 Sent the cart off — back in 4h with new wants.', '');
+      _departCart(true);
     }
     // Units still sellable for a wanted item: min(stock, quota − sold-this-visit).
     function _cartSellable(w, stock) {
@@ -1050,10 +1088,24 @@
     function renderCartSheet() {
       const el = document.getElementById('cartSheet');
       if (!el) return;
+      if (!_cartSheetOpen) { el.style.display = 'none'; return; }
       const cart = _farmCart();
-      if (!_cartSheetOpen || !cart.present) { el.style.display = 'none'; _cartSheetOpen = _cartSheetOpen && cart.present; return; }
       const meta = farmProductMeta(), prices = farmProductPrices(), stock = roomData.farmStock || {};
-      // One square per sellable unit (tap to sell one → that square closes).
+      if (!cart.present) {
+        // Away: countdown + a preview of what the NEXT cart will want.
+        const want = cart.wanted.map(w => {
+          const m = meta[w.id] || { emoji: '❓', name: w.id };
+          return '<div class="cart-sq" style="cursor:default;border-style:dashed;border-color:var(--g-border);background:rgba(255,255,255,.04)"><span class="cart-sq-icon">' + m.emoji + '</span><span class="cart-sq-cap" style="color:var(--g-ink-soft)">×' + w.qty + '</span></div>';
+        }).join('');
+        el.innerHTML =
+          '<div class="cp-head">🛒 Cart is away</div>' +
+          '<div class="farm-panel-empty" style="padding:0 2px 8px">Back in <b>' + _fmtFarmTime(cart.nextInMs) + '</b>. The next cart will want:</div>' +
+          '<div class="cart-grid">' + want + '</div>' +
+          '<button class="cp-close" onclick="closeCartSheet()">Close</button>';
+        el.style.display = 'block';
+        return;
+      }
+      // Present → one square per sellable unit (tap to sell one → that square closes).
       let squares = '';
       cart.wanted.forEach(w => {
         const m = meta[w.id] || { emoji: '❓', name: w.id };
@@ -1063,18 +1115,15 @@
             '<span class="cart-sq-icon">' + m.emoji + '</span><span class="cart-sq-cap">+' + (prices[w.id] || 0) + '🪙</span></button>';
         }
       });
-      const wantsLine = cart.wanted.map(w => {
-        const m = meta[w.id] || { emoji: '❓' };
-        const rem = Math.max(0, w.qty - (_cartSold[w.id] || 0));
-        return m.emoji + '×' + rem;
-      }).join('  ');
+      const wantsLine = cart.wanted.map(w => (meta[w.id] || { emoji: '❓' }).emoji + '×' + Math.max(0, w.qty - (_cartSold[w.id] || 0))).join('  ');
       el.innerHTML =
         '<div class="cp-head">🛒 Merchant Cart</div>' +
         '<div class="farm-panel-empty" style="padding:0 2px 4px">Wants: ' + wantsLine + ' · tap a square to sell one, then it\'s off for 4h.</div>' +
         (squares
           ? '<div class="cart-grid">' + squares + '</div>' +
             '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="sellAllToCart()">💰 Sell all it wants</button>'
-          : '<div class="ws-status">Nothing it wants in your stock right now.</div>') +
+          : '<div class="ws-status">Nothing it wants in your stock right now.</div>' +
+            '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="dismissCart()">🐴 Send it off (new cart in 4h)</button>') +
         '<button class="cp-close" onclick="closeCartSheet()">Close</button>';
       el.style.display = 'block';
     }
@@ -1110,12 +1159,10 @@
       if (!sold) return showToast('Nothing the cart wants right now.', '');
       roomData.coins += total;
       roomData.farmStock = stock;
-      roomData.farmCartLeftAt = Date.now();   // visit done → cart departs (single save)
-      _cartSoldThisVisit = false;
-      await saveRoom();
       showToast('🛒 Sold ' + sold + ' items for ' + total + '🪙! The cart rolls on.', 'success');
       checkAchievements();
-      closeCartSheet(); renderFarmPanel(); renderAll();
+      renderFarmPanel(); renderAll();
+      _departCart(true);   // roll-off animation, then show the next-cart modal
     }
 
     // ── RGB coat preview — a little gallery of each animal's rainbow variant ──
@@ -1159,14 +1206,16 @@
     // ── Single-machine modal — tap a machine's hut on the farm to make goods with
     // just THAT machine (start a batch / collect it). Machines are BUILT in the
     // Garden tab; this modal only operates an already-built one.
-    function openMachineModal(id) { _workshopModalId = id; _makeChoiceSlot = null; _workshopModalOpen = true; renderWorkshopModal(); }
+    function openMachineModal(id) { _workshopModalId = id; _makeChoiceSlot = null; _slotConfirm = false; _workshopModalOpen = true; renderWorkshopModal(); }
     function closeWorkshopModal() {
-      _workshopModalOpen = false; _workshopModalId = null; _makeChoiceSlot = null;
+      _workshopModalOpen = false; _workshopModalId = null; _makeChoiceSlot = null; _slotConfirm = false;
       const el = document.getElementById('workshopModal');
       if (el) el.style.display = 'none';
     }
-    function chooseMake(slot) { _makeChoiceSlot = slot; renderWorkshopModal(); }
+    function chooseMake(slot) { _makeChoiceSlot = slot; _slotConfirm = false; renderWorkshopModal(); }
     function cancelMake() { _makeChoiceSlot = null; renderWorkshopModal(); }
+    function askOpenSlot() { _slotConfirm = true; _makeChoiceSlot = null; renderWorkshopModal(); }
+    function cancelOpenSlot() { _slotConfirm = false; renderWorkshopModal(); }
     function renderWorkshopModal() {
       const el = document.getElementById('workshopModal');
       if (!el) return;
@@ -1189,7 +1238,7 @@
         for (let i = 0; i < FARM_MAX_SLOTS; i++) {
           if (i >= m.slots) {                                   // not opened yet
             const afford = roomData.coins >= FARM_SLOT_COST;
-            cells += '<button class="ws-cell locked"' + (afford ? '' : ' disabled') + ' onclick="buyMachineSlot(\'' + mc.id + '\')">' +
+            cells += '<button class="ws-cell locked"' + (afford ? '' : ' disabled') + ' onclick="askOpenSlot()">' +
               '<span class="ws-cell-icon">🔒</span><span class="ws-cell-cap">Open · ' + Math.round(FARM_SLOT_COST / 1000) + 'k🪙</span></button>';
             continue;
           }
@@ -1221,7 +1270,13 @@
           }).join('');
           chooser = '<div class="ws-choose"><div class="ws-slot-no">Slot ' + (_makeChoiceSlot + 1) + ' — pick a product <span class="ws-x" onclick="cancelMake()">✕</span></div>' + choices + '</div>';
         }
-        body = grid + chooser;
+        // confirmation before spending coins to open a new slot
+        let confirmBanner = '';
+        if (_slotConfirm) {
+          confirmBanner = '<div class="ws-choose"><div class="ws-slot-no">Open a new slot for ' + FARM_SLOT_COST + '🪙? <span class="ws-x" onclick="cancelOpenSlot()">✕</span></div>' +
+            '<button class="farm-shop-buy ws-recipe" onclick="buyMachineSlot(\'' + mc.id + '\')"' + (roomData.coins < FARM_SLOT_COST ? ' disabled' : '') + '>✓ Open slot · ' + FARM_SLOT_COST + '🪙</button></div>';
+        }
+        body = grid + chooser + confirmBanner;
       }
       const butcherNote = mc.id === 'butcher'
         ? '<div class="ws-status" style="margin-top:8px">🔪 Get meat by butchering an animal: 🐮 Animals tab → tap 🔪 on it.</div>' : '';
@@ -1653,8 +1708,18 @@
           ctx.fillRect(bx, byy, bw * (h / 100), 4);
         }
 
-        // Merchant cart (only while it's visiting)
-        if (viewingUid === currentUid && _farmCart().present) _drawMerchantCart(ctx, W, H, t);
+        // Merchant cart: rolling-off animation → present wagon → away signpost
+        if (viewingUid === currentUid) {
+          const _cartS = _farmCart();
+          if (_cartLeaveStart && Date.now() - _cartLeaveStart < CART_LEAVE_MS) {
+            const lp = (Date.now() - _cartLeaveStart) / CART_LEAVE_MS;
+            _drawMerchantCart(ctx, W, H, t, lp * 0.55, 1 - lp * 0.85);  // roll right + fade
+          } else {
+            if (_cartLeaveStart) _cartLeaveStart = 0;
+            if (_cartS.present) _drawMerchantCart(ctx, W, H, t);
+            else _drawCartAway(ctx, W, H, t, _cartS);
+          }
+        }
 
         // Floating particles (hearts, +coins)
         _farmParticles = _farmParticles.filter(p => t - p.born < p.life);
@@ -1825,9 +1890,8 @@
         const cx = (e.clientX - rect.left) / rect.width;
         const cy = (e.clientY - rect.top) / rect.height;
 
-        // Merchant cart (when visiting): big tap zone, easy on mobile.
-        const cartNow = _farmCart();
-        if (cartNow.present && Math.hypot(FARM_CART_X - cx, FARM_CART_Y - cy) < 0.14) { openCartSheet(); return; }
+        // Merchant cart / away signpost: big tap zone (sell sheet, or next-cart info).
+        if (Math.hypot(FARM_CART_X - cx, FARM_CART_Y - cy) < 0.14) { openCartSheet(); return; }
         closeCartSheet();   // tapping elsewhere on the farm dismisses the sheet
 
         // Tap a machine hut → open that machine's modal (nearest owned hut within
