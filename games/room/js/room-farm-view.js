@@ -233,7 +233,11 @@
       // at the cart when it visits — see _farmCart() and the cart sell sheet.
       const prices = farmProductPrices(), meta = farmProductMeta();
       const stock = roomData.farmStock || {};
-      const stockIds = Object.keys(stock).filter(k => stock[k] > 0);
+      // Show produce in a FIXED canonical order (meta key order) so the list
+      // never re-sequences when a newly-collected product is added to stock.
+      const _order = Object.keys(meta);
+      const stockIds = Object.keys(stock).filter(k => stock[k] > 0)
+        .sort((a, b) => { const ia = _order.indexOf(a), ib = _order.indexOf(b); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
       const cart = _farmCart();
       const wantMeta = cart.wanted.map(id => (meta[id] || { emoji: '❓' }).emoji).join(' ');
       const cartHtml =
