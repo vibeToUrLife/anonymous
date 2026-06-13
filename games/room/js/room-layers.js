@@ -278,6 +278,10 @@
 
     // -- Sky with warm Hay Day palette, sun/moon follow real time --
     function _drawHDSky(ctx, W, H, night, t) {
+      // Shared by the outside view AND the farm. Stars are normally seeded in
+      // drawOutsideCanvas, but the farm can be opened directly (deep-link) without
+      // that ever running — so make sure they exist before the night branch.
+      if (!_outsideStars) _outsideStars = Array.from({ length: 28 }, (_, i) => ({ x: (Math.sin(i * 7.3 + 2.1) * 0.5 + 0.5), y: (Math.sin(i * 3.7 + 0.9) * 0.5 + 0.5) * 0.35, r: 0.8 + (i % 3) * 0.4 }));
       const sky = ctx.createLinearGradient(0, 0, 0, H * 0.70);
       if (night) {
         sky.addColorStop(0,   '#0a0e2a');
