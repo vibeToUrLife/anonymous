@@ -1977,15 +1977,18 @@
           if (e.type === 'mousedown') e.preventDefault();
           return;
         }
-        // Empty plot → arm a potential plant-drag (a plain tap opens the picker).
+        // Near ANY plot → arm a potential sow-drag (swipe to plant). A plain tap
+        // still opens the picker / harvests via onclick.
         const plots = roomData.farmPlots || [];
+        let near = -1, nd = FARM_PLOT_HIT;
         for (let i = 0; i < plots.length; i++) {
           const pp = _farmPlotPos(i);
-          if (!plots[i].crop && Math.hypot(pp.x - p.x, pp.y - p.y) < FARM_PLOT_HIT) {
-            _farmPlantStartIdx = i; _farmPlantDrag = false; _farmPlantedSet = new Set();
-            _farmDragStartX = p.x; _farmDragStartY = p.y;
-            return;
-          }
+          const d = Math.hypot(pp.x - p.x, pp.y - p.y);
+          if (d < nd) { nd = d; near = i; }
+        }
+        if (near >= 0) {
+          _farmPlantStartIdx = near; _farmPlantDrag = false; _farmPlantedSet = new Set();
+          _farmDragStartX = p.x; _farmDragStartY = p.y;
         }
       }
 
@@ -2006,7 +2009,7 @@
           for (let i = 0; i < plots.length; i++) {
             if (_farmPlantedSet.has(i)) continue;
             const pp = _farmPlotPos(i);
-            if (Math.hypot(pp.x - p.x, pp.y - p.y) < 0.045 && _plantArmed(i)) _farmPlantedSet.add(i);
+            if (Math.hypot(pp.x - p.x, pp.y - p.y) < FARM_PLOT_HIT && _plantArmed(i)) _farmPlantedSet.add(i);
           }
           return;
         }
