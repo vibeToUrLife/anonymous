@@ -18,6 +18,8 @@
     let _farmButcherConfirmId = null; // animal id awaiting butcher confirmation
     let _cartSheetOpen = false;       // merchant-cart sell sheet visible?
     let _cartSoldThisVisit = false;   // sold to the cart this visit → it leaves on close
+    let _cartSold = {};               // units sold per item this visit (enforces the quota)
+    let _cartVisitKey = -1;           // visitStart of the run _cartSold belongs to
     let _workshopModalOpen = false;   // single-machine modal visible?
     let _workshopModalId = null;      // which machine's modal is open
     let _makeChoiceSlot = null;       // slot index currently choosing a recipe (or null)
@@ -896,6 +898,7 @@
       return {
         present: present,
         wanted: wanted,
+        visitStart: visitStart,
         nextInMs: present ? 0 : (FARM_CART_COOLDOWN_MS - (now - left)),
       };
     }
@@ -1022,7 +1025,11 @@
       });
     }
 
-    function openCartSheet() { _cartSheetOpen = true; renderCartSheet(); }
+    function openCartSheet() {
+      const cart = _farmCart();
+      if (cart.visitStart !== _cartVisitKey) { _cartSold = {}; _cartVisitKey = cart.visitStart; }  // fresh visit
+      _cartSheetOpen = true; renderCartSheet();
+    }
     function closeCartSheet() {
       _cartSheetOpen = false;
       const el = document.getElementById('cartSheet');
@@ -1036,49 +1043,57 @@
         renderFarmPanel();
       }
     }
+    // Units still sellable for a wanted item: min(stock, quota − sold-this-visit).
+    function _cartSellable(w, stock) {
+      return Math.max(0, Math.min(stock[w.id] || 0, w.qty - (_cartSold[w.id] || 0)));
+    }
     function renderCartSheet() {
       const el = document.getElementById('cartSheet');
       if (!el) return;
       const cart = _farmCart();
       if (!_cartSheetOpen || !cart.present) { el.style.display = 'none'; _cartSheetOpen = _cartSheetOpen && cart.present; return; }
       const meta = farmProductMeta(), prices = farmProductPrices(), stock = roomData.farmStock || {};
-      const rows = cart.wanted.map(w => {
+      // One square per sellable unit (tap to sell one → that square closes).
+      let squares = '';
+      cart.wanted.forEach(w => {
         const m = meta[w.id] || { emoji: '❓', name: w.id };
-        const have = stock[w.id] || 0;
-        const sellN = Math.min(have, w.qty);          // cart only buys up to its quota
-        const val = sellN * (prices[w.id] || 0);
-        return '<button class="cp-crop"' + (sellN > 0 ? '' : ' disabled') + ' onclick="sellToCart(\'' + w.id + '\')">' +
-          '<span class="cp-emoji">' + m.emoji + '</span>' +
-          '<span class="cp-info"><b>' + m.name + '</b><small>wants ×' + w.qty + ' · you have ' + have + ' · ' + (prices[w.id] || 0) + '🪙 ea</small></span>' +
-          '<span class="cp-cost">' + (sellN > 0 ? 'Sell ' + sellN + ' +' + val + '🪙' : '—') + '</span>' +
-          '</button>';
-      }).join('');
-      const anyToSell = cart.wanted.some(w => (stock[w.id] || 0) > 0);
+        const n = _cartSellable(w, stock);
+        for (let k = 0; k < n; k++) {
+          squares += '<button class="cart-sq" onclick="sellOneToCart(\'' + w.id + '\')">' +
+            '<span class="cart-sq-icon">' + m.emoji + '</span><span class="cart-sq-cap">+' + (prices[w.id] || 0) + '🪙</span></button>';
+        }
+      });
+      const wantsLine = cart.wanted.map(w => {
+        const m = meta[w.id] || { emoji: '❓' };
+        const rem = Math.max(0, w.qty - (_cartSold[w.id] || 0));
+        return m.emoji + '×' + rem;
+      }).join('  ');
       el.innerHTML =
         '<div class="cp-head">🛒 Merchant Cart</div>' +
-        '<div class="farm-panel-empty" style="padding:0 2px 6px">It buys a set amount of each. Sell what it wants — then it\'s off for 4h.</div>' +
-        rows +
-        (anyToSell ? '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="sellAllToCart()">💰 Sell all it wants</button>' : '') +
+        '<div class="farm-panel-empty" style="padding:0 2px 4px">Wants: ' + wantsLine + ' · tap a square to sell one, then it\'s off for 4h.</div>' +
+        (squares
+          ? '<div class="cart-grid">' + squares + '</div>' +
+            '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="sellAllToCart()">💰 Sell all it wants</button>'
+          : '<div class="ws-status">Nothing it wants in your stock right now.</div>') +
         '<button class="cp-close" onclick="closeCartSheet()">Close</button>';
       el.style.display = 'block';
     }
 
-    async function sellToCart(prodId) {
+    async function sellOneToCart(prodId) {
       if (viewingUid !== currentUid) return;
       const cart = _farmCart();
       if (!cart.present) { closeCartSheet(); return showToast('The cart has left — it\'ll be back later.', ''); }
       const want = cart.wanted.find(w => w.id === prodId);
       if (!want) return showToast('The cart isn\'t buying that this visit.', '');
-      const have = (roomData.farmStock || {})[prodId] || 0;
-      const sellN = Math.min(have, want.qty);          // capped at the quota
-      if (sellN <= 0) return showToast('None to sell.', '');
+      if (_cartSellable(want, roomData.farmStock || {}) <= 0) return showToast('The cart has had enough of that.', '');
       const price = farmProductPrices()[prodId] || 0;
-      roomData.coins += sellN * price;
-      roomData.farmStock[prodId] = have - sellN;
+      roomData.coins += price;
+      roomData.farmStock[prodId] = (roomData.farmStock[prodId] || 0) - 1;
+      _cartSold[prodId] = (_cartSold[prodId] || 0) + 1;
       _cartSoldThisVisit = true;   // cart leaves when the sheet is closed
       await saveRoom();
       const m = farmProductMeta()[prodId];
-      showToast('Sold ' + sellN + ' ' + (m ? m.emoji + ' ' + m.name : prodId) + ' for ' + (sellN * price) + '🪙', 'success');
+      showToast('Sold 1 ' + (m ? m.emoji + ' ' + m.name : prodId) + ' for ' + price + '🪙', 'success');
       checkAchievements();
       renderCartSheet(); renderFarmPanel(); renderAll();
     }
@@ -1089,8 +1104,8 @@
       const stock = roomData.farmStock || {}, prices = farmProductPrices();
       let total = 0, sold = 0;
       for (const w of cart.wanted) {
-        const sellN = Math.min(stock[w.id] || 0, w.qty);   // each capped at its quota
-        if (sellN > 0) { total += sellN * (prices[w.id] || 0); sold += sellN; stock[w.id] = (stock[w.id] || 0) - sellN; }
+        const n = _cartSellable(w, stock);
+        if (n > 0) { total += n * (prices[w.id] || 0); sold += n; stock[w.id] = (stock[w.id] || 0) - n; _cartSold[w.id] = (_cartSold[w.id] || 0) + n; }
       }
       if (!sold) return showToast('Nothing the cart wants right now.', '');
       roomData.coins += total;
@@ -1160,6 +1175,10 @@
       const meta = farmProductMeta(), stock = roomData.farmStock || {}, now = Date.now();
       const m = _machineState(mc.id);
       const makesStr = mc.recipes.map(rc => (meta[rc.out.id] ? meta[rc.out.id].emoji : '?')).join(' ');
+      // What you have of the ingredients this machine uses (e.g. 🥛×3).
+      const ingIds = mc.recipes.reduce((a, rc) => { Object.keys(rc.in).forEach(k => { if (a.indexOf(k) < 0) a.push(k); }); return a; }, []);
+      const haveStr = ingIds.map(id => (meta[id] ? meta[id].emoji : id) + '×' + (stock[id] || 0)).join('   ');
+      const haveLine = '<div class="ws-status" style="margin:2px 0 8px">In stock: ' + haveStr + '</div>';
       let body;
       if (!m) {
         body = '<div class="ws-status">Not built yet — build it in the 🌱 Garden tab.</div>';
@@ -1210,7 +1229,7 @@
         '<div class="ws-box">' +
           '<div class="ws-head">' + mc.emoji + ' ' + mc.name + '</div>' +
           '<div class="ws-sub">Makes: ' + makesStr + ' · each slot makes one</div>' +
-          body + butcherNote +
+          haveLine + body + butcherNote +
           '<button class="cp-close" onclick="closeWorkshopModal()">Close</button>' +
         '</div>';
       el.style.display = 'flex';
@@ -1806,20 +1825,24 @@
         const cx = (e.clientX - rect.left) / rect.width;
         const cy = (e.clientY - rect.top) / rect.height;
 
-        // Merchant cart (when visiting): tap it to open the sell sheet.
+        // Merchant cart (when visiting): big tap zone, easy on mobile.
         const cartNow = _farmCart();
-        if (cartNow.present && Math.hypot(FARM_CART_X - cx, FARM_CART_Y - cy) < 0.11) { openCartSheet(); return; }
+        if (cartNow.present && Math.hypot(FARM_CART_X - cx, FARM_CART_Y - cy) < 0.14) { openCartSheet(); return; }
         closeCartSheet();   // tapping elsewhere on the farm dismisses the sheet
 
-        // Tap a machine hut → open that one machine's make/collect modal.
+        // Tap a machine hut → open that machine's modal (nearest owned hut within
+        // a generous radius, so the small huts are easy to hit on mobile).
         const _wm = roomData.farmMachines || {};
+        let _hi = -1, _hd = 0.09;
         for (let _s = 0; _s < FARM_MACHINES.length; _s++) {
-          const _m = FARM_MACHINES[_s];
-          if (_wm[_m.id] && _wm[_m.id].owned) {
+          const _mm = FARM_MACHINES[_s];
+          if (_wm[_mm.id] && _wm[_mm.id].owned) {
             const _p = _workshopPos(_s);
-            if (Math.hypot(_p.x - cx, _p.y - cy) < 0.07) { openMachineModal(_m.id); return; }
+            const _d = Math.hypot(_p.x - cx, _p.y - cy);
+            if (_d < _hd) { _hd = _d; _hi = _s; }
           }
         }
+        if (_hi >= 0) { openMachineModal(FARM_MACHINES[_hi].id); return; }
 
         // Garden plots first: pick the NEAREST plot within the tap radius (easier
         // to hit on mobile than the old first-within-a-tight-circle test).

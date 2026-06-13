@@ -870,6 +870,18 @@
     .ws-cell.busy{border-style:solid;cursor:default;color:var(--cream)}
     .ws-cell.ready{border-style:solid;border-color:rgba(251,146,60,.6);background:rgba(251,146,60,.14);color:var(--cream);animation:wsPulse 1.2s ease-in-out infinite}
     @keyframes wsPulse{0%,100%{box-shadow:0 0 0 0 rgba(251,146,60,.45)}50%{box-shadow:0 0 0 6px rgba(251,146,60,0)}}
+    /* merchant-cart sell squares (one per unit) */
+    .cart-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:4px 0 10px}
+    .cart-sq{
+      aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+      border-radius:13px;border:2px solid rgba(251,146,60,.5);background:rgba(251,146,60,.12);
+      color:var(--cream);font:inherit;cursor:pointer;padding:3px;transition:transform .1s,background .15s;
+    }
+    .cart-sq:hover{background:rgba(251,146,60,.22)}
+    .cart-sq:active{transform:scale(.92)}
+    .cart-sq-icon{font-size:24px;line-height:1}
+    .cart-sq-cap{font-size:9px;font-weight:800;color:var(--g-coin-ink)}
+
     /* recipe chooser under the grid */
     .ws-choose{background:rgba(255,255,255,.04);border:1px solid var(--g-border);border-radius:14px;padding:9px;margin-bottom:10px}
     .ws-x{cursor:pointer;float:right;color:var(--g-ink-soft);font-weight:700}
