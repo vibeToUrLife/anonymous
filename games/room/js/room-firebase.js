@@ -279,9 +279,23 @@
       const _loadOv = document.getElementById('roomLoadingOverlay');
       const _wasFirstLoad = _loadOv && _loadOv.style.display !== 'none';
       if (_loadOv) _loadOv.style.display = 'none';
+      // Deep-link: index.html "Farm" button links to room.html?view=farm — open it
+      // once the room has loaded (own room only).
+      if (_wasFirstLoad) _maybeOpenFarmFromUrl();
       // Always render on first load; skip only if a local save just triggered this snapshot
       if (!_wasFirstLoad && Date.now() - _lastLocalSaveTime < 2000) return;
       renderAllDebounced();
+    }
+
+    // One-time: if the URL asks for the farm view, open it after load.
+    let _farmUrlHandled = false;
+    function _maybeOpenFarmFromUrl() {
+      if (_farmUrlHandled) return;
+      _farmUrlHandled = true;
+      try {
+        const v = new URLSearchParams(location.search).get('view');
+        if (v === 'farm' && viewingUid === currentUid && typeof openFarm === 'function') openFarm();
+      } catch (e) { /* ignore malformed URL */ }
     }
 
     // Live Auto-Feeder top-up: refill any owned pet at/below threshold back to

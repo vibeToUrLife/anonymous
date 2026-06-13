@@ -13,6 +13,8 @@
     let _farmParticles = [];    // floating hearts / +coins effects
     let _farmDropSeq = 0;
     let _selectedCrop = 'wheat'; // crop planted when you tap an empty plot
+    let _farmHerdCollapsed = null; // null = auto; true/false once the user toggles
+    const FARM_HERD_COLLAPSE_AT = 4; // herd longer than this auto-collapses the list
 
     // Trough position on the pasture (normalized)
     const FARM_TROUGH_X = 0.14, FARM_TROUGH_Y = 0.58;
@@ -269,8 +271,10 @@
             '</div>';
         }).join('');
 
-      const herdHtml =
-        '<div class="farm-section-title">🐮 My Animals</div>' +
+      // Herd list is collapsible (it grows long). _farmHerdCollapsed: null = auto
+      // (collapse once the herd passes FARM_HERD_COLLAPSE_AT), else explicit bool.
+      const _herdCollapsed = _farmHerdCollapsed == null ? animals.length > FARM_HERD_COLLAPSE_AT : _farmHerdCollapsed;
+      const herdRows =
         (!animals.length
           ? '<div class="farm-panel-empty">No animals yet — buy one above to start earning!</div>'
           : animals.map(a => {
@@ -289,21 +293,40 @@
                 '<span class="farm-herd-drops">' + (waiting ? def.drop.emoji + ' ×' + waiting : '') + '</span>' +
                 '</div>';
             }).join(''));
+      const herdHtml =
+        '<div class="farm-section-title farm-collapse-head" onclick="toggleFarmHerd()">' +
+          '<span>🐮 My Animals <small>(' + animals.length + ')</small></span>' +
+          '<span class="farm-collapse-arrow">' + (_herdCollapsed ? '▸' : '▾') + '</span>' +
+        '</div>' +
+        (_herdCollapsed ? '' : '<div class="farm-herd-list">' + herdRows + '</div>');
 
-      // Garden: plot count + Add-plot + how-to (seed choice now happens on the farm)
+      // Garden: owned/max plots + Add-plot + plant-all/harvest-all + how-to.
       const plots = roomData.farmPlots || [];
       const usedPlots = plots.filter(p => p.crop).length;
+      const emptyPlots = plots.length - usedPlots;
+      const nowG = Date.now();
+      const ripePlots = plots.filter(p => {
+        if (!p.crop) return false;
+        const c = FARM_CROPS.find(x => x.id === p.crop);
+        return c && cropProgress(p.plantedAt, nowG, c.growMs) >= 1;
+      }).length;
+      const selCrop = FARM_CROPS.find(c => c.id === _selectedCrop) || FARM_CROPS[0];
+      const atMax = plots.length >= FARM_PLOT_MAX;
       const gardenHtml =
         '<div class="farm-section-title">🌱 Garden ' +
-          (plots.length < FARM_PLOT_MAX
-            ? '<button class="farm-shop-buy" onclick="addFarmPlot()"' + (roomData.coins < FARM_PLOT_COST ? ' disabled' : '') + '>+ Plot · ' + FARM_PLOT_COST + '🪙</button>'
-            : '<span class="farm-panel-cap">' + plots.length + ' plots</span>') +
+          '<span class="farm-panel-cap">' + plots.length + '/' + FARM_PLOT_MAX + ' plots</span>' +
+          (atMax
+            ? ''
+            : '<button class="farm-shop-buy" onclick="addFarmPlot()"' + (roomData.coins < FARM_PLOT_COST ? ' disabled' : '') + '>+ Plot · ' + FARM_PLOT_COST + '🪙</button>') +
         '</div>' +
-        '<div class="farm-panel-empty" style="padding-bottom:2px">' + usedPlots + '/' + plots.length + ' plots planted</div>' +
+        '<div class="farm-panel-empty" style="padding-bottom:2px">' + usedPlots + '/' + plots.length + ' planted · ' + ripePlots + ' ripe</div>' +
+        '<div class="farm-garden-actions">' +
+          '<button class="farm-shop-buy" onclick="plantAllFarm()"' + (emptyPlots && roomData.coins >= selCrop.seedCost ? '' : ' disabled') + '>🌱 Plant all ' + selCrop.emoji + '</button>' +
+          '<button class="farm-shop-buy" onclick="harvestAllFarm()"' + (ripePlots ? '' : ' disabled') + '>🧺 Harvest all</button>' +
+        '</div>' +
         '<div class="farm-howto">' +
-          '👆 Tap an empty plot on the farm to choose a seed.<br>' +
-          '✋ Drag across plots to plant several at once.<br>' +
-          '⏳ Hover a crop to see its time left — tap it when ripe to harvest.' +
+          '👆 Tap an empty plot to choose a seed · ✋ drag to plant many.<br>' +
+          '⏳ Tap a ripe crop to harvest. "Plant all" uses your last seed (' + selCrop.name + ').' +
         '</div>';
 
       // Workshop: processing machines (buy → make → collect)
@@ -584,6 +607,52 @@
       showToast('🌱 New garden plot added!', 'success');
       renderFarmPanel();
       renderAll();
+    }
+
+    // Collapse / expand the herd list (UI-only, not persisted).
+    function toggleFarmHerd() {
+      const n = (roomData.farmAnimals || []).length;
+      const cur = _farmHerdCollapsed == null ? n > FARM_HERD_COLLAPSE_AT : _farmHerdCollapsed;
+      _farmHerdCollapsed = !cur;
+      renderFarmPanel();
+    }
+
+    // Plant the selected seed into every empty plot, stopping when coins run out.
+    function plantAllFarm() {
+      if (viewingUid !== currentUid) return;
+      const plots = roomData.farmPlots || [];
+      const crop = FARM_CROPS.find(c => c.id === _selectedCrop);
+      if (!crop) return showToast('Pick a seed first — tap an empty plot.', '');
+      let n = 0;
+      for (let i = 0; i < plots.length; i++) { if (!plots[i].crop && _plantArmed(i)) n++; }
+      if (!n) return showToast(roomData.coins < crop.seedCost ? 'Not enough coins for seeds!' : 'No empty plots to plant.', 'error');
+      saveRoom(); renderFarmPanel(); renderAll();
+      showToast('🌱 Planted ' + n + ' ' + crop.name + (n > 1 ? 's' : ''), 'success');
+    }
+
+    // Harvest every ripe plot at once (food → trough, products → stock).
+    function harvestAllFarm() {
+      if (viewingUid !== currentUid) return;
+      const plots = roomData.farmPlots || [];
+      const now = Date.now();
+      let n = 0;
+      for (const plot of plots) {
+        if (!plot.crop) continue;
+        const crop = FARM_CROPS.find(c => c.id === plot.crop);
+        if (!crop) { plot.crop = null; plot.plantedAt = 0; continue; }
+        if (cropProgress(plot.plantedAt, now, crop.growMs) < 1) continue;
+        if (crop.yield.food) {
+          roomData.farmFood = Math.min(FARM_FOOD_MAX, (roomData.farmFood || 0) + crop.yield.food);
+          if (!roomData.farmFoodAt) roomData.farmFoodAt = now;
+        } else {
+          roomData.farmStock = roomData.farmStock || {};
+          roomData.farmStock[crop.yield.product] = (roomData.farmStock[crop.yield.product] || 0) + crop.yield.qty;
+        }
+        plot.crop = null; plot.plantedAt = 0; n++;
+      }
+      if (!n) return showToast('Nothing ripe to harvest yet.', '');
+      saveRoom(); renderFarmPanel(); renderAll();
+      showToast('🧺 Harvested ' + n + ' plot' + (n > 1 ? 's' : ''), 'success');
     }
 
     // Tap a plot: plant the selected seed if empty, harvest if ripe, else show time.
@@ -1159,6 +1228,7 @@
     let _farmDragSuppressClick = false;
     let _farmDragStartX = 0, _farmDragStartY = 0;
     const FARM_DRAG_THRESHOLD = 0.03; // dead-zone: finger jitter stays a tap
+    const FARM_PLOT_HIT = 0.06;       // tap radius around a plot (bigger = easier on mobile)
     let _farmPlantStartIdx = null;    // empty plot a plant-drag started on
     let _farmPlantDrag = false;       // dragging across plots to plant the armed seed
     let _farmPlantedSet = null;       // plot indices already planted this drag
@@ -1190,7 +1260,7 @@
         const plots = roomData.farmPlots || [];
         for (let i = 0; i < plots.length; i++) {
           const pp = _farmPlotPos(i);
-          if (!plots[i].crop && Math.hypot(pp.x - p.x, pp.y - p.y) < 0.045) {
+          if (!plots[i].crop && Math.hypot(pp.x - p.x, pp.y - p.y) < FARM_PLOT_HIT) {
             _farmPlantStartIdx = i; _farmPlantDrag = false; _farmPlantedSet = new Set();
             _farmDragStartX = p.x; _farmDragStartY = p.y;
             return;
@@ -1302,15 +1372,20 @@
         const cx = (e.clientX - rect.left) / rect.width;
         const cy = (e.clientY - rect.top) / rect.height;
 
-        // Garden plots first: empty → choose a seed, planted → harvest / show time.
+        // Garden plots first: pick the NEAREST plot within the tap radius (easier
+        // to hit on mobile than the old first-within-a-tight-circle test).
         const plots = roomData.farmPlots || [];
+        let plotIdx = -1, plotDist = FARM_PLOT_HIT;
         for (let i = 0; i < plots.length; i++) {
-          const pos = _farmPlotPos(i);
-          if (Math.hypot(pos.x - cx, pos.y - cy) < 0.05) {
-            if (!plots[i].crop) openCropPicker(i);
-            else _plantOrHarvestPlot(plots[i], pos);
-            return;
-          }
+          const pp = _farmPlotPos(i);
+          const d = Math.hypot(pp.x - cx, pp.y - cy);
+          if (d < plotDist) { plotDist = d; plotIdx = i; }
+        }
+        if (plotIdx >= 0) {
+          const pos = _farmPlotPos(plotIdx);
+          if (!plots[plotIdx].crop) openCropPicker(plotIdx);
+          else _plantOrHarvestPlot(plots[plotIdx], pos);
+          return;
         }
 
         // Drops take priority (they're the payout)

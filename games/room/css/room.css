@@ -780,6 +780,15 @@
       display:flex; align-items:center; justify-content:space-between; gap:8px;
       margin:0 0 6px; padding-bottom:6px; border-bottom:2px dotted rgba(251,146,60,.32);
     }
+    /* Collapsible section header (My Animals) */
+    .farm-collapse-head{cursor:pointer;user-select:none;transition:color .15s}
+    .farm-collapse-head:hover{color:var(--g-accent)}
+    .farm-collapse-head small{color:var(--g-ink-faint);font-weight:700}
+    .farm-collapse-arrow{font-size:11px;color:var(--g-ink-soft)}
+    .farm-herd-list{display:flex;flex-direction:column}
+    /* Plant-all / Harvest-all row */
+    .farm-garden-actions{display:flex;gap:8px;margin:8px 0 4px}
+    .farm-garden-actions .farm-shop-buy{flex:1;text-align:center}
 
     /* Rows — dotted separators, quiet by default */
     .farm-shop-row,.farm-herd-row,.farm-food-row{

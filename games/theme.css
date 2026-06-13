@@ -12,6 +12,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap');
 
 :root {
+  /* Declare our own dark theme so Edge's "Automatic Dark Mode for Web Contents"
+     stops force-inverting these pages (was making text dark-on-dark). */
+  color-scheme: dark;
+
   /* Surfaces — warm cocoa (matches home [data-theme="dark"]) */
   --g-bg: radial-gradient(1100px 560px at 50% -8%, rgba(251,146,60,0.10), transparent 62%), #1b140e;
   --g-card: #2a201a;                       /* elevated panel */
