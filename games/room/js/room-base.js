@@ -242,11 +242,11 @@
       { id: 'butcher', emoji: '🔪', name: 'Butcher',  cost: 2500, in: { meat: 1 },          out: { id: 'sausage', qty: 1 }, timeMs: 20 * 60 * 1000 },
     ];
 
-    // Travelling merchant cart: visits the farm on a real-time cycle. Selling now
+    // Travelling merchant cart: parks on the farm and WAITS until you sell to it,
+    // then leaves for a cooldown before returning with a fresh wanted-list. Selling
     // happens only at the cart, and only for the items it wants that visit.
-    const FARM_CART_CYCLE_MS = 12 * 60 * 1000; // one visit cycle (present, then gone)
-    const FARM_CART_OPEN_MS  = 4 * 60 * 1000;  // how long the cart stays each cycle
-    const FARM_CART_WANT_COUNT = 3;            // how many products it buys per visit
+    const FARM_CART_COOLDOWN_MS = 4 * 60 * 60 * 1000; // after a sale, gone this long
+    const FARM_CART_WANT_COUNT = 3;                   // how many products it buys per visit
 
     const FARM_RARE_CHANCE = 0.15;
     const FARM_RGB_CHANCE = 0.03;   // very rare rainbow coat — cosmetic jackpot
@@ -266,7 +266,7 @@
     const FARM_START_HAPPINESS = 60;               // happiness of a newly bought animal
     const FARM_FOOD_MAX = 100;                     // trough capacity (units)
     const FARM_FOOD_COST = 5;                      // coins per food unit on refill
-    const FARM_FOOD_PER_DAY = 12;                  // units each animal eats per day (drains faster → refill often)
+    const FARM_FOOD_PER_DAY = 18;                  // units each animal eats/day — total drain scales with herd size (more animals → trough empties faster)
     const FARM_HAPPY_GAIN_PER_DAY = 25;            // happiness gained per fed day
     const FARM_HAPPY_DECAY_PER_DAY = 25;           // happiness lost per hungry (empty-trough) day
 

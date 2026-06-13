@@ -813,6 +813,29 @@
       color:#2a1c08;background:var(--g-accent-grad);padding:2px 6px;border-radius:999px;vertical-align:middle;
     }
 
+    /* RGB coat preview modal */
+    .rgb-overlay{
+      position:fixed;inset:0;z-index:9600;background:var(--g-scrim);backdrop-filter:blur(6px);
+      display:flex;align-items:center;justify-content:center;padding:18px;
+    }
+    .rgb-box{
+      width:92%;max-width:420px;background:var(--g-card);border:1px solid var(--g-border);
+      border-top:2px solid rgba(251,146,60,.5);border-radius:20px;padding:18px;
+      box-shadow:var(--g-shadow);text-align:center;
+    }
+    .rgb-head{
+      font-family:var(--g-display);font-size:18px;font-weight:800;margin-bottom:4px;
+      background:var(--g-title-grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    }
+    .rgb-sub{font-size:11px;color:var(--g-ink-soft);line-height:1.5;margin-bottom:12px}
+    .rgb-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+    .rgb-cell{
+      background:rgba(255,255,255,.04);border:1px solid var(--g-border);border-radius:14px;
+      padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;
+    }
+    .rgb-canvas{width:108px;height:108px}
+    .rgb-cell span{font-size:11px;font-weight:700;color:var(--cream)}
+
     /* Rows — dotted separators, quiet by default */
     .farm-shop-row,.farm-herd-row,.farm-food-row{
       display:flex; align-items:center; gap:8px; padding:6px 2px; font-size:12px;

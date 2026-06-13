@@ -17,6 +17,7 @@
     const FARM_HERD_COLLAPSE_AT = 4; // herd longer than this auto-collapses the list
     let _farmButcherConfirmId = null; // animal id awaiting butcher confirmation
     let _cartSheetOpen = false;       // merchant-cart sell sheet visible?
+    let _cartSoldThisVisit = false;   // sold to the cart this visit → it leaves on close
     const FARM_CART_X = 0.84, FARM_CART_Y = 0.50; // where the cart parks (normalized)
 
     // Trough position on the pasture (normalized)
@@ -140,6 +141,7 @@
 
     function openFarm() {
       isFarmView = true;
+      _cartSoldThisVisit = false;
       document.getElementById('farmView')?.classList.add('visible');
       _setFarmPanelMode(true);
       _syncRoomPanel();   // hide the side panel; widens the stage before we draw
@@ -168,6 +170,7 @@
       isFarmView = false;
       closeCropPicker();
       closeCartSheet();
+      closeRgbPreview();
       _hideFarmTip();
       document.getElementById('farmView')?.classList.remove('visible');
       _setFarmPanelMode(false);
@@ -236,10 +239,10 @@
       const cartHtml =
         '<div class="farm-section-title">🛒 Merchant Cart</div>' +
         (cart.present
-          ? '<div class="farm-cart-status here">🛒 The cart is here! <b>' + _fmtFarmTime(cart.msLeft) + '</b> left — tap it on the farm, or:</div>' +
-            '<div class="farm-panel-empty" style="padding-top:4px">Buying today: ' + (wantMeta || '—') + '</div>' +
+          ? '<div class="farm-cart-status here">🛒 The cart is here — tap it on the farm, or:</div>' +
+            '<div class="farm-panel-empty" style="padding-top:4px">Buying this visit: ' + (wantMeta || '—') + '</div>' +
             '<button class="farm-shop-buy" style="width:100%;margin-top:6px" onclick="openCartSheet()">Open cart →</button>'
-          : '<div class="farm-cart-status">🛒 Away — next visit in <b>' + _fmtFarmTime(cart.nextInMs) + '</b>.</div>' +
+          : '<div class="farm-cart-status">🛒 Sold out & rolled on — back in <b>' + _fmtFarmTime(cart.nextInMs) + '</b>.</div>' +
             '<div class="farm-panel-empty" style="padding-top:4px">It buys a different set each visit — stock up!</div>');
       const stockHtml =
         cartHtml +
@@ -274,7 +277,10 @@
         }).join('');
 
       const shopHtml =
-        '<div class="farm-section-title">🛒 Animal Shop</div>' +
+        '<div class="farm-section-title">🛒 Animal Shop' +
+          '<button class="farm-mini-btn" onclick="openRgbPreview()" title="Preview the rare rainbow coats">🌈 RGB?</button>' +
+        '</div>' +
+        '<div class="farm-panel-empty" style="padding:0 2px 6px">Every buy has a tiny chance to be a 🌈 rainbow (cosmetic).</div>' +
         FARM_ANIMALS.map(def => {
           const afford = roomData.coins >= def.cost;
           return '<div class="farm-shop-row">' +
@@ -318,17 +324,16 @@
         '</div>' +
         (_herdCollapsed ? '' : '<div class="farm-herd-list">' + herdRows + '</div>');
 
-      // Garden: owned/max plots + Add-plot + plant-all/harvest-all + how-to.
+      // Garden: owned/max plots + Add-plot + how-to. Harvesting any ripe crop
+      // collects ALL ripe crops at once (no buttons needed).
       const plots = roomData.farmPlots || [];
       const usedPlots = plots.filter(p => p.crop).length;
-      const emptyPlots = plots.length - usedPlots;
       const nowG = Date.now();
       const ripePlots = plots.filter(p => {
         if (!p.crop) return false;
         const c = FARM_CROPS.find(x => x.id === p.crop);
         return c && cropProgress(p.plantedAt, nowG, c.growMs) >= 1;
       }).length;
-      const selCrop = FARM_CROPS.find(c => c.id === _selectedCrop) || FARM_CROPS[0];
       const atMax = plots.length >= FARM_PLOT_MAX;
       const gardenHtml =
         '<div class="farm-section-title">🌱 Garden ' +
@@ -338,13 +343,9 @@
             : '<button class="farm-shop-buy" onclick="addFarmPlot()"' + (roomData.coins < FARM_PLOT_COST ? ' disabled' : '') + '>+ Plot · ' + FARM_PLOT_COST + '🪙</button>') +
         '</div>' +
         '<div class="farm-panel-empty" style="padding-bottom:2px">' + usedPlots + '/' + plots.length + ' planted · ' + ripePlots + ' ripe</div>' +
-        '<div class="farm-garden-actions">' +
-          '<button class="farm-shop-buy" onclick="plantAllFarm()"' + (emptyPlots && roomData.coins >= selCrop.seedCost ? '' : ' disabled') + '>🌱 Plant all ' + selCrop.emoji + '</button>' +
-          '<button class="farm-shop-buy" onclick="harvestAllFarm()"' + (ripePlots ? '' : ' disabled') + '>🧺 Harvest all</button>' +
-        '</div>' +
         '<div class="farm-howto">' +
-          '👆 Tap an empty plot to choose a seed · ✋ drag to plant many.<br>' +
-          '⏳ Tap a ripe crop to harvest. "Plant all" uses your last seed (' + selCrop.name + ').' +
+          '👆 Tap an empty plot to choose a seed · ✋ drag to plant several.<br>' +
+          '⏳ Tap any ripe crop to harvest <b>everything that\'s ready</b> at once.' +
         '</div>';
 
       // Workshop: processing machines (buy → make → collect)
@@ -663,36 +664,29 @@
       renderFarmPanel();
     }
 
-    // Plant the selected seed into every empty plot, stopping when coins run out.
-    function plantAllFarm() {
-      if (viewingUid !== currentUid) return;
-      const plots = roomData.farmPlots || [];
-      const crop = FARM_CROPS.find(c => c.id === _selectedCrop);
-      if (!crop) return showToast('Pick a seed first — tap an empty plot.', '');
-      let n = 0;
-      for (let i = 0; i < plots.length; i++) { if (!plots[i].crop && _plantArmed(i)) n++; }
-      if (!n) return showToast(roomData.coins < crop.seedCost ? 'Not enough coins for seeds!' : 'No empty plots to plant.', 'error');
-      saveRoom(); renderFarmPanel(); renderAll();
-      showToast('🌱 Planted ' + n + ' ' + crop.name + (n > 1 ? 's' : ''), 'success');
-    }
-
-    // Harvest every ripe plot at once (food → trough, products → stock).
+    // Harvest every ripe plot at once (food → trough, products → stock). Tapping
+    // any ripe crop on the farm calls this, so a single tap collects the lot.
     function harvestAllFarm() {
       if (viewingUid !== currentUid) return;
       const plots = roomData.farmPlots || [];
       const now = Date.now();
       let n = 0;
-      for (const plot of plots) {
+      for (let i = 0; i < plots.length; i++) {
+        const plot = plots[i];
         if (!plot.crop) continue;
         const crop = FARM_CROPS.find(c => c.id === plot.crop);
         if (!crop) { plot.crop = null; plot.plantedAt = 0; continue; }
         if (cropProgress(plot.plantedAt, now, crop.growMs) < 1) continue;
+        const pos = _farmPlotPos(i);
         if (crop.yield.food) {
           roomData.farmFood = Math.min(FARM_FOOD_MAX, (roomData.farmFood || 0) + crop.yield.food);
           if (!roomData.farmFoodAt) roomData.farmFoodAt = now;
+          _farmParticles.push({ text: '+' + crop.yield.food + ' 🌾', x: pos.x, y: pos.y - 0.05, vy: -0.0009, life: 1200, born: performance.now() });
         } else {
           roomData.farmStock = roomData.farmStock || {};
           roomData.farmStock[crop.yield.product] = (roomData.farmStock[crop.yield.product] || 0) + crop.yield.qty;
+          const m = FARM_PRODUCTS[crop.yield.product];
+          _farmParticles.push({ text: '+' + crop.yield.qty + ' ' + (m ? m.emoji : ''), x: pos.x, y: pos.y - 0.05, vy: -0.0009, life: 1200, born: performance.now() });
         }
         plot.crop = null; plot.plantedAt = 0; n++;
       }
@@ -720,19 +714,8 @@
         const left = Math.ceil((crop.growMs - (now - plot.plantedAt)) / 60000);
         return showToast(crop.emoji + ' ' + crop.name + ' growing — ' + left + 'm left', '');
       }
-      // Ripe → harvest
-      if (crop.yield.food) {
-        roomData.farmFood = Math.min(FARM_FOOD_MAX, (roomData.farmFood || 0) + crop.yield.food);
-        if (!roomData.farmFoodAt) roomData.farmFoodAt = now;
-        _farmParticles.push({ text: '+' + crop.yield.food + ' 🌾', x: pos.x, y: pos.y - 0.05, vy: -0.0009, life: 1200, born: performance.now() });
-      } else {
-        roomData.farmStock = roomData.farmStock || {};
-        roomData.farmStock[crop.yield.product] = (roomData.farmStock[crop.yield.product] || 0) + crop.yield.qty;
-        const m = FARM_PRODUCTS[crop.yield.product];
-        _farmParticles.push({ text: '+' + crop.yield.qty + ' ' + (m ? m.emoji : ''), x: pos.x, y: pos.y - 0.05, vy: -0.0009, life: 1200, born: performance.now() });
-      }
-      plot.crop = null; plot.plantedAt = 0;
-      saveRoom(); renderFarmPanel(); renderAll();
+      // Ripe → one tap collects EVERY ready crop, not just this one.
+      harvestAllFarm();
     }
 
     /* ── Crop picker (tap an empty plot) + plant helpers ── */
@@ -861,21 +844,23 @@
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
       };
     }
-    // Cart state for `now`: presence, time left / next visit, and wanted product ids.
+    // Cart state for `now`: the cart PARKS and waits (present) until you sell to
+    // it; after a sale it leaves for FARM_CART_COOLDOWN_MS, then returns with a
+    // fresh wanted-list. `farmCartLeftAt` (persisted) = when it last left.
     function _farmCart(now) {
       now = now || Date.now();
-      const cyc = now % FARM_CART_CYCLE_MS;
-      const present = cyc < FARM_CART_OPEN_MS;
-      const seed = Math.floor(now / FARM_CART_CYCLE_MS);
+      const left = roomData.farmCartLeftAt || 0;
+      const present = !left || (now - left) >= FARM_CART_COOLDOWN_MS;
+      // Wanted-list is stable for the whole visit; it changes only when a new
+      // visit begins (farmCartLeftAt changes after a sale).
+      const visitStart = left ? (left + FARM_CART_COOLDOWN_MS) : 0;
       const ids = Object.keys(farmProductMeta());     // all sellable products
-      const rng = _mulberry32(seed);
+      const rng = _mulberry32(Math.floor(visitStart / 60000) >>> 0);
       for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const tmp = ids[i]; ids[i] = ids[j]; ids[j] = tmp; }
       return {
         present: present,
         wanted: ids.slice(0, Math.min(FARM_CART_WANT_COUNT, ids.length)),
-        msLeft: present ? (FARM_CART_OPEN_MS - cyc) : 0,
-        nextInMs: present ? 0 : (FARM_CART_CYCLE_MS - cyc),
-        seed: seed,
+        nextInMs: present ? 0 : (FARM_CART_COOLDOWN_MS - (now - left)),
       };
     }
 
@@ -917,6 +902,14 @@
       _cartSheetOpen = false;
       const el = document.getElementById('cartSheet');
       if (el) el.style.display = 'none';
+      // Sold something this visit → the cart's business is done; send it off for
+      // the cooldown. (Sold nothing → it just waits here for next time.)
+      if (_cartSoldThisVisit) {
+        _cartSoldThisVisit = false;
+        roomData.farmCartLeftAt = Date.now();
+        saveRoom();
+        renderFarmPanel();
+      }
     }
     function renderCartSheet() {
       const el = document.getElementById('cartSheet');
@@ -936,8 +929,8 @@
       }).join('');
       const anyToSell = cart.wanted.some(id => (stock[id] || 0) > 0);
       el.innerHTML =
-        '<div class="cp-head">🛒 Merchant Cart · ' + _fmtFarmTime(cart.msLeft) + ' left</div>' +
-        '<div class="farm-panel-empty" style="padding:0 2px 6px">Buying today only — sell before it leaves:</div>' +
+        '<div class="cp-head">🛒 Merchant Cart</div>' +
+        '<div class="farm-panel-empty" style="padding:0 2px 6px">Buying this visit only. It waits until you sell — then it\'s off for 4h.</div>' +
         rows +
         (anyToSell ? '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="sellAllToCart()">💰 Sell all wanted</button>' : '') +
         '<button class="cp-close" onclick="closeCartSheet()">Close</button>';
@@ -947,13 +940,14 @@
     async function sellToCart(prodId) {
       if (viewingUid !== currentUid) return;
       const cart = _farmCart();
-      if (!cart.present) { closeCartSheet(); return showToast('The cart has left — wait for it to return.', ''); }
-      if (!cart.wanted.includes(prodId)) return showToast('The cart isn\'t buying that today.', '');
+      if (!cart.present) { closeCartSheet(); return showToast('The cart has left — it\'ll be back later.', ''); }
+      if (!cart.wanted.includes(prodId)) return showToast('The cart isn\'t buying that this visit.', '');
       const qty = (roomData.farmStock || {})[prodId] || 0;
       if (qty <= 0) return showToast('None to sell.', '');
       const price = farmProductPrices()[prodId] || 0;
       roomData.coins += qty * price;
       roomData.farmStock[prodId] = 0;
+      _cartSoldThisVisit = true;   // cart leaves when the sheet is closed
       await saveRoom();
       const m = farmProductMeta()[prodId];
       showToast('Sold ' + qty + ' ' + (m ? m.emoji + ' ' + m.name : prodId) + ' for ' + (qty * price) + '🪙', 'success');
@@ -963,7 +957,7 @@
     async function sellAllToCart() {
       if (viewingUid !== currentUid) return;
       const cart = _farmCart();
-      if (!cart.present) { closeCartSheet(); return showToast('The cart has left — wait for it to return.', ''); }
+      if (!cart.present) { closeCartSheet(); return showToast('The cart has left — it\'ll be back later.', ''); }
       const stock = roomData.farmStock || {}, prices = farmProductPrices();
       let total = 0, sold = 0;
       for (const id of cart.wanted) {
@@ -973,10 +967,50 @@
       if (!sold) return showToast('Nothing the cart wants right now.', '');
       roomData.coins += total;
       roomData.farmStock = stock;
+      roomData.farmCartLeftAt = Date.now();   // visit done → cart departs (single save)
+      _cartSoldThisVisit = false;
       await saveRoom();
-      showToast('🛒 Sold ' + sold + ' items for ' + total + '🪙!', 'success');
+      showToast('🛒 Sold ' + sold + ' items for ' + total + '🪙! The cart rolls on.', 'success');
       checkAchievements();
-      renderCartSheet(); renderFarmPanel(); renderAll();
+      closeCartSheet(); renderFarmPanel(); renderAll();
+    }
+
+    // ── RGB coat preview — a little gallery of each animal's rainbow variant ──
+    let _rgbPreviewAnim = null;
+    function openRgbPreview() {
+      const el = document.getElementById('rgbPreview');
+      if (!el) return;
+      el.innerHTML =
+        '<div class="rgb-box">' +
+          '<div class="rgb-head">🌈 Rainbow (RGB) coats</div>' +
+          '<div class="rgb-sub">~' + Math.round(FARM_RGB_CHANCE * 100) + '% chance on any animal you buy. Cosmetic only — same value as a normal one.</div>' +
+          '<div class="rgb-grid">' +
+            FARM_ANIMALS.map(d => '<div class="rgb-cell"><canvas class="rgb-canvas" data-type="' + d.id + '" width="120" height="120"></canvas><span>' + d.emoji + ' ' + d.name + '</span></div>').join('') +
+          '</div>' +
+          '<button class="cp-close" onclick="closeRgbPreview()">Close</button>' +
+        '</div>';
+      el.style.display = 'flex';
+      cancelAnimationFrame(_rgbPreviewAnim);
+      const canvases = Array.from(el.querySelectorAll('.rgb-canvas'));
+      function frame(t) {
+        for (const c of canvases) {
+          const ctx = c.getContext('2d');
+          const v = (FARM_VARIANTS[c.dataset.type] || []).find(x => x.rgb);
+          ctx.clearRect(0, 0, c.width, c.height);
+          ctx.save();
+          ctx.translate(c.width / 2, c.height * 0.6);
+          ctx.filter = 'hue-rotate(' + Math.round((t / 14) % 360) + 'deg) saturate(1.7)';
+          drawFarmAnimal(ctx, c.dataset.type, c.width * 0.42, t / 120, false, v ? v.pal : null);
+          ctx.restore();
+        }
+        _rgbPreviewAnim = requestAnimationFrame(frame);
+      }
+      _rgbPreviewAnim = requestAnimationFrame(frame);
+    }
+    function closeRgbPreview() {
+      cancelAnimationFrame(_rgbPreviewAnim); _rgbPreviewAnim = null;
+      const el = document.getElementById('rgbPreview');
+      if (el) el.style.display = 'none';
     }
 
     /* ── Scene ── */
