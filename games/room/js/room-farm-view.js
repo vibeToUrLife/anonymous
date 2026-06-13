@@ -1977,17 +1977,11 @@
           if (e.type === 'mousedown') e.preventDefault();
           return;
         }
-        // Near ANY plot → arm a potential sow-drag (swipe to plant). A plain tap
-        // still opens the picker / harvests via onclick.
-        const plots = roomData.farmPlots || [];
-        let near = -1, nd = FARM_PLOT_HIT;
-        for (let i = 0; i < plots.length; i++) {
-          const pp = _farmPlotPos(i);
-          const d = Math.hypot(pp.x - p.x, pp.y - p.y);
-          if (d < nd) { nd = d; near = i; }
-        }
-        if (near >= 0) {
-          _farmPlantStartIdx = near; _farmPlantDrag = false; _farmPlantedSet = new Set();
+        // Press anywhere in the crop field (bottom strip) → arm a sow-drag, so a
+        // swipe across plots plants them. A plain tap still opens the picker /
+        // harvests via onclick. (Plots live at y≈0.82 & 0.90, well below animals.)
+        if (p.y > 0.75) {
+          _farmPlantStartIdx = 1; _farmPlantDrag = false; _farmPlantedSet = new Set();
           _farmDragStartX = p.x; _farmDragStartY = p.y;
         }
       }
@@ -2001,7 +1995,6 @@
             if (dx * dx + dy * dy < FARM_DRAG_THRESHOLD * FARM_DRAG_THRESHOLD) return;
             _farmPlantDrag = true;
             _hideFarmTip();
-            if (_plantArmed(_farmPlantStartIdx)) _farmPlantedSet.add(_farmPlantStartIdx);
           }
           if (e.cancelable) e.preventDefault();
           e.stopPropagation();
