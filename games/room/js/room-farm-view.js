@@ -15,6 +15,9 @@
     let _selectedCrop = 'wheat'; // crop planted when you tap an empty plot
     let _farmHerdCollapsed = null; // null = auto; true/false once the user toggles
     const FARM_HERD_COLLAPSE_AT = 4; // herd longer than this auto-collapses the list
+    let _farmButcherConfirmId = null; // animal id awaiting butcher confirmation
+    let _cartSheetOpen = false;       // merchant-cart sell sheet visible?
+    const FARM_CART_X = 0.84, FARM_CART_Y = 0.50; // where the cart parks (normalized)
 
     // Trough position on the pasture (normalized)
     const FARM_TROUGH_X = 0.14, FARM_TROUGH_Y = 0.58;
@@ -164,6 +167,7 @@
     function closeFarm() {
       isFarmView = false;
       closeCropPicker();
+      closeCartSheet();
       _hideFarmTip();
       document.getElementById('farmView')?.classList.remove('visible');
       _setFarmPanelMode(false);
@@ -222,23 +226,32 @@
           '<button class="farm-shop-buy" onclick="refillFarmFood()"' + (refillUnits <= 0 ? ' disabled' : '') + '>+' + refillUnits + ' · ' + (refillUnits * FARM_FOOD_COST) + '🪙</button>' +
         '</div>';
 
-      // Produce stock — collected products, each sellable (Sell / Sell all)
+      // Produce inventory (read-only) + merchant-cart status. Selling happens only
+      // at the cart when it visits — see _farmCart() and the cart sell sheet.
       const prices = farmProductPrices(), meta = farmProductMeta();
       const stock = roomData.farmStock || {};
       const stockIds = Object.keys(stock).filter(k => stock[k] > 0);
-      const sellAllVal = farmSellAllValue(stock, prices);
+      const cart = _farmCart();
+      const wantMeta = cart.wanted.map(id => (meta[id] || { emoji: '❓' }).emoji).join(' ');
+      const cartHtml =
+        '<div class="farm-section-title">🛒 Merchant Cart</div>' +
+        (cart.present
+          ? '<div class="farm-cart-status here">🛒 The cart is here! <b>' + _fmtFarmTime(cart.msLeft) + '</b> left — tap it on the farm, or:</div>' +
+            '<div class="farm-panel-empty" style="padding-top:4px">Buying today: ' + (wantMeta || '—') + '</div>' +
+            '<button class="farm-shop-buy" style="width:100%;margin-top:6px" onclick="openCartSheet()">Open cart →</button>'
+          : '<div class="farm-cart-status">🛒 Away — next visit in <b>' + _fmtFarmTime(cart.nextInMs) + '</b>.</div>' +
+            '<div class="farm-panel-empty" style="padding-top:4px">It buys a different set each visit — stock up!</div>');
       const stockHtml =
-        '<div class="farm-section-title">📦 Produce' +
-          (sellAllVal > 0 ? ' <button class="farm-shop-buy" onclick="sellAllFarm()">Sell all · ' + sellAllVal + '🪙</button>' : '') +
-        '</div>' +
+        cartHtml +
+        '<div class="farm-section-title" style="margin-top:12px">📦 Produce</div>' +
         (!stockIds.length
           ? '<div class="farm-panel-empty">Tap produce on the farm to collect it here.</div>'
           : stockIds.map(id => {
               const m = meta[id] || { emoji: '❓', name: id };
+              const wanted = cart.present && cart.wanted.includes(id);
               return '<div class="farm-shop-row">' +
-                '<span class="farm-shop-animal">' + m.emoji + ' ' + m.name + ' <small>×' + stock[id] + '</small></span>' +
+                '<span class="farm-shop-animal">' + m.emoji + ' ' + m.name + ' <small>×' + stock[id] + '</small>' + (wanted ? ' <span class="farm-want-tag">cart wants</span>' : '') + '</span>' +
                 '<span class="farm-shop-drop">' + (prices[id] || 0) + '🪙 ea</span>' +
-                '<button class="farm-shop-buy" onclick="sellFarmProduct(\'' + id + '\')">Sell ' + (stock[id] * (prices[id] || 0)) + '🪙</button>' +
                 '</div>';
             }).join(''));
 
@@ -284,13 +297,18 @@
               const color = h > 60 ? '#6dd56d' : h > 30 ? '#f2c94c' : '#eb5757';
               const lvl = animalLevel(a.collected, FARM_LEVELS);
               const waiting = dropCounts[a.id] || 0;
+              const mark = a.variant === 'rgb' ? ' 🌈' : ((FARM_VARIANTS[a.type] || []).some(v => v.id === a.variant && v.rare) ? ' ✨' : '');
+              const butcherCtl = _farmButcherConfirmId === a.id
+                ? '<span class="farm-butcher-confirm"><button class="farm-mini-btn danger" onclick="butcherAnimal(\'' + a.id + '\')">✓ Butcher</button><button class="farm-mini-btn" onclick="cancelButcher()">✗</button></span>'
+                : '<button class="farm-mini-btn" title="Butcher for meat" onclick="askButcher(\'' + a.id + '\')">🔪</button>';
               return '<div class="farm-herd-row">' +
                 '<span class="farm-herd-emoji">' + def.emoji + '</span>' +
                 '<span class="farm-herd-info">' +
-                  '<span class="farm-herd-name">' + def.name + ' <small>Lv' + lvl + '</small> · ' + h + '%</span>' +
+                  '<span class="farm-herd-name">' + def.name + mark + ' <small>Lv' + lvl + '</small> · ' + h + '%</span>' +
                   '<span class="farm-herd-bar"><span style="width:' + h + '%;background:' + color + '"></span></span>' +
                 '</span>' +
-                '<span class="farm-herd-drops">' + (waiting ? def.drop.emoji + ' ×' + waiting : '') + '</span>' +
+                (waiting ? '<span class="farm-herd-drops">' + def.drop.emoji + ' ×' + waiting + '</span>' : '') +
+                butcherCtl +
                 '</div>';
             }).join(''));
       const herdHtml =
@@ -428,9 +446,15 @@
       if (roomData.coins < def.cost) return showToast('Not enough coins!', 'error');
       roomData.coins -= def.cost;
       const now = Date.now();
-      // Roll a coat variant (first = common default, second = rare).
+      // Roll a coat variant: rgb (rarest) → rare → common. Layered thresholds, so
+      // FARM_RGB_CHANCE must stay below FARM_RARE_CHANCE.
       const variants = FARM_VARIANTS[def.id] || [];
-      const variant = (variants.length > 1 && Math.random() < FARM_RARE_CHANCE) ? variants[1] : (variants[0] || { id: null });
+      const rgbV = variants.find(v => v.rgb);
+      const roll = Math.random();
+      let variant;
+      if (rgbV && roll < FARM_RGB_CHANCE) variant = rgbV;
+      else if (variants.length > 1 && roll < FARM_RARE_CHANCE) variant = variants[1];
+      else variant = variants[0] || { id: null };
       roomData.farmAnimals.push({
         id: 'fa' + now + '_' + Math.floor(Math.random() * 1e4),
         type: def.id,
@@ -445,10 +469,32 @@
       roomData.farmVariants[def.id + '_' + (variant.id || 'default')] = true;
       if (!roomData.farmFoodAt) roomData.farmFoodAt = now; // start the feeding clock
       await saveRoom();
-      showToast((variant.rare ? '✨ Rare ' + variant.name + ' ' : def.emoji + ' ') + def.name + ' joined your farm!', 'success');
+      showToast((variant.rgb ? '🌈 RGB ' : variant.rare ? '✨ Rare ' + variant.name + ' ' : def.emoji + ' ') + def.name + (variant.rgb ? ' — jackpot!' : ' joined your farm!'), 'success');
       checkAchievements();
       renderFarmPanel();
       renderAll(); // refresh coin counter
+    }
+
+    // ── Butcher (retire an animal for meat) — two-tap confirm, no blocking dialog ──
+    function askButcher(id) { _farmButcherConfirmId = id; renderFarmPanel(); }
+    function cancelButcher() { _farmButcherConfirmId = null; renderFarmPanel(); }
+    async function butcherAnimal(id) {
+      if (viewingUid !== currentUid) return;
+      _farmButcherConfirmId = null;
+      const animals = roomData.farmAnimals || [];
+      const a = animals.find(x => x.id === id);
+      if (!a) { renderFarmPanel(); return; }
+      const yield_ = FARM_MEAT_YIELD[a.type] || 1;
+      roomData.farmAnimals = animals.filter(x => x.id !== id);
+      roomData.farmDrops = (roomData.farmDrops || []).filter(d => d.animalId !== id); // drop its pending produce
+      delete _farmAnimStates[id];
+      roomData.farmStock = roomData.farmStock || {};
+      roomData.farmStock.meat = (roomData.farmStock.meat || 0) + yield_;
+      await saveRoom();
+      const def = FARM_ANIMALS.find(f => f.id === a.type);
+      showToast('🔪 Butchered ' + (def ? def.name : 'animal') + ' → 🥩 ×' + yield_ + ' meat', 'success');
+      renderFarmPanel();
+      renderAll();
     }
 
     async function expandFarm() {
@@ -801,6 +847,136 @@
       checkAchievements();
       renderFarmPanel();
       renderAll();
+    }
+
+    /* ── Merchant cart (visits on a real-time cycle; sell only what it wants) ── */
+    // Small deterministic RNG so the wanted-list is stable within a visit and the
+    // same on all the user's devices — no server state needed.
+    function _mulberry32(seed) {
+      let s = seed >>> 0;
+      return function () {
+        s = (s + 0x6D2B79F5) | 0;
+        let t = Math.imul(s ^ (s >>> 15), 1 | s);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    // Cart state for `now`: presence, time left / next visit, and wanted product ids.
+    function _farmCart(now) {
+      now = now || Date.now();
+      const cyc = now % FARM_CART_CYCLE_MS;
+      const present = cyc < FARM_CART_OPEN_MS;
+      const seed = Math.floor(now / FARM_CART_CYCLE_MS);
+      const ids = Object.keys(farmProductMeta());     // all sellable products
+      const rng = _mulberry32(seed);
+      for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const tmp = ids[i]; ids[i] = ids[j]; ids[j] = tmp; }
+      return {
+        present: present,
+        wanted: ids.slice(0, Math.min(FARM_CART_WANT_COUNT, ids.length)),
+        msLeft: present ? (FARM_CART_OPEN_MS - cyc) : 0,
+        nextInMs: present ? 0 : (FARM_CART_CYCLE_MS - cyc),
+        seed: seed,
+      };
+    }
+
+    // Draw the parked merchant wagon on the pasture (called from the render loop).
+    function _drawMerchantCart(ctx, W, H, t) {
+      const cx = FARM_CART_X * W, cy = FARM_CART_Y * H;
+      const s = Math.max(40, Math.min(W, H) * 0.11);
+      ctx.save();
+      ctx.fillStyle = 'rgba(30,62,20,.22)';                      // ground shadow
+      ctx.beginPath(); ctx.ellipse(cx, cy + s * 0.44, s * 0.58, s * 0.14, 0, 0, Math.PI * 2); ctx.fill();
+      // wheels
+      [-s * 0.28, s * 0.28].forEach(dx => {
+        ctx.fillStyle = '#5b3a22'; ctx.beginPath(); ctx.arc(cx + dx, cy + s * 0.36, s * 0.16, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#caa46a'; ctx.beginPath(); ctx.arc(cx + dx, cy + s * 0.36, s * 0.06, 0, Math.PI * 2); ctx.fill();
+      });
+      // body
+      ctx.fillStyle = '#9b6b3f';
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(cx - s * 0.44, cy - s * 0.06, s * 0.88, s * 0.44, s * 0.07); ctx.fill(); }
+      ctx.fillStyle = 'rgba(0,0,0,.12)';
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(cx - s * 0.44, cy + s * 0.18, s * 0.88, s * 0.20, s * 0.06); ctx.fill(); }
+      // striped awning + scalloped edge
+      const ax = cx - s * 0.5, ay = cy - s * 0.42, seg = s / 5;
+      for (let i = 0; i < 5; i++) { ctx.fillStyle = i % 2 ? '#fff' : '#e8533f'; ctx.fillRect(ax + i * seg, ay, seg, s * 0.18); }
+      for (let i = 0; i < 5; i++) { ctx.fillStyle = i % 2 ? '#fff' : '#e8533f'; ctx.beginPath(); ctx.arc(ax + (i + 0.5) * seg, ay + s * 0.18, s * 0.05, 0, Math.PI); ctx.fill(); }
+      // produce basket
+      ctx.font = Math.round(s * 0.36) + 'px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('🧺', cx, cy + s * 0.12);
+      // floating prompt
+      const bob = Math.sin(t / 300) * 3;
+      ctx.font = '800 ' + Math.round(Math.max(11, s * 0.17)) + 'px sans-serif';
+      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.fillStyle = '#fff';
+      ctx.strokeText('Tap to sell!', cx, cy - s * 0.64 + bob);
+      ctx.fillText('Tap to sell!', cx, cy - s * 0.64 + bob);
+      ctx.restore();
+    }
+
+    function openCartSheet() { _cartSheetOpen = true; renderCartSheet(); }
+    function closeCartSheet() {
+      _cartSheetOpen = false;
+      const el = document.getElementById('cartSheet');
+      if (el) el.style.display = 'none';
+    }
+    function renderCartSheet() {
+      const el = document.getElementById('cartSheet');
+      if (!el) return;
+      const cart = _farmCart();
+      if (!_cartSheetOpen || !cart.present) { el.style.display = 'none'; _cartSheetOpen = _cartSheetOpen && cart.present; return; }
+      const meta = farmProductMeta(), prices = farmProductPrices(), stock = roomData.farmStock || {};
+      const rows = cart.wanted.map(id => {
+        const m = meta[id] || { emoji: '❓', name: id };
+        const qty = stock[id] || 0;
+        const val = qty * (prices[id] || 0);
+        return '<button class="cp-crop"' + (qty > 0 ? '' : ' disabled') + ' onclick="sellToCart(\'' + id + '\')">' +
+          '<span class="cp-emoji">' + m.emoji + '</span>' +
+          '<span class="cp-info"><b>' + m.name + '</b><small>' + (prices[id] || 0) + '🪙 ea · you have ' + qty + '</small></span>' +
+          '<span class="cp-cost">' + (qty > 0 ? '+' + val + '🪙' : '—') + '</span>' +
+          '</button>';
+      }).join('');
+      const anyToSell = cart.wanted.some(id => (stock[id] || 0) > 0);
+      el.innerHTML =
+        '<div class="cp-head">🛒 Merchant Cart · ' + _fmtFarmTime(cart.msLeft) + ' left</div>' +
+        '<div class="farm-panel-empty" style="padding:0 2px 6px">Buying today only — sell before it leaves:</div>' +
+        rows +
+        (anyToSell ? '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="sellAllToCart()">💰 Sell all wanted</button>' : '') +
+        '<button class="cp-close" onclick="closeCartSheet()">Close</button>';
+      el.style.display = 'block';
+    }
+
+    async function sellToCart(prodId) {
+      if (viewingUid !== currentUid) return;
+      const cart = _farmCart();
+      if (!cart.present) { closeCartSheet(); return showToast('The cart has left — wait for it to return.', ''); }
+      if (!cart.wanted.includes(prodId)) return showToast('The cart isn\'t buying that today.', '');
+      const qty = (roomData.farmStock || {})[prodId] || 0;
+      if (qty <= 0) return showToast('None to sell.', '');
+      const price = farmProductPrices()[prodId] || 0;
+      roomData.coins += qty * price;
+      roomData.farmStock[prodId] = 0;
+      await saveRoom();
+      const m = farmProductMeta()[prodId];
+      showToast('Sold ' + qty + ' ' + (m ? m.emoji + ' ' + m.name : prodId) + ' for ' + (qty * price) + '🪙', 'success');
+      checkAchievements();
+      renderCartSheet(); renderFarmPanel(); renderAll();
+    }
+    async function sellAllToCart() {
+      if (viewingUid !== currentUid) return;
+      const cart = _farmCart();
+      if (!cart.present) { closeCartSheet(); return showToast('The cart has left — wait for it to return.', ''); }
+      const stock = roomData.farmStock || {}, prices = farmProductPrices();
+      let total = 0, sold = 0;
+      for (const id of cart.wanted) {
+        const qty = stock[id] || 0;
+        if (qty > 0) { total += qty * (prices[id] || 0); sold += qty; stock[id] = 0; }
+      }
+      if (!sold) return showToast('Nothing the cart wants right now.', '');
+      roomData.coins += total;
+      roomData.farmStock = stock;
+      await saveRoom();
+      showToast('🛒 Sold ' + sold + ' items for ' + total + '🪙!', 'success');
+      checkAchievements();
+      renderCartSheet(); renderFarmPanel(); renderAll();
     }
 
     /* ── Scene ── */
@@ -1192,6 +1368,8 @@
           ctx.save();
           ctx.translate(px, py + bob);
           if (!st.facingRight) ctx.scale(-1, 1); // drawers face right
+          // RGB coat: animated rainbow shimmer (filter is reset by ctx.restore()).
+          if (a.variant === 'rgb') ctx.filter = 'hue-rotate(' + Math.round((t / 14 + idx * 60) % 360) + 'deg) saturate(1.7)';
           drawFarmAnimal(ctx, a.type, size, t / 120, st.moving, _farmVariantPal(a));
           ctx.restore();
           // Mini happiness bar
@@ -1202,6 +1380,9 @@
           ctx.fillStyle = h > 60 ? '#6dd56d' : h > 30 ? '#f2c94c' : '#eb5757';
           ctx.fillRect(bx, byy, bw * (h / 100), 4);
         }
+
+        // Merchant cart (only while it's visiting)
+        if (viewingUid === currentUid && _farmCart().present) _drawMerchantCart(ctx, W, H, t);
 
         // Floating particles (hearts, +coins)
         _farmParticles = _farmParticles.filter(p => t - p.born < p.life);
@@ -1367,10 +1548,15 @@
       cvs.onclick = (e) => {
         closeCropPicker();   // any tap dismisses an open picker
         if (_farmDragSuppressClick) { _farmDragSuppressClick = false; return; }
-        if (viewingUid !== currentUid) return;
+        if (viewingUid !== currentUid) { closeCartSheet(); return; }
         const rect = cvs.getBoundingClientRect();
         const cx = (e.clientX - rect.left) / rect.width;
         const cy = (e.clientY - rect.top) / rect.height;
+
+        // Merchant cart (when visiting): tap it to open the sell sheet.
+        const cartNow = _farmCart();
+        if (cartNow.present && Math.hypot(FARM_CART_X - cx, FARM_CART_Y - cy) < 0.11) { openCartSheet(); return; }
+        closeCartSheet();   // tapping elsewhere on the farm dismisses the sheet
 
         // Garden plots first: pick the NEAREST plot within the tap radius (easier
         // to hit on mobile than the old first-within-a-tight-circle test).

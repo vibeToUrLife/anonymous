@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>My Room — Virtual Pet & Garden</title>
-  <link rel="stylesheet" href="room/css/room.css?v=cb15">
+  <link rel="stylesheet" href="room/css/room.css?v=cb17">
   <link rel="stylesheet" href="theme.css">
 </head>
 <body>
@@ -105,6 +105,7 @@
           <div class="outside-hint">Tap a plot to plant · tap produce to collect</div>
           <div class="farm-tip" id="farmTip" style="display:none"></div>
           <div class="crop-picker" id="cropPicker" style="display:none"></div>
+          <div class="crop-picker" id="cartSheet" style="display:none"></div>
         </div>
       </div>
     </div>
@@ -347,37 +348,37 @@
   <script src="../src/js/firebase-config.js"></script>
 
   <!-- Pet drawing modules -->
-  <script src="pets/shared.js?v=cb15"></script>
-  <script src="pets/cat.js?v=cb15"></script>
-  <script src="pets/dog.js?v=cb15"></script>
-  <script src="pets/bunny.js?v=cb15"></script>
-  <script src="pets/hamster.js?v=cb15"></script>
-  <script src="pets/fox.js?v=cb15"></script>
-  <script src="pets/panda.js?v=cb15"></script>
-  <script src="pets/goose.js?v=cb15"></script>
-  <script src="pets/farm-animals.js?v=cb15"></script>
+  <script src="pets/shared.js?v=cb17"></script>
+  <script src="pets/cat.js?v=cb17"></script>
+  <script src="pets/dog.js?v=cb17"></script>
+  <script src="pets/bunny.js?v=cb17"></script>
+  <script src="pets/hamster.js?v=cb17"></script>
+  <script src="pets/fox.js?v=cb17"></script>
+  <script src="pets/panda.js?v=cb17"></script>
+  <script src="pets/goose.js?v=cb17"></script>
+  <script src="pets/farm-animals.js?v=cb17"></script>
 
   <!-- Room JS modules -->
-  <script src="room/js/room-base.js?v=cb15"></script>
-  <script src="room/js/room-drops.js?v=cb15"></script>
-  <script src="room/js/room-autofeed.js?v=cb15"></script>
-  <script src="room/js/room-farm.js?v=cb15"></script>
-  <script src="room/js/room-state.js?v=cb15"></script>
-  <script src="room/js/room-layers.js?v=cb15"></script>
-  <script src="room/js/room-farm-view.js?v=cb15"></script>
-  <script src="room/js/room-firebase.js?v=cb15"></script>
-  <script src="room/js/room-render.js?v=cb15"></script>
-  <script src="room/js/room-actions.js?v=cb15"></script>
-  <script src="room/js/room-plants.js?v=cb15"></script>
-  <script src="room/js/room-decorations.js?v=cb15"></script>
-  <script src="room/js/room-bg.js?v=cb15"></script>
-  <script src="room/js/room-pets.js?v=cb15"></script>
-  <script src="room/js/room-ui.js?v=cb15"></script>
-  <script src="room/js/room-accessories.js?v=cb15"></script>
-  <script src="room/js/room-jukebox.js?v=cb15"></script>
-  <script src="room/js/room-weather.js?v=cb15"></script>
-  <script src="room/js/room-gacha.js?v=cb15"></script>
-  <script src="room/js/room-leaderboard.js?v=cb15"></script>
+  <script src="room/js/room-base.js?v=cb17"></script>
+  <script src="room/js/room-drops.js?v=cb17"></script>
+  <script src="room/js/room-autofeed.js?v=cb17"></script>
+  <script src="room/js/room-farm.js?v=cb17"></script>
+  <script src="room/js/room-state.js?v=cb17"></script>
+  <script src="room/js/room-layers.js?v=cb17"></script>
+  <script src="room/js/room-farm-view.js?v=cb17"></script>
+  <script src="room/js/room-firebase.js?v=cb17"></script>
+  <script src="room/js/room-render.js?v=cb17"></script>
+  <script src="room/js/room-actions.js?v=cb17"></script>
+  <script src="room/js/room-plants.js?v=cb17"></script>
+  <script src="room/js/room-decorations.js?v=cb17"></script>
+  <script src="room/js/room-bg.js?v=cb17"></script>
+  <script src="room/js/room-pets.js?v=cb17"></script>
+  <script src="room/js/room-ui.js?v=cb17"></script>
+  <script src="room/js/room-accessories.js?v=cb17"></script>
+  <script src="room/js/room-jukebox.js?v=cb17"></script>
+  <script src="room/js/room-weather.js?v=cb17"></script>
+  <script src="room/js/room-gacha.js?v=cb17"></script>
+  <script src="room/js/room-leaderboard.js?v=cb17"></script>
   <div id="petCollectionModal" style="display:none;position:fixed;inset:0;z-index:9550;background:var(--g-scrim);align-items:center;justify-content:center" onclick="if(event.target===this)closePetCollection()">
     <div style="background:var(--g-card);border:1px solid var(--g-border);border-top:2px solid rgba(255,122,92,0.45);border-radius:16px;padding:18px;max-width:340px;width:90%;box-shadow:var(--g-shadow)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">

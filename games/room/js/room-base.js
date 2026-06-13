@@ -206,12 +206,16 @@
     // their price on FARM_ANIMALS[].drop; the farm view merges both into one
     // product registry for selling / orders / processing.
     const FARM_PRODUCTS = {
-      carrot: { emoji: '🥕', name: 'Carrot', coins: 35 },
-      corn:   { emoji: '🌽', name: 'Corn',   coins: 70 },
-      cheese: { emoji: '🧀', name: 'Cheese', coins: 200 },
-      bread:  { emoji: '🍞', name: 'Bread',  coins: 110 },
-      cake:   { emoji: '🍰', name: 'Cake',   coins: 260 },
+      carrot:  { emoji: '🥕', name: 'Carrot',  coins: 35 },
+      corn:    { emoji: '🌽', name: 'Corn',    coins: 70 },
+      cheese:  { emoji: '🧀', name: 'Cheese',  coins: 200 },
+      bread:   { emoji: '🍞', name: 'Bread',   coins: 110 },
+      cake:    { emoji: '🍰', name: 'Cake',    coins: 260 },
+      meat:    { emoji: '🥩', name: 'Meat',    coins: 45 },   // from butchering an animal
+      sausage: { emoji: '🌭', name: 'Sausage', coins: 130 },  // meat cooked at the Butcher
     };
+    // Meat yielded when an animal is butchered (retired), by tier.
+    const FARM_MEAT_YIELD = { goose: 1, pig: 2, cow: 3, horse: 4 };
 
     // Crops grown in garden plots. wheat refills the trough (closes the food
     // loop); others yield a sellable product.
@@ -232,17 +236,28 @@
     // Processing machines: one-time buy, then turn raw produce into pricier goods
     // over a timer (one job at a time). `in` maps product id → qty consumed.
     const FARM_MACHINES = [
-      { id: 'dairy', emoji: '🧀', name: 'Dairy',     cost: 2000, in: { milk: 1 },          out: { id: 'cheese', qty: 1 }, timeMs: 30 * 60 * 1000 },
-      { id: 'bakery', emoji: '🍞', name: 'Bakery',    cost: 2500, in: { corn: 1 },          out: { id: 'bread',  qty: 1 }, timeMs: 30 * 60 * 1000 },
-      { id: 'oven',  emoji: '🍰', name: 'Cake Oven', cost: 5000, in: { egg: 2, milk: 1 },  out: { id: 'cake',   qty: 1 }, timeMs: 60 * 60 * 1000 },
+      { id: 'dairy', emoji: '🧀', name: 'Dairy',     cost: 2000, in: { milk: 1 },          out: { id: 'cheese',  qty: 1 }, timeMs: 30 * 60 * 1000 },
+      { id: 'bakery', emoji: '🍞', name: 'Bakery',    cost: 2500, in: { corn: 1 },          out: { id: 'bread',   qty: 1 }, timeMs: 30 * 60 * 1000 },
+      { id: 'oven',  emoji: '🍰', name: 'Cake Oven', cost: 5000, in: { egg: 2, milk: 1 },  out: { id: 'cake',    qty: 1 }, timeMs: 60 * 60 * 1000 },
+      { id: 'butcher', emoji: '🔪', name: 'Butcher',  cost: 2500, in: { meat: 1 },          out: { id: 'sausage', qty: 1 }, timeMs: 20 * 60 * 1000 },
     ];
 
+    // Travelling merchant cart: visits the farm on a real-time cycle. Selling now
+    // happens only at the cart, and only for the items it wants that visit.
+    const FARM_CART_CYCLE_MS = 12 * 60 * 1000; // one visit cycle (present, then gone)
+    const FARM_CART_OPEN_MS  = 4 * 60 * 1000;  // how long the cart stays each cycle
+    const FARM_CART_WANT_COUNT = 3;            // how many products it buys per visit
+
     const FARM_RARE_CHANCE = 0.15;
+    const FARM_RGB_CHANCE = 0.03;   // very rare rainbow coat — cosmetic jackpot
+    // Per animal: [0] common, [1] rare, [2] rgb (rainbow). The rgb pal sets a
+    // vivid base colour; the farm renderer also hue-rotates rgb animals over time
+    // for an animated rainbow shimmer (purely cosmetic — same value as any other).
     const FARM_VARIANTS = {
-      goose: [ { id: 'white',   name: 'White',   rare: false }, { id: 'golden', name: 'Golden', rare: true, pal: { body: '#f3d676', wing: '#e6c45a', beak: '#e08a2c', leg: '#d8842c' } } ],
-      pig:   [ { id: 'pink',    name: 'Pink',    rare: false }, { id: 'golden', name: 'Golden', rare: true, pal: { coat: '#f0cf8a', ear: '#e0b96a' } } ],
-      cow:   [ { id: 'classic', name: 'Classic', rare: false }, { id: 'brown',  name: 'Brown',  rare: true, pal: { coat: '#e8c89a', light: '#d8b681', patch: '#6b4a2e' } } ],
-      horse: [ { id: 'bay',     name: 'Bay',     rare: false }, { id: 'black',  name: 'Black',  rare: true, pal: { coat: '#4a3f3a', mane: '#241f1b' } } ],
+      goose: [ { id: 'white',   name: 'White',   rare: false }, { id: 'golden', name: 'Golden', rare: true, pal: { body: '#f3d676', wing: '#e6c45a', beak: '#e08a2c', leg: '#d8842c' } }, { id: 'rgb', name: 'RGB', rgb: true, pal: { body: '#6ad9ff', wing: '#ff7ae0', beak: '#ffd23d', leg: '#ff8a5c' } } ],
+      pig:   [ { id: 'pink',    name: 'Pink',    rare: false }, { id: 'golden', name: 'Golden', rare: true, pal: { coat: '#f0cf8a', ear: '#e0b96a' } }, { id: 'rgb', name: 'RGB', rgb: true, pal: { coat: '#c77aff', ear: '#7ad6ff' } } ],
+      cow:   [ { id: 'classic', name: 'Classic', rare: false }, { id: 'brown',  name: 'Brown',  rare: true, pal: { coat: '#e8c89a', light: '#d8b681', patch: '#6b4a2e' } }, { id: 'rgb', name: 'RGB', rgb: true, pal: { coat: '#8ad6ff', light: '#ffd6f5', patch: '#7a4fff' } } ],
+      horse: [ { id: 'bay',     name: 'Bay',     rare: false }, { id: 'black',  name: 'Black',  rare: true, pal: { coat: '#4a3f3a', mane: '#241f1b' } }, { id: 'rgb', name: 'RGB', rgb: true, pal: { coat: '#9b7afc', mane: '#ff5db1' } } ],
     };
     const FARM_MAX_ANIMALS = 20;                   // total animals on the farm, any mix
     const FARM_DROP_CAP = 3;                       // max uncollected drops per animal
