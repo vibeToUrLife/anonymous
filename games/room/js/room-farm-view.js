@@ -18,7 +18,8 @@
     let _farmButcherConfirmId = null; // animal id awaiting butcher confirmation
     let _cartSheetOpen = false;       // merchant-cart sell sheet visible?
     let _cartSoldThisVisit = false;   // sold to the cart this visit → it leaves on close
-    let _workshopModalOpen = false;   // workshop modal visible?
+    let _workshopModalOpen = false;   // single-machine modal visible?
+    let _workshopModalId = null;      // which machine's modal is open
     const FARM_CART_X = 0.84, FARM_CART_Y = 0.50; // where the cart parks (normalized)
 
     // Trough position on the pasture (normalized)
@@ -354,9 +355,24 @@
           '⏳ Tap any ripe crop to harvest <b>everything that\'s ready</b> at once.' +
         '</div>';
 
-      // Workshop: processing machines (buy → make → collect)
-      // Workshop lives in its own modal now (tap the Workshop on the farm) — see
-      // renderWorkshopModal(). It's no longer part of the right panel.
+      // Build Machines: buy here; built ones appear on the farm where you operate them.
+      const _bm = roomData.farmMachines || {};
+      const buildHtml =
+        '<div class="farm-section-title">🏭 Build Machines</div>' +
+        '<div class="farm-panel-empty" style="padding:0 2px 6px">Built machines appear on your farm — tap one there to make goods.</div>' +
+        FARM_MACHINES.map(mc => {
+          const owned = _bm[mc.id] && _bm[mc.id].owned;
+          const outM = meta[mc.out.id] || { emoji: '❓' };
+          const inStr = Object.keys(mc.in).map(id => (meta[id] ? meta[id].emoji : id) + '×' + mc.in[id]).join('+');
+          const note = mc.id === 'butcher' ? ' · butcher animals' : '';
+          return '<div class="farm-shop-row">' +
+            '<span class="farm-shop-animal">' + mc.emoji + ' ' + mc.name + ' <small>' + inStr + '→' + outM.emoji + note + '</small></span>' +
+            (owned
+              ? '<span class="farm-shop-drop">✓ on farm</span>'
+              : '<button class="farm-shop-buy" onclick="buyFarmMachine(\'' + mc.id + '\')"' + (roomData.coins < mc.cost ? ' disabled' : '') + '>Build · ' + mc.cost + '🪙</button>') +
+            '</div>';
+        }).join('');
+
       const expLvl = roomData.farmCapLevel || 0;
       const expandCost = expLvl < FARM_EXPAND_COSTS.length ? FARM_EXPAND_COSTS[expLvl] : null;
       const upgradesHtml =
@@ -385,13 +401,13 @@
       ];
       const groups = {
         animals:  card(foodHtml) + card(herdHtml) + card(shopHtml),
-        garden:   card(gardenHtml),
+        garden:   card(gardenHtml) + card(buildHtml),
         market:   card(stockHtml) + card(ordersHtml),
         upgrades: card(upgradesHtml),
       };
       const hints = {
         animals:  'Keep the trough filled — fed animals are happy and produce faster!',
-        garden:   'Tap soil on the farm to plant; tap the 🛠️ Workshop building on the farm to make goods.',
+        garden:   'Plant on the farm soil. Build machines here — then tap a machine on your farm to make goods.',
         market:   'Tap produce on the farm to collect it, then sell it or fill the daily orders.',
         upgrades: 'Expand your farm, automate collecting, and drag decor to arrange it.',
       };
@@ -463,14 +479,14 @@
       return !!(roomData.farmMachines && roomData.farmMachines.butcher && roomData.farmMachines.butcher.owned);
     }
     function askButcher(id) {
-      if (!_ownsButcher()) { showToast('🔪 Build the Butcher in the Workshop first!', 'error'); openWorkshopModal(); return; }
+      if (!_ownsButcher()) { showToast('🔪 Build the Butcher first — Garden tab → Build Machines.', 'error'); switchFarmTab('garden'); return; }
       _farmButcherConfirmId = id; renderFarmPanel();
     }
     function cancelButcher() { _farmButcherConfirmId = null; renderFarmPanel(); }
     async function butcherAnimal(id) {
       if (viewingUid !== currentUid) return;
       _farmButcherConfirmId = null;
-      if (!_ownsButcher()) { renderFarmPanel(); return showToast('🔪 Build the Butcher in the Workshop first!', 'error'); }
+      if (!_ownsButcher()) { renderFarmPanel(); return showToast('🔪 Build the Butcher first — Garden tab → Build Machines.', 'error'); }
       const animals = roomData.farmAnimals || [];
       const a = animals.find(x => x.id === id);
       if (!a) { renderFarmPanel(); return; }
@@ -573,8 +589,8 @@
       roomData.coins -= mc.cost;
       roomData.farmMachines[id] = { owned: true, startedAt: 0 };
       await saveRoom();
-      showToast(mc.emoji + ' ' + mc.name + ' built!', 'success');
-      renderFarmPanel(); renderWorkshopModal();
+      showToast(mc.emoji + ' ' + mc.name + ' built! Tap it on your farm to make goods.', 'success');
+      renderFarmPanel();
       renderAll();
     }
 
@@ -886,14 +902,12 @@
       ctx.restore();
     }
 
-    // The always-present Workshop building (tap → modal) and the per-machine huts.
-    function _workshopEntryPos() { return { x: 0.13, y: 0.41 }; }
+    // Fixed slot position for machine `slot` (its hut, drawn when owned).
     function _workshopPos(slot) { return { x: 0.30 + slot * 0.13, y: 0.45 }; }
 
-    // Zones animals must not walk into: workshop building + owned machines + cart.
+    // Zones animals must not walk into: owned machine huts + the cart (when here).
     function _farmBlockedZones() {
       const zones = [];
-      const ep = _workshopEntryPos(); zones.push({ x: ep.x, y: ep.y, r: 0.07 });
       const machines = roomData.farmMachines || {};
       FARM_MACHINES.forEach((m, slot) => {
         if (machines[m.id] && machines[m.id].owned) { const p = _workshopPos(slot); zones.push({ x: p.x, y: p.y, r: 0.06 }); }
@@ -906,27 +920,10 @@
       return false;
     }
 
-    // Draw the always-present Workshop building + owned machine huts on the pasture.
+    // Draw owned machine huts on the pasture (machines are built in the Garden tab).
     function _drawWorkshopMachines(ctx, W, H, t, night) {
       const machines = roomData.farmMachines || {};
       const now = Date.now();
-      // Workshop building — the tap-to-open entry point (always there).
-      (function () {
-        const p = _workshopEntryPos(), cx = p.x * W, cy = p.y * H, s = Math.max(38, Math.min(W, H) * 0.10);
-        ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillStyle = night ? 'rgba(0,0,0,.30)' : 'rgba(30,62,20,.22)';
-        ctx.beginPath(); ctx.ellipse(cx, cy + s * 0.46, s * 0.56, s * 0.14, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#b98a5a';                                              // walls
-        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(cx - s * 0.46, cy - s * 0.14, s * 0.92, s * 0.58, s * 0.08); ctx.fill(); }
-        ctx.fillStyle = '#7a4a2c';                                              // roof
-        ctx.beginPath(); ctx.moveTo(cx - s * 0.56, cy - s * 0.1); ctx.lineTo(cx, cy - s * 0.54); ctx.lineTo(cx + s * 0.56, cy - s * 0.1); ctx.closePath(); ctx.fill();
-        ctx.font = Math.round(s * 0.42) + 'px serif'; ctx.fillText('🛠️', cx, cy + s * 0.12);
-        const bob = Math.sin(t / 320) * 2;
-        ctx.font = '800 ' + Math.round(Math.max(10, s * 0.15)) + 'px sans-serif';
-        ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.fillStyle = '#fff';
-        ctx.strokeText('Workshop', cx, cy - s * 0.64 + bob); ctx.fillText('Workshop', cx, cy - s * 0.64 + bob);
-        ctx.restore();
-      })();
       FARM_MACHINES.forEach((m, slot) => {
         const st = machines[m.id];
         if (!st || !st.owned) return;
@@ -1068,48 +1065,46 @@
       if (el) el.style.display = 'none';
     }
 
-    // ── Workshop modal — build machines & turn raw produce into pricier goods.
-    // Opened by tapping the Workshop (or a machine hut) on the farm. The buy/
-    // start/collect actions live in buyFarmMachine/startFarmMachine/collectFarmMachine.
-    function openWorkshopModal() { _workshopModalOpen = true; renderWorkshopModal(); }
+    // ── Single-machine modal — tap a machine's hut on the farm to make goods with
+    // just THAT machine (start a batch / collect it). Machines are BUILT in the
+    // Garden tab; this modal only operates an already-built one.
+    function openMachineModal(id) { _workshopModalId = id; _workshopModalOpen = true; renderWorkshopModal(); }
     function closeWorkshopModal() {
-      _workshopModalOpen = false;
+      _workshopModalOpen = false; _workshopModalId = null;
       const el = document.getElementById('workshopModal');
       if (el) el.style.display = 'none';
     }
     function renderWorkshopModal() {
       const el = document.getElementById('workshopModal');
       if (!el) return;
-      if (!_workshopModalOpen) { el.style.display = 'none'; return; }
-      const meta = farmProductMeta(), machines = roomData.farmMachines || {}, stock = roomData.farmStock || {}, now = Date.now();
-      const rows = FARM_MACHINES.map(mc => {
-        const st = machines[mc.id] || {};
-        const inStr = Object.keys(mc.in).map(id => (meta[id] ? meta[id].emoji : id) + '×' + mc.in[id]).join('+');
-        const outM = meta[mc.out.id] || { emoji: '❓', name: mc.out.id };
-        const recipe = inStr + ' → ' + outM.emoji;
-        let ctl, status;
-        if (!st.owned) {
-          ctl = '<button class="farm-shop-buy" onclick="buyFarmMachine(\'' + mc.id + '\')"' + (roomData.coins < mc.cost ? ' disabled' : '') + '>Build · ' + mc.cost + '🪙</button>';
-          status = 'Not built yet';
-        } else if (st.startedAt) {
-          if (cropProgress(st.startedAt, now, mc.timeMs) >= 1) { ctl = '<button class="farm-shop-buy" onclick="collectFarmMachine(\'' + mc.id + '\')">Collect ' + outM.emoji + '</button>'; status = '✅ Ready!'; }
-          else { ctl = '<span class="farm-shop-drop">⏳ ' + Math.ceil((mc.timeMs - (now - st.startedAt)) / 60000) + 'm</span>'; status = 'Making ' + outM.name + '…'; }
+      const mc = FARM_MACHINES.find(m => m.id === _workshopModalId);
+      if (!_workshopModalOpen || !mc) { el.style.display = 'none'; return; }
+      const meta = farmProductMeta(), st = (roomData.farmMachines || {})[mc.id] || {}, stock = roomData.farmStock || {}, now = Date.now();
+      const inStr = Object.keys(mc.in).map(id => (meta[id] ? meta[id].emoji : id) + '×' + mc.in[id]).join(' + ');
+      const outM = meta[mc.out.id] || { emoji: '❓', name: mc.out.id };
+      let body;
+      if (!st.owned) {
+        body = '<div class="ws-status">Not built yet — build it in the 🌱 Garden tab.</div>';
+      } else if (st.startedAt) {
+        if (cropProgress(st.startedAt, now, mc.timeMs) >= 1) {
+          body = '<div class="ws-status">✅ Ready to collect!</div>' +
+            '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="collectFarmMachine(\'' + mc.id + '\')">Collect ' + outM.emoji + ' ' + outM.name + '</button>';
         } else {
-          const canStart = Object.keys(mc.in).every(id => (stock[id] || 0) >= mc.in[id]);
-          ctl = '<button class="farm-shop-buy" onclick="startFarmMachine(\'' + mc.id + '\')"' + (canStart ? '' : ' disabled') + '>Make</button>';
-          status = canStart ? 'Ready to make' : 'Need ' + inStr;
+          body = '<div class="ws-status">⏳ Making ' + outM.name + '… ' + Math.ceil((mc.timeMs - (now - st.startedAt)) / 60000) + 'm left</div>';
         }
-        return '<div class="ws-row">' +
-          '<span class="ws-emoji">' + mc.emoji + '</span>' +
-          '<span class="ws-info"><b>' + mc.name + '</b><small>' + recipe + ' · ' + status + '</small></span>' +
-          '<span class="ws-ctl">' + ctl + '</span>' +
-          '</div>';
-      }).join('');
+      } else {
+        const have = Object.keys(mc.in).map(id => (meta[id] ? meta[id].emoji : id) + ' ' + (stock[id] || 0) + '/' + mc.in[id]).join('   ');
+        const canStart = Object.keys(mc.in).every(id => (stock[id] || 0) >= mc.in[id]);
+        body = '<div class="ws-status">You have: ' + have + '</div>' +
+          '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="startFarmMachine(\'' + mc.id + '\')"' + (canStart ? '' : ' disabled') + '>Make ' + outM.emoji + ' ' + outM.name + '</button>';
+      }
+      const butcherNote = mc.id === 'butcher'
+        ? '<div class="ws-status" style="margin-top:8px">🔪 To butcher an animal for meat, open the 🐮 Animals tab and tap 🔪 on the animal.</div>' : '';
       el.innerHTML =
         '<div class="ws-box">' +
-          '<div class="ws-head">🏭 Workshop</div>' +
-          '<div class="ws-sub">Build a machine, then turn raw produce into pricier goods.</div>' +
-          rows +
+          '<div class="ws-head">' + mc.emoji + ' ' + mc.name + '</div>' +
+          '<div class="ws-sub">' + inStr + ' → ' + outM.emoji + ' ' + outM.name + '</div>' +
+          body + butcherNote +
           '<button class="cp-close" onclick="closeWorkshopModal()">Close</button>' +
         '</div>';
       el.style.display = 'flex';
@@ -1710,15 +1705,13 @@
         if (cartNow.present && Math.hypot(FARM_CART_X - cx, FARM_CART_Y - cy) < 0.11) { openCartSheet(); return; }
         closeCartSheet();   // tapping elsewhere on the farm dismisses the sheet
 
-        // Workshop building or any machine hut → open the workshop modal.
-        const _ep = _workshopEntryPos();
-        if (Math.hypot(_ep.x - cx, _ep.y - cy) < 0.08) { openWorkshopModal(); return; }
+        // Tap a machine hut → open that one machine's make/collect modal.
         const _wm = roomData.farmMachines || {};
         for (let _s = 0; _s < FARM_MACHINES.length; _s++) {
           const _m = FARM_MACHINES[_s];
           if (_wm[_m.id] && _wm[_m.id].owned) {
             const _p = _workshopPos(_s);
-            if (Math.hypot(_p.x - cx, _p.y - cy) < 0.07) { openWorkshopModal(); return; }
+            if (Math.hypot(_p.x - cx, _p.y - cy) < 0.07) { openMachineModal(_m.id); return; }
           }
         }
 

@@ -853,6 +853,7 @@
     .ws-info b{font-size:13px;color:var(--cream)}
     .ws-info small{font-size:10px;color:var(--g-ink-faint)}
     .ws-ctl{flex-shrink:0}
+    .ws-status{font-size:12px;color:var(--g-ink-soft);text-align:center;line-height:1.5;margin:6px 0 10px}
 
     /* Rows — dotted separators, quiet by default */
     .farm-shop-row,.farm-herd-row,.farm-food-row{
