@@ -1722,6 +1722,16 @@
           ctx.fillRect(bx, byy, bw, 4);
           ctx.fillStyle = h > 60 ? '#6dd56d' : h > 30 ? '#f2c94c' : '#eb5757';
           ctx.fillRect(bx, byy, bw * (h / 100), 4);
+          // Level badge above the bar
+          const lvTxt = 'Lv' + animalLevel(a.collected, FARM_LEVELS);
+          ctx.font = '800 ' + Math.round(Math.max(9, size * 0.15)) + 'px sans-serif';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          const lw = ctx.measureText(lvTxt).width + size * 0.16, lh = Math.max(12, size * 0.2);
+          const lx = px - lw / 2, ly = byy - lh - 3;
+          ctx.fillStyle = 'rgba(20,12,6,.82)';
+          if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(lx, ly, lw, lh, lh / 2); ctx.fill(); } else ctx.fillRect(lx, ly, lw, lh);
+          ctx.fillStyle = '#ffd23d';
+          ctx.fillText(lvTxt, px, ly + lh / 2 + 0.5);
         }
 
         // Merchant cart: rolling-off animation → present wagon → away signpost
