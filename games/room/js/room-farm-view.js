@@ -901,6 +901,53 @@
       ctx.restore();
     }
 
+    // Fixed slot position for workshop machine `slot` (drawn on the pasture when owned).
+    function _workshopPos(slot) { return { x: 0.27 + slot * 0.13, y: 0.45 }; }
+
+    // Zones animals must not walk into: owned workshop machines + the cart (when here).
+    function _farmBlockedZones() {
+      const zones = [];
+      const machines = roomData.farmMachines || {};
+      FARM_MACHINES.forEach((m, slot) => {
+        if (machines[m.id] && machines[m.id].owned) { const p = _workshopPos(slot); zones.push({ x: p.x, y: p.y, r: 0.06 }); }
+      });
+      if (_farmCart().present) zones.push({ x: FARM_CART_X, y: FARM_CART_Y, r: 0.08 });
+      return zones;
+    }
+    function _inBlocked(x, y, zones, pad) {
+      for (const z of zones) if (Math.hypot(z.x - x, z.y - y) < z.r + (pad || 0)) return true;
+      return false;
+    }
+
+    // Draw owned workshop machines as little clay huts along the back of the pasture.
+    function _drawWorkshopMachines(ctx, W, H, t, night) {
+      const machines = roomData.farmMachines || {};
+      const now = Date.now();
+      FARM_MACHINES.forEach((m, slot) => {
+        const st = machines[m.id];
+        if (!st || !st.owned) return;
+        const p = _workshopPos(slot);
+        const cx = p.x * W, cy = p.y * H, s = Math.max(30, Math.min(W, H) * 0.08);
+        ctx.save();
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = night ? 'rgba(0,0,0,.30)' : 'rgba(30,62,20,.22)';        // shadow
+        ctx.beginPath(); ctx.ellipse(cx, cy + s * 0.42, s * 0.5, s * 0.13, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#d9b483';                                               // hut body
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(cx - s * 0.4, cy - s * 0.16, s * 0.8, s * 0.54, s * 0.08); ctx.fill(); }
+        ctx.fillStyle = 'rgba(0,0,0,.10)';
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(cx - s * 0.4, cy + s * 0.2, s * 0.8, s * 0.18, s * 0.07); ctx.fill(); }
+        ctx.fillStyle = '#b8553f';                                               // roof
+        ctx.beginPath(); ctx.moveTo(cx - s * 0.5, cy - s * 0.12); ctx.lineTo(cx, cy - s * 0.5); ctx.lineTo(cx + s * 0.5, cy - s * 0.12); ctx.closePath(); ctx.fill();
+        ctx.font = Math.round(s * 0.42) + 'px serif';                            // machine emoji
+        ctx.fillText(m.emoji, cx, cy + s * 0.08);
+        if (st.startedAt) {                                                      // cooking ⏳ / ready ✅
+          ctx.font = Math.round(s * 0.3) + 'px serif';
+          ctx.fillText(now - st.startedAt >= m.timeMs ? '✅' : '⏳', cx + s * 0.36, cy - s * 0.34);
+        }
+        ctx.restore();
+      });
+    }
+
     function openCartSheet() { _cartSheetOpen = true; renderCartSheet(); }
     function closeCartSheet() {
       _cartSheetOpen = false;
@@ -1373,6 +1420,8 @@
         // Animals: wander + drawn renderers, mini happiness bar above
         // Animals stay in the pasture, above the dividing fence (crops are below).
         const penTop = 0.50, penBot = Math.max(0.60, divY - 0.05);
+        _drawWorkshopMachines(ctx, W, H, t, night);   // huts behind the herd
+        const _blocked = _farmBlockedZones();           // workshop + cart: animals keep out
         const _herd = roomData.farmAnimals || [];
         let _ai = 0;
         for (const a of _herd) {
@@ -1384,6 +1433,11 @@
             const laneW = 0.80 / Math.max(1, _herd.length);
             st.tx = Math.max(0.08, Math.min(0.92, 0.10 + lane * 0.80 + (Math.random() - 0.5) * laneW));
             st.ty = penTop + Math.random() * (penBot - penTop);
+            // don't pick a spot on the workshop or the cart — re-roll if blocked
+            for (let _try = 0; _try < 6 && _inBlocked(st.tx, st.ty, _blocked, 0.02); _try++) {
+              st.tx = Math.max(0.08, Math.min(0.92, 0.10 + Math.random() * 0.80));
+              st.ty = penTop + Math.random() * (penBot - penTop);
+            }
             st.nextWander = t + 4000 + Math.random() * 8000;
           }
           const dx = st.tx - st.x, dy = st.ty - st.y;
@@ -1393,6 +1447,15 @@
             st.x += (dx / dist) * 0.0009;
             st.y += (dy / dist) * 0.0009;
             st.facingRight = dx > 0;
+          }
+          // shove the animal out of any blocked zone it drifted into
+          for (const z of _blocked) {
+            const bdx = st.x - z.x, bdy = st.y - z.y, bd = Math.hypot(bdx, bdy), minR = z.r + 0.02;
+            if (bd < minR) {
+              if (bd < 1e-4) st.x = z.x + minR;
+              else { st.x = z.x + (bdx / bd) * minR; st.y = z.y + (bdy / bd) * minR; }
+              st.nextWander = Math.min(st.nextWander, t + 300);
+            }
           }
           st.y = Math.max(penTop, Math.min(penBot, st.y));
           const px = st.x * W, py = st.y * H;
@@ -1595,6 +1658,16 @@
         const cartNow = _farmCart();
         if (cartNow.present && Math.hypot(FARM_CART_X - cx, FARM_CART_Y - cy) < 0.11) { openCartSheet(); return; }
         closeCartSheet();   // tapping elsewhere on the farm dismisses the sheet
+
+        // Workshop machine tap → jump to its controls (Garden tab).
+        const _wm = roomData.farmMachines || {};
+        for (let _s = 0; _s < FARM_MACHINES.length; _s++) {
+          const _m = FARM_MACHINES[_s];
+          if (_wm[_m.id] && _wm[_m.id].owned) {
+            const _p = _workshopPos(_s);
+            if (Math.hypot(_p.x - cx, _p.y - cy) < 0.06) { switchFarmTab('garden'); showToast(_m.emoji + ' ' + _m.name + ' — manage it in the Garden tab', ''); return; }
+          }
+        }
 
         // Garden plots first: pick the NEAREST plot within the tap radius (easier
         // to hit on mobile than the old first-within-a-tight-circle test).
