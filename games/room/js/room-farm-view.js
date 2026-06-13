@@ -1245,6 +1245,16 @@
       const mark = a.variant === 'rgb' ? ' 🌈' : ((FARM_VARIANTS[a.type] || []).some(v => v.id === a.variant && v.rare) ? ' ✨' : '');
       const waiting = (roomData.farmDrops || []).filter(d => d.animalId === a.id).length;
       const meat = FARM_MEAT_YIELD[a.type] || 1;
+      // Production: current cycle (faster when happy / higher level) + next-drop countdown.
+      const cycleMs = farmCycleMs(a.happiness, FARM_CYCLE_SLOW_MS, FARM_CYCLE_FAST_MS) / (1 + FARM_LEVEL_SPEEDUP * (lvl - 1));
+      let prodLine;
+      if (waiting >= FARM_DROP_CAP) {
+        prodLine = def.drop.emoji + ' ' + def.drop.name + ' — full (' + waiting + '/' + FARM_DROP_CAP + '), collect to resume';
+      } else {
+        const next = Math.max(0, (a.lastDropTime || Date.now()) + cycleMs - Date.now());
+        prodLine = 'Makes ' + def.drop.emoji + ' ' + def.drop.name + ' every ~' + _fmtFarmTime(cycleMs) +
+          ' · next in ' + (next <= 0 ? 'soon' : _fmtFarmTime(next)) + (waiting ? ' (' + waiting + ' ready)' : '');
+      }
       const nextThresh = FARM_LEVELS[lvl];                                  // threshold for next level
       const lvlInfo = nextThresh != null ? ((a.collected || 0) + '/' + nextThresh + ' to Lv' + (lvl + 1)) : 'max level';
       let actions;
@@ -1264,7 +1274,8 @@
           '<div class="ws-head">' + def.emoji + ' ' + def.name + mark + '</div>' +
           '<div class="ws-sub">Lv ' + lvl + ' · ' + lvlInfo + (waiting ? ' · ' + def.drop.emoji + '×' + waiting + ' waiting' : '') + '</div>' +
           '<div class="ws-status" style="margin:2px 0 6px">Happiness <b style="color:' + color + '">' + h + '%</b></div>' +
-          '<div style="height:8px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden;margin:0 0 12px"><div style="height:100%;width:' + h + '%;background:' + color + '"></div></div>' +
+          '<div style="height:8px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden;margin:0 0 8px"><div style="height:100%;width:' + h + '%;background:' + color + '"></div></div>' +
+          '<div class="ws-status" style="margin:0 0 12px">' + prodLine + '</div>' +
           actions +
           '<button class="cp-close" onclick="closeAnimalModal()">Close</button>' +
         '</div>';
