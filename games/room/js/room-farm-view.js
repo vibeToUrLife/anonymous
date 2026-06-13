@@ -1027,8 +1027,9 @@
       ctx.restore();
     }
 
-    // Fixed slot position for machine `slot` (its hut, drawn when owned).
-    function _workshopPos(slot) { return { x: 0.24 + slot * 0.12, y: 0.45 }; }
+    // Fixed slot position for machine `slot` (its hut). Kept left of the cart's
+    // tap zone (cart at x 0.84, r 0.14) so taps never collide.
+    function _workshopPos(slot) { return { x: 0.22 + slot * 0.11, y: 0.45 }; }
 
     // Zones animals must not walk into: owned machine huts + the cart (when here).
     function _farmBlockedZones() {
@@ -2091,12 +2092,8 @@
         const cx = (e.clientX - rect.left) / rect.width;
         const cy = (e.clientY - rect.top) / rect.height;
 
-        // Merchant cart / away signpost: big tap zone (sell sheet, or next-cart info).
-        if (Math.hypot(FARM_CART_X - cx, FARM_CART_Y - cy) < 0.14) { openCartSheet(); return; }
-        closeCartSheet();   // tapping elsewhere on the farm dismisses the sheet
-
-        // Tap a machine hut → open that machine's modal (nearest owned hut within
-        // a generous radius, so the small huts are easy to hit on mobile).
+        // Machine huts FIRST (their small, specific targets must win over the
+        // cart's big zone) — nearest owned hut within a generous radius.
         const _wm = roomData.farmMachines || {};
         let _hi = -1, _hd = 0.09;
         for (let _s = 0; _s < FARM_MACHINES.length; _s++) {
@@ -2108,6 +2105,10 @@
           }
         }
         if (_hi >= 0) { openMachineModal(FARM_MACHINES[_hi].id); return; }
+
+        // Merchant cart / away signpost: big tap zone (sell sheet, or next-cart info).
+        if (Math.hypot(FARM_CART_X - cx, FARM_CART_Y - cy) < 0.14) { openCartSheet(); return; }
+        closeCartSheet();   // tapping elsewhere on the farm dismisses the sheet
 
         // Garden plots first: pick the NEAREST plot within the tap radius (easier
         // to hit on mobile than the old first-within-a-tight-circle test).
