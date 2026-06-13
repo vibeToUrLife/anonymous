@@ -854,10 +854,27 @@
     .ws-info small{font-size:10px;color:var(--g-ink-faint)}
     .ws-ctl{flex-shrink:0}
     .ws-status{font-size:12px;color:var(--g-ink-soft);text-align:center;line-height:1.5;margin:6px 0 10px}
-    .ws-slot{display:flex;align-items:center;gap:8px;padding:7px 4px;border-top:1px dotted var(--g-border)}
-    .ws-slot:first-of-type{border-top:none}
-    .ws-slot-no{font-weight:800;font-size:12px;color:var(--g-accent-2);white-space:nowrap}
-    .ws-slot-state{flex:1;min-width:0;font-size:11px;color:var(--g-ink-soft)}
+    .ws-slot-no{font-weight:800;font-size:12px;color:var(--g-accent-2)}
+    /* 4-square slot grid */
+    .ws-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0 12px}
+    .ws-cell{
+      aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+      border-radius:14px;border:2px dashed var(--g-border);background:rgba(255,255,255,.04);
+      color:var(--g-ink-soft);font:inherit;cursor:pointer;padding:4px;transition:border-color .15s,background .15s;
+    }
+    .ws-cell-icon{font-size:26px;line-height:1}
+    .ws-cell-cap{font-size:8.5px;font-weight:800;text-align:center;line-height:1.1;letter-spacing:.2px}
+    .ws-cell.idle:hover,.ws-cell.idle.picking{border-color:var(--g-accent);color:var(--g-accent);background:rgba(251,146,60,.08)}
+    .ws-cell.locked{border-style:solid;border-color:var(--g-border)}
+    .ws-cell.locked:disabled{opacity:.45;cursor:not-allowed}
+    .ws-cell.busy{border-style:solid;cursor:default;color:var(--cream)}
+    .ws-cell.ready{border-style:solid;border-color:rgba(251,146,60,.6);background:rgba(251,146,60,.14);color:var(--cream);animation:wsPulse 1.2s ease-in-out infinite}
+    @keyframes wsPulse{0%,100%{box-shadow:0 0 0 0 rgba(251,146,60,.45)}50%{box-shadow:0 0 0 6px rgba(251,146,60,0)}}
+    /* recipe chooser under the grid */
+    .ws-choose{background:rgba(255,255,255,.04);border:1px solid var(--g-border);border-radius:14px;padding:9px;margin-bottom:10px}
+    .ws-x{cursor:pointer;float:right;color:var(--g-ink-soft);font-weight:700}
+    .ws-recipe{display:block;width:100%;text-align:left;margin-top:6px}
+    .ws-recipe small{opacity:.7;font-weight:600}
 
     /* Rows — dotted separators, quiet by default */
     .farm-shop-row,.farm-herd-row,.farm-food-row{

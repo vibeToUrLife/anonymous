@@ -20,6 +20,7 @@
     let _cartSoldThisVisit = false;   // sold to the cart this visit → it leaves on close
     let _workshopModalOpen = false;   // single-machine modal visible?
     let _workshopModalId = null;      // which machine's modal is open
+    let _makeChoiceSlot = null;       // slot index currently choosing a recipe (or null)
     const FARM_CART_X = 0.84, FARM_CART_Y = 0.50; // where the cart parks (normalized)
 
     // Trough position on the pasture (normalized)
@@ -362,11 +363,10 @@
         '<div class="farm-panel-empty" style="padding:0 2px 6px">Built machines appear on your farm — tap one there to make goods.</div>' +
         FARM_MACHINES.map(mc => {
           const owned = _bm[mc.id] && _bm[mc.id].owned;
-          const outM = meta[mc.out.id] || { emoji: '❓' };
-          const inStr = Object.keys(mc.in).map(id => (meta[id] ? meta[id].emoji : id) + '×' + mc.in[id]).join('+');
-          const note = mc.id === 'butcher' ? ' · butcher animals' : '';
+          const makes = mc.recipes.map(rc => (meta[rc.out.id] ? meta[rc.out.id].emoji : '?')).join(' ');
+          const note = mc.id === 'butcher' ? ' · needs meat' : '';
           return '<div class="farm-shop-row">' +
-            '<span class="farm-shop-animal">' + mc.emoji + ' ' + mc.name + ' <small>' + inStr + '→' + outM.emoji + note + '</small></span>' +
+            '<span class="farm-shop-animal">' + mc.emoji + ' ' + mc.name + ' <small>makes ' + makes + note + '</small></span>' +
             (owned
               ? '<span class="farm-shop-drop">✓ on farm</span>'
               : '<button class="farm-shop-buy" onclick="buyFarmMachine(\'' + mc.id + '\')"' + (roomData.coins < mc.cost ? ' disabled' : '') + '>Build · ' + mc.cost + '🪙</button>') +
@@ -586,6 +586,8 @@
       if (!m || !m.owned) return null;
       if (!m.slots) m.slots = 1;
       if (!Array.isArray(m.jobs)) m.jobs = [m.startedAt || 0];   // migrate old single job
+      // Each job is 0 (idle) or { at, r } (recipe index). Migrate legacy numbers → recipe 0.
+      m.jobs = m.jobs.map(j => (j ? (typeof j === 'number' ? { at: j, r: 0 } : j) : 0));
       while (m.jobs.length < m.slots) m.jobs.push(0);
       if (m.jobs.length > m.slots) m.jobs.length = m.slots;
       if ('startedAt' in m) delete m.startedAt;                  // drop legacy field
@@ -620,17 +622,20 @@
       renderWorkshopModal(); renderFarmPanel(); renderAll();
     }
 
-    async function startMachineSlot(id, slot) {
+    async function startMachineSlot(id, slot, r) {
       if (viewingUid !== currentUid) return;
       const mc = FARM_MACHINES.find(m => m.id === id), m = _machineState(id);
       if (!mc || !m || m.jobs[slot]) return;
+      const recipe = mc.recipes[r]; if (!recipe) return;
       const stockNow = roomData.farmStock || {};
-      if (!Object.keys(mc.in).every(k => (stockNow[k] || 0) >= mc.in[k])) return showToast('Not enough ingredients!', 'error');
-      Object.keys(mc.in).forEach(k => { stockNow[k] -= mc.in[k]; });
+      if (!Object.keys(recipe.in).every(k => (stockNow[k] || 0) >= recipe.in[k])) return showToast('Not enough ingredients!', 'error');
+      Object.keys(recipe.in).forEach(k => { stockNow[k] -= recipe.in[k]; });
       roomData.farmStock = stockNow;
-      m.jobs[slot] = Date.now();
+      m.jobs[slot] = { at: Date.now(), r: r };
+      _makeChoiceSlot = null;
       await saveRoom();
-      showToast(mc.emoji + ' ' + mc.name + ' started…', 'success');
+      const outM = farmProductMeta()[recipe.out.id];
+      showToast(mc.emoji + ' making ' + (outM ? outM.emoji + ' ' + outM.name : recipe.out.id) + '…', 'success');
       renderWorkshopModal(); renderFarmPanel(); renderAll();
     }
 
@@ -638,13 +643,14 @@
       if (viewingUid !== currentUid) return;
       const mc = FARM_MACHINES.find(m => m.id === id), m = _machineState(id);
       if (!mc || !m || !m.jobs[slot]) return;
-      if (cropProgress(m.jobs[slot], Date.now(), mc.timeMs) < 1) return showToast('Still processing…', '');
+      const job = m.jobs[slot], recipe = mc.recipes[job.r] || mc.recipes[0];
+      if (cropProgress(job.at, Date.now(), recipe.timeMs) < 1) return showToast('Still processing…', '');
       roomData.farmStock = roomData.farmStock || {};
-      roomData.farmStock[mc.out.id] = (roomData.farmStock[mc.out.id] || 0) + mc.out.qty;
+      roomData.farmStock[recipe.out.id] = (roomData.farmStock[recipe.out.id] || 0) + recipe.out.qty;
       m.jobs[slot] = 0;
       await saveRoom();
-      const outM = farmProductMeta()[mc.out.id];
-      showToast('Collected ' + mc.out.qty + ' ' + (outM ? outM.emoji + ' ' + outM.name : mc.out.id) + '!', 'success');
+      const outM = farmProductMeta()[recipe.out.id];
+      showToast('Collected ' + recipe.out.qty + ' ' + (outM ? outM.emoji + ' ' + outM.name : recipe.out.id) + '!', 'success');
       renderWorkshopModal(); renderFarmPanel(); renderAll();
     }
 
@@ -993,10 +999,16 @@
         ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(cx, fy - s * 0.04, s * 0.17, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = 'rgba(0,0,0,.15)'; ctx.lineWidth = 1; ctx.stroke();
         ctx.font = Math.round(s * 0.22) + 'px serif'; ctx.fillText(m.emoji, cx, fy - s * 0.03);
-        // cooking steam ↑ / ready ✅ (any slot)
+        // cooking steam ↑ / ready ✅ (any slot) — jobs are 0 | {at,r} | legacy number
         const jobs = Array.isArray(st.jobs) ? st.jobs : [st.startedAt || 0];
-        const anyReady = jobs.some(j => j && now - j >= m.timeMs);
-        const anyCook = jobs.some(j => j && now - j < m.timeMs);
+        let anyReady = false, anyCook = false;
+        jobs.forEach(j => {
+          if (!j) return;
+          const at = typeof j === 'number' ? j : j.at;
+          const rec = (m.recipes && m.recipes[typeof j === 'number' ? 0 : (j.r || 0)]) || (m.recipes && m.recipes[0]);
+          const tMs = rec ? rec.timeMs : 30 * 60 * 1000;
+          if (now - at >= tMs) anyReady = true; else anyCook = true;
+        });
         if (anyReady) {
           ctx.font = Math.round(s * 0.28) + 'px serif'; ctx.fillText('✅', fx + wallW + D * 0.5, rTop + s * 0.04);
         } else if (anyCook) {
@@ -1132,47 +1144,72 @@
     // ── Single-machine modal — tap a machine's hut on the farm to make goods with
     // just THAT machine (start a batch / collect it). Machines are BUILT in the
     // Garden tab; this modal only operates an already-built one.
-    function openMachineModal(id) { _workshopModalId = id; _workshopModalOpen = true; renderWorkshopModal(); }
+    function openMachineModal(id) { _workshopModalId = id; _makeChoiceSlot = null; _workshopModalOpen = true; renderWorkshopModal(); }
     function closeWorkshopModal() {
-      _workshopModalOpen = false; _workshopModalId = null;
+      _workshopModalOpen = false; _workshopModalId = null; _makeChoiceSlot = null;
       const el = document.getElementById('workshopModal');
       if (el) el.style.display = 'none';
     }
+    function chooseMake(slot) { _makeChoiceSlot = slot; renderWorkshopModal(); }
+    function cancelMake() { _makeChoiceSlot = null; renderWorkshopModal(); }
     function renderWorkshopModal() {
       const el = document.getElementById('workshopModal');
       if (!el) return;
       const mc = FARM_MACHINES.find(m => m.id === _workshopModalId);
       if (!_workshopModalOpen || !mc) { el.style.display = 'none'; return; }
-      const meta = farmProductMeta(), st = (roomData.farmMachines || {})[mc.id] || {}, stock = roomData.farmStock || {}, now = Date.now();
-      const inStr = Object.keys(mc.in).map(id => (meta[id] ? meta[id].emoji : id) + '×' + mc.in[id]).join(' + ');
-      const outM = meta[mc.out.id] || { emoji: '❓', name: mc.out.id };
+      const meta = farmProductMeta(), stock = roomData.farmStock || {}, now = Date.now();
       const m = _machineState(mc.id);
-      const canStart = Object.keys(mc.in).every(id => (stock[id] || 0) >= mc.in[id]);
+      const makesStr = mc.recipes.map(rc => (meta[rc.out.id] ? meta[rc.out.id].emoji : '?')).join(' ');
       let body;
       if (!m) {
         body = '<div class="ws-status">Not built yet — build it in the 🌱 Garden tab.</div>';
       } else {
-        const have = Object.keys(mc.in).map(id => (meta[id] ? meta[id].emoji : id) + ' ' + (stock[id] || 0) + '/' + mc.in[id]).join('   ');
-        // One row per production slot
-        const slots = m.jobs.map((job, i) => {
-          let right;
-          if (!job) right = '<button class="farm-shop-buy" onclick="startMachineSlot(\'' + mc.id + '\',' + i + ')"' + (canStart ? '' : ' disabled') + '>Make</button>';
-          else if (cropProgress(job, now, mc.timeMs) >= 1) right = '<button class="farm-shop-buy" onclick="collectMachineSlot(\'' + mc.id + '\',' + i + ')">Collect ' + outM.emoji + '</button>';
-          else right = '<span class="farm-shop-drop">⏳ ' + Math.ceil((mc.timeMs - (now - job)) / 60000) + 'm</span>';
-          return '<div class="ws-slot"><span class="ws-slot-no">Slot ' + (i + 1) + '</span>' +
-            '<span class="ws-slot-state">' + (!job ? 'idle' : cropProgress(job, now, mc.timeMs) >= 1 ? '✅ ready' : 'making ' + outM.emoji) + '</span>' + right + '</div>';
-        }).join('');
-        const slotBtn = m.slots < FARM_MAX_SLOTS
-          ? '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="buyMachineSlot(\'' + mc.id + '\')"' + (roomData.coins < FARM_SLOT_COST ? ' disabled' : '') + '>🧰 Open slot · ' + FARM_SLOT_COST + '🪙 (' + m.slots + '/' + FARM_MAX_SLOTS + ')</button>'
-          : '<div class="ws-status">All ' + FARM_MAX_SLOTS + ' slots open.</div>';
-        body = '<div class="ws-status">You have: ' + have + '</div>' + slots + slotBtn;
+        // A grid of FARM_MAX_SLOTS squares: locked (buy) · idle (tap to choose) ·
+        // making (shows the product + timer) · ready (tap to collect).
+        let cells = '';
+        for (let i = 0; i < FARM_MAX_SLOTS; i++) {
+          if (i >= m.slots) {                                   // not opened yet
+            const afford = roomData.coins >= FARM_SLOT_COST;
+            cells += '<button class="ws-cell locked"' + (afford ? '' : ' disabled') + ' onclick="buyMachineSlot(\'' + mc.id + '\')">' +
+              '<span class="ws-cell-icon">🔒</span><span class="ws-cell-cap">Open · ' + Math.round(FARM_SLOT_COST / 1000) + 'k🪙</span></button>';
+            continue;
+          }
+          const job = m.jobs[i];
+          if (!job) {                                           // open + empty
+            cells += '<button class="ws-cell idle' + (_makeChoiceSlot === i ? ' picking' : '') + '" onclick="chooseMake(' + i + ')">' +
+              '<span class="ws-cell-icon">➕</span><span class="ws-cell-cap">Make</span></button>';
+          } else {
+            const recipe = mc.recipes[job.r] || mc.recipes[0];
+            const oM = meta[recipe.out.id] || { emoji: '❓' };
+            if (cropProgress(job.at, now, recipe.timeMs) >= 1) {
+              cells += '<button class="ws-cell ready" onclick="collectMachineSlot(\'' + mc.id + '\',' + i + ')">' +
+                '<span class="ws-cell-icon">' + oM.emoji + '</span><span class="ws-cell-cap">✅ Collect</span></button>';
+            } else {
+              cells += '<div class="ws-cell busy">' +
+                '<span class="ws-cell-icon">' + oM.emoji + '</span><span class="ws-cell-cap">⏳ ' + Math.ceil((recipe.timeMs - (now - job.at)) / 60000) + 'm</span></div>';
+            }
+          }
+        }
+        const grid = '<div class="ws-grid">' + cells + '</div>';
+        // recipe chooser shown below the grid while picking for an empty square
+        let chooser = '';
+        if (_makeChoiceSlot != null && _makeChoiceSlot < m.slots && !m.jobs[_makeChoiceSlot]) {
+          const choices = mc.recipes.map((rc, r) => {
+            const oM = meta[rc.out.id] || { emoji: '❓', name: rc.out.id };
+            const inStr = Object.keys(rc.in).map(k => (meta[k] ? meta[k].emoji : k) + '×' + rc.in[k]).join('+');
+            const can = Object.keys(rc.in).every(k => (stock[k] || 0) >= rc.in[k]);
+            return '<button class="farm-shop-buy ws-recipe" onclick="startMachineSlot(\'' + mc.id + '\',' + _makeChoiceSlot + ',' + r + ')"' + (can ? '' : ' disabled') + '>' + oM.emoji + ' ' + oM.name + ' <small>' + inStr + ' · ' + Math.round(rc.timeMs / 60000) + 'm</small></button>';
+          }).join('');
+          chooser = '<div class="ws-choose"><div class="ws-slot-no">Slot ' + (_makeChoiceSlot + 1) + ' — pick a product <span class="ws-x" onclick="cancelMake()">✕</span></div>' + choices + '</div>';
+        }
+        body = grid + chooser;
       }
       const butcherNote = mc.id === 'butcher'
-        ? '<div class="ws-status" style="margin-top:8px">🔪 To butcher an animal for meat, open the 🐮 Animals tab and tap 🔪 on the animal.</div>' : '';
+        ? '<div class="ws-status" style="margin-top:8px">🔪 Get meat by butchering an animal: 🐮 Animals tab → tap 🔪 on it.</div>' : '';
       el.innerHTML =
         '<div class="ws-box">' +
           '<div class="ws-head">' + mc.emoji + ' ' + mc.name + '</div>' +
-          '<div class="ws-sub">' + inStr + ' → ' + outM.emoji + ' ' + outM.name + ' · each slot makes one</div>' +
+          '<div class="ws-sub">Makes: ' + makesStr + ' · each slot makes one</div>' +
           body + butcherNote +
           '<button class="cp-close" onclick="closeWorkshopModal()">Close</button>' +
         '</div>';

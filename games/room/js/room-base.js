@@ -208,11 +208,19 @@
     const FARM_PRODUCTS = {
       carrot:  { emoji: '🥕', name: 'Carrot',  coins: 35 },
       corn:    { emoji: '🌽', name: 'Corn',    coins: 70 },
-      cheese:  { emoji: '🧀', name: 'Cheese',  coins: 200 },
-      bread:   { emoji: '🍞', name: 'Bread',   coins: 110 },
-      cake:    { emoji: '🍰', name: 'Cake',    coins: 260 },
       meat:    { emoji: '🥩', name: 'Meat',    coins: 45 },   // from butchering an animal
-      sausage: { emoji: '🌭', name: 'Sausage', coins: 130 },  // meat cooked at the Butcher
+      // Workshop goods (each machine can make a few of these — all sellable)
+      cheese:  { emoji: '🧀', name: 'Cheese',  coins: 200 },
+      yogurt:  { emoji: '🍦', name: 'Yogurt',  coins: 95 },
+      butter:  { emoji: '🧈', name: 'Butter',  coins: 150 },
+      bread:   { emoji: '🍞', name: 'Bread',   coins: 110 },
+      cookie:  { emoji: '🍪', name: 'Cookie',  coins: 95 },
+      pie:     { emoji: '🥧', name: 'Pie',     coins: 200 },
+      cake:    { emoji: '🍰', name: 'Cake',    coins: 260 },
+      pancake: { emoji: '🥞', name: 'Pancake', coins: 160 },
+      sausage: { emoji: '🌭', name: 'Sausage', coins: 130 },
+      bacon:   { emoji: '🥓', name: 'Bacon',   coins: 180 },
+      ham:     { emoji: '🍖', name: 'Ham',     coins: 240 },
     };
     // Meat yielded when an animal is butchered (retired), by tier.
     const FARM_MEAT_YIELD = { goose: 1, pig: 2, cow: 3, horse: 4 };
@@ -235,11 +243,28 @@
 
     // Processing machines: one-time buy, then turn raw produce into pricier goods
     // over a timer (one job at a time). `in` maps product id → qty consumed.
+    // Each machine can make a few products — you pick one per slot ("Make" → choose).
+    const M = 60 * 1000;
     const FARM_MACHINES = [
-      { id: 'dairy', emoji: '🧀', name: 'Dairy',     cost: 2000, in: { milk: 1 },          out: { id: 'cheese',  qty: 1 }, timeMs: 30 * 60 * 1000 },
-      { id: 'bakery', emoji: '🍞', name: 'Bakery',    cost: 2500, in: { corn: 1 },          out: { id: 'bread',   qty: 1 }, timeMs: 30 * 60 * 1000 },
-      { id: 'oven',  emoji: '🍰', name: 'Cake Oven', cost: 5000, in: { egg: 2, milk: 1 },  out: { id: 'cake',    qty: 1 }, timeMs: 60 * 60 * 1000 },
-      { id: 'butcher', emoji: '🔪', name: 'Butcher',  cost: 2500, in: { meat: 1 },          out: { id: 'sausage', qty: 1 }, timeMs: 20 * 60 * 1000 },
+      { id: 'dairy', emoji: '🧀', name: 'Dairy', cost: 2000, recipes: [
+        { in: { milk: 1 }, out: { id: 'cheese', qty: 1 }, timeMs: 30 * M },
+        { in: { milk: 1 }, out: { id: 'yogurt', qty: 1 }, timeMs: 25 * M },
+        { in: { milk: 2 }, out: { id: 'butter', qty: 1 }, timeMs: 45 * M },
+      ] },
+      { id: 'bakery', emoji: '🍞', name: 'Bakery', cost: 2500, recipes: [
+        { in: { corn: 1 }, out: { id: 'bread',  qty: 1 }, timeMs: 30 * M },
+        { in: { corn: 1 }, out: { id: 'cookie', qty: 1 }, timeMs: 25 * M },
+        { in: { corn: 2 }, out: { id: 'pie',    qty: 1 }, timeMs: 45 * M },
+      ] },
+      { id: 'oven', emoji: '🍰', name: 'Cake Oven', cost: 5000, recipes: [
+        { in: { egg: 2, milk: 1 }, out: { id: 'cake',    qty: 1 }, timeMs: 60 * M },
+        { in: { egg: 1, corn: 1 }, out: { id: 'pancake', qty: 1 }, timeMs: 35 * M },
+      ] },
+      { id: 'butcher', emoji: '🔪', name: 'Butcher', cost: 2500, recipes: [
+        { in: { meat: 1 }, out: { id: 'sausage', qty: 1 }, timeMs: 20 * M },
+        { in: { meat: 1 }, out: { id: 'bacon',   qty: 1 }, timeMs: 30 * M },
+        { in: { meat: 2 }, out: { id: 'ham',     qty: 1 }, timeMs: 40 * M },
+      ] },
     ];
     // Each built machine runs jobs in parallel slots. Building gives 1 slot; buy
     // more (each makes a product independently) up to the max.
