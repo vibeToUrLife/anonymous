@@ -827,7 +827,7 @@
       display:flex;align-items:center;justify-content:center;padding:18px;
     }
     .rgb-box{
-      width:92%;max-width:420px;background:var(--g-card);border:1px solid var(--g-border);
+      width:92%;max-width:420px;max-height:88vh;overflow-y:auto;background:var(--g-card);border:1px solid var(--g-border);
       border-top:2px solid rgba(251,146,60,.5);border-radius:20px;padding:18px;
       box-shadow:var(--g-shadow);text-align:center;
     }
@@ -846,7 +846,7 @@
 
     /* Workshop modal */
     .ws-box{
-      width:92%;max-width:420px;background:var(--g-card);border:1px solid var(--g-border);
+      width:92%;max-width:420px;max-height:88vh;overflow-y:auto;background:var(--g-card);border:1px solid var(--g-border);
       border-top:2px solid rgba(251,146,60,.5);border-radius:20px;padding:18px;box-shadow:var(--g-shadow);
     }
     .ws-head{
@@ -948,8 +948,8 @@
     }
     .cp-head{font-family:var(--farm-display);font-size:14px;font-weight:800;color:var(--g-ink);text-align:center;margin-bottom:10px;letter-spacing:.4px}
     .cp-crop{
-      display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin-bottom:7px;padding:8px 10px;cursor:pointer;
-      background:rgba(255,255,255,.04);border:1px solid var(--g-border);border-radius:11px;color:var(--g-ink);
+      display:flex;align-items:center;gap:10px;width:100%;min-height:48px;text-align:left;margin-bottom:8px;padding:11px 12px;cursor:pointer;
+      background:rgba(255,255,255,.04);border:1px solid var(--g-border);border-radius:12px;color:var(--g-ink);
     }
     .cp-crop:hover{background:rgba(255,255,255,.08);border-color:var(--g-accent)}
     .cp-crop:disabled{opacity:.45;cursor:not-allowed}
@@ -958,5 +958,6 @@
     .cp-info b{font-size:13px}
     .cp-info small{font-size:10px;color:var(--g-ink-soft)}
     .cp-cost{font-family:var(--farm-display);font-weight:800;font-size:12px;color:#2a1c08;background:var(--g-accent-grad);padding:3px 9px;border-radius:999px;white-space:nowrap}
-    .cp-close{display:block;width:100%;margin-top:2px;padding:7px;border:1px solid var(--g-border);border-radius:10px;background:rgba(255,255,255,.05);color:var(--g-ink-soft);font-size:12px;font-weight:600;cursor:pointer}
-    .cp-close:hover{background:rgba(255,255,255,.1)}
+    .cp-close{display:block;width:100%;min-height:46px;margin-top:6px;padding:13px;border:1px solid var(--g-border);border-radius:12px;background:rgba(255,255,255,.06);color:var(--g-ink);font-size:14px;font-weight:700;cursor:pointer}
+    .cp-close:hover{background:rgba(255,255,255,.12)}
+    .cp-close:active{transform:scale(.98)}

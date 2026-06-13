@@ -2107,16 +2107,16 @@
         if (Math.hypot(FARM_CART_X - cx, FARM_CART_Y - cy) < 0.14) { openCartSheet(); return; }
         closeCartSheet();   // tapping elsewhere on the farm dismisses the sheet
 
-        // Garden plots first: pick the NEAREST plot within the tap radius (easier
-        // to hit on mobile than the old first-within-a-tight-circle test).
+        // Garden plots: any tap in the crop strip (y>0.75) picks the NEAREST plot —
+        // no precision needed on phones (the strip is plots only).
         const plots = roomData.farmPlots || [];
-        let plotIdx = -1, plotDist = FARM_PLOT_HIT;
-        for (let i = 0; i < plots.length; i++) {
-          const pp = _farmPlotPos(i);
-          const d = Math.hypot(pp.x - cx, pp.y - cy);
-          if (d < plotDist) { plotDist = d; plotIdx = i; }
-        }
-        if (plotIdx >= 0) {
+        if (plots.length && cy > 0.75) {
+          let plotIdx = 0, plotDist = Infinity;
+          for (let i = 0; i < plots.length; i++) {
+            const pp = _farmPlotPos(i);
+            const d = Math.hypot(pp.x - cx, pp.y - cy);
+            if (d < plotDist) { plotDist = d; plotIdx = i; }
+          }
           const pos = _farmPlotPos(plotIdx);
           if (!plots[plotIdx].crop) openCropPicker(plotIdx);
           else _plantOrHarvestPlot(plots[plotIdx], pos);
