@@ -274,6 +274,23 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════
+    // 15. DAILY RIDDLE SOLVERS — who answered today's 脑筋急转弯 correctly
+    //     Path: riddle_solvers/{dateStr}/solvers/{uid} = { name, at }
+    //     Powers the "🏆 今日答对" list in the riddle card (names only — the answer
+    //     is NEVER stored here). Each user writes only their OWN solver doc; any
+    //     signed-in user may read the list.
+    // ═══════════════════════════════════════
+    match /riddle_solvers/{dateStr} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+
+      match /solvers/{uid} {
+        allow read: if isAuth();
+        allow write: if isOwner(uid);
+      }
+    }
+
+    // ═══════════════════════════════════════
     // DEFAULT — deny everything else
     // ═══════════════════════════════════════
     match /{document=**} {

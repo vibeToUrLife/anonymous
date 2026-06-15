@@ -378,6 +378,26 @@ body.light-theme .pg-toggle.active { background: var(--accent); color: #2a1f4a; 
 }
 .riddle-reward { font-size: 12px; color: rgba(255, 255, 255, 0.5); }
 
+/* Reveal forfeit warning (shown after the first tap on 查看答案) */
+.riddle-warn {
+  font-size: 12.5px; font-weight: 600; color: #fca5a5;
+  background: rgba(248, 113, 113, 0.12); border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: 10px; padding: 8px 12px; margin-bottom: 10px;
+}
+
+/* "🏆 今日答对" list — names only, never the answer */
+.riddle-solvers {
+  margin-top: 12px; padding-top: 10px; text-align: left;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+.riddle-solvers-title { font-size: 13px; font-weight: 700; color: rgba(255, 255, 255, 0.85); margin-bottom: 8px; }
+.riddle-solvers-list { display: flex; flex-wrap: wrap; gap: 6px; max-height: 110px; overflow-y: auto; }
+.riddle-solver-chip {
+  font-size: 12px; font-weight: 600; color: #fde68a;
+  background: rgba(245, 158, 11, 0.14); border-radius: 999px; padding: 4px 11px;
+}
+.riddle-solvers-empty { font-size: 12px; color: rgba(255, 255, 255, 0.45); }
+
 /* Light theme */
 body.light-theme .riddle-fab.has-new::after { border-color: #f5f3fa; }
 body.light-theme .riddle-card { background: linear-gradient(160deg, #ffffff 0%, #f5f3fa 100%); border-color: rgba(0, 0, 0, 0.08); }
@@ -393,6 +413,11 @@ body.light-theme .riddle-btn.ghost { color: rgba(0, 0, 0, 0.45); }
 body.light-theme .riddle-feedback { color: rgba(0, 0, 0, 0.7); }
 body.light-theme .riddle-answer { color: #b45309; background: rgba(245, 158, 11, 0.14); }
 body.light-theme .riddle-reward { color: rgba(0, 0, 0, 0.45); }
+body.light-theme .riddle-warn { color: #b91c1c; background: rgba(248, 113, 113, 0.1); border-color: rgba(248, 113, 113, 0.35); }
+body.light-theme .riddle-solvers { border-top-color: rgba(0, 0, 0, 0.1); }
+body.light-theme .riddle-solvers-title { color: rgba(0, 0, 0, 0.75); }
+body.light-theme .riddle-solver-chip { color: #b45309; background: rgba(245, 158, 11, 0.16); }
+body.light-theme .riddle-solvers-empty { color: rgba(0, 0, 0, 0.45); }
 
 /* ════════════════════════════════════════════════════════════
    5. 金币乐园 Coin Center (shop / gacha / slot) + boost + cosmetics

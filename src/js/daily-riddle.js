@@ -85,10 +85,15 @@
   const feedbackEl = document.getElementById('riddleFeedback');
   const rewardEl   = document.getElementById('riddleReward');
   const closeBtn   = document.getElementById('riddleClose');
+  const cancelBtn  = document.getElementById('riddleRevealCancel');
+  const warnEl     = document.getElementById('riddleWarn');
+  const solversEl  = document.getElementById('riddleSolvers');
 
   const today    = L.dateKey();
   const DONE_KEY = 'riddle_done_' + today;   // localStorage: 'solved' | 'revealed'
   let riddle     = RIDDLES[L.dailyIndex(RIDDLES.length)];
+  let _revealArmed = false;   // 查看答案 needs two taps (first arms the forfeit warning)
+  let _solversUnsub = null;   // live "今日答对" subscription
 
   function doneState() { try { return localStorage.getItem(DONE_KEY); } catch (e) { return null; } }
   function setDone(v) { try { localStorage.setItem(DONE_KEY, v); } catch (e) {} }
@@ -116,6 +121,7 @@
     hintEl.hidden = true; hintEl.textContent = '💡 ' + riddle.hint;
     answerEl.hidden = true;
     feedbackEl.textContent = ''; feedbackEl.className = 'riddle-feedback';
+    disarmReveal();
     const st = doneState();
     if (st === 'solved') {
       setPlayable(false);
@@ -154,6 +160,7 @@
     render();   // paint immediately from the local cache…
     overlay.classList.add('show');
     fab.classList.remove('has-new');
+    subscribeSolvers();   // live "今日答对" list (names only)
     setTimeout(function () { if (!inputEl.disabled) inputEl.focus(); }, 60);
     // …then reconcile with the account: if THIS account already finished today
     // on another device, mirror that here and re-lock the UI.
@@ -161,7 +168,7 @@
     if (acct === 'solved' && doneState() !== 'solved') { setDone('solved'); render(); }
     else if (acct === 'revealed' && !doneState()) { setDone('revealed'); render(); }
   }
-  function close() { overlay.classList.remove('show'); }
+  function close() { overlay.classList.remove('show'); unsubscribeSolvers(); }
 
   // Award 100 coins, once per day. The transaction re-checks the day server-side
   // so the same day can't pay out twice (even from another device).
@@ -192,6 +199,7 @@
     }
     // Correct — lock the UI, reveal, then settle the reward.
     setDone('solved');
+    recordSolver();   // add me to today's "答对" list (name only)
     setPlayable(false);
     showAnswer();
     feedbackEl.textContent = '🎉 答对了！';
@@ -221,8 +229,29 @@
     } catch (e) {}
   }
 
-  function reveal() {
+  // Two-step "查看答案": the first tap only ARMS the forfeit warning; the second
+  // tap actually reveals. "取消" disarms. Stops accidental loss of the daily reward.
+  function armReveal() {
     if (inputEl.disabled) return;
+    _revealArmed = true;
+    if (warnEl) warnEl.hidden = false;
+    revealBtn.textContent = '⚠️ 确定看答案？(放弃今天机会)';
+    if (cancelBtn) cancelBtn.hidden = false;
+  }
+  function disarmReveal() {
+    _revealArmed = false;
+    if (warnEl) warnEl.hidden = true;
+    revealBtn.textContent = '查看答案';
+    if (cancelBtn) cancelBtn.hidden = true;
+  }
+  function onRevealClick() {
+    if (inputEl.disabled) return;
+    if (!_revealArmed) { armReveal(); return; }   // first tap → warn
+    disarmReveal();
+    reveal();                                      // second tap → reveal + forfeit
+  }
+
+  function reveal() {
     if (doneState() !== 'solved') { setDone('revealed'); markAccountRevealed(); }   // viewing forfeits today's reward
     setPlayable(false);
     showAnswer();
@@ -231,12 +260,65 @@
     rewardEl.textContent = '🪙 明天答对可得 100 金币';
   }
 
+  /* ── "今日答对" live list (names only — never the answer) ── */
+
+  // Record THIS account as having solved today. Owner-only doc at
+  // riddle_solvers/{today}/solvers/{uid}; the name comes from the board profile.
+  async function recordSolver() {
+    if (typeof db === 'undefined' || typeof auth === 'undefined') return;
+    const uid = auth.currentUser && auth.currentUser.uid;
+    if (!uid) return;
+    let name = '';
+    try { name = localStorage.getItem('flappy_name') || ''; } catch (e) {}
+    if (!name) name = (auth.currentUser && auth.currentUser.displayName) || '匿名';
+    try {
+      await db.collection('riddle_solvers').doc(today).collection('solvers').doc(uid)
+        .set({ name: name, at: Date.now() }, { merge: true });
+    } catch (e) {}
+  }
+
+  function _escapeName(s) {
+    return String(s == null ? '' : s).replace(/[&<>]/g, function (c) {
+      return c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;';
+    });
+  }
+
+  function renderSolvers(list) {
+    if (!solversEl) return;
+    solversEl.hidden = false;
+    const body = list.length
+      ? '<div class="riddle-solvers-list">' +
+          list.map(function (s) { return '<span class="riddle-solver-chip">' + _escapeName(s.name || '匿名') + '</span>'; }).join('') +
+        '</div>'
+      : '<div class="riddle-solvers-empty">还没有人答对，快来抢首位！</div>';
+    solversEl.innerHTML = '<div class="riddle-solvers-title">🏆 今日答对（' + list.length + '）</div>' + body;
+  }
+
+  function subscribeSolvers() {
+    if (typeof db === 'undefined') { if (solversEl) solversEl.hidden = true; return; }
+    unsubscribeSolvers();
+    renderSolvers([]);   // show the section right away (empty state) while it loads
+    try {
+      _solversUnsub = db.collection('riddle_solvers').doc(today).collection('solvers')
+        .onSnapshot(function (snap) {
+          const list = [];
+          snap.forEach(function (d) { list.push(d.data() || {}); });
+          list.sort(function (a, b) { return (a.at || 0) - (b.at || 0); });
+          renderSolvers(list);
+        }, function () {});
+    } catch (e) {}
+  }
+  function unsubscribeSolvers() {
+    if (_solversUnsub) { _solversUnsub(); _solversUnsub = null; }
+  }
+
   fab.addEventListener('click', open);
   closeBtn.addEventListener('click', close);
   overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
   submitBtn.addEventListener('click', submit);
   hintBtn.addEventListener('click', function () { hintEl.hidden = false; });
-  revealBtn.addEventListener('click', reveal);
+  revealBtn.addEventListener('click', onRevealClick);
+  if (cancelBtn) cancelBtn.addEventListener('click', disarmReveal);
   inputEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && overlay.classList.contains('show')) close();
