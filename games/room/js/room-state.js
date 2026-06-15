@@ -20,7 +20,7 @@
 
     // Pet instance helpers
     // Maximum number of pets allowed on a single layer/floor
-    const MAX_PETS_PER_LAYER = 2;
+    const MAX_PETS_PER_LAYER = 4;
 
     function getPet(id) { return roomData.pets.find(p => p.id === id); }
     /** Returns pets assigned to the current active layer. */
