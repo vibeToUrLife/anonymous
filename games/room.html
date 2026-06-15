@@ -107,10 +107,6 @@
           <div class="farm-tip" id="farmTip" style="display:none"></div>
           <div class="crop-picker" id="cropPicker" style="display:none"></div>
           <div class="crop-picker" id="cartSheet" style="display:none"></div>
-          <div class="rgb-overlay" id="rgbPreview" style="display:none" onclick="if(event.target===this)closeRgbPreview()"></div>
-          <div class="rgb-overlay" id="workshopModal" style="display:none" onclick="if(event.target===this)closeWorkshopModal()"></div>
-          <div class="rgb-overlay" id="animalModal" style="display:none" onclick="if(event.target===this)closeAnimalModal()"></div>
-          <div class="rgb-overlay" id="produceModal" style="display:none" onclick="if(event.target===this)closeProduceModal()"></div>
         </div>
       </div>
     </div>
@@ -280,6 +276,13 @@
     </div><!-- /.panel-inner -->
     </div><!-- /.panel-wrap -->
   </div><!-- /.main-wrap -->
+
+  <!-- Farm full-screen overlays — kept at top level (not inside #farmView) so their
+       z-index ranks in the root stacking context, above the panel toggle. -->
+  <div class="rgb-overlay" id="rgbPreview" style="display:none" onclick="if(event.target===this)closeRgbPreview()"></div>
+  <div class="rgb-overlay" id="workshopModal" style="display:none" onclick="if(event.target===this)closeWorkshopModal()"></div>
+  <div class="rgb-overlay" id="animalModal" style="display:none" onclick="if(event.target===this)closeAnimalModal()"></div>
+  <div class="rgb-overlay" id="produceModal" style="display:none" onclick="if(event.target===this)closeProduceModal()"></div>
 
   <!-- Daily Login Reward modal -->
   <div class="daily-overlay hidden" id="dailyOverlay">
