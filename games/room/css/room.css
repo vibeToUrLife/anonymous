@@ -794,6 +794,17 @@
     .farm-collapse-head small{color:var(--g-ink-faint);font-weight:700}
     .farm-collapse-arrow{font-size:11px;color:var(--g-ink-soft)}
     .farm-herd-list{display:flex;flex-direction:column}
+    /* "Visit other farms" list (farm panel) */
+    .farm-visit-row{display:flex;align-items:center;gap:10px;padding:9px 10px;margin-bottom:6px;border:1px solid var(--g-border);border-radius:12px;background:rgba(255,255,255,.04);cursor:pointer;transition:background .15s,transform .1s,border-color .15s}
+    .farm-visit-row:hover{background:rgba(255,255,255,.08);border-color:var(--g-accent)}
+    .farm-visit-row:active{transform:scale(.99)}
+    .farm-visit-emoji{font-size:22px;line-height:1}
+    .farm-visit-info{flex:1;display:flex;flex-direction:column;min-width:0;gap:2px}
+    .farm-visit-name{font-size:13px;font-weight:700;color:var(--g-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .farm-visit-peek{font-size:11px;color:var(--g-ink-soft)}
+    .farm-visit-go{font-size:18px;color:var(--g-ink-faint)}
+    .farm-visit-home{width:100%;padding:9px;margin-top:6px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--g-border);border-radius:12px;background:rgba(255,255,255,.06);color:var(--g-ink);transition:background .15s,border-color .15s}
+    .farm-visit-home:hover{background:rgba(255,255,255,.12);border-color:var(--g-accent)}
     /* Plant-all / Harvest-all row */
     .farm-garden-actions{display:flex;gap:8px;margin:8px 0 4px}
     .farm-garden-actions .farm-shop-buy{flex:1;text-align:center}

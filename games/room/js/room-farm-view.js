@@ -7,6 +7,8 @@
        ═══════════════════════════════ */
     let isFarmView = false;
     let _farmTab = 'animals';   // active sub-tab inside the farm's own tab bar
+    let _farmVisitRooms = null; // cached "other farms" list (null = not loaded yet)
+    let _farmVisitUnsub = null; // live subscription to the rooms list (while a farm is open)
     let _farmAnimFrame = null;
     let _farmTickInterval = null;
     let _farmAnimStates = {};   // ephemeral wander state per animal id (not saved)
@@ -167,6 +169,59 @@
 
     function switchFarmTab(id) { _farmTab = id; renderFarmPanel(); }
 
+    /* ── Visit other players' farms (read-only) ── */
+
+    // Live list of other players (same rooms query the room's Visit tab uses).
+    // Idempotent: subscribes once per farm session; the listener detaches in
+    // closeFarm. The cache is kept across the visitRoom→openFarm hop so the list
+    // never flickers back to "loading".
+    function _subFarmVisitList() {
+      if (_farmVisitUnsub || typeof db === 'undefined') return;
+      try {
+        _farmVisitUnsub = db.collection('rooms').orderBy('updatedAt', 'desc').limit(20)
+          .onSnapshot(function (snap) {
+            const rooms = [], now = Date.now();
+            snap.forEach(function (doc) {
+              if (doc.id === currentUid) return;                 // never list myself
+              const d = doc.data();
+              rooms.push({ uid: doc.id, name: d.displayName, animals: (d.farmAnimals || []).length, online: !!(d.lastSeen && (now - d.lastSeen) < 60000) });
+            });
+            rooms.sort(function (a, b) { return (b.online ? 1 : 0) - (a.online ? 1 : 0); });   // online first
+            _farmVisitRooms = rooms;
+            // Repaint only if the list is currently on screen.
+            if (isFarmView && (viewingUid !== currentUid || _farmTab === 'visit')) renderFarmPanel();
+          }, function () {});
+      } catch (e) {}
+    }
+    function _unsubFarmVisitList() {
+      if (_farmVisitUnsub) { _farmVisitUnsub(); _farmVisitUnsub = null; }   // keep _farmVisitRooms cache
+    }
+
+    function _farmVisitListHtml() {
+      _subFarmVisitList();
+      if (_farmVisitRooms == null) return '<div class="farm-panel-empty">加载农场列表中…</div>';
+      if (!_farmVisitRooms.length) return '<div class="farm-panel-empty">暂时没有其他农场可参观。</div>';
+      return _farmVisitRooms.map(function (r) {
+        const peek = r.animals ? '🐮 ×' + r.animals : '<span style="opacity:.5">空农场</span>';
+        return '<div class="farm-visit-row" onclick="visitFarm(\'' + r.uid + '\')">' +
+          '<span class="farm-visit-emoji">🚜</span>' +
+          '<span class="farm-visit-info">' +
+            '<span class="farm-visit-name">' + (r.online ? '🟢 ' : '') + escapeHtml(r.name || 'Anonymous') + '</span>' +
+            '<span class="farm-visit-peek">' + peek + '</span>' +
+          '</span>' +
+          '<span class="farm-visit-go">›</span>' +
+        '</div>';
+      }).join('');
+    }
+
+    // Go to a player's farm (or back to your own when uid === currentUid):
+    // visitRoom loads their data + lands in their room, then we reopen the farm.
+    async function visitFarm(uid) {
+      if (typeof visitRoom !== 'function') return;
+      await visitRoom(uid);
+      openFarm();
+    }
+
     function openFarm() {
       isFarmView = true;
       _cartSoldThisVisit = false;
@@ -212,6 +267,7 @@
       _farmAnimFrame = null;
       clearInterval(_farmTickInterval);
       _farmTickInterval = null;
+      _unsubFarmVisitList();
     }
 
     /* ── Farm panel (own panel — replaces the room tabs while the farm is open) ── */
@@ -234,7 +290,12 @@
             '<div class="farm-shop-row"><span class="farm-shop-animal">🌻 ' + (roomData.farmDecors || []).length + ' decorations · 🌱 ' + (roomData.farmPlots || []).length + ' plots</span></div>' +
           '</section>' +
           '<button class="farm-shop-buy" style="width:100%;padding:9px;font-size:13px" onclick="cheerFarm()">👍 Cheer this farm</button>' +
-          '<div class="farm-panel-hint">You\'re visiting — cheer to show some love!</div>';
+          '<button class="farm-visit-home" onclick="visitFarm(\'' + currentUid + '\')">🏠 回我的农场</button>' +
+          '<section class="farm-card" style="margin-top:10px">' +
+            '<div class="farm-section-title">🚜 参观其他农场 <span class="farm-panel-cap">live</span></div>' +
+            _farmVisitListHtml() +
+          '</section>' +
+          '<div class="farm-panel-hint">你正在参观 — 点赞鼓励，或去逛逛别的农场吧！</div>';
         return;
       }
 
@@ -429,6 +490,14 @@
             : '<button class="farm-shop-buy" onclick="buyFarmAutoCollect()"' + (roomData.coins < FARM_AUTOCOLLECT_COST ? ' disabled' : '') + '>' + FARM_AUTOCOLLECT_COST + '🪙</button>') +
         '</div>';
 
+      // Built (and subscribed) only when the Visit tab is active, so opening the
+      // farm for normal play never spins up the rooms-list listener.
+      const visitHtml = _farmTab === 'visit'
+        ? '<div class="farm-section-title">🚜 参观农场 <span class="farm-panel-cap">live</span></div>' +
+          '<div class="farm-panel-empty" style="padding:0 2px 6px">点一位农场主，去逛逛他的农场（只看不改）。</div>' +
+          _farmVisitListHtml()
+        : '';
+
       const card = (s) => '<section class="farm-card">' + s + '</section>';
       // The farm page is long, so it's split into its own tabs.
       const FARM_TABS = [
@@ -436,18 +505,21 @@
         { id: 'garden',   label: '🌱 Garden' },
         { id: 'market',   label: '📦 Market' },
         { id: 'upgrades', label: '⚙️ Upgrades' },
+        { id: 'visit',    label: '🚜 Visit' },
       ];
       const groups = {
         animals:  card(foodHtml) + card(herdHtml) + card(shopHtml),
         garden:   card(gardenHtml) + card(buildHtml),
         market:   card(stockHtml) + card(ordersHtml),
         upgrades: card(upgradesHtml),
+        visit:    card(visitHtml),
       };
       const hints = {
         animals:  'Keep the trough filled — fed animals are happy and produce faster!',
         garden:   'Plant on the farm soil. Build machines here — then tap a machine on your farm to make goods.',
         market:   'Tap produce on the farm to collect it, then sell it or fill the daily orders.',
         upgrades: 'Expand your farm, automate collecting, and drag decor to arrange it.',
+        visit:    '参观别人的农场，给他们点赞，再回到自己的农场。',
       };
       if (!groups[_farmTab]) _farmTab = 'animals';
       panel.innerHTML =
