@@ -270,6 +270,13 @@
       _unsubFarmVisitList();
     }
 
+    // Farm "← Back": a visitor returns to their OWN farm (so they keep farming);
+    // the owner just closes the farm back to the outside view.
+    function farmBack() {
+      if (viewingUid !== currentUid) { visitFarm(currentUid); return; }
+      closeFarm();
+    }
+
     /* ── Farm panel (own panel — replaces the room tabs while the farm is open) ── */
     function renderFarmPanel() {
       const panel = document.getElementById('farmPanel');

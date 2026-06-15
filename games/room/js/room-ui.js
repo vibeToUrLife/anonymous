@@ -47,11 +47,13 @@
       });
     });
 
-    // Back button: if visiting, go home; else go to index
+    // Back button: visiting a farm → back to my own farm (loads my pets);
+    // visiting a room → my own room; otherwise the link falls through to the index.
     document.querySelector('.back-btn').addEventListener('click', (e) => {
       if (viewingUid !== currentUid) {
         e.preventDefault();
-        goHome();
+        if (isFarmView) visitFarm(currentUid);
+        else goHome();
       }
     });
 
