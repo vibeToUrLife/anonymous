@@ -1208,7 +1208,7 @@
         case 'dog':    drawDogPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
         case 'bunny':  drawBunnyPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
         case 'hamster':drawHamsterPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
-        case 'fox':    drawFoxPet(ctx, size, legPhase, moving, hunger, action, ap, t); break;
+        case 'fox':    drawFoxPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
         case 'panda':  drawPandaPet(ctx, size, legPhase, moving, hunger, action, ap, t); break;
         case 'goose':  drawGoosePet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
         default:       drawCatPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal);
