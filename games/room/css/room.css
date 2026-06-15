@@ -900,6 +900,11 @@
     .cart-sq:active{transform:scale(.92)}
     .cart-sq-icon{font-size:24px;line-height:1}
     .cart-sq-cap{font-size:9px;font-weight:800;color:var(--g-coin-ink)}
+    /* Wanted but not-yet-made: shown locked so you know what to produce */
+    .cart-sq.locked{cursor:default;border-style:dashed;border-color:var(--g-border);background:rgba(255,255,255,.04)}
+    .cart-sq.locked:hover{background:rgba(255,255,255,.04);transform:none}
+    .cart-sq.locked .cart-sq-icon{filter:grayscale(.6);opacity:.55}
+    .cart-sq.locked .cart-sq-cap{color:var(--g-ink-soft)}
 
     /* recipe chooser under the grid */
     .ws-choose{background:rgba(255,255,255,.04);border:1px solid var(--g-border);border-radius:14px;padding:9px;margin-bottom:10px}

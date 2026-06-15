@@ -1309,24 +1309,34 @@
         el.style.display = 'block';
         return;
       }
-      // Present → one square per sellable unit (tap to sell one → that square closes).
-      let squares = '';
+      // Present → a square for EVERY unit the cart still wants. Units you have in
+      // stock are sellable (tap to sell one); units you can make but haven't yet
+      // show as locked "make" squares. You own the workshop, so the cart still
+      // asks for it — this way you always see what to produce, even on empty stock.
+      let squares = '', sellableTotal = 0;
       cart.wanted.forEach(w => {
         const m = meta[w.id] || { emoji: '❓', name: w.id };
-        const n = _cartSellable(w, stock);
-        for (let k = 0; k < n; k++) {
-          squares += '<button class="cart-sq" onclick="sellOneToCart(\'' + w.id + '\')">' +
-            '<span class="cart-sq-icon">' + m.emoji + '</span><span class="cart-sq-cap">+' + (prices[w.id] || 0) + '🪙</span></button>';
+        const remaining = Math.max(0, w.qty - (_cartSold[w.id] || 0));
+        const sellable = _cartSellable(w, stock);
+        sellableTotal += sellable;
+        for (let k = 0; k < remaining; k++) {
+          squares += k < sellable
+            ? '<button class="cart-sq" onclick="sellOneToCart(\'' + w.id + '\')">' +
+                '<span class="cart-sq-icon">' + m.emoji + '</span><span class="cart-sq-cap">+' + (prices[w.id] || 0) + '🪙</span></button>'
+            : '<div class="cart-sq locked" title="Make this in the workshop, then sell it">' +
+                '<span class="cart-sq-icon">' + m.emoji + '</span><span class="cart-sq-cap">make</span></div>';
         }
       });
       const wantsLine = cart.wanted.map(w => (meta[w.id] || { emoji: '❓' }).emoji + '×' + Math.max(0, w.qty - (_cartSold[w.id] || 0))).join('  ');
       el.innerHTML =
         '<div class="cp-head">🛒 Merchant Cart</div>' +
-        '<div class="farm-panel-empty" style="padding:0 2px 4px">Wants: ' + wantsLine + ' · tap a square to sell one, then it\'s off for 4h.</div>' +
-        (squares
-          ? '<div class="cart-grid">' + squares + '</div>' +
-            '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="sellAllToCart()">💰 Sell all it wants</button>'
-          : '<div class="ws-status">Nothing it wants in your stock right now.</div>' +
+        (cart.wanted.length
+          ? '<div class="farm-panel-empty" style="padding:0 2px 4px">Wants: ' + wantsLine + ' · tap a square to sell; greyed “make” squares you still need to produce.</div>' +
+            '<div class="cart-grid">' + squares + '</div>' +
+            (sellableTotal > 0
+              ? '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="sellAllToCart()">💰 Sell all it wants</button>'
+              : '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="dismissCart()">🐴 Send it off (new cart in 4h)</button>')
+          : '<div class="ws-status">Build a workshop first — then the cart buys what it makes.</div>' +
             '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="dismissCart()">🐴 Send it off (new cart in 4h)</button>') +
         '<button class="cp-close" onclick="closeCartSheet()">Close</button>';
       el.style.display = 'block';
