@@ -131,6 +131,9 @@ let suppressNextReplyNotif = false; // suppress notification for self-sent repli
 let shouldScrollToBottom = true; // scroll to bottom on first load
 let firstSnapshotFired = false; // track if real Firestore data arrived
 let knownReplyCounts = {}; // track reply counts per bubble ID
+let unseenNewBubbles = new Set();   // ids of new bubbles you haven't seen yet (in-page glow)
+let unseenReplyBubbles = new Set(); // ids of bubbles with a new reply you haven't opened yet
+let newestUnseenId = null;          // jump target for the "N new" pill
 
 /* ── Local cache helpers ── */
 function cacheSet(key, data) {
@@ -986,6 +989,8 @@ function render(items) {
         }
         updateReplies(existing, a);
         updateReactions(existing, a);
+        existing.classList.toggle('is-new', unseenNewBubbles.has(a.id));
+        existing.classList.toggle('has-new-reply', unseenReplyBubbles.has(a.id));
         return;
     }
     // New bubble — animate in
@@ -999,6 +1004,8 @@ function render(items) {
     const bobSpeeds = [5, 4.5, 6, 5.5];
     bubble.className = 'bubble c' + colorIdx + ' shape' + shapeIdx + ' sz' + sizeIdx;
     bubble.dataset.id = a.id;
+    if (unseenNewBubbles.has(a.id)) bubble.classList.add('is-new');   // new-arrival glow + NEW tag
+    bubble.addEventListener('click', () => markBubbleSeen(a.id));      // engaging clears the glow
     bubble.style.animationDelay = '0s, 0s';
     bubble.style.animationName = 'floatIn, ' + bobNames[bobIdx];
     bubble.style.animationDuration = '0.5s, ' + bobSpeeds[bobIdx] + 's';
@@ -1106,6 +1113,7 @@ function render(items) {
     bubble._replyData = a;
     replyBtn.addEventListener('click', (e) => {
         e.stopPropagation();
+        markReplySeen(a.id); markBubbleSeen(a.id);   // opening replies clears the "new" markers
         const container = bubble.querySelector('.replies-container');
         const latest = bubble._replyData || a;
         const latestReplyCount = countAllReplies(latest.replies);
@@ -2304,6 +2312,51 @@ function flashTitle() {
     }, 1000);
 }
 
+// ── In-page "new content" indicators (pill + per-bubble glow / reply dot) ──
+// These work even when the tab is FOCUSED — the badge/push above only fire when hidden.
+const newContentPill = document.getElementById('newContentPill');
+function updateNewContentPill() {
+    if (!newContentPill) return;
+    const n = unseenNewBubbles.size + unseenReplyBubbles.size;
+    if (n <= 0) { newContentPill.classList.remove('show'); return; }
+    const c = newContentPill.querySelector('.ncp-count');
+    if (c) c.textContent = n;
+    newContentPill.classList.add('show');
+}
+function markBubbleSeen(id) {          // clear a NEW-bubble glow once you've engaged with it
+    if (unseenNewBubbles.delete(id)) {
+    const el = wrap.querySelector('[data-id="' + id + '"]');
+    if (el) el.classList.remove('is-new');
+    updateNewContentPill();
+    }
+}
+function markReplySeen(id) {           // clear the reply dot once you open that bubble's replies
+    if (unseenReplyBubbles.delete(id)) {
+    const el = wrap.querySelector('[data-id="' + id + '"]');
+    if (el) el.classList.remove('has-new-reply');
+    updateNewContentPill();
+    }
+}
+function markAllSeen() {
+    unseenNewBubbles.clear(); unseenReplyBubbles.clear();
+    wrap.querySelectorAll('.bubble.is-new, .bubble.has-new-reply').forEach(el => el.classList.remove('is-new', 'has-new-reply'));
+    newestUnseenId = null;
+    updateNewContentPill();
+}
+function jumpToNewest() {              // pill tap → scroll to & flash one unseen bubble at a time
+    let el = newestUnseenId && wrap.querySelector('[data-id="' + newestUnseenId + '"]');
+    if (!el || !(el.classList.contains('is-new') || el.classList.contains('has-new-reply'))) {
+    el = wrap.querySelector('.bubble.is-new, .bubble.has-new-reply');
+    }
+    if (!el) { markAllSeen(); return; }
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1200);
+    markBubbleSeen(el.dataset.id); markReplySeen(el.dataset.id);
+    const next = wrap.querySelector('.bubble.is-new, .bubble.has-new-reply');
+    newestUnseenId = next ? next.dataset.id : null;
+}
+if (newContentPill) newContentPill.addEventListener('click', jumpToNewest);
+
 function notifyNewMessages(items) {
     if (isFirstSnapshot) {
     // On first load, just record the known IDs & reply counts — don't notify
@@ -2318,12 +2371,14 @@ function notifyNewMessages(items) {
     // Check for new replies on existing bubbles
     let newReplyCount = 0;
     let newestReplyText = '';
+    const replyBubbleIds = [];
     items.forEach(a => {
     const currentCount = countAllReplies(a.replies || []);
     const oldCount = knownReplyCounts[a.id] || 0;
     if (knownIds.has(a.id) && currentCount > oldCount) {
         const diff = currentCount - oldCount;
         newReplyCount += diff;
+        replyBubbleIds.push(a.id);
         // Get the newest reply text for the notification
         const lastReply = getLatestReply(a.replies || []);
         if (lastReply) {
@@ -2346,6 +2401,9 @@ function notifyNewMessages(items) {
         'New Anonymous Message',
         'anon-bubble'
         );
+        // In-page: glow the new bubbles + count them in the pill (newest = last, chronological).
+        newItems.forEach(a => unseenNewBubbles.add(a.id));
+        newestUnseenId = newItems[newItems.length - 1].id;
     }
     }
 
@@ -2361,8 +2419,13 @@ function notifyNewMessages(items) {
         'New Reply',
         'anon-reply'
         );
+        // In-page: dot the bubbles that got a new reply.
+        replyBubbleIds.forEach(id => unseenReplyBubbles.add(id));
+        if (replyBubbleIds.length) newestUnseenId = replyBubbleIds[replyBubbleIds.length - 1];
     }
     }
+
+    updateNewContentPill();
 
     // Update known IDs
     items.forEach(a => knownIds.add(a.id));
