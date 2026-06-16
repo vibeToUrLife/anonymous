@@ -263,18 +263,9 @@
           }
           saveRoom();
         }
-        // Farm offline catch-up — advance every animal's production clock once
-        // per load; drops spawned while away land on the farm ground (capped).
-        if (!_farmCatchupDone && viewingUid === currentUid && (roomData.farmAnimals || []).length) {
-          _farmCatchupDone = true;
-          const _spawned = runFarmProduction();
-          if (_spawned > 0) {
-            saveRoom();
-            setTimeout(function () {
-              showToast('🚜 Your farm produced ' + _spawned + ' item' + (_spawned > 1 ? 's' : '') + ' while you were away!', 'success');
-            }, 1200);
-          }
-        }
+        // Farm offline produce is no longer applied on load — it's banked and shown
+        // in the mandatory "while you were away" collect modal when you open the farm
+        // (see openFarm / _offlinePlan in room-farm-view.js).
         maybeGenerateDailyDrops();
         _roomLoaded = true;
       } else {

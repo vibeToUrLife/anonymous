@@ -88,8 +88,12 @@
   // Returns { animals, foodStock, foodAt, spawns: [{ animalId, type }] }.
   function planFarmTick(opts) {
     const now = opts.now;
+    // Optional cap: only count production/feeding within the last capMs. Used by the
+    // offline "while you were away" window so animals bank at most capMs of produce.
+    const earliest = now - (opts.capMs != null ? opts.capMs : Infinity);
     const herd = opts.animals.length;
-    const foodAt = opts.foodAt != null && opts.foodAt <= now ? opts.foodAt : now;
+    let foodAt = opts.foodAt != null && opts.foodAt <= now ? opts.foodAt : now;
+    if (foodAt < earliest) foodAt = earliest;
     const elapsedDays = (now - foodAt) / DAY_MS;
     const demandPerDay = herd * opts.foodPerDay;
     const fedDays = demandPerDay > 0 ? Math.min(elapsedDays, opts.foodStock / demandPerDay) : elapsedDays;
@@ -100,8 +104,9 @@
     const animals = opts.animals.map(a => {
       const happiness = Math.max(0, Math.min(100,
         a.happiness + fedDays * opts.gainPerDay - hungryDays * opts.decayPerDay));
-      const last = a.lastDropTime != null ? a.lastDropTime : now;
+      let last = a.lastDropTime != null ? a.lastDropTime : now;
       if (last > now) return Object.assign({}, a, { happiness: happiness, lastDropTime: now }); // clock skew
+      if (last < earliest) last = earliest;   // cap the catch-up window (capMs)
       // Higher-level animals produce faster (cycle shortened by levelSpeedup/level).
       const level = animalLevel(a.collected, opts.levels || [0]);
       const speedMult = 1 + (opts.levelSpeedup || 0) * (level - 1);

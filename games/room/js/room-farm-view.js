@@ -11,6 +11,7 @@
     let _farmVisitUnsub = null; // live subscription to the rooms list (while a farm is open)
     let _farmAnimFrame = null;
     let _farmTickInterval = null;
+    let _farmAwayPlan = null;   // pending "while you were away" offline produce (awaiting collect)
     let _farmAnimStates = {};   // ephemeral wander state per animal id (not saved)
     let _farmParticles = [];    // floating hearts / +coins effects
     let _farmDropSeq = 0;
@@ -63,6 +64,7 @@
         decayPerDay: FARM_HAPPY_DECAY_PER_DAY,
         levels: FARM_LEVELS,
         levelSpeedup: FARM_LEVEL_SPEEDUP,
+        capMs: FARM_OFFLINE_CAP_MS,   // cap any single catch-up at 3h (live ticks are tiny, so unaffected)
       });
       roomData.farmAnimals = plan.animals;
       roomData.farmFood = plan.foodStock;
@@ -226,25 +228,135 @@
       document.getElementById('farmView')?.classList.add('visible');
       _setFarmPanelMode(true);
       _syncRoomPanel();   // hide the side panel; widens the stage before we draw
-      const isOwner = viewingUid === currentUid;
-      if (isOwner) {
-        let _changed = false;
-        if ((roomData.farmDecors || []).length) { roomData.farmDecors = []; _changed = true; } // decor feature removed
-        if (runFarmProduction() > 0) _changed = true;
-        if (_ensureFarmOrders()) _changed = true;
-        if (_changed) saveRoom();
+      if (viewingUid === currentUid) {
+        if ((roomData.farmDecors || []).length) roomData.farmDecors = []; // decor feature removed
+        _ensureFarmOrders();
+        // Offline "while you were away" produce (capped at 3h). Owner only.
+        const off = _offlinePlan();
+        if (off.total > 0 && off.awayMs >= FARM_OFFLINE_MODAL_MS && !roomData.farmAutoCollect) {
+          // Mandatory collect modal — gate the farm until the player collects.
+          renderFarmPanel();
+          drawFarmCanvas();
+          _showFarmAway(off);
+          return;
+        }
+        // Short trip, or Auto-Collector owned → bank it straight away, no modal.
+        if (off.total > 0) {
+          _applyOfflinePlan(off);
+          if (off.awayMs >= FARM_OFFLINE_MODAL_MS) {
+            const _n = off.total;
+            setTimeout(function () { showToast('🤖 Auto-Collector banked ' + _n + ' produce while you were away!', 'success'); }, 600);
+          }
+        }
+        saveRoom();
       }
+      _startFarmLive();
+    }
+
+    // Render the farm + start the once-a-minute live production tick (owner only).
+    function _startFarmLive() {
       renderFarmPanel();
       drawFarmCanvas();
-      // Herd eats + produces once a minute while the farm is open (owner only).
       clearInterval(_farmTickInterval);
-      if (isOwner) {
+      if (viewingUid === currentUid) {
         _farmTickInterval = setInterval(() => {
           if (document.hidden || !isFarmView) return;
           if (runFarmProduction() > 0) saveRoom();
           renderFarmPanel(); // keep food count + happiness fresh
         }, 60 * 1000);
       }
+    }
+
+    // Compute (WITHOUT applying) the offline produce since the farm was last active,
+    // capped at FARM_OFFLINE_CAP_MS (3h). Pure time cap — no per-type count cap — so
+    // the only offline limit is time. Returns { plan, batch:{prodId:count}, total, awayMs }.
+    function _offlinePlan() {
+      const now = Date.now();
+      const animals = roomData.farmAnimals || [];
+      let lastActive = 0;
+      for (const a of animals) lastActive = Math.max(lastActive, a.lastDropTime || 0);
+      const awayMs = lastActive ? (now - lastActive) : 0;
+      const plan = planFarmTick({
+        animals: animals,
+        dropCounts: {},          // ignore the field-drop count cap; time is the only offline limit
+        foodStock: roomData.farmFood || 0,
+        foodAt: roomData.farmFoodAt || 0,
+        now: now,
+        slowMs: FARM_CYCLE_SLOW_MS,
+        fastMs: FARM_CYCLE_FAST_MS,
+        dropCap: Infinity,
+        foodPerDay: FARM_FOOD_PER_DAY,
+        gainPerDay: FARM_HAPPY_GAIN_PER_DAY,
+        decayPerDay: FARM_HAPPY_DECAY_PER_DAY,
+        levels: FARM_LEVELS,
+        levelSpeedup: FARM_LEVEL_SPEEDUP,
+        capMs: FARM_OFFLINE_CAP_MS,
+      });
+      const batch = {};
+      for (const s of plan.spawns) {
+        const def = FARM_ANIMALS.find(f => f.id === s.type);
+        const pid = def ? def.drop.id : s.type;
+        batch[pid] = (batch[pid] || 0) + 1;
+      }
+      return { plan: plan, batch: batch, total: plan.spawns.length, awayMs: awayMs };
+    }
+
+    // Commit an offline plan: advance clocks/happiness/food and bank the produce
+    // straight into stock (+collection XP). Moves each animal's clock to ~now, so
+    // the next offline window starts fresh — i.e. you must collect to keep earning.
+    function _applyOfflinePlan(off) {
+      const plan = off.plan;
+      roomData.farmAnimals = plan.animals;
+      roomData.farmFood = plan.foodStock;
+      roomData.farmFoodAt = plan.foodAt;
+      roomData.farmStock = roomData.farmStock || {};
+      for (const s of plan.spawns) {
+        const def = FARM_ANIMALS.find(f => f.id === s.type);
+        const pid = def ? def.drop.id : s.type;
+        roomData.farmStock[pid] = (roomData.farmStock[pid] || 0) + 1;
+        roomData.farmTotalCollected = (roomData.farmTotalCollected || 0) + 1;
+        const a = roomData.farmAnimals.find(an => an.id === s.animalId);
+        if (a) a.collected = (a.collected || 0) + 1;
+      }
+    }
+
+    // The mandatory "while you were away" collect modal. No close button; tapping
+    // the button OR the backdrop collects (backdrop tap auto-collects via room.html).
+    function _showFarmAway(off) {
+      _farmAwayPlan = off;
+      const el = document.getElementById('farmAwayModal');
+      if (!el) return;
+      const meta = farmProductMeta();
+      const rows = Object.keys(off.batch).map(function (pid) {
+        const m = meta[pid] || { emoji: '❓', name: pid };
+        return '<div class="ws-slot"><span class="ws-slot-no">' + m.emoji + ' ' + m.name + '</span>' +
+               '<span class="ws-slot-state">×' + off.batch[pid] + '</span></div>';
+      }).join('');
+      el.innerHTML =
+        '<div class="ws-box">' +
+          '<div class="ws-head">🐔 While you were away…</div>' +
+          '<div class="ws-sub">Your animals produced this. Collect it to keep them going!</div>' +
+          rows +
+          '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="collectFarmAway()">📦 Collect all</button>' +
+        '</div>';
+      el.style.display = 'flex';
+    }
+    function _hideFarmAway() {
+      _farmAwayPlan = null;
+      const el = document.getElementById('farmAwayModal');
+      if (el) el.style.display = 'none';
+    }
+    // Collect the offline produce (button OR backdrop tap), then enter the farm.
+    async function collectFarmAway() {
+      if (viewingUid !== currentUid) { _hideFarmAway(); _startFarmLive(); return; }
+      const n = _farmAwayPlan ? _farmAwayPlan.total : 0;
+      if (_farmAwayPlan) _applyOfflinePlan(_farmAwayPlan);
+      _hideFarmAway();
+      await saveRoom();
+      checkAchievements();
+      if (n > 0) showToast('📦 Collected ' + n + ' produce from your animals!', 'success');
+      _startFarmLive();
+      renderAll();
     }
 
     function closeFarm() {
@@ -255,6 +367,7 @@
       closeWorkshopModal();
       closeAnimalModal();
       closeProduceModal();
+      _hideFarmAway();
       _hideFarmTip();
       document.getElementById('farmView')?.classList.remove('visible');
       _setFarmPanelMode(false);

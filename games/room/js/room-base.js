@@ -318,6 +318,8 @@
     const FARM_MAX_ANIMALS = 20;                   // total animals on the farm, any mix
     const FARM_DROP_CAP = 3;                       // (legacy) max uncollected drops per animal
     const FARM_PRODUCE_CAP = 20;                   // max uncollected produce per ANIMAL TYPE — production pauses at this until you collect
+    const FARM_OFFLINE_CAP_MS = 3 * 60 * 60 * 1000;  // offline (not in farm): animals bank up to 3h of produce, then wait for a collect
+    const FARM_OFFLINE_MODAL_MS = 60 * 60 * 1000;    // only show the "while you were away" collect modal after ≥1h away
     const FARM_CYCLE_SLOW_MS = 6 * 60 * 60 * 1000; // production cycle at happiness 0
     const FARM_CYCLE_FAST_MS = 2 * 60 * 60 * 1000; // production cycle at happiness 100
     const FARM_START_HAPPINESS = 60;               // happiness of a newly bought animal
