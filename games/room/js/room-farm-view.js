@@ -1289,7 +1289,14 @@
 
     function openCartSheet() {
       const cart = _farmCart();
-      if (cart.visitStart !== _cartVisitKey) { _cartSold = {}; _cartVisitKey = cart.visitStart; }  // fresh visit
+      // New visit (or first open after a reload) → restore how much was already
+      // sold this visit from the saved progress, so refreshing never re-offers
+      // units you've already sold.
+      if (cart.visitStart !== _cartVisitKey) {
+        _cartVisitKey = cart.visitStart;
+        const snap = roomData.farmCartSold;
+        _cartSold = (snap && snap.visitStart === cart.visitStart && snap.sold) ? Object.assign({}, snap.sold) : {};
+      }
       _cartSheetOpen = true; renderCartSheet();
     }
     function _hideCartSheet() {
@@ -1307,6 +1314,7 @@
     function _departCart(showNext) {
       roomData.farmCartLeftAt = Date.now();
       _cartSold = {};
+      roomData.farmCartSold = null;   // clear this visit's sold-progress
       _cartLeaveStart = Date.now();
       _hideCartSheet();
       // Lock in (and persist via the saveRoom below) the next visit's wanted-list
@@ -1390,6 +1398,7 @@
       roomData.coins += price;
       roomData.farmStock[prodId] = (roomData.farmStock[prodId] || 0) - 1;
       _cartSold[prodId] = (_cartSold[prodId] || 0) + 1;
+      roomData.farmCartSold = { visitStart: cart.visitStart, sold: _cartSold };
       await saveRoom();
       const m = farmProductMeta()[prodId];
       showToast('Sold 1 ' + (m ? m.emoji + ' ' + m.name : prodId) + ' for ' + price + '🪙', 'success');
@@ -1413,6 +1422,7 @@
       if (!sold) return showToast('Nothing the cart wants right now.', '');
       roomData.coins += total;
       roomData.farmStock = stock;
+      roomData.farmCartSold = { visitStart: cart.visitStart, sold: _cartSold };
       checkAchievements();
       // Fully fulfilled → the plane flies off (new one in 4h); otherwise it stays
       // so you can finish the rest (or tap "Send it off").
