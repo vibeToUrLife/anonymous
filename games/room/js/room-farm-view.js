@@ -2368,6 +2368,9 @@
       cvs.onclick = (e) => {
         closeCropPicker();   // any tap dismisses an open picker
         if (_farmDragSuppressClick) { _farmDragSuppressClick = false; return; }
+        // Tap outside the sell sheet (anywhere on the farm) closes it — taps on
+        // the sheet itself hit its own buttons and never reach this canvas.
+        if (_cartSheetOpen) { closeCartSheet(); return; }
         if (viewingUid !== currentUid) { closeCartSheet(); return; }
         const rect = cvs.getBoundingClientRect();
         const cx = (e.clientX - rect.left) / rect.width;

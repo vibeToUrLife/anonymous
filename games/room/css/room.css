@@ -962,6 +962,10 @@
       background:linear-gradient(180deg,var(--g-card),var(--g-board));border:1px solid var(--g-border);border-radius:16px;
       padding:12px 12px 12px;box-shadow:var(--g-shadow);
     }
+    /* Merchant (sky-plane) sell sheet: size to content so everything shows at
+       once — no inner scroll. Vertically centered so it can't grow off an edge.
+       (Only #cartSheet; the #cropPicker keeps its scroll for long crop lists.) */
+    #cartSheet{max-height:none;overflow:visible;top:50%;bottom:auto;transform:translate(-50%,-50%)}
     .cp-head{font-family:var(--farm-display);font-size:14px;font-weight:800;color:var(--g-ink);text-align:center;margin-bottom:10px;letter-spacing:.4px}
     .cp-crop{
       display:flex;align-items:center;gap:10px;width:100%;min-height:48px;text-align:left;margin-bottom:8px;padding:11px 12px;cursor:pointer;
