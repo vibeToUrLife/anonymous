@@ -62,6 +62,40 @@
       await userDocRef().set(data, { merge: true });
     }
 
+    // ── Room "while you were away" coin modal (mirrors the farm offline modal).
+    // Mandatory: no Close; the button OR a backdrop tap collects (auto-collect).
+    let _roomCoinAwayPlan = null;
+    function _showRoomCoinAway(plan) {
+      _roomCoinAwayPlan = plan;
+      const el = document.getElementById('roomCoinModal');
+      if (!el) return;
+      el.innerHTML =
+        '<div class="ws-box">' +
+          '<div class="ws-head">🌱 While you were away…</div>' +
+          '<div class="ws-sub">Your ' + plan.name + ' earned coins. Collect them to keep it growing!</div>' +
+          '<div class="ws-slot"><span class="ws-slot-no">🪙 Coins</span><span class="ws-slot-state">+' + plan.earned + '</span></div>' +
+          '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="collectRoomCoinAway()">📦 Collect</button>' +
+        '</div>';
+      el.style.display = 'flex';
+    }
+    function _hideRoomCoinAway() {
+      _roomCoinAwayPlan = null;
+      const el = document.getElementById('roomCoinModal');
+      if (el) el.style.display = 'none';
+    }
+    // Collect the offline coins (button OR backdrop tap). Only here do the coins get
+    // added and the timer reset — until collected they stay pending (recomputed on reload).
+    async function collectRoomCoinAway() {
+      const plan = _roomCoinAwayPlan;
+      _hideRoomCoinAway();
+      if (!plan || viewingUid !== currentUid) return;
+      roomData.coins += plan.earned;
+      roomData.lastCoinCollect = Date.now();
+      await saveRoom();
+      showToast('💰 Collected ' + plan.earned + ' coins!', 'success');
+      renderAllDebounced();
+    }
+
     /* ═══════════════════════════════
        Init
        ═══════════════════════════════ */
@@ -225,13 +259,17 @@
           const cycles = Math.floor(elapsed / (5 * 60 * 1000));
           if (cycles > 0) {
             const earned = cycles * coinsPerCycle;
-            roomData.coins += earned;
-            // Reset lastCoinCollect to now so timer restarts from page load
-            roomData.lastCoinCollect = Date.now();
-            saveRoom();
-            setTimeout(() => {
-              showToast('🌱 Your Lv.' + plantLvl + ' ' + (plantDef ? plantDef.name : 'plant') + ' earned ' + earned + ' coins while you were away!', 'success');
-            }, 800);
+            const _name = 'Lv.' + plantLvl + ' ' + (plantDef ? plantDef.name : 'plant');
+            if (rawElapsed >= PLANT_OFFLINE_MODAL_MS) {
+              // ≥1h away → mandatory collect modal. Coins are added (and the timer
+              // reset) only on collect — until then they stay pending.
+              setTimeout(function () { _showRoomCoinAway({ earned: earned, name: _name }); }, 800);
+            } else {
+              // Short trip → bank it straight away (no modal).
+              roomData.coins += earned;
+              roomData.lastCoinCollect = Date.now();
+              saveRoom();
+            }
           } else {
             // No cycles earned but reset the timer on page load
             roomData.lastCoinCollect = Date.now();
@@ -376,7 +414,7 @@
           userDocRef().update({ lastSeen: Date.now() }).catch(() => {});
           // Collect plant coins earned while tab was hidden (capped at 2 hours)
           const bestHidden = getBestPlantIncome();
-          if (viewingUid === currentUid && bestHidden && roomData.lastCoinCollect) {
+          if (viewingUid === currentUid && bestHidden && roomData.lastCoinCollect && !_roomCoinAwayPlan) {
             const plantLvl = bestHidden.plantLvl;
             const plantDef = bestHidden.plantDef;
             const coinsPerCycle = bestHidden.perCycle;

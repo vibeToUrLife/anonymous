@@ -99,6 +99,8 @@
 
     // Maximum offline coin generation time for plants (2 hours in ms)
     const PLANT_OFFLINE_CAP_MS = 2 * 60 * 60 * 1000;
+    // Only show the "while you were away" coin collect modal after ≥1h away
+    const PLANT_OFFLINE_MODAL_MS = 60 * 60 * 1000;
 
     const PET_SIZES = {
       cat: 72, dog: 80, bunny: 64, hamster: 58, fox: 76, panda: 86, goose: 74
