@@ -1310,8 +1310,9 @@
       ctx.restore();
     }
 
-    // Fixed slot position for machine `slot` (its hut). Kept left of the cart's
-    // tap zone (cart at x 0.84, r 0.14) so taps never collide.
+    // Fixed slot position for machine `slot` (its hut). Sits well left of the sky
+    // plane's tap zone (plane at x 0.84, y 0.24, r 0.18); huts are hit-tested
+    // first so any overlap resolves to the hut.
     function _workshopPos(slot) { return { x: 0.22 + slot * 0.11, y: 0.45 }; }
 
     // Zones animals must not walk into: owned machine huts. (The merchant is now
@@ -2507,10 +2508,11 @@
         const cx = (e.clientX - rect.left) / rect.width;
         const cy = (e.clientY - rect.top) / rect.height;
 
-        // Machine huts FIRST (their small, specific targets must win over the
-        // cart's big zone) — nearest owned hut within a generous radius.
+        // Machine huts FIRST (their specific targets must win over the cart's big
+        // zone) — nearest owned hut within a finger-friendly radius. Picks the
+        // NEAREST owned hut, so a generous radius can't cause mis-selection.
         const _wm = roomData.farmMachines || {};
-        let _hi = -1, _hd = 0.09;
+        let _hi = -1, _hd = 0.13;
         for (let _s = 0; _s < FARM_MACHINES.length; _s++) {
           const _mm = FARM_MACHINES[_s];
           if (_wm[_mm.id] && _wm[_mm.id].owned) {
@@ -2521,8 +2523,9 @@
         }
         if (_hi >= 0) { openMachineModal(FARM_MACHINES[_hi].id); return; }
 
-        // Merchant cart / away signpost: big tap zone (sell sheet, or next-cart info).
-        if (Math.hypot(FARM_CART_X - cx, FARM_CART_Y - cy) < 0.14) { openCartSheet(); return; }
+        // Sky plane / away cloud: big tap zone covering the plane AND its trailing
+        // "Tap to sell!" banner (which streams out to the left of the body).
+        if (Math.hypot(FARM_CART_X - cx, FARM_CART_Y - cy) < 0.18) { openCartSheet(); return; }
         closeCartSheet();   // tapping elsewhere on the farm dismisses the sheet
 
         // Garden plots: any tap in the crop strip (y>0.75) picks the NEAREST plot —
