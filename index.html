@@ -609,6 +609,44 @@
     .settings-toggle input:checked + .slider { background:linear-gradient(135deg,var(--primary),var(--primary-deep)) !important; }
     .settings-select button.active, .poll-btn.active, .mood-emoji-btn.selected { border-color:var(--primary) !important; }
     .poll-option-row.voted, .cc-lb-row.me, .cc-fortune-card.rare { border-color:var(--primary) !important; }
+
+    /* ══════════════════════════════════════════════════════════════
+       Final-30-min countdown bubble — floats top-center on the board in
+       the last 30 minutes before the active countdown target, so users
+       see the time directly without opening the sidebar. Tokens flip
+       light/dark; sits between the corner ☰ / ⚙ buttons.
+       ══════════════════════════════════════════════════════════════ */
+    .cd-bubble {
+      position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+      z-index: 320;
+      display: flex; align-items: center; gap: 10px;
+      max-width: min(92vw, 360px);
+      padding: 8px 10px 8px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      box-shadow: var(--clay-up);
+      animation: cdBubbleIn 0.35s var(--ease) both;
+    }
+    .cd-bubble.hidden { display: none; }
+    @keyframes cdBubbleIn {
+      from { opacity: 0; transform: translate(-50%, -12px); }
+      to   { opacity: 1; transform: translate(-50%, 0); }
+    }
+    .cd-bubble-emoji { font-size: 20px; line-height: 1; }
+    .cd-bubble-body { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+    .cd-bubble-line1 { font-size: 13px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+    .cd-bubble-time { color: var(--primary-deep); font-variant-numeric: tabular-nums; }
+    .cd-bubble.urgent .cd-bubble-time { color: var(--bad); }
+    .cd-bubble-at { font-size: 11px; color: var(--ink-faint); }
+    .cd-bubble-close {
+      background: none; border: none; cursor: pointer;
+      color: var(--ink-faint); font-size: 13px; line-height: 1;
+      padding: 4px 6px; border-radius: 8px;
+      transition: color 0.2s, background 0.2s;
+    }
+    .cd-bubble-close:hover { color: var(--bad); background: var(--primary-tint); }
+    @media (prefers-reduced-motion: reduce) { .cd-bubble { animation: none; } }
   </style>
 </head>
 <body>
@@ -895,6 +933,16 @@
 
     </div><!-- end sidebar-body -->
   </aside>
+
+  <!-- Final-30-min countdown bubble (floats top-center; filled & toggled by app.js) -->
+  <div class="cd-bubble hidden" id="countdownBubble" role="status" aria-live="polite">
+    <span class="cd-bubble-emoji" id="cdBubbleEmoji">🏃</span>
+    <span class="cd-bubble-body">
+      <span class="cd-bubble-line1"><span id="cdBubbleLabel">Off work in</span> <b class="cd-bubble-time" id="cdBubbleTime">29:45</b></span>
+      <span class="cd-bubble-at" id="cdBubbleAt">at 6:00 PM</span>
+    </span>
+    <button class="cd-bubble-close" id="cdBubbleClose" aria-label="Dismiss">✕</button>
+  </div>
 
   <div class="page-title-wrapper">
     <!-- Pixel art speech bubble logo -->

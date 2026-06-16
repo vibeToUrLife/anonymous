@@ -2585,6 +2585,50 @@ const celebrationOverlay = document.getElementById('celebrationOverlay');
 const celebrationClose   = document.getElementById('celebrationClose');
 let countdownInterval    = null;
 
+// ── Final-30-min on-page countdown bubble (floats top-center) ──
+const cdBubble       = document.getElementById('countdownBubble');
+const cdBubbleEmoji  = document.getElementById('cdBubbleEmoji');
+const cdBubbleLabel  = document.getElementById('cdBubbleLabel');
+const cdBubbleTime   = document.getElementById('cdBubbleTime');
+const cdBubbleAt     = document.getElementById('cdBubbleAt');
+const cdBubbleClose  = document.getElementById('cdBubbleClose');
+const CD_BUBBLE_WINDOW = 30 * 60 * 1000;   // show only in the last 30 minutes
+let cdCurrentTarget    = null;             // target the visible bubble is tracking
+let cdDismissedTarget  = null;             // target the user closed (stay hidden until next window)
+
+// 24h timestamp → "6:00 PM"
+function formatClock(ts) {
+    const d = new Date(ts);
+    let h = d.getHours();
+    const ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return h + ':' + padZ(d.getMinutes()) + ' ' + ap;
+}
+function hideCountdownBubble() {
+    cdCurrentTarget = null;
+    if (cdBubble) cdBubble.classList.add('hidden');
+}
+// Called every second from tickCountdown(); shows the pill inside the 30-min window
+function updateCountdownBubble(diff, targetTs, type) {
+    if (!cdBubble) return;
+    cdCurrentTarget = targetTs;
+    if (diff <= 0 || diff > CD_BUBBLE_WINDOW || cdDismissedTarget === targetTs) {
+    cdBubble.classList.add('hidden');
+    return;
+    }
+    const totalSec = Math.floor(diff / 1000);
+    cdBubbleTime.textContent  = padZ(Math.floor(totalSec / 60)) + ':' + padZ(totalSec % 60);
+    cdBubbleEmoji.textContent = type === 'lunch' ? '🍜' : '🏃';
+    cdBubbleLabel.textContent = type === 'lunch' ? 'Lunch in' : 'Off work in';
+    cdBubbleAt.textContent    = 'at ' + formatClock(targetTs);
+    cdBubble.classList.toggle('urgent', diff <= 5 * 60 * 1000);   // turn time red in last 5 min
+    cdBubble.classList.remove('hidden');
+}
+if (cdBubbleClose) cdBubbleClose.addEventListener('click', () => {
+    cdDismissedTarget = cdCurrentTarget;        // suppress this target; reappears next window
+    cdBubble.classList.add('hidden');
+});
+
 // Only show celebration once per period per day — persist across refresh
 function getCelebrationKey(type) {
     const d = new Date();
@@ -2672,6 +2716,7 @@ function tickCountdown(targetTs, type) {
     const diff = targetTs - Date.now();
     if (diff <= 0) {
         clearInterval(countdownInterval);
+        hideCountdownBubble();
         if (type === 'lunch') {
         countdownDigits.innerHTML = '<span class="countdown-done">🍽️ Lunch time! 🍽️</span>';
         countdownLabel.textContent = 'Go eat & recharge!';
@@ -2690,6 +2735,7 @@ function tickCountdown(targetTs, type) {
     const s = Math.floor((diff % 60000) / 1000);
     countdownDigits.textContent = padZ(h) + ':' + padZ(m) + ':' + padZ(s);
     countdownLabel.textContent = type === 'lunch' ? 'until lunch 🍜' : 'until freedom 🏃';
+    updateCountdownBubble(diff, targetTs, type);
     }
     update();
     countdownInterval = setInterval(update, 1000);
@@ -2730,6 +2776,7 @@ function applyDefaultCountdown() {
     if (result && result.ts) {
     tickCountdown(result.ts, result.type);
     } else {
+    hideCountdownBubble();
     const now = new Date();
     const day = now.getDay();
     const hm = now.getHours() * 60 + now.getMinutes();
