@@ -1574,7 +1574,7 @@
           ctx.clearRect(0, 0, c.width, c.height);
           ctx.save();
           ctx.translate(c.width / 2, c.height * 0.6);
-          ctx.filter = 'hue-rotate(' + Math.round((t / 14) % 360) + 'deg) saturate(1.7)';
+          ctx.filter = 'hue-rotate(' + Math.round((t / 5) % 360) + 'deg) saturate(1.7)';
           drawFarmAnimal(ctx, c.dataset.type, c.width * 0.42, t / 120, false, v ? v.pal : null);
           ctx.restore();
         }
@@ -2303,7 +2303,8 @@
           ctx.translate(px, py + bob);
           if (!st.facingRight) ctx.scale(-1, 1); // drawers face right
           // RGB coat: animated rainbow shimmer (filter is reset by ctx.restore()).
-          if (a.variant === 'rgb') ctx.filter = 'hue-rotate(' + Math.round((t / 14 + idx * 60) % 360) + 'deg) saturate(1.7)';
+          // ~1.8s per full color cycle so it visibly shimmers (was t/14 ≈ 5s, too slow).
+          if (a.variant === 'rgb') ctx.filter = 'hue-rotate(' + Math.round((t / 5 + idx * 60) % 360) + 'deg) saturate(1.7)';
           drawFarmAnimal(ctx, a.type, size, t / 120, st.moving, _farmVariantPal(a));
           ctx.restore();
           // Mini happiness bar
