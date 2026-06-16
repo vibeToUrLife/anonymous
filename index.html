@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Anonymous Bubble Answers</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
-  <link rel="stylesheet" href="./src/css/style.css?v=4">
+  <link rel="stylesheet" href="./src/css/style.css?v=5">
   <link rel="stylesheet" href="./src/css/interactive.css?v=1">
   <!-- Clay "Bubble Pop" design system: tokens + component library (load last so they govern) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -838,22 +838,22 @@
 
     <!-- My Room + My Farm quick links -->
     <div class="sidebar-section" style="padding:0">
-      <div style="display:flex;gap:10px">
-        <a href="./games/room.html" class="game-card" style="flex:1">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <a href="./games/room.html" class="game-card">
           <span class="game-card-emoji">🏠</span>
           <div>
             <div class="game-card-title">My Room</div>
             <div class="game-card-sub">Pets, plants & decor</div>
           </div>
         </a>
-        <a href="./games/room.html?view=farm" class="game-card" style="flex:1">
+        <a href="./games/room.html?view=farm" class="game-card">
           <span class="game-card-emoji">🚜</span>
           <div>
             <div class="game-card-title">My Farm</div>
             <div class="game-card-sub">Animals, crops & coins</div>
           </div>
         </a>
-        <a href="./games/room.html?view=aquarium" class="game-card" style="flex:1">
+        <a href="./games/room.html?view=aquarium" class="game-card">
           <span class="game-card-emoji" style="background:var(--primary-tint)">🐠</span>
           <div>
             <div class="game-card-title">My Aquarium</div>
@@ -1213,7 +1213,7 @@
   <script src="./src/js/quote-comments.js"></script>
   <!-- Clay design system theme controller (must load before app.js wires the toggle) -->
   <script src="./src/js/theme.js"></script>
-  <script src="./src/js/app.js?v=2"></script>
+  <script src="./src/js/app.js?v=3"></script>
   <!-- Live, interactive board features (load after app.js for shared db/auth) -->
   <script src="./src/js/board-live-logic.js"></script>
   <script src="./src/js/presence.js"></script>

@@ -242,6 +242,20 @@ function getLatestReply(replies) {
     });
     return latestReply;
 }
+// Path (array of reply keys) from the top of `replies` down to the reply with
+// `targetId` — used to pre-open ancestor threads when jumping to a nested reply.
+function findReplyPath(replies, targetId, parentPath) {
+    parentPath = parentPath || [];
+    const list = replies || [];
+    for (let i = 0; i < list.length; i++) {
+        const r = list[i];
+        const path = buildReplyPath(parentPath, r, i);
+        if (r.id && r.id === targetId) return path;
+        const sub = findReplyPath(r.replies, targetId, path);
+        if (sub) return sub;
+    }
+    return null;
+}
 function toLiteReplies(replies) {
     return (replies || []).map((reply) => ({
     id: reply.id ?? null,
@@ -1306,6 +1320,7 @@ function openReplies(bubble, a) {
 function buildReplyItem(docId, r, replyPath, depth) {
     const div = document.createElement('div');
     div.className = 'reply-item' + (depth > 0 ? ' is-nested' : '');
+    if (r.id) div.dataset.replyId = r.id;   // so jumpToNewest can scroll to + flash this reply
     if (r.image) {
     const img = document.createElement('img');
     img.className = 'reply-img';
@@ -2349,9 +2364,28 @@ function jumpToNewest() {              // pill tap → scroll to & flash one uns
     el = wrap.querySelector('.bubble.is-new, .bubble.has-new-reply');
     }
     if (!el) { markAllSeen(); return; }
+    // A pure new-reply (not a brand-new bubble) → open its thread and flash the
+    // reply itself; otherwise just flash the bubble.
+    const isReplyJump = el.classList.contains('has-new-reply') && !el.classList.contains('is-new') && el._replyData;
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1200);
     markBubbleSeen(el.dataset.id); markReplySeen(el.dataset.id);
+    if (isReplyJump) {
+        const data = el._replyData;
+        const latest = getLatestReply(data.replies || []);
+        const path = latest && latest.id ? findReplyPath(data.replies || [], latest.id) : null;
+        // Pre-open ancestor threads so a nested reply renders visible, then expand.
+        if (path) for (let k = 1; k < path.length; k++) _openReplyThreads.add(getReplyReactionStorageKey(el.dataset.id, path.slice(0, k)));
+        if (!el.querySelector('.replies-container')) openReplies(el, data); else updateReplies(el, data);
+        requestAnimationFrame(() => {
+            const target = latest && latest.id ? el.querySelector('.reply-item[data-reply-id="' + latest.id + '"]') : null;
+            const focus = target || el;
+            focus.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            focus.classList.add(target ? 'flash-reply' : 'flash');
+            setTimeout(() => { focus.classList.remove('flash-reply'); focus.classList.remove('flash'); }, 1200);
+        });
+    } else {
+        el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1200);
+    }
     const next = wrap.querySelector('.bubble.is-new, .bubble.has-new-reply');
     newestUnseenId = next ? next.dataset.id : null;
 }
@@ -2456,6 +2490,7 @@ function fireNotification(count, bodyText, title, tag) {
     n.addEventListener('click', () => {
         window.focus();
         n.close();
+        jumpToNewest();   // go straight to the new bubble / reply (expands + border-blinks it)
     });
     }
 }
