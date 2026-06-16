@@ -2643,46 +2643,87 @@ function markCelebrationShown(type) {
 
 function padZ(n) { return String(n).padStart(2, '0'); }
 
-// Confetti burst
-function spawnConfetti() {
-    const colors = ['#f7c97e','#e06377','#7ec8e3','#c8b6ff','#58c5b5','#f2a154','#9b72cf'];
-    for (let i = 0; i < 80; i++) {
-    const el = document.createElement('div');
-    el.className = 'confetti';
-    el.style.left = Math.random() * 100 + 'vw';
-    el.style.background = colors[Math.floor(Math.random() * colors.length)];
-    el.style.width = (6 + Math.random() * 8) + 'px';
-    el.style.height = (6 + Math.random() * 8) + 'px';
-    el.style.animationDuration = (2 + Math.random() * 3) + 's';
-    el.style.animationDelay = (Math.random() * 1.5) + 's';
-    document.body.appendChild(el);
-    el.addEventListener('animationend', () => el.remove());
+// Celebration content + particles (off work / lunch break)
+const CEL_CONFETTI = ['#f7c97e','#e06377','#7ec8e3','#c8b6ff','#58c5b5','#f2a154','#9b72cf','#ffd23d','#ff9d5c'];
+const CEL_DATA = {
+    offwork: { emojis: ['🎉','🥳','🎊'], title: 'OFF WORK!',  sub: 'Time to go home — you crushed it today 💪', btn: "Let's go home! 🏡", floats: ['🎈','✨','🎈','⭐','🎈'] },
+    lunch:   { emojis: ['🍜','😋','🍱'], title: 'LUNCH TIME!', sub: 'Go eat & recharge — enjoy every bite 🍽️',  btn: 'Bon appétit! 🍴', floats: ['🍙','🍰','🍜','🍱','🍵'] },
+};
+// Skip the heavy particle work if the user opted out of animations.
+function celReduced() {
+    return document.body.classList.contains('no-animations') ||
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+// Fluttering multi-shape confetti (squares, dots, ribbons) that sway as they fall.
+function spawnConfetti(n) {
+    const fx = document.getElementById('celebrationFx');
+    if (!fx) return;
+    for (let i = 0; i < (n || 120); i++) {
+        const p = document.createElement('div');
+        p.className = 'celebration-confetti';
+        const shape = Math.random(), c = CEL_CONFETTI[Math.floor(Math.random() * CEL_CONFETTI.length)], w = 6 + Math.random() * 8;
+        if (shape < 0.4)      { p.style.width = w + 'px'; p.style.height = w + 'px'; p.style.borderRadius = '2px'; }
+        else if (shape < 0.7) { p.style.width = w + 'px'; p.style.height = w + 'px'; p.style.borderRadius = '50%'; }
+        else                  { p.style.width = (3 + Math.random() * 3) + 'px'; p.style.height = (12 + Math.random() * 10) + 'px'; p.style.borderRadius = '3px'; }
+        p.style.background = c;
+        p.style.left = (Math.random() * 100) + 'vw';
+        p.style.setProperty('--sway', (Math.random() * 90 - 45) + 'px');
+        p.style.animationDuration = (2.4 + Math.random() * 2.4) + 's';
+        p.style.animationDelay = (Math.random() * 1.2) + 's';
+        p.addEventListener('animationend', () => p.remove());
+        fx.appendChild(p);
+    }
+}
+// Themed emoji floaters that rise up (balloons/sparkles for off work, food for lunch).
+function spawnFloaters(set, n) {
+    const fx = document.getElementById('celebrationFx');
+    if (!fx) return;
+    for (let i = 0; i < n; i++) {
+        const p = document.createElement('div');
+        p.className = 'celebration-float';
+        p.textContent = set[Math.floor(Math.random() * set.length)];
+        p.style.left = (6 + Math.random() * 88) + 'vw';
+        p.style.fontSize = (20 + Math.random() * 22) + 'px';
+        p.style.setProperty('--sway', (Math.random() * 120 - 60) + 'px');
+        p.style.setProperty('--spin', (Math.random() * 60 - 30) + 'deg');
+        p.style.animationDuration = (3.4 + Math.random() * 2.6) + 's';
+        p.style.animationDelay = (Math.random() * 1.4) + 's';
+        p.addEventListener('animationend', () => p.remove());
+        fx.appendChild(p);
     }
 }
 
 function showCelebration(type) {
-    type = type || 'offwork';
+    type = (type === 'lunch') ? 'lunch' : 'offwork';
     if (wasCelebrationShown(type)) return;
     markCelebrationShown(type);
-    const celebrationText = document.getElementById('celebrationText');
-    const celebrationSub = document.getElementById('celebrationSub');
-    const celebrationEmojis = document.getElementById('celebrationEmojis');
-    if (type === 'lunch') {
-    celebrationEmojis.textContent = '🍽️😋🎉';
-    celebrationText.textContent = 'LUNCH TIME!';
-    celebrationSub.textContent = 'Go eat & recharge! Enjoy your break 🍜';
-    } else {
-    celebrationEmojis.textContent = '🎉🥳🎊';
-    celebrationText.textContent = 'OFF WORK!';
-    celebrationSub.textContent = 'Time to go home! You did great today 💪';
-    }
+    const d = CEL_DATA[type];
+    const fx = document.getElementById('celebrationFx');
+    if (fx) fx.innerHTML = '';
+    document.getElementById('celebrationEmojis').innerHTML =
+        d.emojis.map((e, i) => '<span style="--i:' + i + '">' + e + '</span>').join('');
+    document.getElementById('celebrationText').textContent = d.title;
+    document.getElementById('celebrationSub').textContent = d.sub;
+    celebrationClose.textContent = d.btn;
+    celebrationOverlay.className = 'celebration-overlay ' + type;   // reset classes + set theme
+    void celebrationOverlay.offsetWidth;                           // restart entrance animations
     celebrationOverlay.classList.add('show');
-    spawnConfetti();
-    setTimeout(spawnConfetti, 1200);
+    if (!celReduced()) {
+        spawnConfetti(120);
+        setTimeout(() => spawnConfetti(70), 900);
+        spawnFloaters(d.floats, 14);
+    }
 }
 
-celebrationClose.addEventListener('click', () => {
+function hideCelebration() {
     celebrationOverlay.classList.remove('show');
+    const fx = document.getElementById('celebrationFx');
+    if (fx) fx.innerHTML = '';
+}
+celebrationClose.addEventListener('click', hideCelebration);
+celebrationOverlay.addEventListener('click', (e) => {
+    if (!e.target.closest('.celebration-card')) hideCelebration();   // tap anywhere outside the card
 });
 
 // Default targets: Mon-Fri, 9AM→12:30PM (lunch) | 2PM→6PM (off work)

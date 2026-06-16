@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Anonymous Bubble Answers</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
-  <link rel="stylesheet" href="./src/css/style.css?v=3">
+  <link rel="stylesheet" href="./src/css/style.css?v=4">
   <link rel="stylesheet" href="./src/css/interactive.css?v=1">
   <!-- Clay "Bubble Pop" design system: tokens + component library (load last so they govern) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1160,12 +1160,17 @@
     </div>
   </div>
 
-  <!-- Celebration overlay -->
+  <!-- Celebration overlay (off work / lunch break) -->
   <div class="celebration-overlay" id="celebrationOverlay">
-    <div class="celebration-emojis" id="celebrationEmojis">🎉🥳🎊</div>
-    <div class="celebration-text" id="celebrationText">OFF WORK!</div>
-    <div class="celebration-sub" id="celebrationSub">Time to go home! You did great today 💪</div>
-    <button class="celebration-close" id="celebrationClose">Dismiss</button>
+    <div class="celebration-scrim"></div>
+    <div class="celebration-rays"></div>
+    <div class="celebration-fx" id="celebrationFx"></div>
+    <div class="celebration-card">
+      <div class="celebration-emojis" id="celebrationEmojis"><span style="--i:0">🎉</span><span style="--i:1">🥳</span><span style="--i:2">🎊</span></div>
+      <div class="celebration-text" id="celebrationText">OFF WORK!</div>
+      <div class="celebration-sub" id="celebrationSub">Time to go home! You did great today 💪</div>
+      <button class="celebration-close" id="celebrationClose">Let's go! 🎉</button>
+    </div>
   </div>
 
   <!-- What's New overlay — content is driven by WHATS_NEW_CONFIG in the script below -->

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Celebration Preview — Off Work / Lunch Break</title>
+<style>
+  /* ===========================================================
+     PREVIEW ONLY — proposed new "Off Work" + "Lunch Break"
+     celebration. Self-contained; open by double-clicking.
+     Clay "Bubble Pop" vibe · spring easing · staggered entrance
+     · fluttering confetti · type-specific accents · reduced-motion safe.
+     Nothing in the real app changes until you approve this.
+     =========================================================== */
+  :root{
+    --primary:#f2a154; --primary-deep:#d4731f; --accent:#e06377;
+    --surface:#fff7ec; --ink:#3a2a18; --ink-soft:#7a6650;
+    --back-ease:cubic-bezier(.34,1.56,.64,1);
+    font-family:'Baloo 2','Segoe UI',system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; color:#f3ede4;
+    background:
+      radial-gradient(900px 500px at 50% -10%, #3a2c52, transparent 60%),
+      linear-gradient(160deg,#1c1633,#241a2e 60%,#2a1d22);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:26px;
+    padding:32px 18px;
+  }
+
+  /* ── Preview control panel ── */
+  .pv-head{text-align:center; max-width:560px}
+  .pv-head h1{font-size:clamp(20px,5vw,28px); margin:0 0 6px; font-weight:800;
+    background:linear-gradient(90deg,#f7c97e,#e06377,#c8b6ff); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent}
+  .pv-head p{margin:0; color:#bcb0c8; font-size:14px; line-height:1.6}
+  .pv-btns{display:flex; gap:14px; flex-wrap:wrap; justify-content:center}
+  .pv-btn{
+    min-height:52px; padding:14px 26px; border:none; border-radius:16px; cursor:pointer;
+    font:inherit; font-size:16px; font-weight:800; color:#2a1c08;
+    background:linear-gradient(135deg,#ffd58a,#f2a154); box-shadow:0 8px 22px rgba(242,161,84,.38);
+    transition:transform .15s var(--back-ease), filter .15s; touch-action:manipulation;
+  }
+  .pv-btn.lunch{background:linear-gradient(135deg,#ffd27a,#ff9d5c); box-shadow:0 8px 22px rgba(255,157,92,.38)}
+  .pv-btn:hover{filter:brightness(1.04)} .pv-btn:active{transform:scale(.95)}
+  .pv-note{color:#8f86a0; font-size:12px}
+
+  /* ===================== CELEBRATION ===================== */
+  .cel{
+    position:fixed; inset:0; z-index:600; display:none;
+    align-items:center; justify-content:center; overflow:hidden;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .cel.show{display:flex; animation:cel-back .45s ease both}
+  /* warm glow backdrop (theme-tinted per type) */
+  .cel-scrim{
+    position:absolute; inset:0;
+    background:radial-gradient(1100px 700px at 50% 42%, rgba(255,180,90,.30), transparent 60%), rgba(18,12,28,.86);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  }
+  .cel.lunch .cel-scrim{background:radial-gradient(1100px 700px at 50% 42%, rgba(255,170,80,.34), transparent 60%), rgba(26,14,12,.86)}
+  @keyframes cel-back{from{opacity:0}to{opacity:1}}
+
+  /* slow rotating sunburst rays behind the card (off-work only) */
+  .cel-rays{
+    position:absolute; width:150vmax; height:150vmax; left:50%; top:50%; translate:-50% -50%;
+    background:repeating-conic-gradient(from 0deg, rgba(255,200,120,.10) 0deg 8deg, transparent 8deg 16deg);
+    animation:cel-spin 26s linear infinite; opacity:0; transition:opacity .6s;
+  }
+  .cel.offwork.show .cel-rays{opacity:1}
+  @keyframes cel-spin{to{rotate:360deg}}
+
+  /* the clay card springs up */
+  .cel-card{
+    position:relative; z-index:2; width:min(90%,420px); text-align:center;
+    padding:34px 28px 30px; border-radius:28px;
+    background:linear-gradient(180deg,#fffaf2,var(--surface));
+    border:1px solid rgba(255,255,255,.7);
+    box-shadow:0 30px 70px rgba(0,0,0,.45), inset 0 2px 0 rgba(255,255,255,.9);
+    animation:cel-card .6s var(--back-ease) .08s both;
+  }
+  @keyframes cel-card{from{opacity:0; transform:translateY(46px) scale(.82)} to{opacity:1; transform:translateY(0) scale(1)}}
+
+  .cel-emojis{display:flex; gap:10px; justify-content:center; font-size:clamp(40px,11vw,58px); line-height:1; margin-bottom:14px}
+  .cel-emojis span{display:inline-block; animation:
+      cel-pop .55s var(--back-ease) calc(.18s + var(--i)*.12s) both,
+      cel-bob 2.6s ease-in-out calc(.85s + var(--i)*.12s) infinite;
+    filter:drop-shadow(0 6px 8px rgba(0,0,0,.18))}
+  @keyframes cel-pop{0%{opacity:0; transform:scale(0) rotate(-35deg)} 70%{transform:scale(1.18) rotate(6deg)} 100%{opacity:1; transform:scale(1) rotate(0)}}
+  @keyframes cel-bob{0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)}}
+
+  .cel-title{
+    font-size:clamp(34px,9vw,52px); font-weight:900; letter-spacing:.5px; line-height:1.1; margin:2px 0 8px;
+    background:linear-gradient(90deg,#f2a154,#e06377,#9b72cf,#f2a154); background-size:300% 100%;
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+    animation:cel-shimmer 3s linear infinite, cel-title-in .55s var(--back-ease) .28s both;
+  }
+  .cel.lunch .cel-title{background:linear-gradient(90deg,#e8893f,#e0556a,#f2a154,#e8893f); background-size:300% 100%}
+  @keyframes cel-shimmer{to{background-position:300% 50%}}
+  @keyframes cel-title-in{from{opacity:0; transform:scale(.7)} to{opacity:1; transform:scale(1)}}
+
+  .cel-sub{color:var(--ink-soft); font-size:clamp(14px,3.6vw,17px); font-weight:600; margin:0 0 22px; animation:cel-fade-up .5s ease .42s both}
+  @keyframes cel-fade-up{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)}}
+
+  .cel-btn{
+    min-height:52px; padding:14px 40px; border:none; border-radius:16px; cursor:pointer;
+    font:inherit; font-size:17px; font-weight:800; color:#fff; touch-action:manipulation;
+    background:linear-gradient(135deg,var(--primary),var(--primary-deep));
+    box-shadow:0 10px 26px rgba(212,115,31,.5);
+    animation:cel-fade-up .5s ease .54s both, cel-glow 2.4s ease-in-out 1s infinite;
+  }
+  .cel.lunch .cel-btn{background:linear-gradient(135deg,#ff9d5c,#e0556a); box-shadow:0 10px 26px rgba(224,85,106,.5)}
+  .cel-btn:active{transform:scale(.96)}
+  @keyframes cel-glow{0%,100%{box-shadow:0 10px 26px rgba(212,115,31,.45)} 50%{box-shadow:0 12px 34px rgba(242,161,84,.75)}}
+
+  /* particles (confetti + floaters) injected by JS */
+  .cel-fx{position:absolute; inset:0; z-index:3; pointer-events:none; overflow:hidden}
+  .pc{position:absolute; top:-12vh; will-change:transform,opacity; animation:cel-confetti linear forwards}
+  @keyframes cel-confetti{
+    0%{transform:translateY(-12vh) translateX(0) rotate(0); opacity:1}
+    25%{transform:translateY(18vh) translateX(var(--sway)) rotate(180deg)}
+    50%{transform:translateY(46vh) translateX(0) rotate(360deg)}
+    75%{transform:translateY(74vh) translateX(var(--sway)) rotate(560deg)}
+    100%{transform:translateY(112vh) translateX(0) rotate(760deg); opacity:.15}
+  }
+  .pf{position:absolute; bottom:-10vh; font-size:26px; will-change:transform,opacity; animation:cel-float linear forwards; filter:drop-shadow(0 4px 6px rgba(0,0,0,.2))}
+  @keyframes cel-float{
+    0%{transform:translateY(0) translateX(0) rotate(0); opacity:0}
+    12%{opacity:1}
+    100%{transform:translateY(-118vh) translateX(var(--sway)) rotate(var(--spin)); opacity:0}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .cel.show, .cel-card, .cel-emojis span, .cel-title, .cel-sub, .cel-btn{animation-duration:.01ms !important; animation-iteration-count:1 !important}
+    .cel-rays, .pc, .pf{display:none !important}
+  }
+</style>
+</head>
+<body>
+
+  <div class="pv-head">
+    <h1>✨ Celebration Preview</h1>
+    <p>Proposed new <b>Off&nbsp;Work</b> &amp; <b>Lunch&nbsp;Break</b> animation. Tap a button to play it.
+       Tap the celebration's button (or anywhere) to dismiss, then replay.</p>
+  </div>
+  <div class="pv-btns">
+    <button class="pv-btn" onclick="play('offwork')">🏃 Off Work</button>
+    <button class="pv-btn lunch" onclick="play('lunch')">🍜 Lunch Break</button>
+  </div>
+  <div class="pv-note">This is a throwaway preview file — the real app is untouched until you say "go".</div>
+
+  <!-- Celebration -->
+  <div class="cel" id="cel">
+    <div class="cel-scrim"></div>
+    <div class="cel-rays"></div>
+    <div class="cel-fx" id="celFx"></div>
+    <div class="cel-card">
+      <div class="cel-emojis" id="celEmojis"></div>
+      <div class="cel-title" id="celTitle"></div>
+      <div class="cel-sub" id="celSub"></div>
+      <button class="cel-btn" id="celBtn">Let's go! 🎉</button>
+    </div>
+  </div>
+
+<script>
+  const cel = document.getElementById('cel');
+  const fx = document.getElementById('celFx');
+  const CONF = ['#f7c97e','#e06377','#7ec8e3','#c8b6ff','#58c5b5','#f2a154','#9b72cf','#ffd23d','#ff9d5c'];
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const DATA = {
+    offwork:{ emojis:['🎉','🥳','🎊'], title:'OFF WORK!', sub:'Time to go home — you crushed it today 💪', btn:"Let's go home! 🏡", floats:['🎈','✨','🎈','⭐','🎈'] },
+    lunch:{   emojis:['🍜','😋','🍱'], title:'LUNCH TIME!', sub:'Go eat & recharge — enjoy every bite 🍽️',  btn:'Bon appétit! 🍴', floats:['🍙','🍰','🍜','🍱','🍵'] },
+  };
+
+  function spawnConfetti(n){
+    for(let i=0;i<n;i++){
+      const p=document.createElement('div'); p.className='pc';
+      const shape=Math.random(); const c=CONF[(Math.random()*CONF.length)|0];
+      const w=6+Math.random()*8;
+      if(shape<0.4){ p.style.width=w+'px'; p.style.height=w+'px'; p.style.borderRadius='2px'; }
+      else if(shape<0.7){ p.style.width=w+'px'; p.style.height=w+'px'; p.style.borderRadius='50%'; }
+      else { p.style.width=(3+Math.random()*3)+'px'; p.style.height=(12+Math.random()*10)+'px'; p.style.borderRadius='3px'; }
+      p.style.background=c;
+      p.style.left=(Math.random()*100)+'vw';
+      p.style.setProperty('--sway',(Math.random()*90-45)+'px');
+      p.style.animationDuration=(2.4+Math.random()*2.4)+'s';
+      p.style.animationDelay=(Math.random()*1.2)+'s';
+      p.addEventListener('animationend',()=>p.remove());
+      fx.appendChild(p);
+    }
+  }
+  function spawnFloaters(set,n){
+    for(let i=0;i<n;i++){
+      const p=document.createElement('div'); p.className='pf';
+      p.textContent=set[(Math.random()*set.length)|0];
+      p.style.left=(6+Math.random()*88)+'vw';
+      p.style.fontSize=(20+Math.random()*22)+'px';
+      p.style.setProperty('--sway',(Math.random()*120-60)+'px');
+      p.style.setProperty('--spin',(Math.random()*60-30)+'deg');
+      p.style.animationDuration=(3.4+Math.random()*2.6)+'s';
+      p.style.animationDelay=(Math.random()*1.4)+'s';
+      p.addEventListener('animationend',()=>p.remove());
+      fx.appendChild(p);
+    }
+  }
+
+  function play(type){
+    const d=DATA[type];
+    cel.className='cel '+type;                 // reset + theme class
+    fx.innerHTML='';
+    document.getElementById('celEmojis').innerHTML=d.emojis.map((e,i)=>'<span style="--i:'+i+'">'+e+'</span>').join('');
+    document.getElementById('celTitle').textContent=d.title;
+    document.getElementById('celSub').textContent=d.sub;
+    document.getElementById('celBtn').textContent=d.btn;
+    // restart entrance animations
+    void cel.offsetWidth;
+    cel.classList.add('show');
+    if(!reduce){
+      spawnConfetti(120);
+      setTimeout(()=>spawnConfetti(70),900);
+      spawnFloaters(d.floats,14);
+    }
+  }
+  function dismiss(){ cel.classList.remove('show'); }
+  document.getElementById('celBtn').addEventListener('click',dismiss);
+  cel.querySelector('.cel-scrim').addEventListener('click',dismiss);
+</script>
+</body>
+</html>

@@ -1798,77 +1798,98 @@ body.light-theme .spin-result-food { color: #b8860b; }
     margin-top: 6px;
 }
 
-/* ── Celebration overlay ── */
+/* ── Celebration overlay (off work / lunch break) — Clay "Bubble Pop" ── */
 .celebration-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 600;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: rgba(15, 12, 41, 0.92);
-    backdrop-filter: blur(12px);
+    position: fixed; inset: 0; z-index: 600; display: none;
+    align-items: center; justify-content: center; overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
 }
-.celebration-overlay.show { display: flex; }
+.celebration-overlay.show { display: flex; animation: cel-back 0.45s ease both; }
+@keyframes cel-back { from { opacity: 0; } to { opacity: 1; } }
+
+.celebration-scrim {
+    position: absolute; inset: 0;
+    background: radial-gradient(1100px 700px at 50% 42%, rgba(255,180,90,0.30), transparent 60%), rgba(18,12,28,0.86);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+}
+.celebration-overlay.lunch .celebration-scrim {
+    background: radial-gradient(1100px 700px at 50% 42%, rgba(255,170,80,0.34), transparent 60%), rgba(26,14,12,0.86);
+}
+
+/* slow rotating sunburst rays behind the card (off-work only) */
+.celebration-rays {
+    position: absolute; width: 150vmax; height: 150vmax; left: 50%; top: 50%; translate: -50% -50%;
+    background: repeating-conic-gradient(from 0deg, rgba(255,200,120,0.10) 0deg 8deg, transparent 8deg 16deg);
+    animation: cel-spin 26s linear infinite; opacity: 0; transition: opacity 0.6s; pointer-events: none;
+}
+.celebration-overlay.offwork.show .celebration-rays { opacity: 1; }
+@keyframes cel-spin { to { rotate: 360deg; } }
+
+/* the clay card springs up */
+.celebration-card {
+    position: relative; z-index: 2; width: min(90%, 420px); text-align: center;
+    padding: 34px 28px 30px; border-radius: 28px;
+    background: linear-gradient(180deg, #fffaf2, #fff7ec);
+    border: 1px solid rgba(255,255,255,0.7);
+    box-shadow: 0 30px 70px rgba(0,0,0,0.45), inset 0 2px 0 rgba(255,255,255,0.9);
+    animation: cel-card 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.08s both;
+}
+@keyframes cel-card { from { opacity: 0; transform: translateY(46px) scale(0.82); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+.celebration-emojis { display: flex; gap: 10px; justify-content: center; font-size: clamp(40px, 11vw, 58px); line-height: 1; margin-bottom: 14px; }
+.celebration-emojis span {
+    display: inline-block;
+    animation: cel-pop 0.55s cubic-bezier(0.34,1.56,0.64,1) calc(0.18s + var(--i) * 0.12s) both,
+               cel-bob 2.6s ease-in-out calc(0.85s + var(--i) * 0.12s) infinite;
+    filter: drop-shadow(0 6px 8px rgba(0,0,0,0.18));
+}
+@keyframes cel-pop { 0% { opacity: 0; transform: scale(0) rotate(-35deg); } 70% { transform: scale(1.18) rotate(6deg); } 100% { opacity: 1; transform: scale(1) rotate(0); } }
+@keyframes cel-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+
 .celebration-text {
-    font-size: 48px;
-    font-weight: 900;
-    text-align: center;
-    background: linear-gradient(90deg, #f7c97e, #f2a154, #e06377, var(--accent), var(--primary-deep));
-    background-size: 300% 100%;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: celebrate-gradient 2s ease infinite;
-    line-height: 1.3;
+    font-size: clamp(34px, 9vw, 52px); font-weight: 900; letter-spacing: 0.5px; line-height: 1.1; margin: 2px 0 8px;
+    background: linear-gradient(90deg, #f2a154, #e06377, #9b72cf, #f2a154); background-size: 300% 100%;
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    animation: cel-shimmer 3s linear infinite, cel-title-in 0.55s cubic-bezier(0.34,1.56,0.64,1) 0.28s both;
 }
-.celebration-sub {
-    font-size: 20px;
-    color: rgba(255,255,255,0.7);
-    margin-top: 12px;
-}
-.celebration-emojis {
-    font-size: 60px;
-    margin-top: 20px;
-    animation: celebrate-bounce 0.8s ease-in-out infinite alternate;
-}
-@keyframes celebrate-gradient {
-    0%   { background-position: 0% 50%; }
-    50%  { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
-@keyframes celebrate-bounce {
-    from { transform: translateY(0) scale(1); }
-    to   { transform: translateY(-18px) scale(1.1); }
-}
+.celebration-overlay.lunch .celebration-text { background: linear-gradient(90deg, #e8893f, #e0556a, #f2a154, #e8893f); background-size: 300% 100%; }
+@keyframes cel-shimmer { to { background-position: 300% 50%; } }
+@keyframes cel-title-in { from { opacity: 0; transform: scale(0.7); } to { opacity: 1; transform: scale(1); } }
+
+.celebration-sub { color: #7a6650; font-size: clamp(14px, 3.6vw, 17px); font-weight: 600; margin: 0 0 22px; animation: cel-fade-up 0.5s ease 0.42s both; }
+@keyframes cel-fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
 .celebration-close {
-    margin-top: 36px;
-    padding: 14px 36px;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-radius: 16px;
-    background: transparent;
-    color: #fff;
-    font-size: 16px;
-    cursor: pointer;
-    transition: background 0.2s, border-color 0.2s;
+    min-height: 52px; padding: 14px 40px; border: none; border-radius: 16px; cursor: pointer;
+    font-family: inherit; font-size: 17px; font-weight: 800; color: #fff; touch-action: manipulation;
+    background: linear-gradient(135deg, #f2a154, #d4731f); box-shadow: 0 10px 26px rgba(212,115,31,0.5);
+    animation: cel-fade-up 0.5s ease 0.54s both, cel-glow 2.4s ease-in-out 1s infinite;
 }
-.celebration-close:hover {
-    background: rgba(255,255,255,0.1);
-    border-color: rgba(255,255,255,0.5);
+.celebration-overlay.lunch .celebration-close { background: linear-gradient(135deg, #ff9d5c, #e0556a); box-shadow: 0 10px 26px rgba(224,85,106,0.5); }
+.celebration-close:active { transform: scale(0.96); }
+@keyframes cel-glow { 0%, 100% { box-shadow: 0 10px 26px rgba(212,115,31,0.45); } 50% { box-shadow: 0 12px 34px rgba(242,161,84,0.75); } }
+
+/* particles — fluttering confetti + rising floaters (built by spawnConfetti/spawnFloaters) */
+.celebration-fx { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
+.celebration-confetti { position: absolute; top: -12vh; will-change: transform, opacity; animation: cel-confetti linear forwards; }
+@keyframes cel-confetti {
+    0%   { transform: translateY(-12vh) translateX(0) rotate(0); opacity: 1; }
+    25%  { transform: translateY(18vh) translateX(var(--sway)) rotate(180deg); }
+    50%  { transform: translateY(46vh) translateX(0) rotate(360deg); }
+    75%  { transform: translateY(74vh) translateX(var(--sway)) rotate(560deg); }
+    100% { transform: translateY(112vh) translateX(0) rotate(760deg); opacity: 0.15; }
 }
-/* confetti particles */
-.confetti {
-    position: fixed;
-    z-index: 601;
-    width: 10px;
-    height: 10px;
-    border-radius: 2px;
-    pointer-events: none;
-    animation: confetti-fall linear forwards;
+.celebration-float { position: absolute; bottom: -10vh; will-change: transform, opacity; animation: cel-float linear forwards; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2)); }
+@keyframes cel-float {
+    0%   { transform: translateY(0) translateX(0) rotate(0); opacity: 0; }
+    12%  { opacity: 1; }
+    100% { transform: translateY(-118vh) translateX(var(--sway)) rotate(var(--spin)); opacity: 0; }
 }
-@keyframes confetti-fall {
-    0%   { opacity: 1; transform: translateY(-10vh) rotate(0deg); }
-    100% { opacity: 0; transform: translateY(110vh) rotate(720deg); }
+
+@media (prefers-reduced-motion: reduce) {
+    .celebration-overlay.show, .celebration-card, .celebration-emojis span,
+    .celebration-text, .celebration-sub, .celebration-close { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+    .celebration-rays, .celebration-confetti, .celebration-float { display: none !important; }
 }
 
 /* ── Main content offset when sidebar open (desktop) ── */
