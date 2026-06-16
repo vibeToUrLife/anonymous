@@ -1100,10 +1100,25 @@
       return pool.slice(0, Math.min(FARM_CART_WANT_COUNT, pool.length))
         .map(id => ({ id: id, qty: _cartQty(id, visitStart) }));
     }
+    // Freeze the wanted-list ONCE per visit, then reuse it for the rest of that
+    // visit. Without this, _cartBuildWanted re-runs on every render and re-orders
+    // by *current* stock — so selling an item down to 0 swaps a different item
+    // into its slot, and the away "preview" stops matching what the cart actually
+    // buys on arrival. The snapshot is keyed by visitStart and persisted
+    // (roomData.farmCartWanted) so it survives reloads and is identical across the
+    // user's devices and from preview → arrival. (Empty lists — no workshops yet —
+    // are left live so the cart picks up your first workshop's goods right away.)
+    function _cartWantedFor(visitStart) {
+      const snap = roomData.farmCartWanted;
+      if (snap && snap.visitStart === visitStart && Array.isArray(snap.wanted) && snap.wanted.length) return snap.wanted;
+      const wanted = _cartBuildWanted(visitStart);
+      if (wanted.length) roomData.farmCartWanted = { visitStart: visitStart, wanted: wanted };
+      return wanted;
+    }
     // Cart state for `now`: the cart PARKS and waits (present) until you sell to
     // it; after a sale it leaves for FARM_CART_COOLDOWN_MS, then returns.
-    // `farmCartLeftAt` (persisted) = when it last left. Wanted-list is built live
-    // from your current made-goods stock, with stable per-item quotas.
+    // `farmCartLeftAt` (persisted) = when it last left. Wanted-list is frozen per
+    // visit (see _cartWantedFor) so it never changes mid-visit.
     function _farmCart(now) {
       now = now || Date.now();
       const left = roomData.farmCartLeftAt || 0;
@@ -1111,7 +1126,7 @@
       const visitStart = left ? (left + FARM_CART_COOLDOWN_MS) : 0;
       return {
         present: present,
-        wanted: _cartBuildWanted(visitStart),
+        wanted: _cartWantedFor(visitStart),
         visitStart: visitStart,
         nextInMs: present ? 0 : (FARM_CART_COOLDOWN_MS - (now - left)),
       };
@@ -1283,6 +1298,10 @@
       _cartSoldThisVisit = false; _cartSold = {};
       _cartLeaveStart = Date.now();
       _hideCartSheet();
+      // Lock in (and persist via the saveRoom below) the next visit's wanted-list
+      // now, from current stock, so the away preview matches exactly what the cart
+      // buys when it returns.
+      _cartWantedFor(roomData.farmCartLeftAt + FARM_CART_COOLDOWN_MS);
       saveRoom();
       renderFarmPanel();
       if (showNext) setTimeout(function () { if (isFarmView) { _cartSheetOpen = true; renderCartSheet(); } }, CART_LEAVE_MS + 120);

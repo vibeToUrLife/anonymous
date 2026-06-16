@@ -25,6 +25,7 @@
         farmOrdersDone: roomData.farmOrdersDone || [],
         farmMachines: roomData.farmMachines || {},
         farmCartLeftAt: roomData.farmCartLeftAt || 0,
+        farmCartWanted: roomData.farmCartWanted || null,
         farmTroughLevel: roomData.farmTroughLevel || 0,
         plant: roomData.plant,
         plantLevels: roomData.plantLevels,
@@ -181,6 +182,7 @@
         roomData.farmOrdersDone = Array.isArray(d.farmOrdersDone) ? d.farmOrdersDone : [];
         roomData.farmMachines = d.farmMachines || {};
         roomData.farmCartLeftAt = d.farmCartLeftAt || 0;
+        roomData.farmCartWanted = d.farmCartWanted || null;
         roomData.farmTroughLevel = d.farmTroughLevel || 0;
         _roomLoaded = true;
         // Decay hunger based on elapsed time (1% per 10 min)
