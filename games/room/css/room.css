@@ -743,6 +743,11 @@
     .panel-wrap.farm-mode .tabs,.panel-wrap.farm-mode .tab-panel{display:none}
     .panel-wrap.farm-mode .farm-panel{display:block}
     .panel-wrap.farm-mode .panel-inner{background:transparent}
+    /* Aquarium mode — same durable hide as farm-mode, but shows ONLY #aquariumPanel
+       (both panels share the .farm-panel class, so target by id here). */
+    .panel-wrap.aquarium-mode .tabs,.panel-wrap.aquarium-mode .tab-panel{display:none !important}
+    .panel-wrap.aquarium-mode #aquariumPanel{display:block}
+    .panel-wrap.aquarium-mode .panel-inner{background:transparent}
 
     /* Farm's own tab bar — splits the long farm page into sections */
     .farm-tabs{display:flex;gap:6px;margin-bottom:11px}
@@ -874,6 +879,9 @@
     .ws-ctl{flex-shrink:0}
     .ws-status{font-size:12px;color:var(--g-ink-soft);text-align:center;line-height:1.5;margin:6px 0 10px}
     .ws-slot-no{font-weight:800;font-size:12px;color:var(--g-accent-2)}
+    .ws-slot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 4px;border-top:1px dotted var(--g-border)}
+    .ws-slot:first-of-type{border-top:none}
+    .ws-slot-state{font-weight:700;font-size:13px;color:var(--g-ink)}
     /* 4-square slot grid */
     .ws-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0 12px}
     .ws-cell{
@@ -1054,3 +1062,51 @@
       #petStatusBar button { min-height: 44px; }                     /* tricks · collection · close */
       #petStatusName { min-height: 44px; }
     }
+
+    /* ── Aquarium roster & completion bars ── */
+    .aq-bar-row { display:flex; align-items:center; gap:8px; margin:4px 0; }
+    .aq-bar-label { font-size:11px; font-weight:700; min-width:96px; }
+    .aq-bar-row .farm-herd-bar { flex:1; }
+    .aq-roster {
+      display:grid; grid-template-columns:repeat(auto-fill, minmax(72px, 1fr));
+      gap:8px;
+    }
+    .aq-fish-card {
+      background:var(--g-slot); border:1px solid var(--g-border); border-radius:12px;
+      padding:6px 4px; text-align:center; cursor:pointer;
+      transition:background .15s, border-color .15s, transform .1s;
+    }
+    .aq-fish-card:hover { background:var(--g-hover); }
+    .aq-fish-card:active { transform:scale(.97); }
+    .aq-fish-card.placed { border-color:var(--g-accent); background:rgba(251,146,60,.10); }
+    .aq-fish-card.locked { cursor:default; opacity:.85; }
+    .aq-fish-card.locked:hover { background:var(--g-slot); }
+    .aq-fish-canvas { display:block; margin:0 auto; width:64px; height:44px; }
+    .aq-fish-name { font-size:10px; font-weight:700; color:var(--g-ink); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .aq-fish-card.locked .aq-fish-name { color:var(--g-ink-faint); }
+    .aq-fish-tag { font-size:8px; text-transform:uppercase; letter-spacing:.5px; color:var(--g-ink-soft); margin-top:1px; }
+    .aq-fish-card.placed .aq-fish-tag { color:var(--g-accent); }
+
+    /* Aquarium theme picker */
+    .aq-themes { display:flex; flex-wrap:wrap; gap:6px; }
+    .aq-theme-btn {
+      flex:1; min-width:72px; padding:7px 6px; font-size:11px; font-weight:700;
+      border:1px solid var(--g-border); border-radius:10px; cursor:pointer;
+      background:var(--g-slot); color:var(--g-ink); transition:background .15s, border-color .15s;
+    }
+    .aq-theme-btn:hover { background:var(--g-hover); }
+    .aq-theme-btn.active { border-color:var(--g-accent); background:rgba(251,146,60,.12); color:var(--g-accent); }
+
+    /* Mini-game row: play button + small ℹ️ info button */
+    .aq-game-row { display:flex; gap:6px; align-items:stretch; margin-bottom:6px; }
+    .aq-game-row:last-child { margin-bottom:0; }
+    .aq-game-row .farm-shop-buy { margin:0; }
+    .aq-info-btn {
+      flex:0 0 auto; width:36px; border:1px solid var(--g-border); border-radius:10px;
+      background:var(--g-slot); color:var(--g-ink-soft); font-size:13px; cursor:pointer;
+      transition:background .15s, color .15s, border-color .15s;
+    }
+    .aq-info-btn:hover { background:var(--g-hover); color:var(--g-accent); border-color:var(--g-accent); }
+    /* Tutorial modal bullet list */
+    .aq-tut-list { margin:6px 0 12px; padding-left:18px; text-align:left; font-size:12px; color:var(--g-ink-soft); line-height:1.7; }
+    .aq-tut-list li { margin-bottom:3px; }

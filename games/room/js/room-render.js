@@ -17,8 +17,9 @@
       document.getElementById('pageTitle').textContent = isOwner ? 'My Room' : name + "'s Room";
       document.getElementById('ownerName').textContent = isOwner ? ('Welcome, ' + name) : '';
 
-      // Tabs visibility (hidden while the farm — with its own tab bar — is open)
-      document.getElementById('tabsBar').style.display = (isOwner && !isFarmView) ? 'flex' : 'none';
+      // Tabs visibility (hidden while the farm or aquarium — each with its own
+      // panel — is open; both views replace the room's tab bar)
+      document.getElementById('tabsBar').style.display = (isOwner && !isFarmView && !(typeof isAquariumView !== 'undefined' && isAquariumView)) ? 'flex' : 'none';
       document.querySelectorAll('.tab-panel').forEach(p => {
         if (!isOwner) p.classList.remove('active');
       });

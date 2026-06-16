@@ -28,6 +28,12 @@
         farmCartWanted: roomData.farmCartWanted || null,
         farmCartSold: roomData.farmCartSold || null,
         farmTroughLevel: roomData.farmTroughLevel || 0,
+        aquariumFish: roomData.aquariumFish || [],
+        aquariumTheme: roomData.aquariumTheme || 'tropical',
+        aquariumLastCollect: roomData.aquariumLastCollect || 0,
+        aquariumRaceDay: roomData.aquariumRaceDay || '',
+        aquariumBubbleDay: roomData.aquariumBubbleDay || '',
+        aquariumFrenzyAt: roomData.aquariumFrenzyAt || 0,
         plant: roomData.plant,
         plantLevels: roomData.plantLevels,
         ownedPlants: roomData.ownedPlants,
@@ -203,6 +209,12 @@
         roomData.autoFeeder = d.autoFeeder || false;
         roomData.autoFeedOn = d.autoFeedOn || false;
         roomData.farmAnimals = Array.isArray(d.farmAnimals) ? d.farmAnimals : [];
+        roomData.aquariumFish = Array.isArray(d.aquariumFish) ? d.aquariumFish : [];
+        roomData.aquariumTheme = d.aquariumTheme || 'tropical';
+        roomData.aquariumLastCollect = d.aquariumLastCollect || 0;
+        roomData.aquariumRaceDay = d.aquariumRaceDay || '';
+        roomData.aquariumBubbleDay = d.aquariumBubbleDay || '';
+        roomData.aquariumFrenzyAt = d.aquariumFrenzyAt || 0;
         roomData.farmDrops = Array.isArray(d.farmDrops) ? d.farmDrops : [];
         roomData.farmDecors = Array.isArray(d.farmDecors) ? d.farmDecors : [];
         roomData.farmFood = d.farmFood || 0;
@@ -332,6 +344,7 @@
       try {
         const v = new URLSearchParams(location.search).get('view');
         if (v === 'farm' && viewingUid === currentUid && typeof openFarm === 'function') openFarm();
+        else if (v === 'aquarium' && viewingUid === currentUid && typeof openAquarium === 'function') openAquarium();
       } catch (e) { /* ignore malformed URL */ }
     }
 
@@ -363,7 +376,7 @@
       _unsubscribeRoomSnap();
       if (unsubVisitList) { unsubVisitList(); unsubVisitList = null; }
       // Reset roomData to defaults for clean account switch
-      roomData = { coins: 0, petDrops: [], petCollections: {}, autoFeeder: false, autoFeedOn: false, farmAnimals: [], farmDrops: [], farmDecors: [], farmFood: 0, farmFoodAt: 0, farmStock: {}, farmTotalCollected: 0, farmCapLevel: 0, farmAutoCollect: false, farmVariants: {}, farmPlots: [], farmOrdersDay: '', farmOrdersDone: [], farmMachines: {}, farmCartLeftAt: 0, farmTroughLevel: 0, pets: [], plant: null, plantLevels: {}, plantPosition: null, ownedPlants: [], ownedDecors: [], placedDecors: [], ownedWalls: ['wall_default'], wallPattern: 'wall_default', ownedWindows: ['win_none','win_classic'], windowStyle: 'win_classic', ownedFloors: ['floor_wood'], floorStyle: 'floor_wood', ownedAccessories: [], displayName: getPlayerName(), lastCoinCollect: 0, loginStreak: 0, lastLoginDay: '', achievements: [], gachaPulls: 0, giftsGiven: 0, giftsReceived: 0, jukeboxTrack: null, jukeboxVol: 0.5, unlockedLayers: 1, layerData: {} };
+      roomData = { coins: 0, petDrops: [], petCollections: {}, autoFeeder: false, autoFeedOn: false, farmAnimals: [], farmDrops: [], farmDecors: [], farmFood: 0, farmFoodAt: 0, farmStock: {}, farmTotalCollected: 0, farmCapLevel: 0, farmAutoCollect: false, farmVariants: {}, farmPlots: [], farmOrdersDay: '', farmOrdersDone: [], farmMachines: {}, farmCartLeftAt: 0, farmTroughLevel: 0, aquariumFish: [], aquariumTheme: 'tropical', aquariumLastCollect: 0, aquariumRaceDay: '', aquariumBubbleDay: '', aquariumFrenzyAt: 0, pets: [], plant: null, plantLevels: {}, plantPosition: null, ownedPlants: [], ownedDecors: [], placedDecors: [], ownedWalls: ['wall_default'], wallPattern: 'wall_default', ownedWindows: ['win_none','win_classic'], windowStyle: 'win_classic', ownedFloors: ['floor_wood'], floorStyle: 'floor_wood', ownedAccessories: [], displayName: getPlayerName(), lastCoinCollect: 0, loginStreak: 0, lastLoginDay: '', achievements: [], gachaPulls: 0, giftsGiven: 0, giftsReceived: 0, jukeboxTrack: null, jukeboxVol: 0.5, unlockedLayers: 1, layerData: {} };
       // Reset to floor 1 when re-initialising (e.g. account switch)
       currentLayer = 1;
       isOutsideView = false;

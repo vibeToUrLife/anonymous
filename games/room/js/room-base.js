@@ -322,6 +322,21 @@
     const FARM_PRODUCE_CAP = 20;                   // max uncollected produce per ANIMAL TYPE — production pauses at this until you collect
     const FARM_OFFLINE_CAP_MS = 3 * 60 * 60 * 1000;  // offline (not in farm): animals bank up to 3h of produce, then wait for a collect
     const FARM_OFFLINE_MODAL_MS = 60 * 60 * 1000;    // only show the "while you were away" collect modal after ≥1h away
+
+    // ── Aquarium (idle coins + themes) ──
+    const AQUARIUM_IDLE_RATES = { common: 3, rare: 9, epic: 18, legendary: 36 }; // coins/hr per placed fish (3× base); junk earns 0
+    const AQUARIUM_OFFLINE_CAP_MS = 3 * 60 * 60 * 1000;   // bank up to 3h of idle coins while away
+    const AQUARIUM_OFFLINE_MODAL_MS = 60 * 60 * 1000;     // ≥1h away → show the "while you were away" collect modal
+    const AQUARIUM_FRENZY_COOLDOWN_MS = 5 * 60 * 1000;   // Feeding Frenzy: 5-min cooldown
+    const AQUARIUM_FRENZY_MS = 15000;                    // Feeding Frenzy round length (ms)
+    const AQUARIUM_BUBBLE_MS = 20000;                    // Bubble Pop round length (ms)
+    const AQUARIUM_RACE_STAKES = [10, 50, 100];          // Fish Race bet options
+    const AQUARIUM_THEMES = [
+      { id: 'tropical', name: '🏝️ Tropical',   grad: ['#1a3a5c', '#15406a', '#0a1e38'], caustic: '100,200,255' },
+      { id: 'abyss',    name: '🌑 Deep Abyss',  grad: ['#0a2230', '#06303a', '#02141c'], caustic: '70,170,180' },
+      { id: 'sunset',   name: '🌅 Sunset Reef',  grad: ['#3a2350', '#5a2a4a', '#231229'], caustic: '255,150,120' },
+      { id: 'moonlit',  name: '🌙 Moonlit',     grad: ['#243150', '#33406a', '#141a2e'], caustic: '150,175,225' },
+    ];
     const FARM_CYCLE_SLOW_MS = 6 * 60 * 60 * 1000; // production cycle at happiness 0
     const FARM_CYCLE_FAST_MS = 2 * 60 * 60 * 1000; // production cycle at happiness 100
     const FARM_START_HAPPINESS = 60;               // happiness of a newly bought animal
@@ -628,6 +643,12 @@
       { id: 'ach_farm_1k',       icon: '🌾', name: 'Master Farmer',      desc: 'Collect 1,000 produce',       check: (d) => (d.farmTotalCollected || 0) >= 1000 },
       { id: 'ach_farm_lv5',      icon: '⭐', name: 'Prize Livestock',    desc: 'Raise a farm animal to Lv5',  check: (d) => (d.farmAnimals || []).some(a => animalLevel(a.collected, FARM_LEVELS) >= 5) },
       { id: 'ach_farm_expand',   icon: '🏞️', name: 'Land Baron',         desc: 'Expand your farm',            check: (d) => (d.farmCapLevel || 0) >= 1 },
+      { id: 'ach_aqua_first',  icon: '🐠', name: 'First Fish',     desc: 'Place your first fish in the aquarium', check: (d) => (d.aquariumFish || []).length >= 1 },
+      { id: 'ach_aqua_common', icon: '🐟', name: 'Reef Regular',   desc: 'Place every common fish',  check: (d) => FISH_TYPES.filter(f => f.rarity === 'common').every(f => (d.aquariumFish || []).includes(f.name)) },
+      { id: 'ach_aqua_rare',   icon: '🐡', name: 'Deep Sea Diver', desc: 'Place every rare fish',    check: (d) => FISH_TYPES.filter(f => f.rarity === 'rare').every(f => (d.aquariumFish || []).includes(f.name)) },
+      { id: 'ach_aqua_epic',   icon: '🦈', name: 'Apex Tank',      desc: 'Place every epic fish',    check: (d) => FISH_TYPES.filter(f => f.rarity === 'epic').every(f => (d.aquariumFish || []).includes(f.name)) },
+      { id: 'ach_aqua_legend', icon: '🐉', name: 'Legend Keeper',  desc: 'Place every legendary fish', check: (d) => FISH_TYPES.filter(f => f.rarity === 'legendary').every(f => (d.aquariumFish || []).includes(f.name)) },
+      { id: 'ach_aqua_100',    icon: '🏆', name: 'Aquarist 100%',  desc: 'Place every catchable fish', check: (d) => FISH_TYPES.filter(f => f.rarity !== 'junk').every(f => (d.aquariumFish || []).includes(f.name)) },
     ];
 
     /* ═══════════════════════════════
