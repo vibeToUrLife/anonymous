@@ -19,6 +19,8 @@
     let _plantQty = 1;           // how many plots the "Plant N" button fills at once
     let _farmHerdCollapsed = null; // null = auto; true/false once the user toggles
     const FARM_HERD_COLLAPSE_AT = 4; // herd longer than this auto-collapses the list
+    let _farmProduceCollapsed = null; // null = auto; true/false once the user toggles
+    const FARM_PRODUCE_COLLAPSE_AT = 4; // produce list longer than this auto-collapses
     let _farmButcherConfirmId = null; // animal id awaiting butcher confirmation
     let _cartSheetOpen = false;       // merchant-cart sell sheet visible?
     let _cartSold = {};               // units sold per item this visit (enforces the quota)
@@ -459,10 +461,17 @@
             '<button class="farm-shop-buy" style="width:100%;margin-top:6px" onclick="openCartSheet()">Open cart →</button>'
           : '<div class="farm-cart-status">🛒 Sold out & rolled on — back in <b>' + _fmtFarmTime(cart.nextInMs) + '</b>.</div>' +
             '<div class="farm-panel-empty" style="padding-top:4px">It buys a different set each visit — stock up!</div>');
+      // Produce list is collapsible (it grows as you collect more types).
+      const _produceCollapsed = _farmProduceCollapsed == null ? stockIds.length > FARM_PRODUCE_COLLAPSE_AT : _farmProduceCollapsed;
       const stockHtml =
         cartHtml +
-        '<div class="farm-section-title" style="margin-top:12px">📦 Produce</div>' +
-        (!stockIds.length
+        '<div class="farm-section-title farm-collapse-head" style="margin-top:12px" onclick="toggleFarmProduce()">' +
+          '<span>📦 Produce <small>(' + stockIds.length + ')</small></span>' +
+          '<span class="farm-collapse-arrow">' + (_produceCollapsed ? '▸' : '▾') + '</span>' +
+        '</div>' +
+        (_produceCollapsed
+          ? ''
+          : !stockIds.length
           ? '<div class="farm-panel-empty">Tap produce on the farm to collect it here.</div>'
           : stockIds.map(id => {
               const m = meta[id] || { emoji: '❓', name: id };
@@ -945,6 +954,15 @@
       const n = (roomData.farmAnimals || []).length;
       const cur = _farmHerdCollapsed == null ? n > FARM_HERD_COLLAPSE_AT : _farmHerdCollapsed;
       _farmHerdCollapsed = !cur;
+      renderFarmPanel();
+    }
+
+    // Collapse / expand the produce list (UI-only, not persisted).
+    function toggleFarmProduce() {
+      const stock = roomData.farmStock || {};
+      const n = Object.keys(stock).filter(k => stock[k] > 0).length;
+      const cur = _farmProduceCollapsed == null ? n > FARM_PRODUCE_COLLAPSE_AT : _farmProduceCollapsed;
+      _farmProduceCollapsed = !cur;
       renderFarmPanel();
     }
 
