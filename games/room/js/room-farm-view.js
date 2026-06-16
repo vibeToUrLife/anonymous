@@ -20,7 +20,6 @@
     const FARM_HERD_COLLAPSE_AT = 4; // herd longer than this auto-collapses the list
     let _farmButcherConfirmId = null; // animal id awaiting butcher confirmation
     let _cartSheetOpen = false;       // merchant-cart sell sheet visible?
-    let _cartSoldThisVisit = false;   // sold to the cart this visit → it leaves on close
     let _cartSold = {};               // units sold per item this visit (enforces the quota)
     let _cartVisitKey = -1;           // visitStart of the run _cartSold belongs to
     let _cartLeaveStart = 0;          // Date.now() when the wagon began rolling off (0 = not leaving)
@@ -224,7 +223,6 @@
 
     function openFarm() {
       isFarmView = true;
-      _cartSoldThisVisit = false;
       document.getElementById('farmView')?.classList.add('visible');
       _setFarmPanelMode(true);
       _syncRoomPanel();   // hide the side panel; widens the stage before we draw
@@ -1300,15 +1298,15 @@
       if (el) el.style.display = 'none';
     }
     function closeCartSheet() {
-      // Sold via single taps this visit → roll the cart off (no auto next-modal).
-      if (_cartSoldThisVisit) { _departCart(false); return; }
+      // Closing never sends the plane off — it stays parked until you've sold
+      // everything it wants (auto-leaves) or you tap "Send it off".
       _hideCartSheet();
     }
     // Send the cart off: start the roll-off animation + 4h cooldown. showNext pops
     // the next-cart info modal once the wagon has left.
     function _departCart(showNext) {
       roomData.farmCartLeftAt = Date.now();
-      _cartSoldThisVisit = false; _cartSold = {};
+      _cartSold = {};
       _cartLeaveStart = Date.now();
       _hideCartSheet();
       // Lock in (and persist via the saveRoom below) the next visit's wanted-list
@@ -1392,12 +1390,15 @@
       roomData.coins += price;
       roomData.farmStock[prodId] = (roomData.farmStock[prodId] || 0) - 1;
       _cartSold[prodId] = (_cartSold[prodId] || 0) + 1;
-      _cartSoldThisVisit = true;   // cart leaves when the sheet is closed
       await saveRoom();
       const m = farmProductMeta()[prodId];
       showToast('Sold 1 ' + (m ? m.emoji + ' ' + m.name : prodId) + ' for ' + price + '🪙', 'success');
       checkAchievements();
-      renderCartSheet(); renderFarmPanel(); renderAll();
+      renderFarmPanel(); renderAll();
+      // Sold everything it wanted → the plane flies off (new one in 4h);
+      // otherwise keep the sheet open so you can sell/make the rest.
+      if (cart.wanted.every(w => (w.qty - (_cartSold[w.id] || 0)) <= 0)) _departCart(true);
+      else renderCartSheet();
     }
     async function sellAllToCart() {
       if (viewingUid !== currentUid) return;
@@ -1412,10 +1413,17 @@
       if (!sold) return showToast('Nothing the cart wants right now.', '');
       roomData.coins += total;
       roomData.farmStock = stock;
-      showToast('🛒 Sold ' + sold + ' items for ' + total + '🪙! The cart rolls on.', 'success');
       checkAchievements();
-      renderFarmPanel(); renderAll();
-      _departCart(true);   // roll-off animation, then show the next-cart modal
+      // Fully fulfilled → the plane flies off (new one in 4h); otherwise it stays
+      // so you can finish the rest (or tap "Send it off").
+      if (cart.wanted.every(w => (w.qty - (_cartSold[w.id] || 0)) <= 0)) {
+        showToast('🛒 Sold ' + sold + ' items for ' + total + '🪙! Off it goes.', 'success');
+        renderFarmPanel(); renderAll();
+        return _departCart(true);
+      }
+      await saveRoom();
+      showToast('🛒 Sold ' + sold + ' items for ' + total + '🪙.', 'success');
+      renderCartSheet(); renderFarmPanel(); renderAll();
     }
 
     // ── RGB coat preview — a little gallery of each animal's rainbow variant ──
