@@ -32,7 +32,7 @@
     let _workshopModalId = null;      // which machine's modal is open
     let _makeChoiceSlot = null;       // slot index currently choosing a recipe (or null)
     let _slotConfirm = false;         // awaiting confirmation to open (buy) a new slot
-    const FARM_CART_X = 0.84, FARM_CART_Y = 0.50; // where the cart parks (normalized)
+    const FARM_CART_X = 0.84, FARM_CART_Y = 0.24; // where the sky merchant plane hovers (normalized; up in the sky band)
 
     // Trough position on the pasture (normalized)
     const FARM_TROUGH_X = 0.14, FARM_TROUGH_Y = 0.58;
@@ -1132,57 +1132,70 @@
       };
     }
 
-    // Draw the parked merchant wagon. offsetX/alpha let the render loop slide it
-    // off-screen + fade it for the leave animation.
+    // Draw the parked sky merchant — a little propeller plane that hovers in the
+    // sky and waits, trailing a "Tap to sell!" banner. offsetX/alpha let the
+    // render loop fly it off-screen + fade it for the leave animation. (Was a
+    // ground wagon; restyled to an aeroplane that stops in the sky.)
     function _drawMerchantCart(ctx, W, H, t, offsetX, alpha) {
-      const cx = (FARM_CART_X + (offsetX || 0)) * W, cy = FARM_CART_Y * H;
-      const s = Math.max(40, Math.min(W, H) * 0.11);
+      const s = Math.max(44, Math.min(W, H) * 0.12);
+      const hover = Math.sin(t / 600) * (s * 0.08);
+      const cx = (FARM_CART_X + (offsetX || 0)) * W, cy = FARM_CART_Y * H + hover;
       ctx.save();
       if (alpha != null) ctx.globalAlpha = alpha;
-      ctx.fillStyle = 'rgba(30,62,20,.22)';                      // ground shadow
-      ctx.beginPath(); ctx.ellipse(cx, cy + s * 0.44, s * 0.58, s * 0.14, 0, 0, Math.PI * 2); ctx.fill();
-      // wheels
-      [-s * 0.28, s * 0.28].forEach(dx => {
-        ctx.fillStyle = '#5b3a22'; ctx.beginPath(); ctx.arc(cx + dx, cy + s * 0.36, s * 0.16, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#caa46a'; ctx.beginPath(); ctx.arc(cx + dx, cy + s * 0.36, s * 0.06, 0, Math.PI * 2); ctx.fill();
-      });
-      // body
-      ctx.fillStyle = '#9b6b3f';
-      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(cx - s * 0.44, cy - s * 0.06, s * 0.88, s * 0.44, s * 0.07); ctx.fill(); }
-      ctx.fillStyle = 'rgba(0,0,0,.12)';
-      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(cx - s * 0.44, cy + s * 0.18, s * 0.88, s * 0.20, s * 0.06); ctx.fill(); }
-      // striped awning + scalloped edge
-      const ax = cx - s * 0.5, ay = cy - s * 0.42, seg = s / 5;
-      for (let i = 0; i < 5; i++) { ctx.fillStyle = i % 2 ? '#fff' : '#e8533f'; ctx.fillRect(ax + i * seg, ay, seg, s * 0.18); }
-      for (let i = 0; i < 5; i++) { ctx.fillStyle = i % 2 ? '#fff' : '#e8533f'; ctx.beginPath(); ctx.arc(ax + (i + 0.5) * seg, ay + s * 0.18, s * 0.05, 0, Math.PI); ctx.fill(); }
-      // produce basket
-      ctx.font = Math.round(s * 0.36) + 'px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('🧺', cx, cy + s * 0.12);
-      // floating prompt
-      const bob = Math.sin(t / 300) * 3;
-      ctx.font = '800 ' + Math.round(Math.max(11, s * 0.17)) + 'px sans-serif';
-      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.fillStyle = '#fff';
-      ctx.strokeText('Tap to sell!', cx, cy - s * 0.64 + bob);
-      ctx.fillText('Tap to sell!', cx, cy - s * 0.64 + bob);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      // Trailing banner streaming out behind (to the left), advertising the sale
+      const bnW = s * 1.1, bnH = s * 0.32, bnX = cx - s * 0.62 - bnW, bnY = cy - bnH / 2;
+      const flap = Math.sin(t / 180) * (s * 0.05);
+      ctx.strokeStyle = 'rgba(70,50,30,.55)'; ctx.lineWidth = Math.max(1, s * 0.025);
+      ctx.beginPath(); ctx.moveTo(cx - s * 0.5, cy); ctx.lineTo(bnX + bnW, bnY + bnH / 2 + flap * 0.5); ctx.stroke();
+      ctx.fillStyle = '#e8533f';
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(bnX, bnY + flap, bnW, bnH, bnH * 0.28); ctx.fill(); }
+      else ctx.fillRect(bnX, bnY + flap, bnW, bnH);
+      ctx.font = '800 ' + Math.round(Math.max(9, s * 0.15)) + 'px sans-serif'; ctx.fillStyle = '#fff';
+      ctx.fillText('Tap to sell!', bnX + bnW / 2, bnY + bnH / 2 + flap);
+      // Tail fin (rear-left)
+      ctx.fillStyle = '#c2402f';
+      ctx.beginPath(); ctx.moveTo(cx - s * 0.38, cy + s * 0.02); ctx.lineTo(cx - s * 0.6, cy - s * 0.32); ctx.lineTo(cx - s * 0.28, cy - s * 0.05); ctx.closePath(); ctx.fill();
+      // Main wing (swept, under the belly)
+      ctx.fillStyle = '#caa46a';
+      ctx.beginPath(); ctx.moveTo(cx + s * 0.02, cy + s * 0.04); ctx.lineTo(cx - s * 0.26, cy + s * 0.34); ctx.lineTo(cx + s * 0.2, cy + s * 0.12); ctx.closePath(); ctx.fill();
+      // Fuselage
+      ctx.fillStyle = '#f7eedd';
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(cx - s * 0.48, cy - s * 0.16, s * 0.9, s * 0.32, s * 0.16); ctx.fill(); }
+      else { ctx.beginPath(); ctx.ellipse(cx - s * 0.03, cy, s * 0.45, s * 0.16, 0, 0, Math.PI * 2); ctx.fill(); }
+      // Red nose cap (right tip)
+      ctx.fillStyle = '#e8533f';
+      ctx.beginPath(); ctx.arc(cx + s * 0.4, cy, s * 0.16, -Math.PI / 2, Math.PI / 2); ctx.fill();
+      // Cockpit + passenger windows
+      ctx.fillStyle = '#8fd3ff';
+      for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(cx - s * 0.26 + i * s * 0.17, cy - s * 0.01, s * 0.05, 0, Math.PI * 2); ctx.fill(); }
+      // Spinning propeller at the nose
+      ctx.save();
+      ctx.translate(cx + s * 0.56, cy); ctx.rotate(t / 28);
+      ctx.strokeStyle = 'rgba(55,38,22,.85)'; ctx.lineWidth = Math.max(2, s * 0.045); ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(0, -s * 0.17); ctx.lineTo(0, s * 0.17); ctx.moveTo(-s * 0.17, 0); ctx.lineTo(s * 0.17, 0); ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = '#5b3a22'; ctx.beginPath(); ctx.arc(cx + s * 0.56, cy, s * 0.045, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
     }
 
-    // Draw a signpost where the cart parks while it's AWAY — tap it for the
-    // countdown + what the next cart will want.
+    // While the plane is AWAY, mark its sky parking spot with a small cloud + a
+    // ✈️ and the return countdown — tap it for the next-flight info.
     function _drawCartAway(ctx, W, H, t, cart) {
-      const cx = FARM_CART_X * W, cy = FARM_CART_Y * H, s = Math.max(34, Math.min(W, H) * 0.095);
+      const s = Math.max(34, Math.min(W, H) * 0.1);
+      const hover = Math.sin(t / 700) * (s * 0.06);
+      const cx = FARM_CART_X * W, cy = FARM_CART_Y * H + hover;
       ctx.save();
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillStyle = 'rgba(30,62,20,.18)';                       // shadow
-      ctx.beginPath(); ctx.ellipse(cx, cy + s * 0.42, s * 0.4, s * 0.1, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#7a5230';                                  // post
-      ctx.fillRect(cx - s * 0.05, cy - s * 0.28, s * 0.1, s * 0.7);
-      ctx.fillStyle = '#caa46a';                                  // sign board
-      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(cx - s * 0.42, cy - s * 0.52, s * 0.84, s * 0.4, s * 0.06); ctx.fill(); }
-      ctx.fillStyle = 'rgba(0,0,0,.12)'; if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(cx - s * 0.42, cy - s * 0.18, s * 0.84, s * 0.06, s * 0.03); ctx.fill(); }
-      ctx.font = Math.round(s * 0.24) + 'px serif'; ctx.fillText('🛒', cx, cy - s * 0.4);
-      ctx.font = '800 ' + Math.round(Math.max(9, s * 0.13)) + 'px sans-serif'; ctx.fillStyle = '#4a3320';
-      ctx.fillText(_fmtFarmTime(cart.nextInMs), cx, cy - s * 0.22);
+      // puffy cloud
+      ctx.fillStyle = 'rgba(255,255,255,.9)';
+      [[-0.34, 0.06, 0.24], [-0.02, -0.05, 0.3], [0.32, 0.06, 0.24], [0, 0.16, 0.28]].forEach(p => {
+        ctx.beginPath(); ctx.arc(cx + p[0] * s, cy + p[1] * s, p[2] * s, 0, Math.PI * 2); ctx.fill();
+      });
+      // ✈️ + return countdown
+      ctx.font = Math.round(s * 0.34) + 'px serif'; ctx.fillText('✈️', cx, cy - s * 0.05);
+      ctx.font = '800 ' + Math.round(Math.max(9, s * 0.2)) + 'px sans-serif'; ctx.fillStyle = '#3f5d7a';
+      ctx.fillText(_fmtFarmTime(cart.nextInMs), cx, cy + s * 0.24);
       ctx.restore();
     }
 
@@ -1190,14 +1203,14 @@
     // tap zone (cart at x 0.84, r 0.14) so taps never collide.
     function _workshopPos(slot) { return { x: 0.22 + slot * 0.11, y: 0.45 }; }
 
-    // Zones animals must not walk into: owned machine huts + the cart (when here).
+    // Zones animals must not walk into: owned machine huts. (The merchant is now
+    // an aeroplane that hovers in the sky, so it no longer blocks the pasture.)
     function _farmBlockedZones() {
       const zones = [];
       const machines = roomData.farmMachines || {};
       FARM_MACHINES.forEach((m, slot) => {
         if (machines[m.id] && machines[m.id].owned) { const p = _workshopPos(slot); zones.push({ x: p.x, y: p.y, r: 0.10 }); }
       });
-      if (_farmCart().present) zones.push({ x: FARM_CART_X, y: FARM_CART_Y, r: 0.08 });
       return zones;
     }
     function _inBlocked(x, y, zones, pad) {
@@ -2181,19 +2194,6 @@
         }
         _drawPenLabels(ctx, W, H, _pens.list, night);   // pen name tabs on top of the herd
 
-        // Merchant cart: rolling-off animation → present wagon → away signpost
-        if (viewingUid === currentUid) {
-          const _cartS = _farmCart();
-          if (_cartLeaveStart && Date.now() - _cartLeaveStart < CART_LEAVE_MS) {
-            const lp = (Date.now() - _cartLeaveStart) / CART_LEAVE_MS;
-            _drawMerchantCart(ctx, W, H, t, lp * 0.55, 1 - lp * 0.85);  // roll right + fade
-          } else {
-            if (_cartLeaveStart) _cartLeaveStart = 0;
-            if (_cartS.present) _drawMerchantCart(ctx, W, H, t);
-            else _drawCartAway(ctx, W, H, t, _cartS);
-          }
-        }
-
         // Floating particles (hearts, +coins)
         _farmParticles = _farmParticles.filter(p => t - p.born < p.life);
         for (const p of _farmParticles) {
@@ -2207,6 +2207,20 @@
         }
 
         if (!night) _drawClouds(ctx, W, H, t);
+
+        // Sky merchant plane — drawn LAST so drifting clouds never hide the
+        // tappable prompt: fly-off animation → hovering plane → away cloud.
+        if (viewingUid === currentUid) {
+          const _cartS = _farmCart();
+          if (_cartLeaveStart && Date.now() - _cartLeaveStart < CART_LEAVE_MS) {
+            const lp = (Date.now() - _cartLeaveStart) / CART_LEAVE_MS;
+            _drawMerchantCart(ctx, W, H, t, lp * 0.7, 1 - lp * 0.9);  // fly right + fade
+          } else {
+            if (_cartLeaveStart) _cartLeaveStart = 0;
+            if (_cartS.present) _drawMerchantCart(ctx, W, H, t);
+            else _drawCartAway(ctx, W, H, t, _cartS);
+          }
+        }
         _farmAnimFrame = requestAnimationFrame(frame);
       }
       _farmAnimFrame = requestAnimationFrame(frame);
