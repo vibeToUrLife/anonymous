@@ -146,6 +146,14 @@
         { key: 'cross',  name: 'Cross',  body: '#5a4636', belly: '#dcc6a0', ear: '#241c15', leg: '#201a14' },
         { key: 'fennec', name: 'Fennec', body: '#e8c98a', belly: '#fff6e6', ear: '#b9925c', leg: '#a87f4e' },
       ],
+      panda: [
+        // Color = the panda's skin/fur (body + head). Markings stay black so it still reads as a panda.
+        { key: 'classic', name: 'Classic',  body: '#ffffff', patch: '#333333' },
+        { key: 'brown',   name: 'Brown',    body: '#c8975c', patch: '#333333' },
+        { key: 'pink',    name: 'Pink',     body: '#f7a8c4', patch: '#333333' },
+        { key: 'blue',    name: 'Sky Blue', body: '#8fb6ef', patch: '#333333' },
+        { key: 'mint',    name: 'Mint',     body: '#8ed9b2', patch: '#333333' },
+      ],
     };
 
     function getPetPalette(type, colorKey) {
