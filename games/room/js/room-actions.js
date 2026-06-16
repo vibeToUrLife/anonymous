@@ -899,6 +899,10 @@
       roomData.farmOrdersDay = d.farmOrdersDay || '';
       roomData.farmOrdersDone = Array.isArray(d.farmOrdersDone) ? d.farmOrdersDone : [];
       roomData.farmMachines = d.farmMachines || {};
+      // Mirror the host's aquarium (read-only; placing/liking are gated separately).
+      roomData.aquariumFish = Array.isArray(d.aquariumFish) ? d.aquariumFish : [];
+      roomData.aquariumTheme = d.aquariumTheme || 'tropical';
+      roomData.aquariumLikes = d.aquariumLikes || 0;
       // Load multi-layer data for visited room (visitor starts on floor 1)
       roomData.unlockedLayers = d.unlockedLayers ?? 1;
       const rawLayerData = d.layerData ? JSON.parse(JSON.stringify(d.layerData)) : {};

@@ -57,7 +57,7 @@ service cloud.firestore {
                     || (isAuth()
                         && request.resource.data.diff(resource.data)
                            .affectedKeys()
-                           .hasOnly(['coins', 'giftsReceived']));
+                           .hasOnly(['coins', 'giftsReceived', 'aquariumLikes']));
       allow delete: if false;
 
       match /guestbook/{msgId} {
