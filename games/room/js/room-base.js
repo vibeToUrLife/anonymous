@@ -232,6 +232,7 @@
       cookie:  { emoji: '🍪', name: 'Cookie',  coins: 95 },
       pie:     { emoji: '🥧', name: 'Pie',     coins: 200 },
       cake:    { emoji: '🍰', name: 'Cake',    coins: 260 },
+      carrotcake: { emoji: '🧁', name: 'Carrot Cake', coins: 220 },
       pancake: { emoji: '🥞', name: 'Pancake', coins: 160 },
       sausage:  { emoji: '🌭', name: 'Sausage',  coins: 130 },
       bacon:    { emoji: '🥓', name: 'Bacon',    coins: 180 },
@@ -279,7 +280,7 @@
       { id: 'oven', emoji: '🍰', name: 'Cake Oven', cost: 5000, recipes: [
         { in: { egg: 2, milk: 1 }, out: { id: 'cake',    qty: 1 }, timeMs: 60 * M },
         { in: { egg: 1, corn: 1 }, out: { id: 'pancake', qty: 1 }, timeMs: 35 * M },
-        { in: { carrot: 2 },       out: { id: 'cake',    qty: 1 }, timeMs: 45 * M },  // carrot cake
+        { in: { carrot: 2 },       out: { id: 'carrotcake', qty: 1 }, timeMs: 45 * M },  // carrot cake
       ] },
       { id: 'butcher', emoji: '🔪', name: 'Butcher', cost: 2500, recipes: [
         { in: { meat: 1 }, out: { id: 'sausage', qty: 1 }, timeMs: 20 * M },
