@@ -996,3 +996,61 @@
     .cp-plant:hover{filter:brightness(1.05)}
     .cp-plant:active{transform:scale(.98)}
     .cp-plant:disabled{opacity:.4;cursor:not-allowed;filter:none}
+
+    /* ============================================================
+       Mobile tap-target compliance (Apple HIG 44px / Material 48dp).
+       Appended last so it overrides earlier rules without editing them.
+       · touch-action is global (no layout effect, kills the 300ms tap delay)
+       · size bumps are scoped to touch input via @media (pointer: coarse),
+         so desktop (mouse) layout is completely unchanged.
+       ============================================================ */
+    button, a, input, textarea, select, [onclick], [role="button"] {
+      touch-action: manipulation;
+    }
+    @media (pointer: coarse) {
+      /* Tabs + in-flow / full-width / list-row buttons → at least 44px tall.
+         (Width comes from flex/100%, so height is the only thing to raise.) */
+      .back-btn, .outside-back-btn, .tab-btn, .sub-tab, .decor-tab, .farm-tab,
+      .lb-tab, .shop-btn, .panel-shortcut-btn, .panel-toggle,
+      .settings-logout-btn, .settings-close-btn, .daily-close, .achieve-close,
+      .gacha-close, .lb-close, .swap-close, .gift-close, .gift-amt,
+      .gb-send-btn, .gb-reply-btn, .gb-reply-send,
+      .farm-shop-buy, .farm-produce-btn, .farm-visit-home, .farm-collapse-head,
+      .farm-visit-row, .ws-recipe, .jukebox-track, .cp-max {
+        min-height: 44px;
+      }
+      /* Full-width text buttons: vertically center the label now they're taller. */
+      .shop-btn, .settings-logout-btn, .settings-close-btn {
+        display: flex; align-items: center; justify-content: center;
+      }
+      /* Square / icon-disc buttons → at least 44×44 in both dimensions. */
+      .achieve-x-btn, .jukebox-btn, .cp-step, .ws-cell, .farm-mini-btn,
+      .food-btn, .gb-sticker-btn {
+        min-width: 44px; min-height: 44px;
+      }
+      /* Fixed top-right discs (settings / achievements): expand only the HIT
+         AREA via a transparent centered overlay — no resize, no reflow, no
+         collision with the neighbouring disc or the coin pill. */
+      .settings-btn::after, .achieve-header-btn::after {
+        content: ""; position: absolute; inset: -4px;
+      }
+      /* Comfortable spacing (>=8px) between adjacent targets; let the sticker
+         row wrap so 44px stickers never overflow. */
+      .panel-shortcuts, .gb-sticker-row, .jukebox-controls,
+      .lb-tabs, .farm-tabs, .cart-grid { gap: 8px; }
+      .gb-sticker-row { flex-wrap: wrap; }
+    }
+    /* Very narrow phones: 4-col produce/cart grids → 3 cols so 44px cells
+       never overflow horizontally. */
+    @media (max-width: 330px) {
+      .cart-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    /* Pet status bar — its controls are rendered inline by JS (no class), so
+       target them by their container ids to reach 44px on touch. */
+    @media (pointer: coarse) {
+      #petStatusColors { gap: 8px; }
+      #petStatusColors > div { min-width: 44px; min-height: 44px; }  /* colour swatches */
+      #petStatusTricksBtns { gap: 8px; }
+      #petStatusBar button { min-height: 44px; }                     /* tricks · collection · close */
+      #petStatusName { min-height: 44px; }
+    }
