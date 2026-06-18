@@ -755,6 +755,19 @@
       </div>
       <hr class="settings-divider">
       <div class="settings-section">
+        <div class="settings-label">🐾 Walking Pet</div>
+        <div class="settings-select walk-pet-select" id="walkPetSelect">
+          <button data-pet="hamster">🐹 Hamster</button>
+          <button data-pet="cat">🐱 Cat</button>
+          <button data-pet="dog">🐶 Dog</button>
+          <button data-pet="bunny">🐰 Bunny</button>
+          <button data-pet="fox">🦊 Fox</button>
+          <button data-pet="panda">🐼 Panda</button>
+          <button data-pet="off">🚫 Hide</button>
+        </div>
+      </div>
+      <hr class="settings-divider">
+      <div class="settings-section">
         <div class="settings-label">Data</div>
         <button class="settings-cache-btn" id="clearCacheBtn">🗑️ Clear Local Cache</button>
       </div>
@@ -1018,61 +1031,10 @@
     <button class="remove-preview" id="removePreview" title="Remove image">✕</button>
   </div>
 
-  <!-- Decorative walking pet (view-only, same for all players) -->
-  <div class="walking-pet walking" aria-hidden="true">
-    <svg class="pet-cat-svg" width="48" height="44" viewBox="0 0 48 44" xmlns="http://www.w3.org/2000/svg">
-      <!-- Zzz for sleeping (hidden by default via CSS) -->
-      <text class="cat-svg-zzz" x="4" y="6" font-size="7" fill="rgba(255,255,255,0.7)" font-weight="bold">z</text>
-      <text class="cat-svg-zzz" x="0" y="11" font-size="5" fill="rgba(255,255,255,0.5)" font-weight="bold">z</text>
-      <!-- Tail (behind body) -->
-      <path class="cat-svg-tail" d="M38,22 C42,18 46,12 42,8" stroke="#e8941e" stroke-width="3" fill="none" stroke-linecap="round"/>
-      <!-- Body -->
-      <ellipse cx="22" cy="24" rx="14" ry="10" fill="#f5a623"/>
-      <!-- Body stripe markings -->
-      <path d="M16,18 Q18,16 20,18" stroke="#d4871a" stroke-width="1" fill="none" opacity="0.5"/>
-      <path d="M22,17 Q24,15 26,17" stroke="#d4871a" stroke-width="1" fill="none" opacity="0.5"/>
-      <!-- Head group (for lick animation) -->
-      <g class="cat-svg-head-group">
-        <!-- Head -->
-        <ellipse cx="14" cy="14" rx="10" ry="9" fill="#f5a623"/>
-        <!-- Left ear -->
-        <polygon points="6,8 4,0 10,5" fill="#f5a623"/>
-        <polygon points="6.5,7 5.5,2.5 9,5.5" fill="#ffb6c1"/>
-        <!-- Right ear -->
-        <polygon points="22,8 24,0 18,5" fill="#f5a623"/>
-        <polygon points="21.5,7 22.5,2.5 19,5.5" fill="#ffb6c1"/>
-        <!-- Eyes -->
-        <ellipse class="cat-svg-eye-l" cx="10" cy="13" rx="2.2" ry="2.5" fill="#2d2d2d"/>
-        <ellipse class="cat-svg-eye-r" cx="18" cy="13" rx="2.2" ry="2.5" fill="#2d2d2d"/>
-        <!-- Eye shine -->
-        <circle cx="10.8" cy="12" r="0.9" fill="#fff"/>
-        <circle cx="18.8" cy="12" r="0.9" fill="#fff"/>
-        <!-- Nose -->
-        <ellipse cx="14" cy="16.5" rx="1.5" ry="1" fill="#ffb6c1"/>
-        <!-- Mouth -->
-        <path d="M14,17.5 Q12,19.5 11,18.5" stroke="#d4871a" stroke-width="0.8" fill="none" stroke-linecap="round"/>
-        <path d="M14,17.5 Q16,19.5 17,18.5" stroke="#d4871a" stroke-width="0.8" fill="none" stroke-linecap="round"/>
-        <!-- Whiskers -->
-        <line x1="2" y1="14" x2="8" y2="15.5" stroke="rgba(0,0,0,0.2)" stroke-width="0.6"/>
-        <line x1="1" y1="16.5" x2="8" y2="16.5" stroke="rgba(0,0,0,0.2)" stroke-width="0.6"/>
-        <line x1="20" y1="15.5" x2="26" y2="14" stroke="rgba(0,0,0,0.2)" stroke-width="0.6"/>
-        <line x1="20" y1="16.5" x2="27" y2="16.5" stroke="rgba(0,0,0,0.2)" stroke-width="0.6"/>
-        <!-- Cheek blush -->
-        <circle cx="8" cy="16" r="2" fill="#ffcdd2" opacity="0.4"/>
-        <circle cx="20" cy="16" r="2" fill="#ffcdd2" opacity="0.4"/>
-      </g>
-      <!-- Front legs -->
-      <rect class="cat-svg-leg-fl" x="12" y="32" width="3.5" height="7" rx="1.5" fill="#d4871a"/>
-      <rect class="cat-svg-leg-fr" x="18" y="32" width="3.5" height="7" rx="1.5" fill="#d4871a"/>
-      <!-- Back legs -->
-      <rect class="cat-svg-leg-bl" x="26" y="32" width="3.5" height="7" rx="1.5" fill="#d4871a"/>
-      <rect class="cat-svg-leg-br" x="31" y="32" width="3.5" height="7" rx="1.5" fill="#d4871a"/>
-      <!-- Paws -->
-      <ellipse class="cat-svg-paw-fl" cx="13.75" cy="39" rx="2.2" ry="1.2" fill="#f5d89a"/>
-      <ellipse class="cat-svg-paw-fr" cx="19.75" cy="39" rx="2.2" ry="1.2" fill="#f5d89a"/>
-      <ellipse class="cat-svg-paw-bl" cx="27.75" cy="39" rx="2.2" ry="1.2" fill="#f5d89a"/>
-      <ellipse class="cat-svg-paw-br" cx="32.75" cy="39" rx="2.2" ry="1.2" fill="#f5d89a"/>
-    </svg>
+  <!-- Decorative walking pet (view-only). Animal is chosen in Settings → Walking Pet;
+       it's rendered on a canvas using the shared games/pets/*.js art. -->
+  <div class="walking-pet" aria-hidden="true">
+    <canvas class="pet-canvas" style="display:block"></canvas>
   </div>
 
   <div class="input-area">
@@ -1213,7 +1175,7 @@
   <script src="./src/js/quote-comments.js"></script>
   <!-- Clay design system theme controller (must load before app.js wires the toggle) -->
   <script src="./src/js/theme.js"></script>
-  <script src="./src/js/app.js?v=4"></script>
+  <script src="./src/js/app.js?v=5"></script>
   <!-- Live, interactive board features (load after app.js for shared db/auth) -->
   <script src="./src/js/board-live-logic.js"></script>
   <script src="./src/js/presence.js"></script>
@@ -1225,6 +1187,15 @@
   <!-- Coin sinks: cosmetics shop / gacha / slot / boost (金币乐园) -->
   <script src="./src/js/coin-spend-logic.js"></script>
   <script src="./src/js/coin-center.js"></script>
+
+  <!-- Walking-pet animal art (shared with the room pets) -->
+  <script src="./games/pets/shared.js"></script>
+  <script src="./games/pets/cat.js"></script>
+  <script src="./games/pets/dog.js"></script>
+  <script src="./games/pets/bunny.js"></script>
+  <script src="./games/pets/fox.js"></script>
+  <script src="./games/pets/panda.js"></script>
+  <script src="./games/pets/hamster.js"></script>
   <script>
     // Initialize daily quote banner
     (function() {
@@ -1440,27 +1411,48 @@
     (function() {
       'use strict';
       var pet = document.querySelector('.walking-pet');
-      if (!pet) return;
+      var canvas = pet && pet.querySelector('.pet-canvas');
+      if (!pet || !canvas) return;
+
+      /* ── Available animals → their shared drawer (pets/*.js). Hidden = 'off'. ── */
+      var DRAWERS = {
+        cat:     typeof drawCatPet     === 'function' ? drawCatPet     : null,
+        dog:     typeof drawDogPet     === 'function' ? drawDogPet     : null,
+        bunny:   typeof drawBunnyPet   === 'function' ? drawBunnyPet   : null,
+        fox:     typeof drawFoxPet     === 'function' ? drawFoxPet     : null,
+        panda:   typeof drawPandaPet   === 'function' ? drawPandaPet   : null,
+        hamster: typeof drawHamsterPet === 'function' ? drawHamsterPet : null
+      };
+      /* Each animal's little speech-bubble sounds on click. */
+      var SOUNDS = {
+        cat:     ['Meow~', 'Mew!', 'Purr~', 'Nya~', 'Mrrp!'],
+        dog:     ['Woof!', 'Arf!', 'Bork!', 'Wuff~'],
+        bunny:   ['*hop*', 'Squeak!', 'Nibble~'],
+        fox:     ['Yip!', 'Ring~', 'Skree!'],
+        panda:   ['Munch~', '*rolls*', 'Maa~'],
+        hamster: ['Squeak!', '*nibble*', 'Eep!']
+      };
+
+      /* ── Canvas setup (crisp on retina) ── */
+      var CW = 84, CH = 66, BASE_X = 42, BASE_Y = 50, PET_S = 36;
+      var ctx = canvas.getContext('2d');
+      var DPR = Math.min(2, window.devicePixelRatio || 1);
+      canvas.width = CW * DPR; canvas.height = CH * DPR;
+      canvas.style.width = CW + 'px'; canvas.style.height = CH + 'px';
+      ctx.scale(DPR, DPR);
 
       /* ── Config ── */
       var WALK_SPEED = 70;        /* pixels per second */
       var RUN_SPEED = 180;        /* pixels per second when running */
-      /* Idle actions: name → duration in ms */
-      var ACTIONS = {
-        sitting:    3000,
-        licking:    2800,
-        sleeping:   5000,
-        jumping:    700,
-        stretching: 2600,
-        looking:    2600
-      };
-      var ACTION_KEYS = Object.keys(ACTIONS);
       var IDLE_CHANCE_EDGE = 0.4;   /* chance to idle when reaching an edge */
-      var IDLE_CHANCE_MID  = 0.008; /* per-frame chance to idle mid-walk */
+      var IDLE_CHANCE_MID  = 0.006; /* per-frame chance to idle mid-walk */
       var RUN_CHANCE       = 0.15;  /* chance to start running instead of walking */
       var MIN_WALK_PX = 80;
+      var IDLE_MIN = 1800, IDLE_MAX = 4200;   /* idle duration range (ms) */
 
       /* ── State ── */
+      var animal = 'cat';
+      var enabled = true;
       var posX = -50;
       var facingRight = true;
       var state = 'walk'; /* walk | run | idle */
@@ -1469,102 +1461,120 @@
       var lastTime = performance.now();
       var rafId = null;
       var walkStepTimer = 0;      /* accumulates time to check mid-walk idle */
+      var idleUntil = 0, idleAction = 'sit', idleFlip = false;  /* sit | sleep */
+      var reactUntil = 0;         /* click-bounce active until this timestamp */
 
-      /* Apply position & direction */
-      function applyPos() {
-        pet.style.left = posX + 'px';
-        pet.style.transform = facingRight ? 'scaleX(-1)' : 'scaleX(1)';
+      /* ── Preference (Settings → Walking Pet) ── */
+      function loadPref() {
+        var v = null;
+        try { v = localStorage.getItem('walk_pet'); } catch (e) {}
+        if (v === 'off') { enabled = false; }
+        else if (v && DRAWERS[v]) { animal = v; enabled = true; }
+        else { animal = 'cat'; enabled = true; }
       }
+      function setAnimal(v) {
+        if (v === 'off') { enabled = false; }
+        else if (DRAWERS[v]) { animal = v; enabled = true; }
+        else { return; }
+        applyEnabled();
+      }
+      function applyEnabled() {
+        pet.style.display = enabled ? '' : 'none';
+        if (enabled) { lastTime = performance.now(); if (!rafId) rafId = requestAnimationFrame(tick); }
+        else if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+      }
+
+      function applyPos() { pet.style.left = posX + 'px'; }
 
       /* Pick a new walk target */
       function pickTarget() {
         var w = window.innerWidth;
         if (facingRight) {
-          targetX = Math.min(w + 10, posX + MIN_WALK_PX + Math.random() * (w - posX));
+          targetX = Math.min(w + 10, posX + MIN_WALK_PX + Math.random() * Math.max(40, w - posX));
         } else {
           targetX = Math.max(-55, posX - MIN_WALK_PX - Math.random() * (posX + 55));
         }
       }
 
-      /* Clear all action classes */
-      function clearClasses() {
-        pet.classList.remove('walking', 'running');
-        ACTION_KEYS.forEach(function(k) { pet.classList.remove(k); });
-      }
-
       /* Start walking or running */
       function startWalk() {
-        clearClasses();
         var run = Math.random() < RUN_CHANCE;
         state = run ? 'run' : 'walk';
         currentSpeed = run ? RUN_SPEED : WALK_SPEED;
-        pet.classList.add(run ? 'running' : 'walking');
         walkStepTimer = 0;
         pickTarget();
       }
 
-      /* Perform an idle action */
+      /* Stand still (or curl up to sleep) for a while */
       function doIdle(flipAfter) {
-        var key = ACTION_KEYS[Math.floor(Math.random() * ACTION_KEYS.length)];
-        clearClasses();
         state = 'idle';
-        pet.classList.add(key);
+        idleAction = Math.random() < 0.4 ? 'sleep' : 'sit';
+        var dur = IDLE_MIN + Math.random() * (IDLE_MAX - IDLE_MIN);
+        if (idleAction === 'sleep') dur += 1500;
+        idleUntil = performance.now() + dur;
+        idleFlip = flipAfter;
+      }
 
-        /* Close eyes when sleeping */
-        if (key === 'sleeping') {
-          var eyeL = pet.querySelector('.cat-svg-eye-l');
-          var eyeR = pet.querySelector('.cat-svg-eye-r');
-          if (eyeL) eyeL.setAttribute('ry', '0.8');
-          if (eyeR) eyeR.setAttribute('ry', '0.8');
+      /* Draw the current animal onto the canvas */
+      function render(now) {
+        var drawer = DRAWERS[animal] || DRAWERS.cat;
+        ctx.clearRect(0, 0, CW, CH);
+        if (!drawer) return;
+        var moving = (state === 'walk' || state === 'run');
+        var legPhase = moving ? now / (state === 'run' ? 60 : 110) : 0;
+        var action = (state === 'idle' && idleAction === 'sleep') ? 'sleep' : '';
+        ctx.save();
+        ctx.translate(BASE_X, BASE_Y);
+        if (now < reactUntil) {               /* happy bounce on click */
+          var bob = Math.sin((1 - (reactUntil - now) / 360) * Math.PI) * 0.18;
+          ctx.scale(1 + bob, 1 + bob);
+          ctx.translate(0, -bob * 6);
         }
-
-        setTimeout(function() {
-          /* Restore eyes */
-          var eyeL = pet.querySelector('.cat-svg-eye-l');
-          var eyeR = pet.querySelector('.cat-svg-eye-r');
-          if (eyeL) eyeL.setAttribute('ry', '2.5');
-          if (eyeR) eyeR.setAttribute('ry', '2.5');
-
-          if (flipAfter) facingRight = !facingRight;
-          startWalk();
-        }, ACTIONS[key]);
+        if (!facingRight) ctx.scale(-1, 1);   /* pets are drawn facing right */
+        drawer(ctx, PET_S, legPhase, moving, 100, action, 0, now, null);
+        ctx.restore();
       }
 
       /* Main animation loop */
       function tick(now) {
+        if (!enabled) { rafId = null; return; }
         var dt = (now - lastTime) / 1000;
         lastTime = now;
+        if (dt > 0.1) dt = 0.1;
 
         if (state === 'walk' || state === 'run') {
           var dir = facingRight ? 1 : -1;
           posX += dir * currentSpeed * dt;
           applyPos();
 
-          /* Check mid-walk idle (only for normal walk) */
           if (state === 'walk') {
             walkStepTimer += dt;
             if (walkStepTimer > 1.5 && Math.random() < IDLE_CHANCE_MID) {
               doIdle(false);
-              rafId = requestAnimationFrame(tick);
-              return;
             }
           }
 
-          /* Reached target or edge */
-          var reachedEdge = (facingRight && posX >= targetX) || (!facingRight && posX <= targetX);
-          var offScreen = posX > window.innerWidth + 10 || posX < -55;
-
-          if (reachedEdge || offScreen) {
-            if (!offScreen && Math.random() < IDLE_CHANCE_EDGE) {
-              doIdle(true);
-            } else {
-              facingRight = !facingRight;
-              startWalk();
-              applyPos();
+          if (state !== 'idle') {
+            var reachedEdge = (facingRight && posX >= targetX) || (!facingRight && posX <= targetX);
+            var offScreen = posX > window.innerWidth + 10 || posX < -55;
+            if (reachedEdge || offScreen) {
+              if (!offScreen && Math.random() < IDLE_CHANCE_EDGE) {
+                doIdle(true);
+              } else {
+                facingRight = !facingRight;
+                startWalk();
+                applyPos();
+              }
             }
+          }
+        } else if (state === 'idle') {
+          if (now >= idleUntil) {
+            if (idleFlip) facingRight = !facingRight;
+            startWalk();
           }
         }
 
+        render(now);
         rafId = requestAnimationFrame(tick);
       }
 
@@ -1572,56 +1582,44 @@
       document.addEventListener('visibilitychange', function() {
         if (document.hidden) {
           if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-        } else {
+        } else if (enabled) {
           lastTime = performance.now();
           if (!rafId) rafId = requestAnimationFrame(tick);
         }
       });
 
-      /* ── Click interaction ── */
-      var MEOW_TEXTS = ['Meow~', 'Mew!', 'Purr~', 'Nya~', 'Mrrp!', '♪ Meow', 'Miao~'];
-      var clickCooldown = false;
-
-      pet.addEventListener('click', function(e) {
-        if (clickCooldown) return;
-        clickCooldown = true;
-
-        /* Show meow bubble */
+      /* ── Click interaction: sound bubble + hearts + bounce ── */
+      pet.addEventListener('click', function() {
+        reactUntil = performance.now() + 360;
+        var sounds = SOUNDS[animal] || SOUNDS.cat;
         var bubble = document.createElement('div');
         bubble.className = 'cat-meow-bubble';
-        bubble.textContent = MEOW_TEXTS[Math.floor(Math.random() * MEOW_TEXTS.length)];
+        bubble.textContent = sounds[Math.floor(Math.random() * sounds.length)];
         pet.appendChild(bubble);
         setTimeout(function() { bubble.remove(); }, 1900);
 
-        /* Happy jump reaction */
-        clearClasses();
-        pet.classList.add('click-react');
-        state = 'idle';
-
-        /* Spawn heart particles */
         for (var i = 0; i < 3; i++) {
           var heart = document.createElement('div');
           heart.className = 'cat-heart';
           heart.textContent = '❤️';
-          heart.style.left = (10 + Math.random() * 28) + 'px';
-          heart.style.top = (5 + Math.random() * 10) + 'px';
+          heart.style.left = (16 + Math.random() * 28) + 'px';
+          heart.style.top = (4 + Math.random() * 10) + 'px';
           heart.style.setProperty('--hx', (Math.random() * 20 - 10) + 'px');
           heart.style.animationDelay = (i * 0.15) + 's';
           pet.appendChild(heart);
           (function(h) { setTimeout(function() { h.remove(); }, 1400); })(heart);
         }
-
-        setTimeout(function() {
-          pet.classList.remove('click-react');
-          startWalk();
-          clickCooldown = false;
-        }, 800);
       });
 
+      /* Let Settings change the animal (or hide it) live */
+      window.addEventListener('walkpetchange', function(e) { setAnimal(e.detail); });
+      window.setWalkingPet = setAnimal;
+
       /* Start */
-      startWalk();
+      loadPref();
       applyPos();
-      rafId = requestAnimationFrame(tick);
+      startWalk();
+      applyEnabled();
     })();
   </script>
 </body>

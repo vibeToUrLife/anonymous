@@ -1141,6 +1141,10 @@ body {
 }
 .settings-select button:hover:not(.active) { background: rgba(255,255,255,0.08); }
 
+/* Walking-pet picker has 7 options — let them wrap into rows of ~3 */
+.walk-pet-select { flex-wrap: wrap; }
+.walk-pet-select button { flex: 1 1 28%; font-size: 12px; }
+
 /* Clear cache button */
 .settings-cache-btn {
     width: 100%; padding: 10px; border: 1px solid rgba(255,255,255,0.1);
@@ -1963,7 +1967,7 @@ body.sidebar-open .bubble-wrap {
 /* ── Walking pet on bottom bar ── */
 .walking-pet {
     position: fixed;
-    bottom: 68px;
+    bottom: 88px;
     left: 0;
     z-index: 99;
     cursor: pointer;

@@ -2079,6 +2079,7 @@ settingsBtn.addEventListener('click', () => {
     settingsNameInput.value = (auth.currentUser ? localStorage.getItem('flappy_custom_name_' + auth.currentUser.uid) : null) || auth.currentUser?.displayName || '';
     settingsNameStatus.textContent = '';
     updateFontSizeBtns();
+    updateWalkPetBtns();
     settingsOverlay.classList.remove('hidden');
 });
 document.getElementById('settingsCloseBtn').addEventListener('click', () => {
@@ -2302,6 +2303,21 @@ document.getElementById('fontSizeSelect').addEventListener('click', (e) => {
 animToggle.addEventListener('change', () => {
     document.body.classList.toggle('no-animations', !animToggle.checked);
     localStorage.setItem('animations', animToggle.checked ? '1' : '0');
+});
+
+// Walking-pet picker (Hide / cat / dog / bunny / fox / panda / hamster)
+function updateWalkPetBtns() {
+    const cur = localStorage.getItem('walk_pet') || 'cat';
+    document.querySelectorAll('#walkPetSelect button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.pet === cur);
+    });
+}
+document.getElementById('walkPetSelect').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    localStorage.setItem('walk_pet', btn.dataset.pet);
+    window.dispatchEvent(new CustomEvent('walkpetchange', { detail: btn.dataset.pet }));
+    updateWalkPetBtns();
 });
 
 // Clear cache button
