@@ -80,8 +80,12 @@ auth.onAuthStateChanged(async (user) => {
     // Watch this account's read-watermark so a notice read on another device clears here too.
     if (_notifReadUnsub) { _notifReadUnsub(); _notifReadUnsub = null; }
     _notifReadUnsub = db.collection('rooms').doc(user.uid).onSnapshot((snap) => {
-        const ts = (snap.exists && snap.data().notifReadTs) || 0;
+        if (!snap.exists) return;
+        const d = snap.data();
+        const ts = d.notifReadTs || 0;
         if (ts > notifReadTs) applyRemoteReadTs(ts);
+        // Preferences set on another device → apply here too.
+        if (d.settings) applyAccountSettings(d.settings);
     }, () => {});
     } else {
     loginOverlay.classList.remove('hidden');
@@ -152,6 +156,11 @@ let maxLoadedTs = 0;        // newest bubble/reply ts currently on the board
 let _lastItems = [];        // last rendered items (to look up a bubble by id)
 let _notifReadUnsub = null; // rooms/{uid} watermark listener
 let _notifWriteTimer = null;// debounce for watermark writes
+// ── Account-synced settings (theme, font, animations, walking pet, sound, push) ──
+// Mirrored to rooms/{uid}.settings so preferences follow the account across devices.
+// localStorage stays the instant-load cache; the server value wins on login/live sync.
+let _settingsWriteTimer = null;
+let _lastSettingsJson = null;  // last settings we wrote/applied — ignores our own echo
 
 /* ── Local cache helpers ── */
 function cacheSet(key, data) {
@@ -2225,64 +2234,39 @@ settingsNameSaveBtn.addEventListener('click', async () => {
     }
 });
 
-// Notification toggle inside settings
+// Notification toggle inside settings.
+// Central commit so every path also syncs the preference to the account.
+function commitNotif(on, msg) {
+    notifEnabled = on;
+    localStorage.setItem('notif_enabled', on ? '1' : '0');
+    if (msg) showToast(msg, 'success');
+    syncSettingsToAccount();
+}
 notifToggle.addEventListener('change', () => {
-    if (notifToggle.checked) {
-    // Check if browser supports Notification API
-    if (!('Notification' in window)) {
-        // No native push support (e.g. iOS Safari) — still enable in-app alerts
-        notifEnabled = true;
-        localStorage.setItem('notif_enabled', '1');
-        showToast('In-app notifications enabled! 🔔', 'success');
-        return;
+    if (!notifToggle.checked) { commitNotif(false, 'Notifications disabled'); return; }
+    // Turning ON
+    if (!('Notification' in window)) {            // e.g. iOS Safari — in-app alerts only
+    commitNotif(true, 'In-app notifications enabled! 🔔');
+    return;
     }
     if (Notification.permission === 'denied') {
-        notifToggle.checked = false;
-        showToast('Notifications blocked — enable in browser settings', 'error');
-        return;
+    notifToggle.checked = false;
+    showToast('Notifications blocked — enable in browser settings', 'error');
+    return;
     }
-    if (Notification.permission === 'default') {
-        // Request permission — handle both promise and callback styles
-        try {
-        const result = Notification.requestPermission((perm) => {
-            if (perm !== 'granted') {
-            notifToggle.checked = false;
-            showToast('Notifications blocked by browser', 'error');
-            return;
-            }
-            notifEnabled = true;
-            localStorage.setItem('notif_enabled', '1');
-            showToast('Notifications enabled! 🔔', 'success');
-        });
-        // Modern browsers return a promise
-        if (result && result.then) {
-            result.then((perm) => {
-            if (perm !== 'granted') {
-                notifToggle.checked = false;
-                showToast('Notifications blocked by browser', 'error');
-            } else {
-                notifEnabled = true;
-                localStorage.setItem('notif_enabled', '1');
-                showToast('Notifications enabled! 🔔', 'success');
-            }
-            });
-        }
-        } catch {
-        notifEnabled = true;
-        localStorage.setItem('notif_enabled', '1');
-        showToast('Notifications enabled! 🔔', 'success');
-        }
-        return;
+    if (Notification.permission === 'granted') {
+    commitNotif(true, 'Notifications enabled! 🔔');
+    return;
     }
-    // permission === 'granted'
-    notifEnabled = true;
-    localStorage.setItem('notif_enabled', '1');
-    showToast('Notifications enabled! 🔔', 'success');
-    } else {
-    notifEnabled = false;
-    localStorage.setItem('notif_enabled', '0');
-    showToast('Notifications disabled', 'success');
-    }
+    // permission === 'default' → ask (handle both promise and callback styles)
+    const onPerm = (perm) => {
+    if (perm !== 'granted') { notifToggle.checked = false; showToast('Notifications blocked by browser', 'error'); }
+    else commitNotif(true, 'Notifications enabled! 🔔');
+    };
+    try {
+    const result = Notification.requestPermission(onPerm);
+    if (result && result.then) result.then(onPerm);
+    } catch { commitNotif(true, 'Notifications enabled! 🔔'); }
 });
 
 // Sound toggle
@@ -2290,6 +2274,7 @@ soundToggle.addEventListener('change', () => {
     soundEnabled = soundToggle.checked;
     localStorage.setItem('sound_enabled', soundEnabled ? '1' : '0');
     showToast(soundEnabled ? 'Sound on 🔊' : 'Sound muted 🔇', 'success');
+    syncSettingsToAccount();
 });
 
 // Theme toggle (light / dark) — routed through the Theme controller so it sets
@@ -2298,6 +2283,7 @@ themeToggle.addEventListener('change', () => {
     const t = themeToggle.checked ? 'light' : 'dark';
     if (window.Theme) Theme.setTheme(t);
     else { document.body.classList.toggle('light-theme', themeToggle.checked); localStorage.setItem('theme', t); }
+    syncSettingsToAccount();
 });
 
 // Font size selector
@@ -2315,12 +2301,14 @@ document.getElementById('fontSizeSelect').addEventListener('click', (e) => {
     document.body.classList.add('font-' + size);
     localStorage.setItem('font_size', size);
     updateFontSizeBtns();
+    syncSettingsToAccount();
 });
 
 // Bubble animation toggle
 animToggle.addEventListener('change', () => {
     document.body.classList.toggle('no-animations', !animToggle.checked);
     localStorage.setItem('animations', animToggle.checked ? '1' : '0');
+    syncSettingsToAccount();
 });
 
 // Walking-pet picker (Hide / cat / dog / bunny / fox / panda / hamster)
@@ -2336,7 +2324,79 @@ document.getElementById('walkPetSelect').addEventListener('click', (e) => {
     localStorage.setItem('walk_pet', btn.dataset.pet);
     window.dispatchEvent(new CustomEvent('walkpetchange', { detail: btn.dataset.pet }));
     updateWalkPetBtns();
+    syncSettingsToAccount();
 });
+
+// ── Account-synced settings ──────────────────────────────────────────────
+// Read the effective prefs straight from localStorage (same keys the UI uses).
+// Stable key order so the JSON echo-guard below compares cleanly.
+function currentLocalSettings() {
+    return {
+        theme:      localStorage.getItem('theme') === 'dark' ? 'dark' : 'light',
+        fontSize:   localStorage.getItem('font_size') || 'medium',
+        animations: localStorage.getItem('animations') !== '0',
+        walkPet:    localStorage.getItem('walk_pet') || 'cat',
+        sound:      localStorage.getItem('sound_enabled') !== '0',
+        notif:      localStorage.getItem('notif_enabled') === '1'
+    };
+}
+// Push current prefs up to rooms/{uid}.settings (debounced; reads localStorage at flush time).
+function syncSettingsToAccount() {
+    if (!auth.currentUser) return;
+    if (_settingsWriteTimer) clearTimeout(_settingsWriteTimer);
+    _settingsWriteTimer = setTimeout(() => {
+        _settingsWriteTimer = null;
+        if (!auth.currentUser) return;
+        const s = currentLocalSettings();
+        _lastSettingsJson = JSON.stringify(s);  // mark so our own snapshot echo is ignored
+        db.collection('rooms').doc(auth.currentUser.uid).set({ settings: s }, { merge: true }).catch(() => {});
+    }, 800);
+}
+// Apply a settings map (from login / another device) to localStorage + the live UI.
+function applyAccountSettings(s) {
+    if (!s) return;
+    const o = {
+        theme:      s.theme === 'dark' ? 'dark' : 'light',
+        fontSize:   s.fontSize || 'medium',
+        animations: s.animations !== false,
+        walkPet:    s.walkPet || 'cat',
+        sound:      s.sound !== false,
+        notif:      !!s.notif
+    };
+    const json = JSON.stringify(o);
+    if (json === _lastSettingsJson) return;  // unchanged (or echo of our own write)
+    _lastSettingsJson = json;
+    // Theme
+    if (window.Theme) Theme.setTheme(o.theme);
+    else { localStorage.setItem('theme', o.theme); document.body.classList.toggle('light-theme', o.theme === 'light'); }
+    // Font size
+    localStorage.setItem('font_size', o.fontSize);
+    document.body.classList.remove('font-small', 'font-medium', 'font-large');
+    document.body.classList.add('font-' + o.fontSize);
+    // Bubble animations
+    localStorage.setItem('animations', o.animations ? '1' : '0');
+    document.body.classList.toggle('no-animations', !o.animations);
+    // Walking pet
+    localStorage.setItem('walk_pet', o.walkPet);
+    window.dispatchEvent(new CustomEvent('walkpetchange', { detail: o.walkPet }));
+    // Sound
+    localStorage.setItem('sound_enabled', o.sound ? '1' : '0');
+    soundEnabled = o.sound;
+    // Push preference — actual browser push is still gated per-device by
+    // Notification.permission in fireNotification(), so this can't misfire.
+    localStorage.setItem('notif_enabled', o.notif ? '1' : '0');
+    notifEnabled = o.notif;
+    refreshSettingsUI();
+}
+// Reflect current prefs onto the Settings controls (if the panel is open).
+function refreshSettingsUI() {
+    notifToggle.checked = notifEnabled;
+    soundToggle.checked = soundEnabled;
+    themeToggle.checked = (window.Theme ? Theme.getTheme() : (localStorage.getItem('theme') === 'dark' ? 'dark' : 'light')) === 'light';
+    animToggle.checked = !document.body.classList.contains('no-animations');
+    updateFontSizeBtns();
+    updateWalkPetBtns();
+}
 
 // Clear cache button
 document.getElementById('clearCacheBtn').addEventListener('click', () => {

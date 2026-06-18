@@ -53,6 +53,11 @@ service cloud.firestore {
     //          notifications. A message/reply with ts ≤ notifReadTs is treated as already seen,
     //          so reading on one device silences the same new-message + "tap to view" notice on
     //          the others. Owner-only write (covered by isOwner); any device reads it live.
+    //    NOTE: settings {theme, fontSize, animations, walkPet, sound, notif} — per-ACCOUNT app
+    //          preferences that follow the user across devices (server value wins on login;
+    //          localStorage is just the instant-load cache). Owner-only write. The notif flag is
+    //          a preference only — actual browser push is still gated per-device by the browser's
+    //          Notification permission, so a synced "on" can't push where it was never allowed.
     // ═══════════════════════════════════════
     match /rooms/{uid} {
       allow read: if isAuth();
