@@ -185,6 +185,20 @@
           }
         }
         roomData.layerData = rawLayerData;
+        // One-time migration: the old rule let the SAME plant sit on multiple floors.
+        // Each floor now needs a UNIQUE plant, so keep the first floor that has each
+        // plant and unplace the duplicates (they stay owned — re-placeable later).
+        let _plantDedupChanged = false;
+        {
+          const _seenPlants = new Set();
+          const _floors = Object.keys(rawLayerData).map(Number).sort((a, b) => a - b);
+          for (const f of _floors) {
+            const pl = rawLayerData[f] && rawLayerData[f].plant;
+            if (!pl) continue;
+            if (_seenPlants.has(pl)) { rawLayerData[f].plant = null; _plantDedupChanged = true; }
+            else _seenPlants.add(pl);
+          }
+        }
         // Load the currently active layer's data into the main roomData slots
         const activeLD = roomData.layerData[currentLayer] || {};
         roomData.wallPattern = activeLD.wallPattern || 'wall_default';
@@ -236,6 +250,11 @@
         roomData.farmCartSold = d.farmCartSold || null;
         roomData.farmTroughLevel = d.farmTroughLevel || 0;
         _roomLoaded = true;
+        // Persist the unique-plant migration now that the full room is loaded.
+        if (_plantDedupChanged) {
+          saveRoom();
+          showToast('🌱 Floors with the same plant were tidied — duplicates are back in your inventory. Each floor needs a different plant now.', 'success');
+        }
         // Decay hunger based on elapsed time (1% per 10 min)
         const lastUpdate = d.updatedAt ?? Date.now();
         const elapsed = Date.now() - lastUpdate;
@@ -260,13 +279,11 @@
           if (changed) saveRoom();
         }
         // Plant passive coin generation (offline earnings, capped to 2 hours).
-        // Revenue follows the single best-earning plant across all floors.
-        const bestOffline = getBestPlantIncome();
-        if (!_offlineCoinsCollected && bestOffline) {
+        // Every placed tree earns — revenue is the SUM across all floors.
+        const incomeOffline = getTotalPlantIncome();
+        if (!_offlineCoinsCollected && incomeOffline) {
           _offlineCoinsCollected = true;
-          const plantLvl = bestOffline.plantLvl;
-          const plantDef = bestOffline.plantDef;
-          const coinsPerCycle = bestOffline.perCycle;
+          const coinsPerCycle = incomeOffline.perCycle;
           const lastCollect = roomData.lastCoinCollect || Date.now();
           // Cap offline elapsed time to PLANT_OFFLINE_CAP_MS (2 hours)
           const rawElapsed = Date.now() - lastCollect;
@@ -274,7 +291,10 @@
           const cycles = Math.floor(elapsed / (5 * 60 * 1000));
           if (cycles > 0) {
             const earned = cycles * coinsPerCycle;
-            const _name = 'Lv.' + plantLvl + ' ' + (plantDef ? plantDef.name : 'plant');
+            const _top = incomeOffline.top;
+            const _name = incomeOffline.count > 1
+              ? ('your ' + incomeOffline.count + ' trees')
+              : ('Lv.' + _top.plantLvl + ' ' + (_top.plantDef ? _top.plantDef.name : 'plant'));
             if (rawElapsed >= PLANT_OFFLINE_MODAL_MS) {
               // ≥1h away → mandatory collect modal. Coins are added (and the timer
               // reset) only on collect — until then they stay pending.
@@ -429,11 +449,9 @@
         } else if (document.visibilityState === 'visible' && currentUid) {
           userDocRef().update({ lastSeen: Date.now() }).catch(() => {});
           // Collect plant coins earned while tab was hidden (capped at 2 hours)
-          const bestHidden = getBestPlantIncome();
-          if (viewingUid === currentUid && bestHidden && roomData.lastCoinCollect && !_roomCoinAwayPlan) {
-            const plantLvl = bestHidden.plantLvl;
-            const plantDef = bestHidden.plantDef;
-            const coinsPerCycle = bestHidden.perCycle;
+          const incomeHidden = getTotalPlantIncome();
+          if (viewingUid === currentUid && incomeHidden && roomData.lastCoinCollect && !_roomCoinAwayPlan) {
+            const coinsPerCycle = incomeHidden.perCycle;
             const rawElapsed = Date.now() - roomData.lastCoinCollect;
             const elapsed = Math.min(rawElapsed, PLANT_OFFLINE_CAP_MS);
             const cycles = Math.floor(elapsed / (5 * 60 * 1000));
@@ -442,7 +460,8 @@
               roomData.coins += earned;
               roomData.lastCoinCollect = Date.now();
               saveRoom();
-              showToast('🌱 ' + (plantDef ? plantDef.name : 'Plant') + ' earned ' + earned + ' coins while tab was hidden!', 'success');
+              const _label = incomeHidden.count > 1 ? ('Your ' + incomeHidden.count + ' trees') : (incomeHidden.top.plantDef ? incomeHidden.top.plantDef.name : 'Plant');
+              showToast('🌱 ' + _label + ' earned ' + earned + ' coins while tab was hidden!', 'success');
             }
           }
           // Reattach room listener to resume real-time updates
@@ -458,15 +477,15 @@
       _plantCoinInterval = setInterval(async () => {
         if (document.hidden) return; // Skip when tab is hidden to reduce Firestore reads
         if (viewingUid !== currentUid) return;
-        const bestOnline = getBestPlantIncome();
-        if (!bestOnline) return;
-        const plantDef = bestOnline.plantDef;
-        const earned = bestOnline.perCycle;
+        const incomeOnline = getTotalPlantIncome();
+        if (!incomeOnline) return;
+        const earned = incomeOnline.perCycle;
         roomData.coins += earned;
         roomData.lastCoinCollect = Date.now();
         await saveRoom();
         renderAllDebounced();
-        showToast('🌱 ' + (plantDef ? plantDef.name : 'Plant') + ' earned ' + earned + ' coins!', 'success');
+        const _label = incomeOnline.count > 1 ? ('Your ' + incomeOnline.count + ' trees') : (incomeOnline.top.plantDef ? incomeOnline.top.plantDef.name : 'Plant');
+        showToast('🌱 ' + _label + ' earned ' + earned + ' coins!', 'success');
       }, 5 * 60 * 1000);
 
       // Check daily login reward & achievements on load

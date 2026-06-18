@@ -121,7 +121,7 @@
       // Pet shop — adopt only, no color/equip
       renderPetShop();
       renderShopSection('plantShop', PLANTS, roomData.ownedPlants, [roomData.plant], 'plant',
-        '<span style="display:block;font-size:10px;color:rgba(255,255,255,0.45);margin-top:4px">🌱 Only 1 plant at a time — buy a pricier plant to inherit upgrade progress!</span>');
+        '<span style="display:block;font-size:10px;color:rgba(255,255,255,0.45);margin-top:4px">🌱 One unique plant per floor — every placed tree earns coins!</span>');
       // Only render decor shop if its sub-panel is visible (avoids 99 canvas preview draws)
       const decorPanel = document.getElementById('decorShopWrap');
       if (decorPanel && decorPanel.classList.contains('active')) renderDecorShop();
@@ -210,6 +210,11 @@
       if (titleEl && slotHtml) {
         titleEl.innerHTML = '🌱 Plants' + slotHtml;
       }
+      // Plants must be unique per floor — map each plant already on ANOTHER floor → its floor.
+      const plantFloor = {};
+      if (type === 'plant') {
+        getAllLayerPlants().forEach(p => { if (p.layer !== currentLayer) plantFloor[p.plant] = p.layer; });
+      }
       el.innerHTML = items.map(item => {
         const isOwned = owned.includes(item.id);
         const isEquipped = equippedArr.includes(item.id);
@@ -218,6 +223,9 @@
         if (isEquipped) {
           btnHtml = '<button class="shop-btn equipped-btn" disabled>✓ In Room</button>' +
             '<button class="shop-btn" style="margin-top:4px;background:rgba(239,68,68,0.2);color:#f87171" onclick="unequipItem(\'' + type + '\',\'' + item.id + '\')">Remove</button>';
+        } else if (isOwned && plantFloor[item.id]) {
+          // Already placed on another floor — can't duplicate it here.
+          btnHtml = '<button class="shop-btn" disabled>On Floor ' + plantFloor[item.id] + '</button>';
         } else if (isOwned) {
           btnHtml = '<button class="shop-btn equip" onclick="equipItem(\'' + type + '\',\'' + item.id + '\')">Place in Room</button>';
         } else {
@@ -1659,17 +1667,14 @@
         const nextDef = PLANT_LEVELS[lvl];
         const scaledCost = getPlantUpgradeCost(roomData.plant, lvl);
         const coinsPerCycle = lvl * (plantDef ? plantDef.coinRate : 1);
-        const best = getBestPlantIncome();
-        const isBest = best && best.layer === currentLayer && best.plant === roomData.plant;
+        const income = getTotalPlantIncome();
         plantHtml += '<div class="shop-section"><div class="shop-section-title">🌱 ' + (plantDef?.name || 'Plant') + ' — Lv.' + lvl + ' (Floor ' + currentLayer + ')</div>';
         plantHtml += '<div style="text-align:center;font-size:11px;color:#98e4b0;padding:4px 0 4px">' +
-          '🌿 This plant produces ' + coinSVG(12) + ' ' + coinsPerCycle + ' / 5 min</div>';
-        // Revenue follows the single best-earning plant across all floors
-        plantHtml += '<div style="text-align:center;font-size:11px;padding:0 0 8px;color:' + (isBest ? '#fbbf24' : 'rgba(255,255,255,0.55)') + '">' +
-          (best
-            ? (isBest
-                ? '⭐ Best on all floors — your room earns ' + coinSVG(12) + ' ' + best.perCycle + ' / 5 min'
-                : '💰 Room earns ' + coinSVG(12) + ' ' + best.perCycle + ' / 5 min (from Floor ' + best.layer + ')')
+          '🌿 This tree produces ' + coinSVG(12) + ' ' + coinsPerCycle + ' / 5 min</div>';
+        // Every tree on every floor earns — show the combined room total.
+        plantHtml += '<div style="text-align:center;font-size:11px;padding:0 0 8px;color:#fbbf24">' +
+          (income
+            ? '💰 ' + income.count + ' tree' + (income.count > 1 ? 's' : '') + ' across your floors earn ' + coinSVG(12) + ' ' + income.perCycle + ' / 5 min total'
             : '') + '</div>';
         if (nextDef && scaledCost !== null) {
           const nextCoins = nextDef.level * (plantDef ? plantDef.coinRate : 1);

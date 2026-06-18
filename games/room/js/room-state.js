@@ -133,6 +133,26 @@
     }
 
     /**
+     * Every placed tree earns — total revenue is the SUM of all placed plants
+     * across all floors (coinRate × level each). Returns
+     * { perCycle, count, top } or null if no plants. `top` is the single
+     * biggest earner (used to label the offline-collect modal).
+     */
+    function getTotalPlantIncome() {
+      let perCycle = 0, count = 0, top = null;
+      for (const p of getAllLayerPlants()) {
+        const def = PLANTS.find(x => x.id === p.plant);
+        const rate = (def ? def.coinRate : 1) * p.level;
+        perCycle += rate;
+        count++;
+        if (!top || rate > top.perCycle) {
+          top = { perCycle: rate, plant: p.plant, plantDef: def, plantLvl: p.level, layer: p.layer };
+        }
+      }
+      return count ? { perCycle, count, top } : null;
+    }
+
+    /**
      * Writes the current in-memory wall/window/decors/plantPosition back into
      * roomData.layerData[currentLayer] so the data is always consistent before saving.
      */

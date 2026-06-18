@@ -56,6 +56,12 @@
     async function equipItem(type, id) {
       if (viewingUid !== currentUid) return;
       if (type === 'plant') {
+        // Each floor must have a different plant — block if it's already on another floor.
+        const dup = getAllLayerPlants().find(p => p.plant === id && p.layer !== currentLayer);
+        if (dup) {
+          const def = PLANTS.find(p => p.id === id);
+          return showToast((def ? def.name : 'That plant') + ' is already on Floor ' + dup.layer + ' — each floor needs a different plant', 'error');
+        }
         roomData.plant = id;
         const targetDef = PLANTS.find(p => p.id === id);
         const targetCost = targetDef ? targetDef.cost : 0;
