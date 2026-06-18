@@ -2194,8 +2194,9 @@ body.sidebar-open .bubble-wrap {
     .img-preview-strip { bottom: 118px; padding: 6px 12px; }
     .gif-picker,
     .poll-creator { bottom: 118px; }
-    /* Taller wrapped input bar on phones — lift the pet so its legs clear it. */
-    .walking-pet { bottom: 132px; }
+    /* Taller wrapped input bar on phones (+ iOS home-indicator safe area) —
+       lift the pet well clear of it so the whole animal is visible. */
+    .walking-pet { bottom: calc(140px + env(safe-area-inset-bottom, 0px)); }
     .sidebar { width: 85vw; left: -85vw; }
     body.sidebar-open .page-title-wrapper,
     body.sidebar-open .page-subtitle,
