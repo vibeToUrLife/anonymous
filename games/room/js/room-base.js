@@ -243,6 +243,8 @@
       bell:     { emoji: '🔔', name: 'Bell',     coins: 360 },   // Forge: from horseshoes
       wheat:    { emoji: '🌾', name: 'Wheat',    coins: 20 },    // crop — Bakery ingredient
       baguette: { emoji: '🥖', name: 'Baguette', coins: 170 },   // Bakery: from wheat
+      pizza:    { emoji: '🍕', name: 'Pizza',          coins: 150 },   // Bakery: from truffle
+      risotto:  { emoji: '🍚', name: 'Truffle Risotto', coins: 290 },  // Bakery: from truffle
     };
     // Base meat from butchering, by tier (the animal's level adds more — see _meatYield).
     const FARM_MEAT_YIELD = { goose: 1, pig: 2, cow: 3, horse: 4 };
@@ -278,6 +280,8 @@
         { in: { corn: 1 },  out: { id: 'cookie',   qty: 1 }, timeMs: 25 * M },
         { in: { corn: 2 },  out: { id: 'pie',      qty: 1 }, timeMs: 45 * M },
         { in: { wheat: 2 }, out: { id: 'baguette', qty: 1 }, timeMs: 35 * M },
+        { in: { truffle: 1 }, out: { id: 'pizza',   qty: 1 }, timeMs: 30 * M },   // mushroom → pizza
+        { in: { truffle: 2 }, out: { id: 'risotto', qty: 1 }, timeMs: 45 * M },   // mushroom → risotto
       ] },
       { id: 'oven', emoji: '🍰', name: 'Cake Oven', cost: 5000, recipes: [
         { in: { egg: 2, milk: 1 }, out: { id: 'cake',    qty: 1 }, timeMs: 60 * M },
