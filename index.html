@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Anonymous Bubble Answers</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
-  <link rel="stylesheet" href="./src/css/style.css?v=7">
+  <link rel="stylesheet" href="./src/css/style.css?v=9">
   <link rel="stylesheet" href="./src/css/interactive.css?v=1">
   <!-- Clay "Bubble Pop" design system: tokens + component library (load last so they govern) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="./src/css/theme.css?v=1">
+  <link rel="stylesheet" href="./src/css/theme.css?v=11">
   <link rel="stylesheet" href="./src/css/components.css?v=1">
   <style>
     /* Poll rows (creator + shared) → tokens, both themes.
@@ -653,7 +653,7 @@
   <!-- Apply theme before first paint (default = light) to avoid a flash.
        Sets data-theme on <html> for the token system; keeps body.light-theme
        in sync for legacy corkboard rules still present during the migration. -->
-  <script>(function(){try{var t=localStorage.getItem('theme')==='dark'?'dark':'light';document.documentElement.setAttribute('data-theme',t);if(t==='light')document.body&&document.body.classList.add('light-theme');}catch(e){}})();</script>
+  <script>(function(){try{var s=localStorage.getItem('theme');var t=(s==='dark'||s==='terminal')?s:'light';document.documentElement.setAttribute('data-theme',t);if(t==='light')document.body&&document.body.classList.add('light-theme');}catch(e){}})();</script>
 
   <!-- Access code gate — must enter correct code to proceed -->
   <div class="access-gate" id="accessGate">
@@ -725,13 +725,11 @@
       </div>
       <hr class="settings-divider">
       <div class="settings-section">
-        <div class="settings-label">Appearance</div>
-        <div class="settings-row">
-          <span class="settings-row-label">🌙 Dark / Light Mode</span>
-          <label class="settings-toggle">
-            <input type="checkbox" id="themeToggle">
-            <span class="slider"></span>
-          </label>
+        <div class="settings-label">Appearance — Theme</div>
+        <div class="settings-select" id="themeSelect">
+          <button data-theme-val="light">☀️ Light</button>
+          <button data-theme-val="dark">🌙 Dark</button>
+          <button data-theme-val="terminal">💻 Terminal</button>
         </div>
       </div>
       <hr class="settings-divider">
@@ -1038,6 +1036,7 @@
   </div>
 
   <div class="input-area">
+    <button class="attach-btn input-tool-toggle" id="inputToolToggle" type="button" title="Hide tools" aria-label="Toggle tools">&#8722;</button>
     <button class="attach-btn" id="attachBtn" title="Attach image">📷</button>
     <button class="gif-btn" id="gifBtn" title="Search GIFs">GIF</button>
     <button class="poll-btn" id="pollBtn" title="Create a poll">📊</button>
@@ -1049,6 +1048,26 @@
       <span class="ans-anon-text">🕶️ 匿名</span>
     </div>
   </div>
+  <script>
+    (function () {
+      var t = document.getElementById('inputToolToggle');
+      if (!t) return;
+      var KEY = 'tools_collapsed';
+      function apply(c) {
+        document.body.classList.toggle('tools-collapsed', c);
+        t.innerHTML = c ? '+' : '&#8722;';            // + show / − hide
+        t.title = c ? 'Show tools' : 'Hide tools';
+      }
+      var collapsed = false;
+      try { collapsed = localStorage.getItem(KEY) === '1'; } catch (e) {}
+      apply(collapsed);
+      t.addEventListener('click', function () {
+        collapsed = !collapsed;
+        try { localStorage.setItem(KEY, collapsed ? '1' : '0'); } catch (e) {}
+        apply(collapsed);
+      });
+    })();
+  </script>
 
   <!-- Poll creation form -->
   <div class="poll-creator" id="pollCreator">
@@ -1112,6 +1131,29 @@
 
   <!-- Mood Check-in Widget -->
   <button class="mood-fab" id="moodFab" title="How are you feeling today?">😊</button>
+
+  <!-- Collapse / expand the corner action buttons (all themes) -->
+  <button class="fab-toggle" id="fabToggle" type="button" title="Collapse buttons" aria-label="Collapse buttons">&#709;</button>
+  <script>
+    (function () {
+      var t = document.getElementById('fabToggle');
+      if (!t) return;
+      var KEY = 'fabs_collapsed';
+      function apply(c) {
+        document.body.classList.toggle('fabs-collapsed', c);
+        t.innerHTML = c ? '&#708;' : '&#709;';   // ˄ expand / ˅ collapse
+        t.title = c ? 'Show buttons' : 'Collapse buttons';
+      }
+      var collapsed = false;
+      try { collapsed = localStorage.getItem(KEY) === '1'; } catch (e) {}
+      apply(collapsed);
+      t.addEventListener('click', function () {
+        collapsed = !collapsed;
+        try { localStorage.setItem(KEY, collapsed ? '1' : '0'); } catch (e) {}
+        apply(collapsed);
+      });
+    })();
+  </script>
   <div class="mood-panel" id="moodPanel">
     <h4>How are you feeling today?</h4>
     <div id="moodCheckinArea">
@@ -1174,8 +1216,8 @@
   <script src="./src/js/daily-quotes.js"></script>
   <script src="./src/js/quote-comments.js"></script>
   <!-- Clay design system theme controller (must load before app.js wires the toggle) -->
-  <script src="./src/js/theme.js"></script>
-  <script src="./src/js/app.js?v=7"></script>
+  <script src="./src/js/theme.js?v=2"></script>
+  <script src="./src/js/app.js?v=9"></script>
   <!-- Live, interactive board features (load after app.js for shared db/auth) -->
   <script src="./src/js/board-live-logic.js"></script>
   <script src="./src/js/presence.js"></script>

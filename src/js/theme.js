@@ -5,7 +5,7 @@
   'use strict';
   var STORAGE_KEY = 'theme'; // stored value: 'dark' | 'light'
 
-  function resolveTheme(stored) { return stored === 'dark' ? 'dark' : 'light'; } // default light
+  function resolveTheme(stored) { return (stored === 'dark' || stored === 'terminal') ? stored : 'light'; } // default light
   function nextTheme(current) { return current === 'dark' ? 'light' : 'dark'; }
 
   var api = { resolveTheme: resolveTheme, nextTheme: nextTheme, STORAGE_KEY: STORAGE_KEY };

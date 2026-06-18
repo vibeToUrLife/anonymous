@@ -985,6 +985,14 @@ function hpInfo(a, now) {
     return { pct: pct, label: 'HP ' + Math.round(pct) + '%', color: pct > 50 ? '#58c5b5' : pct > 20 ? '#f2a154' : '#e06377' };
 }
 
+// Terminal-theme HP rendered as an ASCII meter, e.g. "[████████----] 64%".
+function hpAscii(pct) {
+    const WIDTH = 26;
+    const p = Math.max(0, Math.min(100, Math.round(pct)));
+    const filled = Math.round(WIDTH * p / 100);
+    return '[' + '█'.repeat(filled) + '-'.repeat(WIDTH - filled) + '] ' + p + '%';
+}
+
 function render(items) {
     if (!items.length) {
     wrap.innerHTML =
@@ -1011,6 +1019,8 @@ function render(items) {
         hpFill.style.background = hp.color;
         const hpLabel = existing.querySelector('.bubble-hp-label');
         if (hpLabel) hpLabel.textContent = hp.label;
+        const hpAsciiEl = existing.querySelector('.bubble-hp-ascii');
+        if (hpAsciiEl) hpAsciiEl.textContent = hpAscii(hp.pct);
         }
         // Keep awards (and who gave them) in sync as people stamp them.
         const awEl = existing.querySelector('.bubble-awards-row');
@@ -1123,6 +1133,11 @@ function render(items) {
     hpBar.appendChild(hpFill);
     hpWrapper.appendChild(hpLabel);
     hpWrapper.appendChild(hpBar);
+    // ASCII version of the bar — shown only in the terminal theme (CSS-toggled).
+    const hpAsciiEl = document.createElement('div');
+    hpAsciiEl.className = 'bubble-hp-ascii';
+    hpAsciiEl.textContent = hpAscii(hp.pct);
+    hpWrapper.appendChild(hpAsciiEl);
     bubble.appendChild(hpWrapper);
 
     if (a.type === 'poll') {
@@ -2044,7 +2059,7 @@ const settingsBtn = document.getElementById('settingsBtn');
 const settingsOverlay = document.getElementById('settingsOverlay');
 const notifToggle = document.getElementById('notifToggle');
 const soundToggle = document.getElementById('soundToggle');
-const themeToggle = document.getElementById('themeToggle');
+const themeSelect = document.getElementById('themeSelect');
 const animToggle = document.getElementById('animToggle');
 const notifBadge = document.getElementById('notifBadge');
 const originalTitle = document.title;
@@ -2101,7 +2116,7 @@ const settingsNameStatus = document.getElementById('settingsNameStatus');
 settingsBtn.addEventListener('click', () => {
     notifToggle.checked = notifEnabled;
     soundToggle.checked = soundEnabled;
-    themeToggle.checked = (window.Theme ? Theme.getTheme() : (localStorage.getItem('theme') === 'dark' ? 'dark' : 'light')) === 'light';
+    updateThemeBtns();
     animToggle.checked = !document.body.classList.contains('no-animations');
     settingsNameInput.value = (auth.currentUser ? localStorage.getItem('flappy_custom_name_' + auth.currentUser.uid) : null) || auth.currentUser?.displayName || '';
     settingsNameStatus.textContent = '';
@@ -2279,10 +2294,19 @@ soundToggle.addEventListener('change', () => {
 
 // Theme toggle (light / dark) — routed through the Theme controller so it sets
 // data-theme on <html> (token system) and keeps the legacy class in sync.
-themeToggle.addEventListener('change', () => {
-    const t = themeToggle.checked ? 'light' : 'dark';
+function updateThemeBtns() {
+    const cur = (window.Theme ? Theme.getTheme() : (localStorage.getItem('theme') || 'light'));
+    document.querySelectorAll('#themeSelect button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.themeVal === cur);
+    });
+}
+themeSelect.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    const t = btn.dataset.themeVal;   // light | dark | terminal
     if (window.Theme) Theme.setTheme(t);
-    else { document.body.classList.toggle('light-theme', themeToggle.checked); localStorage.setItem('theme', t); }
+    else { localStorage.setItem('theme', t); document.documentElement.setAttribute('data-theme', t); document.body.classList.toggle('light-theme', t === 'light'); }
+    updateThemeBtns();
     syncSettingsToAccount();
 });
 
@@ -2331,8 +2355,9 @@ document.getElementById('walkPetSelect').addEventListener('click', (e) => {
 // Read the effective prefs straight from localStorage (same keys the UI uses).
 // Stable key order so the JSON echo-guard below compares cleanly.
 function currentLocalSettings() {
+    const _t = localStorage.getItem('theme');
     return {
-        theme:      localStorage.getItem('theme') === 'dark' ? 'dark' : 'light',
+        theme:      (_t === 'dark' || _t === 'terminal') ? _t : 'light',
         fontSize:   localStorage.getItem('font_size') || 'medium',
         animations: localStorage.getItem('animations') !== '0',
         walkPet:    localStorage.getItem('walk_pet') || 'cat',
@@ -2356,7 +2381,7 @@ function syncSettingsToAccount() {
 function applyAccountSettings(s) {
     if (!s) return;
     const o = {
-        theme:      s.theme === 'dark' ? 'dark' : 'light',
+        theme:      (s.theme === 'dark' || s.theme === 'terminal') ? s.theme : 'light',
         fontSize:   s.fontSize || 'medium',
         animations: s.animations !== false,
         walkPet:    s.walkPet || 'cat',
@@ -2368,7 +2393,7 @@ function applyAccountSettings(s) {
     _lastSettingsJson = json;
     // Theme
     if (window.Theme) Theme.setTheme(o.theme);
-    else { localStorage.setItem('theme', o.theme); document.body.classList.toggle('light-theme', o.theme === 'light'); }
+    else { localStorage.setItem('theme', o.theme); document.documentElement.setAttribute('data-theme', o.theme); document.body.classList.toggle('light-theme', o.theme === 'light'); }
     // Font size
     localStorage.setItem('font_size', o.fontSize);
     document.body.classList.remove('font-small', 'font-medium', 'font-large');
@@ -2392,7 +2417,7 @@ function applyAccountSettings(s) {
 function refreshSettingsUI() {
     notifToggle.checked = notifEnabled;
     soundToggle.checked = soundEnabled;
-    themeToggle.checked = (window.Theme ? Theme.getTheme() : (localStorage.getItem('theme') === 'dark' ? 'dark' : 'light')) === 'light';
+    updateThemeBtns();
     animToggle.checked = !document.body.classList.contains('no-animations');
     updateFontSizeBtns();
     updateWalkPetBtns();

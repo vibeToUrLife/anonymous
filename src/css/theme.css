@@ -43,6 +43,211 @@
   --glass-bg:rgba(40,30,22,.55); --glass-border:rgba(255,255,255,.14); --scrim:rgba(10,6,3,.62);
 }
 
+/* ── TERMINAL theme — Windows-Terminal look (white text on black, monospace).
+   Built for discreet office use: the bubble board renders as console log lines.
+   Token overrides re-skin every component; the rules further down flatten the
+   floaty bubbles into terminal log lines. ── */
+[data-theme="terminal"]{
+  --font-display: ui-monospace,'Cascadia Code','Cascadia Mono',Consolas,'Courier New',monospace;
+  --font-body:    ui-monospace,'Cascadia Code','Cascadia Mono',Consolas,'Courier New',monospace;
+  --primary:#3a96dd; --primary-deep:#2a7ab8; --on-primary:#0c0c0c; --accent:#3a96dd;
+  --bg:#0c0c0c; --surface:#121212; --sunken:#1a1a1a;
+  --ink:#e6e6e6; --ink-soft:#cccccc; --ink-faint:#7a7a7a;
+  --border:rgba(255,255,255,.16);
+  --primary-tint:rgba(58,150,221,.14); --accent-soft:rgba(58,150,221,.14);
+  /* terminals are flat — swap clay for crisp 1px outlines */
+  --clay-up: 0 0 0 1px rgba(255,255,255,.12);
+  --clay-up-sm: 0 0 0 1px rgba(255,255,255,.12);
+  --clay-in: inset 0 0 0 1px rgba(255,255,255,.14);
+  --acc-shadow: 0 0 0 1px var(--primary);
+  --glass-bg:rgba(12,12,12,.92); --glass-border:rgba(255,255,255,.16); --scrim:rgba(0,0,0,.72);
+  --r-sm:3px; --r:4px; --r-lg:6px;
+  color-scheme: dark;
+}
+[data-theme="terminal"] body{ background:#0c0c0c; }
+/* Board → a scrolling console log. Flex column (not block) so a pinned bubble's
+   `order:-1` still floats it to the top, just like the normal flex board. */
+[data-theme="terminal"] .bubble-wrap{
+  display:flex; flex-direction:column; align-items:stretch;
+  max-width:none !important; margin:0 !important;
+  padding:14px 16px 130px; min-height:calc(100vh - 130px);
+}
+/* No floaty decorations or bubble tails/puffs in the terminal */
+[data-theme="terminal"] .bubble-deco{ display:none !important; }
+[data-theme="terminal"] .bubble::before,
+[data-theme="terminal"] .bubble::after{ content:none !important; display:none !important; box-shadow:none !important; background:none !important; }
+/* Each message → a flat monospace log line with a left gutter bar */
+[data-theme="terminal"] .bubble{
+  display:block; width:100% !important; max-width:100% !important; min-width:0;
+  margin:0 0 3px; padding:4px 10px; box-sizing:border-box;
+  background:rgba(255,255,255,.02) !important;
+  border:none !important; border-left:2px solid var(--border) !important; border-radius:0 !important;
+  box-shadow:none !important; backdrop-filter:none !important;
+  color:var(--ink) !important; font-family:var(--font-body);
+  font-size:13px; line-height:1.55; opacity:1 !important;
+  animation:none !important; transform:none !important; transition:background .12s,border-color .12s;
+}
+[data-theme="terminal"] .bubble:hover{
+  background:rgba(255,255,255,.06) !important; transform:none !important;
+  border-left-color:var(--primary) !important; box-shadow:none !important;
+}
+/* Sender shown like a shell prompt: "> name" in accent */
+[data-theme="terminal"] .answer-sender{ color:var(--primary) !important; font-weight:700; }
+[data-theme="terminal"] .answer-sender::before{ content:'> '; }
+/* Keep footer/reaction controls legible on the flat dark log */
+[data-theme="terminal"] .reply-toggle,
+[data-theme="terminal"] .bubble-footer button{ color:var(--ink-soft) !important; }
+
+/* ── Terminal chrome: logo, title, status bar, buttons ── */
+/* Drop the pixel logo; the title becomes a shell prompt line */
+[data-theme="terminal"] .page-logo{ display:none !important; }
+[data-theme="terminal"] .page-title-wrapper{
+  align-items:flex-start !important; flex-direction:row !important;
+  max-width:none !important; width:100%; margin:8px 0 0 !important; padding:0 16px;
+}
+[data-theme="terminal"] .page-title{
+  text-align:left !important; font-family:var(--font-body) !important; font-weight:700 !important;
+  color:var(--ink) !important; -webkit-text-fill-color:var(--ink) !important;
+  background:none !important; letter-spacing:0 !important;
+  font-size:clamp(15px,3.6vw,20px) !important;
+}
+[data-theme="terminal"] .page-title::before{ content:'user@bubble:~$ '; color:var(--primary); }
+[data-theme="terminal"] .page-title::after{ content:' \258c'; color:var(--primary); animation:termBlink 1.1s step-end infinite; }
+@keyframes termBlink{ 50%{ opacity:0; } }
+[data-theme="terminal"] .page-subtitle{
+  text-align:left !important; max-width:none !important; width:100%; margin:4px 0 0 !important; padding:0 16px;
+  color:var(--ink-faint) !important; font-family:var(--font-body);
+}
+[data-theme="terminal"] .page-subtitle::before{ content:'# '; }
+
+/* Status bar (live bar) → a flat terminal status line */
+[data-theme="terminal"] #liveBar, [data-theme="terminal"] .live-bar{
+  max-width:none !important; margin:8px 16px 0 !important;
+  border:1px solid var(--border) !important; border-radius:3px !important;
+  background:rgba(255,255,255,.03) !important; box-shadow:none !important;
+  font-family:var(--font-body); padding:6px 10px;
+}
+[data-theme="terminal"] .live-presence{
+  background:none !important; color:var(--ink-soft) !important;
+  box-shadow:none !important; border:none !important;
+}
+[data-theme="terminal"] .live-presence b,
+[data-theme="terminal"] .live-typing{ color:var(--primary) !important; }
+
+/* Buttons → flat bracketed terminal buttons */
+[data-theme="terminal"] .pg-toggle,
+[data-theme="terminal"] #sendBtn,
+[data-theme="terminal"] .attach-btn,
+[data-theme="terminal"] .gif-btn,
+[data-theme="terminal"] .poll-btn,
+[data-theme="terminal"] .sidebar-toggle,
+[data-theme="terminal"] .settings-btn,
+[data-theme="terminal"] .new-content-pill{
+  background:transparent !important; color:var(--ink) !important;
+  -webkit-text-fill-color:var(--ink) !important; background-clip:border-box !important;
+  border:1px solid var(--border) !important; border-radius:3px !important;
+  box-shadow:none !important; font-family:var(--font-body) !important; font-weight:700 !important;
+}
+[data-theme="terminal"] .pg-toggle:hover,
+[data-theme="terminal"] #sendBtn:hover,
+[data-theme="terminal"] .attach-btn:hover,
+[data-theme="terminal"] .gif-btn:hover,
+[data-theme="terminal"] .poll-btn:hover,
+[data-theme="terminal"] .sidebar-toggle:hover,
+[data-theme="terminal"] .settings-btn:hover,
+[data-theme="terminal"] .new-content-pill:hover{
+  background:var(--primary) !important; color:var(--on-primary) !important;
+  -webkit-text-fill-color:var(--on-primary) !important; filter:none !important;
+}
+/* Bracket the text action buttons: "Send" → "[ Send ]" */
+[data-theme="terminal"] #sendBtn::before,
+[data-theme="terminal"] .pg-toggle::before{ content:'[ '; }
+[data-theme="terminal"] #sendBtn::after,
+[data-theme="terminal"] .pg-toggle::after{ content:' ]'; }
+
+/* HP bar → ASCII meter "[████████----] 64%": hide the graphical bar, show text */
+.bubble-hp-ascii{ display:none; }
+[data-theme="terminal"] .bubble-hp{ display:none !important; }
+[data-theme="terminal"] .bubble-hp-label{ color:var(--ink-faint) !important; font-family:var(--font-body) !important; }
+[data-theme="terminal"] .bubble-hp-ascii{
+  display:block; font-family:var(--font-body); font-size:12px; line-height:1.15;
+  color:#33d06a; white-space:nowrap; overflow:hidden; letter-spacing:0;
+}
+
+/* Reaction chips + reply/boost actions → flat bracketed terminal buttons */
+[data-theme="terminal"] .reaction-btn,
+[data-theme="terminal"] .reaction-add,
+[data-theme="terminal"] .reply-reaction-btn,
+[data-theme="terminal"] .reply-reaction-add,
+[data-theme="terminal"] .reply-to-reply-toggle,
+[data-theme="terminal"] .boost-toggle{
+  background:transparent !important; color:var(--ink-soft) !important;
+  border:1px solid var(--border) !important; border-radius:3px !important;
+  box-shadow:none !important; font-family:var(--font-body) !important;
+}
+[data-theme="terminal"] .reaction-btn:hover,
+[data-theme="terminal"] .reaction-add:hover,
+[data-theme="terminal"] .reply-reaction-btn:hover,
+[data-theme="terminal"] .reply-reaction-add:hover,
+[data-theme="terminal"] .reply-to-reply-toggle:hover,
+[data-theme="terminal"] .boost-toggle:hover{ background:var(--primary) !important; color:var(--on-primary) !important; }
+[data-theme="terminal"] .reaction-btn.reacted{ border-color:var(--primary) !important; color:var(--primary) !important; background:var(--primary-tint) !important; }
+
+/* Floating round FABs → flat square terminal tiles */
+[data-theme="terminal"] .feedback-fab,
+[data-theme="terminal"] .riddle-fab,
+[data-theme="terminal"] .mood-fab{
+  background:#0c0c0c !important; background-image:none !important; color:var(--ink) !important;
+  border:1px solid var(--border) !important; border-radius:4px !important; box-shadow:none !important;
+}
+[data-theme="terminal"] .feedback-fab:hover,
+[data-theme="terminal"] .riddle-fab:hover,
+[data-theme="terminal"] .mood-fab:hover{
+  background:var(--primary) !important; color:var(--on-primary) !important; transform:none !important;
+}
+[data-theme="terminal"] .fab-toggle{
+  background:#0c0c0c !important; color:var(--ink) !important;
+  border:1px solid var(--border) !important; border-radius:3px !important; box-shadow:none !important;
+}
+[data-theme="terminal"] .fab-toggle:hover{ background:var(--primary) !important; color:var(--on-primary) !important; }
+
+/* Quote banner → a commented config block; countdown → flat tile */
+[data-theme="terminal"] .daily-quote-banner{
+  background:rgba(255,255,255,.02) !important; border:1px solid var(--border) !important;
+  border-left:2px solid var(--primary) !important; border-radius:3px !important; box-shadow:none !important;
+  max-width:none !important; margin:8px 16px !important;
+}
+[data-theme="terminal"] .cd-bubble{
+  background:#0c0c0c !important; border:1px solid var(--border) !important;
+  border-radius:3px !important; box-shadow:none !important;
+}
+
+/* Bottom bar → a terminal command line */
+[data-theme="terminal"] .input-area{
+  background:#0c0c0c !important; border-top:1px solid var(--border) !important;
+  font-family:var(--font-body);
+}
+/* leading shell prompt at the far left of the row */
+[data-theme="terminal"] .input-area::before{
+  content:'~$'; color:var(--primary); font-weight:700; align-self:center;
+  font-size:14px; margin:0 2px; font-family:var(--font-body);
+}
+[data-theme="terminal"] #answerInput{
+  background:#000 !important; color:var(--ink) !important;
+  border:1px solid var(--border) !important; border-radius:2px !important;
+  box-shadow:none !important; font-family:var(--font-body) !important;
+}
+[data-theme="terminal"] #answerInput::placeholder{ color:var(--ink-faint) !important; }
+/* anonymous toggle → a terminal flag */
+[data-theme="terminal"] .ans-anon-toggle,
+[data-theme="terminal"] .ans-anon-text{ color:var(--ink-soft) !important; font-family:var(--font-body) !important; }
+[data-theme="terminal"] #ansCommentAnon{ accent-color:var(--primary) !important; }
+/* image-preview strip (above the bar) → flat terminal tile */
+[data-theme="terminal"] .img-preview-strip{
+  background:#0c0c0c !important; border:1px solid var(--border) !important;
+  border-radius:3px !important; box-shadow:none !important;
+}
+
 /* base */
 html{ -webkit-text-size-adjust:100%; }
 body{ background:var(--bg); color:var(--ink); font-family:var(--font-body); font-size:var(--fs-base); line-height:1.55; -webkit-font-smoothing:antialiased; }

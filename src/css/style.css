@@ -2326,6 +2326,45 @@ body.sidebar-open .bubble-wrap {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ── Mood Check-in Widget ── */
+/* Collapse toggle for the corner FAB stack — sits on top of the stack; when
+   collapsed it drops to the bottom slot and the 3 buttons slide off-screen. */
+.fab-toggle {
+    position: fixed;
+    right: 18px;
+    bottom: 262px;
+    z-index: 311;
+    width: 48px;
+    height: 26px;
+    border: none;
+    border-radius: 13px;
+    background: var(--surface);
+    color: var(--ink-soft);
+    box-shadow: var(--clay-up-sm);
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: bottom 0.25s ease, transform 0.2s, color 0.2s;
+}
+.fab-toggle:hover { color: var(--primary-deep); }
+body.fabs-collapsed .fab-toggle { bottom: 90px; }
+body.fabs-collapsed .feedback-fab,
+body.fabs-collapsed .riddle-fab,
+body.fabs-collapsed .mood-fab {
+    transform: translateX(80px) !important;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Collapse the input-row tools (📷 / GIF / 📊) — the +/− toggle stays. */
+body.tools-collapsed #attachBtn,
+body.tools-collapsed .gif-btn,
+body.tools-collapsed .poll-btn {
+    display: none !important;
+}
+
 .mood-fab {
     position: fixed;
     bottom: 90px;
