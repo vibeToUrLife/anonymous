@@ -49,6 +49,10 @@ service cloud.firestore {
     //          via owner-only transactions; slot + fortune carry a house edge (coin sink).
     //          每日求签: fortuneDay (YYYY-MM-DD) + fortuneResult {tier,line,bonus} — once/day,
     //          owner-only; the stored result is shown for the rest of the day.
+    //    NOTE: notifReadTs (number, ms) — per-ACCOUNT "read up to" watermark for bubble-board
+    //          notifications. A message/reply with ts ≤ notifReadTs is treated as already seen,
+    //          so reading on one device silences the same new-message + "tap to view" notice on
+    //          the others. Owner-only write (covered by isOwner); any device reads it live.
     // ═══════════════════════════════════════
     match /rooms/{uid} {
       allow read: if isAuth();

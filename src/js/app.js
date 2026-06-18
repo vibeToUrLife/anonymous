@@ -77,10 +77,18 @@ auth.onAuthStateChanged(async (user) => {
         if (document.hidden) return; // Skip when tab is hidden to reduce Firestore reads
         if (auth.currentUser) db.collection('rooms').doc(auth.currentUser.uid).update({ lastSeen: Date.now() }).catch(() => {});
     }, 120000);
+    // Watch this account's read-watermark so a notice read on another device clears here too.
+    if (_notifReadUnsub) { _notifReadUnsub(); _notifReadUnsub = null; }
+    _notifReadUnsub = db.collection('rooms').doc(user.uid).onSnapshot((snap) => {
+        const ts = (snap.exists && snap.data().notifReadTs) || 0;
+        if (ts > notifReadTs) applyRemoteReadTs(ts);
+    }, () => {});
     } else {
     loginOverlay.classList.remove('hidden');
     appContent.classList.remove('visible');
     if (_lastSeenInterval) { clearInterval(_lastSeenInterval); _lastSeenInterval = null; }
+    if (_notifReadUnsub) { _notifReadUnsub(); _notifReadUnsub = null; }
+    notifReadTs = 0;
     }
 });
 window.addEventListener('beforeunload', () => {
@@ -134,6 +142,16 @@ let knownReplyCounts = {}; // track reply counts per bubble ID
 let unseenNewBubbles = new Set();   // ids of new bubbles you haven't seen yet (in-page glow)
 let unseenReplyBubbles = new Set(); // ids of bubbles with a new reply you haven't opened yet
 let newestUnseenId = null;          // jump target for the "N new" pill
+// ── Cross-device notification watermark ──
+// rooms/{uid}.notifReadTs = ts of the newest bubble/reply this ACCOUNT has already
+// seen on ANY device. Anything at/below it is treated as already-read: no push,
+// sound, badge or in-page glow. Reading on one device silences the same notice
+// on the others (a live rooms/{uid} listener clears them).
+let notifReadTs = 0;        // current watermark (ms)
+let maxLoadedTs = 0;        // newest bubble/reply ts currently on the board
+let _lastItems = [];        // last rendered items (to look up a bubble by id)
+let _notifReadUnsub = null; // rooms/{uid} watermark listener
+let _notifWriteTimer = null;// debounce for watermark writes
 
 /* ── Local cache helpers ── */
 function cacheSet(key, data) {
@@ -2333,6 +2351,8 @@ window.addEventListener('focus', () => {
     document.title = originalTitle;
     clearInterval(titleFlashInterval);
     titleFlashInterval = null;
+    // Viewing the board = read up to the newest loaded item; sync to other devices.
+    advanceWatermark(maxLoadedTs);
 });
 
 function ringBell() {
@@ -2366,6 +2386,7 @@ function markBubbleSeen(id) {          // clear a NEW-bubble glow once you've en
     if (unseenNewBubbles.delete(id)) {
     const el = wrap.querySelector('[data-id="' + id + '"]');
     if (el) el.classList.remove('is-new');
+    const a = _itemById(id); if (a) advanceWatermark(a.ts || 0);
     updateNewContentPill();
     }
 }
@@ -2373,6 +2394,8 @@ function markReplySeen(id) {           // clear the reply dot once you open that
     if (unseenReplyBubbles.delete(id)) {
     const el = wrap.querySelector('[data-id="' + id + '"]');
     if (el) el.classList.remove('has-new-reply');
+    const a = _itemById(id); const lr = a && getLatestReply(a.replies || []);
+    if (lr) advanceWatermark(lr.ts || 0);
     updateNewContentPill();
     }
 }
@@ -2380,6 +2403,7 @@ function markAllSeen() {
     unseenNewBubbles.clear(); unseenReplyBubbles.clear();
     wrap.querySelectorAll('.bubble.is-new, .bubble.has-new-reply').forEach(el => el.classList.remove('is-new', 'has-new-reply'));
     newestUnseenId = null;
+    advanceWatermark(maxLoadedTs);
     updateNewContentPill();
 }
 function jumpToNewest() {              // pill tap → scroll to & flash one unseen bubble at a time
@@ -2415,7 +2439,70 @@ function jumpToNewest() {              // pill tap → scroll to & flash one uns
 }
 if (newContentPill) newContentPill.addEventListener('click', jumpToNewest);
 
+// ── Cross-device read-watermark helpers ──
+function _itemById(id) { return _lastItems.find(a => a.id === id); }
+// Newest ts on a bubble = max of its own ts and its latest reply's ts.
+function itemNewestTs(a) {
+    let t = a.ts || 0;
+    const lr = getLatestReply(a.replies || []);
+    if (lr && (lr.ts || 0) > t) t = lr.ts;
+    return t;
+}
+// Persist the watermark to rooms/{uid} (debounced) so other devices pick it up.
+function scheduleNotifReadWrite(ts) {
+    if (!auth.currentUser) return;
+    if (_notifWriteTimer) clearTimeout(_notifWriteTimer);
+    _notifWriteTimer = setTimeout(() => {
+        _notifWriteTimer = null;
+        if (auth.currentUser) db.collection('rooms').doc(auth.currentUser.uid)
+            .set({ notifReadTs: ts }, { merge: true }).catch(() => {});
+    }, 1500);
+}
+// Mark everything up to `ts` as read on THIS device, then sync to the account.
+function advanceWatermark(ts) {
+    if (!ts || ts <= notifReadTs) return;
+    notifReadTs = ts;
+    scheduleNotifReadWrite(ts);
+}
+// A higher watermark arrived from another device → silence matching notices here.
+function applyRemoteReadTs(ts) {
+    notifReadTs = ts;
+    let changed = false;
+    unseenNewBubbles.forEach(id => {
+        const a = _itemById(id);
+        if (a && (a.ts || 0) <= ts) {
+            unseenNewBubbles.delete(id);
+            const el = wrap.querySelector('[data-id="' + id + '"]');
+            if (el) el.classList.remove('is-new');
+            changed = true;
+        }
+    });
+    unseenReplyBubbles.forEach(id => {
+        const a = _itemById(id);
+        const lr = a && getLatestReply(a.replies || []);
+        if (lr && (lr.ts || 0) <= ts) {
+            unseenReplyBubbles.delete(id);
+            const el = wrap.querySelector('[data-id="' + id + '"]');
+            if (el) el.classList.remove('has-new-reply');
+            changed = true;
+        }
+    });
+    if (changed) { newestUnseenId = null; updateNewContentPill(); }
+    // Drop the hidden-tab badge/title flash if nothing is left unseen.
+    if (!unseenNewBubbles.size && !unseenReplyBubbles.size) {
+        unseenCount = 0;
+        notifBadge.classList.remove('show');
+        document.title = originalTitle;
+        clearInterval(titleFlashInterval);
+        titleFlashInterval = null;
+    }
+}
+
 function notifyNewMessages(items) {
+    // Track the board's newest ts (monotonic) so "view" actions can advance the watermark.
+    _lastItems = items;
+    maxLoadedTs = items.reduce((m, a) => Math.max(m, itemNewestTs(a)), maxLoadedTs);
+
     if (isFirstSnapshot) {
     // On first load, just record the known IDs & reply counts — don't notify
     isFirstSnapshot = false;
@@ -2425,6 +2512,8 @@ function notifyNewMessages(items) {
     }
 
     const newItems = items.filter(a => !knownIds.has(a.id));
+    // Already seen on another device (ts ≤ account watermark) → don't re-notify or glow.
+    const freshItems = newItems.filter(a => (a.ts || 0) > notifReadTs);
 
     // Check for new replies on existing bubbles
     let newReplyCount = 0;
@@ -2434,12 +2523,11 @@ function notifyNewMessages(items) {
     const currentCount = countAllReplies(a.replies || []);
     const oldCount = knownReplyCounts[a.id] || 0;
     if (knownIds.has(a.id) && currentCount > oldCount) {
-        const diff = currentCount - oldCount;
-        newReplyCount += diff;
-        replyBubbleIds.push(a.id);
-        // Get the newest reply text for the notification
+        // Skip replies already read on another device (latest reply ts ≤ watermark).
         const lastReply = getLatestReply(a.replies || []);
-        if (lastReply) {
+        if (lastReply && (lastReply.ts || 0) > notifReadTs) {
+        newReplyCount += currentCount - oldCount;
+        replyBubbleIds.push(a.id);
         newestReplyText = lastReply.text || '📷 Image reply';
         }
     }
@@ -2447,21 +2535,21 @@ function notifyNewMessages(items) {
     });
 
     // Handle new bubble notifications
-    if (newItems.length) {
+    if (freshItems.length) {
     if (suppressNextNotif) {
         suppressNextNotif = false;
     } else {
         fireNotification(
-        newItems.length,
-        newItems[newItems.length - 1].text
-            ? (newItems[newItems.length - 1].text.length > 80 ? newItems[newItems.length - 1].text.slice(0, 80) + '…' : newItems[newItems.length - 1].text)
+        freshItems.length,
+        freshItems[freshItems.length - 1].text
+            ? (freshItems[freshItems.length - 1].text.length > 80 ? freshItems[freshItems.length - 1].text.slice(0, 80) + '…' : freshItems[freshItems.length - 1].text)
             : '📷 Image message',
         'New Anonymous Message',
         'anon-bubble'
         );
         // In-page: glow the new bubbles + count them in the pill (newest = last, chronological).
-        newItems.forEach(a => unseenNewBubbles.add(a.id));
-        newestUnseenId = newItems[newItems.length - 1].id;
+        freshItems.forEach(a => unseenNewBubbles.add(a.id));
+        newestUnseenId = freshItems[freshItems.length - 1].id;
     }
     }
 
