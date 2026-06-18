@@ -993,6 +993,15 @@ function hpAscii(pct) {
     return '[' + '█'.repeat(filled) + '-'.repeat(WIDTH - filled) + '] ' + p + '%';
 }
 
+// Terminal-theme "[HH:MM] " log prefix element (CSS-toggled; hidden in other themes).
+function makeCmdPfx(ts) {
+    const el = document.createElement('span');
+    el.className = 'bubble-cmd-pfx';
+    const d = new Date(ts || Date.now());
+    el.textContent = '[' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + '] ';
+    return el;
+}
+
 function render(items) {
     if (!items.length) {
     wrap.innerHTML =
@@ -1142,6 +1151,7 @@ function render(items) {
 
     if (a.type === 'poll') {
         // Poll bubble — render poll UI instead of text/image
+        bubble.appendChild(makeCmdPfx(a.ts));
         bubble.appendChild(buildPollContent(a));
     } else {
         if (a.image) {
@@ -1156,6 +1166,8 @@ function render(items) {
             });
             bubble.appendChild(img);
         }
+
+        bubble.appendChild(makeCmdPfx(a.ts));
 
         const txt = document.createElement('span');
         safeTextWithBreaks(txt, a.text);
