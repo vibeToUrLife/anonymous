@@ -1024,6 +1024,14 @@ function render(items) {
     bubble.style.animationName = 'floatIn, ' + bobNames[bobIdx];
     bubble.style.animationDuration = '0.5s, ' + bobSpeeds[bobIdx] + 's';
 
+    // Blink-ring overlay: the "new / new-reply / jumped-to" border blink animates on
+    // its OWN element, so it can never leak `infinite` onto the bubble's floatIn
+    // animation — that leak is what made the whole bubble keep flashing.
+    const alertRing = document.createElement('i');
+    alertRing.className = 'bubble-alert';
+    alertRing.setAttribute('aria-hidden', 'true');
+    bubble.appendChild(alertRing);
+
     // Decorative emojis — 16 sets for variety
     const DECO_SETS = [
         ['✨','💫'],['🌸','💗'],['⭐','🌟'],['💜','🔮'],

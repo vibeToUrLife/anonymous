@@ -1906,8 +1906,12 @@ body.light-theme .spin-result-food { color: #b8860b; }
 .new-content-pill .ncp-count { font-weight: 800; }
 @keyframes ncp-pulse { 0%, 100% { box-shadow: 0 6px 18px rgba(212,115,31,0.4); } 50% { box-shadow: 0 8px 26px rgba(242,161,84,0.7); } }
 
-/* New bubble — border blink + "NEW" ribbon (border only, no glow) */
-.bubble.is-new { position: relative; animation: bubble-new-border 1.6s ease-in-out infinite; }
+/* New bubble — border blink (on the .bubble-alert overlay) + "NEW" ribbon */
+.bubble.is-new { position: relative; }
+/* The blink lives on its own overlay element so its animation can't leak onto the
+   bubble's floatIn/bob animation — that leak is what made the whole bubble flash. */
+.bubble-alert { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 4; }
+.bubble.is-new > .bubble-alert { animation: bubble-new-border 1.6s ease-in-out infinite; }
 @keyframes bubble-new-border {
     0%, 100% { outline: 2px solid rgba(242,161,84,0.4);  outline-offset: 2px; }
     50%      { outline: 2px solid rgba(242,161,84,0.95); outline-offset: 2px; }
@@ -1919,7 +1923,7 @@ body.light-theme .spin-result-food { color: #b8860b; }
     box-shadow: 0 2px 6px rgba(0,0,0,0.3);
 }
 /* Bubble with a new reply — border blink (reply pink) + a static dot on the button */
-.bubble.has-new-reply { animation: bubble-reply-border 1.6s ease-in-out infinite; }
+.bubble.has-new-reply > .bubble-alert { animation: bubble-reply-border 1.6s ease-in-out infinite; }
 @keyframes bubble-reply-border {
     0%, 100% { outline: 2px solid rgba(224,85,106,0.4);  outline-offset: 2px; }
     50%      { outline: 2px solid rgba(224,85,106,0.95); outline-offset: 2px; }
@@ -1930,7 +1934,7 @@ body.light-theme .spin-result-food { color: #b8860b; }
     background: #e0556a; box-shadow: 0 0 0 2px var(--surface, #fff7ec);
 }
 /* Border-only blink when the pill jumps you to a bubble or a reply */
-.bubble.flash, .reply-item.flash-reply { animation: border-flash 1.2s ease; }
+.bubble.flash > .bubble-alert, .reply-item.flash-reply { animation: border-flash 1.2s ease; }
 @keyframes border-flash {
     0%, 100% { outline: 2px solid rgba(242,161,84,0);    outline-offset: 3px; }
     25%, 75% { outline: 2px solid rgba(242,161,84,0.95); outline-offset: 3px; }
@@ -1942,6 +1946,7 @@ body.no-animations .new-content-pill.show,
 body.no-animations .bubble.is-new,
 body.no-animations .bubble.has-new-reply,
 body.no-animations .bubble.flash,
+body.no-animations .bubble-alert,
 body.no-animations .reply-item.flash-reply,
 body.no-animations .bubble.has-new-reply .reply-toggle::after { animation: none !important; }
 body.no-animations .bubble.is-new { outline: 2px solid rgba(242,161,84,0.8); outline-offset: 2px; }
