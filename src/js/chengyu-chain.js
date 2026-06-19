@@ -8,8 +8,9 @@
  *
  * Scoring: each correct idiom pays a flat 20 coins, with NO daily cap. Validation
  * is STRICT — only real 成语 in the bundled dictionary (CHENGYU) are accepted, so
- * made-up words like 晓晓晓晓 are rejected. 同音 (homophone) joins use the per-idiom
- * first/last pinyin stored in the dictionary.
+ * made-up words like 晓晓晓晓 are rejected. 同音 (homophone) joins compare each
+ * boundary character's FULL set of readings (derived from the dictionary), so
+ * 多音字 connect via any of their pronunciations, both ways.
  *
  * Two parts:
  *   1. ChengyuLogic — pure helpers (daily seed, normalise, connect/validate),
@@ -62,13 +63,48 @@
     return i < 0 ? { f: v, l: '' } : { f: v.slice(0, i), l: v.slice(i + 1) };
   }
 
+  // Per-character reading sets (多音字 support), derived from the dictionary and
+  // cached per dict object: every boundary character maps to ALL toneless pinyin
+  // it shows up with anywhere in the dictionary, so 行 → {"xing","hang"} etc.
+  const _readingsCache = new WeakMap();
+  function readingsOf(dict) {
+    if (!dict || typeof dict !== 'object') return new Map();
+    let map = _readingsCache.get(dict);
+    if (map) return map;
+    map = new Map();
+    function add(ch, py) {
+      if (!ch || !py) return;
+      let set = map.get(ch);
+      if (!set) { set = new Set(); map.set(ch, set); }
+      set.add(py);
+    }
+    for (const word in dict) {
+      if (!Object.prototype.hasOwnProperty.call(dict, word)) continue;
+      const py = pyOf(dict, word);
+      if (!py) continue;
+      add(word[0], py.f);
+      add(lastChar(word), py.l);
+    }
+    _readingsCache.set(dict, map);
+    return map;
+  }
+
+  // Do two characters share any reading? (intersect their reading sets)
+  function shareReading(a, b) {
+    if (!a || !b) return false;
+    let hit = false;
+    a.forEach(function (r) { if (b.has(r)) hit = true; });
+    return hit;
+  }
+
   // Does `cand` legally follow `tip`? Exact last→first character always counts;
-  // 同音 (homophone) counts when both idioms' pinyin is known in the dictionary.
+  // 同音 (homophone) counts when tip's last character and cand's first character
+  // share ANY reading — so 多音字 connect via either pronunciation, both ways.
   function connects(tipWord, candWord, dict) {
     if (!tipWord || !candWord) return false;
     if (candWord[0] === lastChar(tipWord)) return true;
-    const t = pyOf(dict, tipWord), c = pyOf(dict, candWord);
-    return !!(t && c && t.l && c.f && t.l === c.f);
+    const map = readingsOf(dict);
+    return shareReading(map.get(lastChar(tipWord)), map.get(candWord[0]));
   }
 
   // Validate a raw submission. STRICT: the word must be a real 成语 (in `dict`).
@@ -85,7 +121,7 @@
   const ChengyuLogic = {
     dateKey: dateKey, hashStr: hashStr, dailySeedIndex: dailySeedIndex,
     normalize: normalize, lastChar: lastChar, has: has, pyOf: pyOf,
-    connects: connects, validate: validate, REWARD: 20
+    readingsOf: readingsOf, connects: connects, validate: validate, REWARD: 20
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = ChengyuLogic;
   global.ChengyuLogic = ChengyuLogic;
