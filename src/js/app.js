@@ -1002,6 +1002,21 @@ function makeCmdPfx(ts) {
     return el;
 }
 
+// Accordion: collapse every other bubble's open reply thread (keep `except` open).
+function collapseOtherReplies(except) {
+    wrap.querySelectorAll('.bubble').forEach(function (b) {
+        if (b === except) return;
+        const c = b.querySelector('.replies-container');
+        if (!c) return;
+        c.remove();
+        const btn = b.querySelector('.reply-toggle');
+        if (btn) {
+            const n = b._replyData ? countAllReplies(b._replyData.replies) : 0;
+            btn.textContent = '💬 Reply' + (n ? ' (' + n + ')' : '');
+        }
+    });
+}
+
 function render(items) {
     if (!items.length) {
     wrap.innerHTML =
@@ -1197,6 +1212,7 @@ function render(items) {
         container.remove();
         replyBtn.textContent = '💬 Reply' + (latestReplyCount ? ' (' + latestReplyCount + ')' : '');
         } else {
+        collapseOtherReplies(bubble);   // accordion: only one thread open at a time
         openReplies(bubble, latest);
         }
     });
