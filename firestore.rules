@@ -358,10 +358,11 @@ service cloud.firestore {
       function isRealIdiom(w) {
         return exists(/databases/$(database)/documents/chengyu_dict/$(w));
       }
-      // A user-added link must be a real 4-hanzi 成语 owned by the writer.
+      // A user-added link must be a real 成语 (exists in chengyu_dict — which only
+      // holds 4-hanzi idioms) and be owned by the writer. No size() check: rules'
+      // string.size() can count BYTES, so it would wrongly reject Chinese words.
       function validAnswer(link) {
         return link.w is string
-               && link.w.size() == 4
                && link.uid == request.auth.uid
                && isRealIdiom(link.w);
       }
