@@ -654,7 +654,7 @@
        Upcoming Events — pinned 便利贴 (sticky notes) on the board, plus a
        full-page 8-bit pixel reminder that pops when an event is near.
        ══════════════════════════════════════════════════════════════ */
-    .ue-board { max-width: 600px; margin: 2px auto 0; padding: 0 12px; }
+    .ue-board { max-width: 600px; margin: -10px auto 0; padding: 0 12px; }
     .ue-head {
       display: flex; align-items: center; justify-content: space-between;
       margin-bottom: 10px;
@@ -688,6 +688,7 @@
       color: var(--ink); font-size: 13px; outline: none; font-family: inherit;
     }
     .ue-input::placeholder { color: var(--ink-faint); }
+    .ue-textarea { resize: vertical; min-height: 64px; line-height: 1.5; }
     .ue-datetime { color-scheme: light dark; }
     .ue-form-actions { display: flex; gap: 8px; }
     .ue-pin-btn, .ue-cancel-btn {
@@ -735,6 +736,7 @@
     .ue-note-title {
       font-family: var(--font-display); font-weight: 800; font-size: 14px;
       line-height: 1.25; word-break: break-word; margin-bottom: 7px;
+      white-space: pre-line;          /* keep the user's line breaks */
     }
     .ue-note-when { font-size: 11px; opacity: 0.8; }
     .ue-note-cd {
@@ -802,7 +804,7 @@
     }
     .ue-reminder-title {
       margin: 4vh 0; font-size: clamp(30px, 9vw, 96px); line-height: 1.45;
-      color: #ffd83d; word-break: break-word;
+      color: #ffd83d; word-break: break-word; white-space: pre-line;
       text-shadow:
         -4px -4px 0 #2b1408, 4px -4px 0 #2b1408, -4px 4px 0 #2b1408, 4px 4px 0 #2b1408,
         0 -4px 0 #2b1408, 0 4px 0 #2b1408, -4px 0 0 #2b1408, 4px 0 0 #2b1408,
@@ -1170,7 +1172,7 @@
       <button class="ue-add-btn" id="ueAddBtn" type="button">+ Pin event</button>
     </div>
     <div class="ue-form hidden" id="ueForm">
-      <input type="text" class="ue-input" id="ueTitle" placeholder="What's happening? e.g. 团队聚餐" maxlength="100" autocomplete="off">
+      <textarea class="ue-input ue-textarea" id="ueTitle" placeholder="Type your message — press Enter for a new line&#10;e.g.&#10;25/07/2026 6.30pm&#10;Marjorie Hotel, Penang&#10;Birthday Event" maxlength="300" rows="3"></textarea>
       <input type="datetime-local" class="ue-input ue-datetime" id="ueWhen">
       <div class="ue-form-actions">
         <button class="ue-pin-btn" id="ueSaveBtn" type="button">📌 Pin it</button>
@@ -1455,7 +1457,7 @@
   <script src="./src/js/firebase-config.js"></script>
   <script src="./src/js/daily-quotes.js?v=2"></script>
   <script src="./src/js/quote-comments.js"></script>
-  <script src="./src/js/upcoming-events.js?v=2"></script>
+  <script src="./src/js/upcoming-events.js?v=3"></script>
   <!-- Clay design system theme controller (must load before app.js wires the toggle) -->
   <script src="./src/js/theme.js?v=2"></script>
   <script src="./src/js/app.js?v=13"></script>

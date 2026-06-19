@@ -15,7 +15,7 @@
 
 // eslint-disable-next-line no-unused-vars
 const UpcomingEvents = (() => {
-  const MAX_TITLE = 100;
+  const MAX_TITLE = 300;
   const GRACE_MS = 8 * 60 * 60 * 1000;   // note lives 8h past its event time
   const DAY_MS   = 24 * 60 * 60 * 1000;
   const HOUR_MS  = 60 * 60 * 1000;
@@ -295,8 +295,9 @@ const UpcomingEvents = (() => {
     if (addBtn) addBtn.addEventListener('click', () => _toggleForm());
     if (saveBtn) saveBtn.addEventListener('click', _create);
     if (cancelBtn) cancelBtn.addEventListener('click', () => _toggleForm(false));
+    // Plain Enter adds a new line (it's a textarea); Ctrl/⌘+Enter posts.
     if (titleEl) titleEl.addEventListener('keydown', e => {
-      if (e.key === 'Enter') { e.preventDefault(); _create(); }
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); _create(); }
     });
     if (ov) ov.addEventListener('click', _hideReminder);
 
