@@ -220,12 +220,14 @@
 /* Floating round FABs → flat square terminal tiles */
 [data-theme="terminal"] .feedback-fab,
 [data-theme="terminal"] .riddle-fab,
+[data-theme="terminal"] .chengyu-fab,
 [data-theme="terminal"] .mood-fab{
   background:#0c0c0c !important; background-image:none !important; color:var(--ink) !important;
   border:1px solid var(--border) !important; border-radius:4px !important; box-shadow:none !important;
 }
 [data-theme="terminal"] .feedback-fab:hover,
 [data-theme="terminal"] .riddle-fab:hover,
+[data-theme="terminal"] .chengyu-fab:hover,
 [data-theme="terminal"] .mood-fab:hover{
   background:var(--primary) !important; color:var(--on-primary) !important; transform:none !important;
 }

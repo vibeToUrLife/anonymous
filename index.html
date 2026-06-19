@@ -6,7 +6,7 @@
   <title>Anonymous Bubble Answers</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
   <link rel="stylesheet" href="./src/css/style.css?v=9">
-  <link rel="stylesheet" href="./src/css/interactive.css?v=1">
+  <link rel="stylesheet" href="./src/css/interactive.css?v=2">
   <!-- Clay "Bubble Pop" design system: tokens + component library (load last so they govern) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1140,6 +1140,26 @@
     </div>
   </div>
 
+  <!-- Daily 成语接龙 (idiom chain) — button stacked above the riddle button -->
+  <button class="chengyu-fab" id="cjFab" title="每日成语接龙 · 答对一个得20金币">🐉</button>
+  <div class="cj-overlay" id="cjOverlay">
+    <div class="cj-card">
+      <button class="cj-close" id="cjClose" title="关闭">✕</button>
+      <div class="cj-head">🐉 每日成语接龙</div>
+      <div class="cj-next" id="cjNext"></div>
+      <div class="cj-chain" id="cjChain"></div>
+      <input class="cj-input" id="cjInput" type="text" maxlength="8" placeholder="输入成语接龙…" autocomplete="off">
+      <div class="cj-actions">
+        <button class="cj-btn primary" id="cjSubmit">接龙</button>
+        <button class="cj-btn ghost" id="cjReseed">卡住了，换开头</button>
+      </div>
+      <div class="cj-feedback" id="cjFeedback"></div>
+      <div class="cj-reward">💰 答对一个成语 +20 金币</div>
+      <div class="cj-board" id="cjBoard"></div>
+      <div class="cj-wrong" id="cjWrong"></div>
+    </div>
+  </div>
+
   <!-- Mood Check-in Widget -->
   <button class="mood-fab" id="moodFab" title="How are you feeling today?">😊</button>
 
@@ -1240,6 +1260,9 @@
   <!-- Daily brain-teaser (脑筋急转弯) -->
   <script src="./src/js/riddles-data.js?v=2"></script>
   <script src="./src/js/daily-riddle.js?v=3"></script>
+  <!-- Daily 成语接龙 (idiom chain) -->
+  <script src="./src/js/chengyu-data.js?v=1"></script>
+  <script src="./src/js/chengyu-chain.js?v=4"></script>
   <!-- Coin sinks: cosmetics shop / gacha / slot / boost (金币乐园) -->
   <script src="./src/js/coin-spend-logic.js"></script>
   <script src="./src/js/coin-center.js"></script>

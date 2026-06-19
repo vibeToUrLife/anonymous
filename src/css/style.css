@@ -2331,7 +2331,7 @@ body.sidebar-open .bubble-wrap {
 .fab-toggle {
     position: fixed;
     right: 18px;
-    bottom: 262px;
+    bottom: 320px;            /* sits above the 成语接龙 FAB (264px) */
     z-index: 311;
     width: 48px;
     height: 26px;
@@ -2352,6 +2352,7 @@ body.sidebar-open .bubble-wrap {
 body.fabs-collapsed .fab-toggle { bottom: 90px; }
 body.fabs-collapsed .feedback-fab,
 body.fabs-collapsed .riddle-fab,
+body.fabs-collapsed .chengyu-fab,
 body.fabs-collapsed .mood-fab {
     transform: translateX(80px) !important;
     opacity: 0;

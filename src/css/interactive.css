@@ -417,6 +417,149 @@ body.light-theme .riddle-warn { color: #b91c1c; background: rgba(248, 113, 113, 
 body.light-theme .riddle-solvers { border-top-color: rgba(0, 0, 0, 0.1); }
 body.light-theme .riddle-solvers-title { color: rgba(0, 0, 0, 0.75); }
 body.light-theme .riddle-solver-chip { color: #b45309; background: rgba(245, 158, 11, 0.16); }
+
+/* ════════════════════════════════════════════════════════════
+   5. Daily 成语接龙 (idiom chain) — FAB + overlay
+   Authored with design tokens, so light / dark / terminal all work
+   without per-theme overrides (tokens flip the values).
+   ════════════════════════════════════════════════════════════ */
+.chengyu-fab {
+  position: fixed;
+  bottom: 264px;            /* stacked directly above the riddle button (206px) */
+  right: 18px;
+  z-index: 310;
+  width: 48px; height: 48px;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--primary-deep);
+  font-size: 22px;
+  cursor: pointer;
+  box-shadow: var(--clay-up);
+  transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
+}
+.chengyu-fab:hover { transform: scale(1.1); filter: brightness(1.03); }
+.chengyu-fab.has-new { animation: cjPulse 1.8s ease-in-out infinite; }
+.chengyu-fab.has-new::after {
+  content: '';
+  position: absolute;
+  top: 2px; right: 2px;
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: #ef4444;
+  border: 2px solid var(--surface);
+}
+@keyframes cjPulse {
+  0%, 100% { box-shadow: var(--clay-up); }
+  50%      { box-shadow: 0 4px 22px rgba(245, 158, 11, 0.55); }
+}
+
+.cj-overlay {
+  position: fixed; inset: 0; z-index: 600;
+  display: none; align-items: center; justify-content: center;
+  padding: 20px;
+  background: var(--scrim);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+}
+.cj-overlay.show { display: flex; animation: pgFadeIn 0.2s ease; }
+
+.cj-card {
+  position: relative;
+  width: 100%; max-width: 420px;
+  max-height: 86vh; overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 22px 20px 18px;
+  box-shadow: var(--clay-up);
+  color: var(--ink);
+  text-align: center;
+}
+.cj-close {
+  position: absolute; top: 12px; right: 12px;
+  width: 30px; height: 30px; border: none; border-radius: 50%;
+  background: var(--sunken); color: var(--ink-soft);
+  font-size: 14px; cursor: pointer; transition: background 0.15s, color 0.15s;
+}
+.cj-close:hover { background: var(--bad); color: #fff; }
+
+.cj-head {
+  font-size: 15px; font-weight: 800; letter-spacing: 0.5px;
+  color: var(--primary-deep); margin-bottom: 10px;
+  font-family: var(--font-display);
+}
+.cj-next {
+  font-size: 13px; font-weight: 700; color: var(--ink);
+  background: var(--primary-tint); border-radius: 10px;
+  padding: 8px 12px; margin-bottom: 10px;
+}
+
+.cj-chain {
+  text-align: left;
+  max-height: 200px; overflow-y: auto;
+  background: var(--sunken); border-radius: 12px;
+  padding: 8px 10px; margin-bottom: 12px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.cj-link {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 14px; color: var(--ink);
+  padding: 3px 5px; border-radius: 8px;
+}
+.cj-link.tip { background: var(--primary-tint); }
+.cj-word { font-weight: 700; letter-spacing: 1px; }
+.cj-by { font-size: 11px; color: var(--ink-faint); margin-left: auto; }
+
+.cj-input {
+  width: 100%; box-sizing: border-box;
+  padding: 11px 14px; border-radius: 12px; border: none;
+  background: var(--sunken); box-shadow: var(--clay-in);
+  color: var(--ink); font-size: 16px; text-align: center; outline: none;
+  margin-bottom: 10px;
+}
+.cj-input::placeholder { color: var(--ink-faint); }
+.cj-input.shake { animation: riddleShake 0.4s; }
+
+.cj-actions { display: flex; gap: 8px; justify-content: center; margin-bottom: 10px; }
+.cj-btn {
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--primary-deep); border-radius: 10px;
+  padding: 9px 18px; font-size: 14px; font-weight: 700; cursor: pointer;
+  box-shadow: var(--clay-up-sm);
+  transition: transform 0.12s, filter 0.15s, opacity 0.15s;
+}
+.cj-btn:hover { filter: brightness(1.03); }
+.cj-btn:active { transform: translateY(1px) scale(.99); }
+.cj-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.cj-btn.primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-deep));
+  color: var(--on-primary); border: none; box-shadow: var(--acc-shadow);
+}
+.cj-btn.ghost { background: transparent; box-shadow: none; color: var(--ink-faint); font-weight: 600; }
+
+.cj-feedback { min-height: 18px; font-size: 13px; font-weight: 700; margin-bottom: 4px; color: var(--ink-soft); }
+.cj-feedback.ok { color: var(--good); }
+.cj-feedback.wrong { color: var(--bad); }
+.cj-reward { font-size: 11px; color: var(--ink-faint); margin-bottom: 10px; }
+
+.cj-board, .cj-wrong { text-align: left; border-top: 1px solid var(--border); padding-top: 10px; margin-top: 4px; }
+.cj-sec-title { font-size: 13px; font-weight: 700; color: var(--ink-soft); margin-bottom: 8px; }
+.cj-rank-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.cj-rank {
+  font-size: 12px; color: var(--primary-deep);
+  background: var(--primary-tint); border-radius: 999px; padding: 4px 11px;
+}
+.cj-wrong-item { font-size: 12px; color: var(--ink-soft); padding: 3px 0; word-break: break-word; }
+.cj-wrong-item b { color: var(--ink); }
+.cj-wrong-why { color: var(--ink-faint); margin-left: 4px; }
+.cj-empty { font-size: 12px; color: var(--ink-faint); }
+.cj-more {
+  width: 100%; margin-top: 6px; padding: 4px;
+  background: none; border: none; cursor: pointer;
+  color: var(--primary-deep); font-size: 11px; font-weight: 700;
+}
+.cj-more:hover { text-decoration: underline; }
+.cj-chain.expanded { max-height: 320px; }
 body.light-theme .riddle-solvers-empty { color: rgba(0, 0, 0, 0.45); }
 
 /* ════════════════════════════════════════════════════════════

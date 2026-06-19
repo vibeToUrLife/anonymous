@@ -326,6 +326,20 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════
+    // 16. DAILY 成语接龙 (idiom chain) — shared daily chain + who answered
+    //     Path: chengyu_chain/{dateStr} = { seed, links[], wrong[] }
+    //       links[] item: {w, uid, name, verified, at}  — the chain, in order
+    //       wrong[] item: {w, uid, name, reason, at}    — recent wrong attempts (≤50)
+    //     ONE shared doc per day. Everyone appends via a transaction that also
+    //     pays +20 coins to the solver's OWN rooms doc (covered by the rooms
+    //     isOwner update rule) for a VERIFIED idiom. Any signed-in user may read &
+    //     write the day doc — same trust level as answers / mood_checkins.
+    // ═══════════════════════════════════════
+    match /chengyu_chain/{dateStr} {
+      allow read, write: if isAuth();
+    }
+
+    // ═══════════════════════════════════════
     // DEFAULT — deny everything else
     // ═══════════════════════════════════════
     match /{document=**} {
