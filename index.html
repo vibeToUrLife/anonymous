@@ -1022,6 +1022,16 @@
     </div>
   </div>
 
+  <!-- Coin Rush banner — revealed at 9am, counts down to today's rush, then Join/View (coin-rush.js) -->
+  <div class="cr-banner hidden" id="crBanner" role="status" aria-live="polite">
+    <span class="cr-banner-emoji" id="crBannerEmoji">💰</span>
+    <span class="cr-banner-body">
+      <span class="cr-banner-line1" id="crBannerLabel">Coin Rush</span>
+      <span class="cr-banner-sub" id="crBannerSub"></span>
+    </span>
+    <button class="cr-banner-btn hidden" id="crBannerBtn" type="button">Join</button>
+  </div>
+
   <div class="bubble-wrap" id="bubbleWrap"></div>
 
   <div class="img-preview-strip" id="imgPreviewStrip">
@@ -1211,6 +1221,7 @@
   <!-- Firebase SDK (compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="./src/js/firebase-config.js"></script>
   <script src="./src/js/daily-quotes.js?v=2"></script>
@@ -1223,6 +1234,8 @@
   <script src="./src/js/presence.js"></script>
   <script src="./src/js/live-reactions.js"></script>
   <script src="./src/js/bubble-playground.js"></script>
+  <script src="./src/js/coin-rush-logic.js"></script>
+  <script src="./src/js/coin-rush.js"></script>
   <!-- Daily brain-teaser (脑筋急转弯) -->
   <script src="./src/js/riddles-data.js?v=2"></script>
   <script src="./src/js/daily-riddle.js?v=3"></script>

@@ -162,6 +162,32 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════
+    // 6b. COIN RUSH — daily synced bubble-pop competition
+    //     coin_rush/{day}/scores/{uid} — owner-only; score (pops) bounded.
+    //     coin_rush/{day}/claims/{uid} — one-time top-3 bonus guard (create-only).
+    //     Bounds (2000 / 20) mirror CoinRush.MAX_RUSH_SCORE / MAX_RUSH_BONUS.
+    // ═══════════════════════════════════════
+    match /coin_rush/{day} {
+      allow read: if isAuth();
+
+      match /scores/{uid} {
+        allow read: if isAuth();
+        allow write: if isOwner(uid)
+                     && request.resource.data.score is number
+                     && request.resource.data.score >= 0
+                     && request.resource.data.score <= 2000;
+      }
+      match /claims/{uid} {
+        allow read: if isAuth();
+        allow create: if isOwner(uid)
+                      && request.resource.data.bonus is number
+                      && request.resource.data.bonus >= 0
+                      && request.resource.data.bonus <= 1000;
+        allow update, delete: if false;
+      }
+    }
+
+    // ═══════════════════════════════════════
     // 7. MOOD CHECK-INS
     // ═══════════════════════════════════════
     match /mood_checkins/{dateId} {

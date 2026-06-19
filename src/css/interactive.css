@@ -699,3 +699,164 @@ body.light-theme .cc-confirm-msg { color: #333; }
 
 /* 土豪榜 "this page only" reminder */
 .cc-board-note { margin: 4px 0 12px; padding: 8px 10px; background: rgba(245,179,1,0.1); border-radius: 8px; line-height: 1.5; }
+
+/* ════════════════════════════════════════════════════════════
+   COIN RUSH — daily synced bubble-pop competition (coin-rush.js)
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Board banner: reveal → countdown → Join / View ── */
+.cr-banner {
+  display: flex; align-items: center; gap: 10px;
+  width: fit-content; max-width: min(94vw, 440px);
+  margin: 10px auto 6px;
+  padding: 8px 10px 8px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: var(--clay-up);
+}
+.cr-banner.hidden { display: none; }
+.cr-banner-emoji { font-size: 20px; line-height: 1; }
+.cr-banner-body { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+.cr-banner-line1 { font-size: 13px; font-weight: 800; color: var(--ink); white-space: nowrap; }
+.cr-banner-sub { font-size: 11px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.cr-banner-btn {
+  margin-left: 6px; border: none; cursor: pointer;
+  background: linear-gradient(135deg, #f7b733, #f9c846);
+  color: #5a3d00; font-weight: 800; font-size: 12px;
+  padding: 7px 14px; border-radius: 999px;
+  box-shadow: 0 4px 10px rgba(247,183,51,.4);
+  transition: transform .12s, box-shadow .12s;
+}
+.cr-banner-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(247,183,51,.55); }
+.cr-banner-btn.hidden { display: none; }
+.cr-banner.urgent { animation: crPulse 1s ease-in-out infinite; border-color: #f7b733; }
+.cr-banner.urgent .cr-banner-sub { color: var(--bad); font-weight: 700; }
+.cr-banner.live { border-color: #36c98b; box-shadow: 0 0 0 2px rgba(54,201,139,.25), var(--clay-up); }
+@keyframes crPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+@media (prefers-reduced-motion: reduce) { .cr-banner.urgent { animation: none; } }
+
+/* ── Big, fixed (scroll-proof) "get ready" countdown — last seconds ── */
+#crCountdown {
+  position: fixed; top: 42%; left: 50%; transform: translate(-50%, -50%);
+  z-index: 430; text-align: center; pointer-events: none;
+  background: rgba(20, 14, 4, 0.92);
+  padding: 20px 36px; border-radius: 24px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5), inset 0 0 0 2px rgba(247, 183, 51, 0.5);
+  animation: crCdIn 0.3s ease both;
+}
+.cr-cd-label { font-size: 15px; font-weight: 800; color: #ffe08a; }
+.cr-cd-num {
+  font-size: 88px; font-weight: 900; line-height: 1.05; color: #fff;
+  font-variant-numeric: tabular-nums; text-shadow: 0 4px 18px rgba(247, 183, 51, 0.55);
+}
+.cr-cd-hint { font-size: 13px; color: rgba(255, 255, 255, 0.7); }
+.cr-cd-num.pop { animation: crCdPop 0.45s ease; }
+@keyframes crCdIn {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes crCdPop {
+  0%   { transform: scale(1.6); opacity: 0.4; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { #crCountdown, .cr-cd-num.pop { animation: none; } }
+
+/* ── Full-screen overlay (gold reskin of the Playground) ── */
+body.cr-open { overflow: hidden; }
+#crOverlay {
+  position: fixed; inset: 0; z-index: 420;
+  display: flex; flex-direction: column;
+  background: radial-gradient(circle at 50% 26%, rgba(74, 54, 12, 0.94), rgba(20, 14, 4, 0.97));
+  backdrop-filter: blur(6px);
+  animation: pgFadeIn 0.25s ease;
+}
+.cr-timer {
+  font-size: 17px; font-weight: 800; color: #ffe08a;
+  font-variant-numeric: tabular-nums; min-width: 56px;
+}
+.cr-timer.urgent { color: #ff6b6b; }
+.cr-body { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+/* Coin look drawn entirely in CSS (no emoji dependency) — a shiny gold disc
+   with a ring; the ★ inside renders on every system. */
+.cr-coin {
+  color: #8a5a00;
+  font-weight: 800;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.3),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.55),
+    inset 0 0 0 4px rgba(190, 140, 12, 0.55),
+    inset 0 -6px 12px rgba(120, 80, 0, 0.2),
+    inset 0 7px 12px rgba(255, 255, 255, 0.5);
+}
+
+/* ── Results panel ── */
+.cr-results {
+  flex: 1; display: flex; flex-direction: column;
+  max-width: 460px; width: 92%; margin: 0 auto; padding: 8px 0 18px;
+}
+.cr-results-title { text-align: center; color: #fff; font-size: 18px; font-weight: 800; padding: 8px 0 14px; }
+.cr-rows { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.cr-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: 12px;
+  background: rgba(255,255,255,0.08); color: #fff;
+}
+.cr-row.me { background: rgba(247,183,51,0.28); box-shadow: 0 0 0 1px rgba(247,183,51,.6) inset; font-weight: 700; }
+.cr-rank {
+  width: 26px; height: 26px; line-height: 26px; flex: 0 0 auto;
+  text-align: center; font-weight: 800; font-size: 13px; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14); color: #fff;
+}
+.cr-rank-1 { background: linear-gradient(135deg, #ffe9a8, #f3c33b); color: #6a4a00; }
+.cr-rank-2 { background: linear-gradient(135deg, #eaeaf2, #c2c2cf); color: #3a3a44; }
+.cr-rank-3 { background: linear-gradient(135deg, #f4c49c, #d8965a); color: #5a2e00; }
+.cr-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cr-score { font-variant-numeric: tabular-nums; font-weight: 700; }
+.cr-bonus { min-width: 56px; text-align: right; color: #ffe08a; font-weight: 800; font-size: 13px; }
+.cr-empty { text-align: center; color: rgba(255,255,255,.6); padding: 30px 0; }
+.cr-results-close {
+  margin: 16px auto 0; border: none; cursor: pointer;
+  background: rgba(255,255,255,0.15); color: #fff; font-weight: 700;
+  padding: 10px 26px; border-radius: 999px;
+}
+.cr-results-close:hover { background: rgba(255,255,255,0.28); }
+
+/* ── Dev test button + panel (developer accounts only) ── */
+.cr-dev-btn {
+  position: fixed; left: 12px; bottom: 12px; z-index: 430;
+  border: none; cursor: pointer; font-size: 12px; font-weight: 700;
+  background: rgba(120,90,200,0.9); color: #fff;
+  padding: 8px 12px; border-radius: 999px; box-shadow: 0 4px 12px rgba(0,0,0,.3);
+}
+.cr-dev-panel {
+  position: fixed; left: 12px; bottom: 52px; z-index: 431;
+  display: flex; flex-direction: column; gap: 6px; width: 230px;
+  padding: 12px; border-radius: 14px;
+  background: #211a3a; color: #fff; box-shadow: 0 12px 30px rgba(0,0,0,.45);
+}
+.cr-dev-title { font-weight: 800; font-size: 13px; }
+.cr-dev-time { font-size: 11px; color: #b9aee8; margin-bottom: 4px; }
+.cr-dev-panel button {
+  border: none; cursor: pointer; text-align: left;
+  background: rgba(255,255,255,0.1); color: #fff; font-size: 12px;
+  padding: 8px 10px; border-radius: 8px;
+}
+.cr-dev-panel button:hover { background: rgba(255,255,255,0.2); }
+.cr-dev-status { margin-top: 6px; font-size: 11px; color: #ffe08a; font-variant-numeric: tabular-nums; }
+
+/* ── Bonus toast ── */
+.cr-toast {
+  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
+  z-index: 460; opacity: 0; pointer-events: none;
+  background: linear-gradient(135deg, #f7b733, #f9c846); color: #5a3d00;
+  font-weight: 800; font-size: 14px; padding: 12px 20px; border-radius: 999px;
+  box-shadow: 0 10px 26px rgba(247,183,51,.5);
+  transition: opacity .3s, transform .3s;
+}
+.cr-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Light-theme banner tweaks */
+body.light-theme .cr-banner { background: var(--surface); }
+body.light-theme .cr-banner-line1 { color: var(--ink); }
