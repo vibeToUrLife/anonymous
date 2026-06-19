@@ -326,17 +326,69 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════
-    // 16. DAILY 成语接龙 (idiom chain) — shared daily chain + who answered
+    // 16. 成语 DICTIONARY — server-side word list for chain validation
+    //     Path: chengyu_dict/{idiom} = {}  (doc id IS the 成语; value unused)
+    //     One doc per REAL 成语. Lets the chengyu_chain rules below verify a
+    //     submitted word actually exists via exists(), which blocks fake words
+    //     (e.g. 诈骗集团 / 团团转转) that bypass the browser-side check. Seed it
+    //     once from a developer browser session; only developers may write.
+    // ═══════════════════════════════════════
+    match /chengyu_dict/{idiom} {
+      allow read: if isAuth();
+      allow write: if isAuth() && isDeveloper(request.auth.uid);
+    }
+
+    // ═══════════════════════════════════════
+    // 16b. DAILY 成语接龙 (idiom chain) — shared daily chain + who answered
     //     Path: chengyu_chain/{dateStr} = { seed, links[], wrong[] }
-    //       links[] item: {w, uid, name, verified, at}  — the chain, in order
-    //       wrong[] item: {w, uid, name, reason, at}    — recent wrong attempts (≤50)
-    //     ONE shared doc per day. Everyone appends via a transaction that also
-    //     pays +20 coins to the solver's OWN rooms doc (covered by the rooms
-    //     isOwner update rule) for a VERIFIED idiom. Any signed-in user may read &
-    //     write the day doc — same trust level as answers / mood_checkins.
+    //       links[] item: {w, uid, name, at}  — the chain, in order
+    //       wrong[] item: {w, uid, name, reason, at}  — recent wrong attempts (≤50)
+    //     ONE shared doc per day. A user appends via a transaction that also pays
+    //     +20 coins to their OWN rooms doc (rooms isOwner update rule). The rules
+    //     ENFORCE that each appended link is a real 成语 (exists in chengyu_dict),
+    //     is 4 hanzi, and is owned by the writer — so fake idioms can't get in even
+    //     by bypassing the browser. The connect (同音) check stays client-side.
     // ═══════════════════════════════════════
     match /chengyu_chain/{dateStr} {
-      allow read, write: if isAuth();
+      allow read: if isAuth();
+
+      function newLinks() { return request.resource.data.links; }
+      function oldLinks() { return resource.data.links; }
+      function tailOf(list) { return list[list.size() - 1]; }
+      function isRealIdiom(w) {
+        return exists(/databases/$(database)/documents/chengyu_dict/$(w));
+      }
+      // A user-added link must be a real 4-hanzi 成语 owned by the writer.
+      function validAnswer(link) {
+        return link.w is string
+               && link.w.size() == 4
+               && link.uid == request.auth.uid
+               && isRealIdiom(link.w);
+      }
+
+      // Developers may fix / clean the day doc freely (e.g. remove junk links).
+      allow create, update: if isAuth() && isDeveloper(request.auth.uid);
+
+      // First write of the day: seed only (size 1) or seed + one valid answer (size 2).
+      allow create: if isAuth()
+                    && newLinks().size() >= 1
+                    && newLinks().size() <= 2
+                    && (newLinks().size() == 1 || validAnswer(tailOf(newLinks())));
+
+      allow update: if isAuth() && (
+        // (a) append exactly ONE real-idiom link; previous tip must stay intact
+        ( newLinks().size() == oldLinks().size() + 1
+          && validAnswer(tailOf(newLinks()))
+          && newLinks()[oldLinks().size() - 1] == tailOf(oldLinks()) )
+        // (b) record a wrong attempt — the chain (links) must be UNCHANGED
+        || newLinks() == oldLinks()
+        // (c) 换开头 before anyone answered — result is a single real-idiom seed
+        || ( oldLinks().size() <= 1
+             && newLinks().size() == 1
+             && isRealIdiom(newLinks()[0].w) )
+      );
+
+      allow delete: if false;
     }
 
     // ═══════════════════════════════════════
