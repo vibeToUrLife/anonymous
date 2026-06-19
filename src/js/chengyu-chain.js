@@ -6,10 +6,10 @@
  * one (同音/homophone also counts). The chain, the "🏆 答对榜" (who answered how
  * many) and the "❌ 答错记录" (who typed a wrong answer) all reset each day.
  *
- * Scoring: each correct idiom pays a flat 20 coins, with NO daily cap. An idiom
- * that isn't in our dictionary ("未收录") still counts and earns coins too, but it
- * can only connect by the exact same character (we have no pinyin for it, so 同音
- * matching needs both idioms to be in the dictionary).
+ * Scoring: each correct idiom pays a flat 20 coins, with NO daily cap. Validation
+ * is STRICT — only real 成语 in the bundled dictionary (CHENGYU) are accepted, so
+ * made-up words like 晓晓晓晓 are rejected. 同音 (homophone) joins use the per-idiom
+ * first/last pinyin stored in the dictionary.
  *
  * Two parts:
  *   1. ChengyuLogic — pure helpers (daily seed, normalise, connect/validate),
@@ -17,7 +17,7 @@
  *   2. A browser IIFE that wires the FAB + overlay UI, the shared Firestore doc
  *      (chengyu_chain/{today}) and the coin reward.
  *
- * Depends on globals: CHENGYU_LIST (chengyu-data.js) and — for play/rewards —
+ * Depends on globals: CHENGYU (chengyu-data.js) and — for play/rewards —
  * db/auth/showToast from app.js. Loaded after both.
  */
 (function (global) {
@@ -51,36 +51,40 @@
 
   function lastChar(w) { return w ? w[w.length - 1] : ''; }
 
-  // word -> { f:firstPinyin, l:lastPinyin } from the [word,f,l] tuples.
-  function buildDict(list) {
-    const map = Object.create(null);
-    (list || []).forEach(function (t) { map[t[0]] = { f: t[1], l: t[2] }; });
-    return map;
+  // Is `word` a real 成语 in the dictionary? (own property only)
+  function has(dict, word) { return !!dict && Object.prototype.hasOwnProperty.call(dict, word); }
+
+  // Parse a dictionary value ("firstPinyin lastPinyin") into { f, l }.
+  function pyOf(dict, word) {
+    const v = dict && dict[word];
+    if (typeof v !== 'string') return null;
+    const i = v.indexOf(' ');
+    return i < 0 ? { f: v, l: '' } : { f: v.slice(0, i), l: v.slice(i + 1) };
   }
 
   // Does `cand` legally follow `tip`? Exact last→first character always counts;
-  // 同音 (homophone) counts only when BOTH idioms are in the dictionary (so their
-  // pinyin is known). Unknown idioms can therefore only connect by exact char.
+  // 同音 (homophone) counts when both idioms' pinyin is known in the dictionary.
   function connects(tipWord, candWord, dict) {
     if (!tipWord || !candWord) return false;
     if (candWord[0] === lastChar(tipWord)) return true;
-    const t = dict[tipWord], c = dict[candWord];
+    const t = pyOf(dict, tipWord), c = pyOf(dict, candWord);
     return !!(t && c && t.l && c.f && t.l === c.f);
   }
 
-  // Validate a raw submission against the current tip + already-used set.
-  // Returns { ok, word, verified, reason }.
+  // Validate a raw submission. STRICT: the word must be a real 成语 (in `dict`).
+  // Returns { ok, word, reason }.
   function validate(input, tipWord, usedSet, dict) {
     const w = normalize(input);
     if (!/^[一-鿿]{4}$/.test(w)) return { ok: false, word: w, reason: '要输入四个汉字的成语' };
+    if (!has(dict, w)) return { ok: false, word: w, reason: '这不是成语（成语库里查不到）' };
     if (usedSet && usedSet.has(w)) return { ok: false, word: w, reason: '这个成语已经用过了' };
     if (!connects(tipWord, w, dict)) return { ok: false, word: w, reason: '接不上「' + lastChar(tipWord) + '」（首字要相同或同音）' };
-    return { ok: true, word: w, verified: !!dict[w] };
+    return { ok: true, word: w };
   }
 
   const ChengyuLogic = {
     dateKey: dateKey, hashStr: hashStr, dailySeedIndex: dailySeedIndex,
-    normalize: normalize, lastChar: lastChar, buildDict: buildDict,
+    normalize: normalize, lastChar: lastChar, has: has, pyOf: pyOf,
     connects: connects, validate: validate, REWARD: 20
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = ChengyuLogic;
@@ -88,13 +92,15 @@
 })(typeof window !== 'undefined' ? window : globalThis);
 
 
-/* ── Browser UI (needs DOM + CHENGYU_LIST; play/reward needs db/auth) ── */
+/* ── Browser UI (needs DOM + CHENGYU; play/reward needs db/auth) ── */
 (function () {
   'use strict';
   if (typeof document === 'undefined') return;
   const L = (typeof ChengyuLogic !== 'undefined') ? ChengyuLogic : null;
-  const LIST = (typeof CHENGYU_LIST !== 'undefined') ? CHENGYU_LIST : [];
-  if (!L || !LIST.length) return;
+  const DICT = (typeof CHENGYU !== 'undefined') ? CHENGYU : null;
+  if (!L || !DICT) return;
+  const WORDS = Object.keys(DICT);
+  if (!WORDS.length) return;
 
   const fab     = document.getElementById('cjFab');
   const overlay = document.getElementById('cjOverlay');
@@ -110,9 +116,8 @@
   const boardEl   = document.getElementById('cjBoard');
   const wrongEl   = document.getElementById('cjWrong');
 
-  const DICT     = L.buildDict(LIST);
   const today    = L.dateKey();
-  const seedWord = LIST[L.dailySeedIndex(LIST.length)][0];
+  const seedWord = WORDS[L.dailySeedIndex(WORDS.length)];
   const PLAYED_KEY = 'cj_played_' + today;
 
   const docRef = (typeof db !== 'undefined') ? db.collection('chengyu_chain').doc(today) : null;
@@ -129,7 +134,7 @@
   }
 
   // The seed link the day always starts from (system-owned, earns nothing).
-  function seedLink()    { return { w: seedWord, uid: 'sys', name: '系统', verified: true, at: 0 }; }
+  function seedLink()    { return { w: seedWord, uid: 'sys', name: '系统', at: 0 }; }
   function initialData() { return { seed: seedWord, links: [seedLink()], wrong: [] }; }
   // Current view of the day (live snapshot, or a synthesized seed-only day).
   function current()     { return _data || initialData(); }
@@ -248,7 +253,7 @@
 
   // Append a valid idiom (race-safe) and pay 20 coins — all in one transaction
   // so the chain can't fork and coins can't double-pay.
-  async function appendLink(word, verified) {
+  async function appendLink(word) {
     if (typeof db === 'undefined' || typeof auth === 'undefined') return 'noauth';
     const uid = auth.currentUser && auth.currentUser.uid;
     if (!uid) return 'noauth';
@@ -264,7 +269,7 @@
         const used = new Set(links.map(function (l) { return l.w; }));
         const res  = L.validate(word, tip, used, DICT);
         if (!res.ok) return 'stale:' + res.reason;              // tip moved or already used
-        const link = { w: word, uid: uid, name: name, verified: verified, at: Date.now() };
+        const link = { w: word, uid: uid, name: name, at: Date.now() };
         if (!d.exists) {
           const base = initialData(); base.links.push(link); tx.set(docRef, base);
         } else {
@@ -308,10 +313,10 @@
         const links = data.links || [];
         if (links.length > 1) return 'locked';                  // already started — opening is fixed
         const used = new Set(links.map(function (l) { return l.w; }));
-        const pool = LIST.filter(function (t) { return !used.has(t[0]); });
+        const pool = WORDS.filter(function (w) { return !used.has(w); });
         if (!pool.length) return 'error';
-        const pick = pool[Math.floor(Math.random() * pool.length)][0];
-        tx.set(docRef, { seed: pick, links: [{ w: pick, uid: 'sys', name: '系统', verified: true, at: 0 }], wrong: data.wrong || [] });
+        const pick = pool[Math.floor(Math.random() * pool.length)];
+        tx.set(docRef, { seed: pick, links: [{ w: pick, uid: 'sys', name: '系统', at: 0 }], wrong: data.wrong || [] });
         return 'ok';
       });
     } catch (e) { return 'error'; }
@@ -327,7 +332,7 @@
       return;
     }
     _busy = true; submitBtn.disabled = true;
-    const out = await appendLink(res.word, res.verified);
+    const out = await appendLink(res.word);
     _busy = false; submitBtn.disabled = false;
     if (out === 'granted') {
       inputEl.value = ''; markPlayed();
