@@ -340,6 +340,29 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════
+    // 17. UPCOMING EVENTS — pinned 便利贴 (sticky notes)
+    //     Path: events/{autoId}
+    //     Fields: uid, displayName, title (≤100 chars), eventAt (ms), createdAt (ms)
+    //     Any signed-in user may pin an event; only the creator (or a developer)
+    //     may delete it. A note is shown on the board until 8h past eventAt, then
+    //     hidden client-side and best-effort deleted by its owner.
+    // ═══════════════════════════════════════
+    match /events/{eventId} {
+      allow read: if isAuth();
+      allow create: if isAuth()
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.title is string
+                    && request.resource.data.title.size() >= 1
+                    && request.resource.data.title.size() <= 100
+                    && request.resource.data.eventAt is number
+                    && request.resource.data.createdAt is number;
+      allow update: if false;
+      allow delete: if isAuth()
+                    && (resource.data.uid == request.auth.uid
+                        || isDeveloper(request.auth.uid));
+    }
+
+    // ═══════════════════════════════════════
     // DEFAULT — deny everything else
     // ═══════════════════════════════════════
     match /{document=**} {
