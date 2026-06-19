@@ -730,6 +730,33 @@ body.light-theme .cc-confirm-msg { color: #333; }
 }
 .cr-banner-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(247,183,51,.55); }
 .cr-banner-btn.hidden { display: none; }
+.cr-banner-info {
+  flex: 0 0 auto; margin-left: 2px; cursor: pointer; border: none;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--primary-tint); color: var(--primary-deep);
+  font-size: 13px; font-weight: 800; font-style: italic; line-height: 22px;
+}
+.cr-banner-info:hover { background: var(--primary-deep); color: #fff; }
+
+/* "How to play" card */
+.cr-info-overlay {
+  position: fixed; inset: 0; z-index: 500; padding: 20px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.45); animation: pgFadeIn 0.2s ease;
+}
+.cr-info-card {
+  max-width: 340px; width: 100%; text-align: center; padding: 22px;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--clay-up);
+}
+.cr-info-title { font-size: 20px; font-weight: 800; margin-bottom: 10px; }
+.cr-info-text { font-size: 14px; line-height: 1.65; color: var(--ink-faint); margin: 0 0 18px; }
+.cr-info-close {
+  border: none; cursor: pointer; font-weight: 800; font-size: 14px;
+  padding: 10px 26px; border-radius: 999px;
+  background: linear-gradient(135deg, #f7b733, #f9c846); color: #5a3d00;
+}
+.cr-info-close:hover { filter: brightness(1.05); }
 .cr-banner.urgent { animation: crPulse 1s ease-in-out infinite; border-color: #f7b733; }
 .cr-banner.urgent .cr-banner-sub { color: var(--bad); font-weight: 700; }
 .cr-banner.live { border-color: #36c98b; box-shadow: 0 0 0 2px rgba(54,201,139,.25), var(--clay-up); }

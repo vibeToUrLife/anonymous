@@ -117,6 +117,8 @@
     if (ph.phase === 'live') openOverlay();
     else if (ph.phase === 'results') viewResults();
   });
+  const bnInfo = document.getElementById('crBannerInfo');
+  if (bnInfo) bnInfo.addEventListener('click', showGameInfo);
 
   function renderBanner(ph, sched) {
     if (!banner) return;
@@ -526,6 +528,26 @@
     document.body.appendChild(el);
     setTimeout(() => el.classList.add('show'), 20);
     setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); }, 4200);
+  }
+
+  // "How to play" card, opened by the ⓘ on the board banner.
+  function showGameInfo() {
+    if (document.getElementById('crInfoOverlay')) return;
+    const ov = document.createElement('div');
+    ov.id = 'crInfoOverlay'; ov.className = 'cr-info-overlay';
+    ov.innerHTML =
+      '<div class="cr-info-card">' +
+        '<div class="cr-info-title">💰 Coin Rush</div>' +
+        '<p class="cr-info-text">Once each weekday a coin rush starts at a surprise time. ' +
+        'Race your coworkers to grab the coins before they\'re gone — every coin is money in ' +
+        'your wallet. The top 3 grabbers win bonus coins (1st 1000 / 2nd 500 / 3rd 300). ' +
+        'Watch the countdown!</p>' +
+        '<button class="cr-info-close" id="crInfoClose" type="button">Got it</button>' +
+      '</div>';
+    document.body.appendChild(ov);
+    const close = () => ov.remove();
+    ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+    ov.querySelector('#crInfoClose').addEventListener('click', close);
   }
 
   /* ── flush on leave (don't lose pops/coins) ───────────────── */
