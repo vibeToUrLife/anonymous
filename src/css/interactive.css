@@ -823,29 +823,6 @@ body.cr-open { overflow: hidden; }
 }
 .cr-results-close:hover { background: rgba(255,255,255,0.28); }
 
-/* ── Dev test button + panel (developer accounts only) ── */
-.cr-dev-btn {
-  position: fixed; left: 12px; bottom: 12px; z-index: 430;
-  border: none; cursor: pointer; font-size: 12px; font-weight: 700;
-  background: rgba(120,90,200,0.9); color: #fff;
-  padding: 8px 12px; border-radius: 999px; box-shadow: 0 4px 12px rgba(0,0,0,.3);
-}
-.cr-dev-panel {
-  position: fixed; left: 12px; bottom: 52px; z-index: 431;
-  display: flex; flex-direction: column; gap: 6px; width: 230px;
-  padding: 12px; border-radius: 14px;
-  background: #211a3a; color: #fff; box-shadow: 0 12px 30px rgba(0,0,0,.45);
-}
-.cr-dev-title { font-weight: 800; font-size: 13px; }
-.cr-dev-time { font-size: 11px; color: #b9aee8; margin-bottom: 4px; }
-.cr-dev-panel button {
-  border: none; cursor: pointer; text-align: left;
-  background: rgba(255,255,255,0.1); color: #fff; font-size: 12px;
-  padding: 8px 10px; border-radius: 8px;
-}
-.cr-dev-panel button:hover { background: rgba(255,255,255,0.2); }
-.cr-dev-status { margin-top: 6px; font-size: 11px; color: #ffe08a; font-variant-numeric: tabular-nums; }
-
 /* ── Bonus toast ── */
 .cr-toast {
   position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);

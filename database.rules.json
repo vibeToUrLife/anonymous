@@ -5,14 +5,12 @@
         ".read": "auth != null",
 
         "players": {
-          ".write": "auth != null && (auth.uid == 'HClZmAeuEaUVjHqUaFLFFMTMQnd2' || auth.uid == 'eUs3isAgsaRT9VLKEFI4HEFbCnk1')",
           "$uid": {
             ".write": "auth != null && auth.uid == $uid && newData.isString()"
           }
         },
 
         "claims": {
-          ".write": "auth != null && (auth.uid == 'HClZmAeuEaUVjHqUaFLFFMTMQnd2' || auth.uid == 'eUs3isAgsaRT9VLKEFI4HEFbCnk1')",
           "$coinId": {
             ".write": "auth != null && !data.exists() && newData.val() == auth.uid"
           }

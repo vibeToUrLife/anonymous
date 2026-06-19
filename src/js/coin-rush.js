@@ -25,8 +25,6 @@
   if (!CR) return;
 
   const FieldValue = firebase.firestore.FieldValue;
-  // Mirror isDeveloper() in firestore.rules — gates the dev test panel only.
-  const DEV_UIDS = ['HClZmAeuEaUVjHqUaFLFFMTMQnd2', 'eUs3isAgsaRT9VLKEFI4HEFbCnk1'];
 
   const SCORE_WRITE_MS = 4000;   // throttle score-doc writes
   const WALLET_FLUSH_MS = 6000;  // batch wallet coin increments
@@ -42,7 +40,7 @@
   let myUid = null, myName = 'Anonymous';
   auth.onAuthStateChanged((u) => {
     myUid = u ? u.uid : null;
-    if (u) { myName = currentName(); maybeMountDevBtn(); }
+    if (u) myName = currentName();
   });
   function currentName() {
     return localStorage.getItem('flappy_name') ||
@@ -52,18 +50,12 @@
   /* ── schedule state ───────────────────────────────────────── */
   let dayKey = CR.dayKeyOf(Date.now());
   let schedule = CR.coinRushSchedule(dayKey);   // today's real, seeded schedule
-  let override = null;                          // dev-forced schedule
-  function activeSchedule() { return override || schedule; }
+  function activeSchedule() { return schedule; }
 
   // Per-rush scoring state
   let currentRushId = null, finalizedId = null;
   let sessionScore = 0, sessionCoinsEarned = 0, participated = false;
   let pendingWallet = 0, walletTimer = null, scoreTimer = null;
-
-  // Log today's real rush time so it's verifiable without waiting.
-  console.log('[CoinRush] today:', schedule
-    ? clockAt(schedule.startMs) + '–' + clockAt(schedule.endMs)
-    : 'no rush (weekend)');
 
   /* ── time formatting helpers (UI only) ────────────────────── */
   function clockAt(ts) {
@@ -83,30 +75,19 @@
     return d.innerHTML;
   }
 
-  // Dev-test state: a compressed phase config + auto-open so the dev panel can
-  // demo the whole lifecycle in seconds. The real game always uses CR untouched.
-  const DEV_CFG = Object.assign({}, CR, { PRE_ALERT_MS: 4000, DURATION_MS: 20000 });
-  const DEV_SOON_MS = 10000;
-  let phaseCfg = CR;        // tick() reads the phase with this (dev may compress it)
-  let devAutoOpen = false;  // a dev rush auto-opens the overlay when it goes live
-  let lastLoggedPhase = null;
-
   /* ── main 1s tick ─────────────────────────────────────────── */
   function tick() {
     const now = Date.now();
     const k = CR.dayKeyOf(now);
     if (k !== dayKey) {                       // new day → fresh schedule
       dayKey = k; schedule = CR.coinRushSchedule(k);
-      override = null; phaseCfg = CR; devAutoOpen = false;
       currentRushId = null; finalizedId = null;
     }
     const sched = activeSchedule();
-    const ph = CR.coinRushPhase(now, sched, phaseCfg);
-    if (ph.phase !== lastLoggedPhase) { console.log('[CoinRush] phase →', ph.phase); lastLoggedPhase = ph.phase; }
+    const ph = CR.coinRushPhase(now, sched, CR);
     handleTransitions(ph, sched);
     renderBanner(ph, sched);
     renderCountdown(ph);
-    updateDevStatus(ph);
   }
 
   function handleTransitions(ph, sched) {
@@ -117,7 +98,6 @@
       sessionScore = 0; sessionCoinsEarned = 0; participated = false;
       myRobScore = 0;
       spawning = true;
-      if (devAutoOpen && !overlay) openOverlay();         // dev: jump straight into the rush
     }
     if (ph.phase === 'results' && currentRushId === id && finalizedId !== id) {
       finalizedId = id;
@@ -546,81 +526,6 @@
     document.body.appendChild(el);
     setTimeout(() => el.classList.add('show'), 20);
     setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); }, 4200);
-  }
-
-  /* ── developer test panel (gated to DEV_UIDS) ─────────────── */
-  function maybeMountDevBtn() {
-    if (!myUid || DEV_UIDS.indexOf(myUid) === -1) return;
-    if (document.getElementById('crDevBtn')) return;
-    const btn = document.createElement('button');
-    btn.id = 'crDevBtn'; btn.className = 'cr-dev-btn'; btn.type = 'button';
-    btn.textContent = '🧪 Rush'; btn.title = 'Coin Rush dev tools';
-    btn.addEventListener('click', toggleDevPanel);
-    document.body.appendChild(btn);
-  }
-
-  function toggleDevPanel() {
-    const existing = document.getElementById('crDevPanel');
-    if (existing) { existing.remove(); return; }
-    const p = document.createElement('div');
-    p.id = 'crDevPanel'; p.className = 'cr-dev-panel';
-    const real = schedule
-      ? 'Today\'s real rush: ' + clockAt(schedule.startMs) + '–' + clockAt(schedule.endMs)
-      : 'No rush today (weekend)';
-    p.innerHTML =
-      '<div class="cr-dev-title">🧪 Coin Rush (dev)</div>' +
-      '<div class="cr-dev-time">' + real + '</div>' +
-      '<button type="button" data-act="now">▶ Start now</button>' +
-      '<button type="button" data-act="soon">⏱ Start in ~10s (watch lifecycle)</button>' +
-      '<button type="button" data-act="preview">🏆 Preview results (mock 5)</button>' +
-      '<button type="button" data-act="clear">✖ Clear override</button>' +
-      '<div class="cr-dev-status" id="crDevStatus">Phase: —</div>';
-    p.addEventListener('click', (e) => {
-      const act = e.target.getAttribute && e.target.getAttribute('data-act');
-      if (!act) return;
-      if (act === 'now') devStart(0, { cfg: DEV_CFG, autoOpen: true });
-      else if (act === 'soon') devStart(DEV_SOON_MS, { cfg: DEV_CFG, autoOpen: true });
-      else if (act === 'preview') devPreview();
-      else if (act === 'clear') { override = null; phaseCfg = CR; devAutoOpen = false; currentRushId = null; finalizedId = null; tick(); }
-    });
-    document.body.appendChild(p);
-    tick();   // populate the status line immediately
-  }
-
-  function updateDevStatus(ph) {
-    const el = document.getElementById('crDevStatus');
-    if (!el) return;
-    let extra = '';
-    if (ph.phase === 'live') extra = ' — ' + fmtDur(ph.msUntilEnd) + ' left';
-    else if (ph.phase === 'scheduled' || ph.phase === 'imminent') extra = ' — live in ' + fmtDur(ph.msUntilStart);
-    el.textContent = 'Phase: ' + ph.phase + extra;
-  }
-
-  function devStart(offsetMs, opts) {
-    opts = opts || {};
-    phaseCfg = opts.cfg || CR;
-    devAutoOpen = opts.autoOpen !== false;
-    const now = Date.now();
-    const start = now + offsetMs;
-    override = { startMs: start, endMs: start + phaseCfg.DURATION_MS, windowIdx: 0, revealMs: now - 1000 };
-    currentRushId = null; finalizedId = null;
-    // Dev convenience: wipe today's shared pot so each test starts fresh (dev-only
-    // write, allowed by the RTDB rules). No-op in solo mode.
-    if (robbingOn) { try { rtdbBase().child('claims').remove(); rtdbBase().child('players').remove(); } catch (e) {} }
-    if (banner && offsetMs > 0) banner.scrollIntoView({ block: 'center' });   // make the countdown visible
-    tick();
-  }
-
-  function devPreview() {
-    const mock = [
-      { uid: 'mock1', name: 'Alice', score: 84, updatedAt: 1 },
-      { uid: 'mock2', name: 'Bob', score: 71, updatedAt: 2 },
-      { uid: myUid || 'me', name: currentName() + ' (you)', score: 65, updatedAt: 3 },
-      { uid: 'mock4', name: 'Carol', score: 50, updatedAt: 4 },
-      { uid: 'mock5', name: 'Dan', score: 32, updatedAt: 5 }
-    ];
-    ensureOverlay();
-    showResults(CR.rankScores(mock), { mock: true });
   }
 
   /* ── flush on leave (don't lose pops/coins) ───────────────── */
