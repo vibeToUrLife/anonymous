@@ -46,13 +46,16 @@
       .replace(/[\s，。、！？；：,.!?;:"'“”‘’（）()【】\[\]{}~`·…—\-_]/g, '');
   }
 
-  // Correct if the (normalised) input equals or contains any accepted answer.
+  // Lenient match: correct if the (normalised) input equals an answer, contains
+  // an answer (user typed a fuller sentence), or is itself a 2+ char fragment of
+  // an answer (user typed only the key part, e.g. "圣诞" for "圣诞老人").
   function isCorrect(input, answers) {
     const n = normalize(input);
     if (!n) return false;
     return (answers || []).some(function (a) {
       const na = normalize(a);
-      return na && (n === na || n.indexOf(na) !== -1);
+      if (!na) return false;
+      return n === na || n.indexOf(na) !== -1 || (n.length >= 2 && na.indexOf(n) !== -1);
     });
   }
 
@@ -109,7 +112,10 @@
 
   function showAnswer() {
     answerEl.hidden = false;
-    answerEl.textContent = '答案：' + riddle.a[0];
+    // Show every accepted answer (canonical first), so users see all that count.
+    answerEl.textContent = riddle.a.length > 1
+      ? '答案：' + riddle.a.join('、') + '（都算对）'
+      : '答案：' + riddle.a[0];
   }
 
   function render() {
