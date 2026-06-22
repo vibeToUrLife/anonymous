@@ -139,6 +139,12 @@
       // Guard: if currentUid changed mid-flight, ignore stale snapshot
       if (!currentUid) return;
       if (viewingUid !== currentUid) return; // Don't overwrite visited room data
+      // While our own writes are still pending (server hasn't acknowledged them),
+      // roomData already holds the latest local intent. Applying the snapshot now
+      // would overwrite an un-acknowledged change — e.g. a crop you just harvested
+      // or a cake you just collected — and the 60s production tick could then
+      // re-save that stale state, so it "comes back" after you leave and return.
+      if (snap.metadata && snap.metadata.hasPendingWrites) return;
       if (snap.exists) {
         // Check displayName sync once on first snapshot
         if (!_offlineCoinsCollected) {
