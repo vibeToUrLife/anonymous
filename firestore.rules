@@ -326,6 +326,18 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════
+    // 15b. DAILY RIDDLE LEADERBOARD — all-time correct-answer count per user
+    //     Path: riddle_leaderboard/{uid} = { name, count, at }
+    //     Powers the "🏅 答对排行榜（累计）" ranking in the riddle card. The count
+    //     is only ever bumped (+1) inside the once-per-day reward transaction, so a
+    //     user can raise ONLY their own total, once per day. Any signed-in user reads.
+    // ═══════════════════════════════════════
+    match /riddle_leaderboard/{uid} {
+      allow read: if isAuth();
+      allow write: if isOwner(uid);
+    }
+
+    // ═══════════════════════════════════════
     // 16. 成语 DICTIONARY — server-side word list for chain validation
     //     Path: chengyu_dict/{idiom} = {}  (doc id IS the 成语; value unused)
     //     One doc per REAL 成语. Lets the chengyu_chain rules below verify a

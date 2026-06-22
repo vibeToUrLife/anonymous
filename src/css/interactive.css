@@ -398,6 +398,20 @@ body.light-theme .pg-toggle.active { background: var(--accent); color: #2a1f4a; 
 }
 .riddle-solvers-empty { font-size: 12px; color: rgba(255, 255, 255, 0.45); }
 
+/* "🏅 答对排行榜（累计）" — all-time correct-answer ranking */
+.riddle-rank {
+  margin-top: 12px; padding-top: 10px; text-align: left;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+.riddle-rank-list { display: flex; flex-direction: column; gap: 4px; max-height: 150px; overflow-y: auto; }
+.riddle-rank-row {
+  display: flex; align-items: center; gap: 8px; font-size: 13px;
+  padding: 4px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.04);
+}
+.riddle-rank-pos { width: 22px; text-align: center; font-weight: 700; color: rgba(255, 255, 255, 0.6); }
+.riddle-rank-name { flex: 1; font-weight: 600; color: rgba(255, 255, 255, 0.9); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.riddle-rank-count { font-weight: 700; color: #fde68a; }
+
 /* Light theme */
 body.light-theme .riddle-fab.has-new::after { border-color: #f5f3fa; }
 body.light-theme .riddle-card { background: linear-gradient(160deg, #ffffff 0%, #f5f3fa 100%); border-color: rgba(0, 0, 0, 0.08); }
@@ -417,6 +431,11 @@ body.light-theme .riddle-warn { color: #b91c1c; background: rgba(248, 113, 113, 
 body.light-theme .riddle-solvers { border-top-color: rgba(0, 0, 0, 0.1); }
 body.light-theme .riddle-solvers-title { color: rgba(0, 0, 0, 0.75); }
 body.light-theme .riddle-solver-chip { color: #b45309; background: rgba(245, 158, 11, 0.16); }
+body.light-theme .riddle-rank { border-top-color: rgba(0, 0, 0, 0.1); }
+body.light-theme .riddle-rank-row { background: rgba(0, 0, 0, 0.04); }
+body.light-theme .riddle-rank-pos { color: rgba(0, 0, 0, 0.5); }
+body.light-theme .riddle-rank-name { color: rgba(0, 0, 0, 0.85); }
+body.light-theme .riddle-rank-count { color: #b45309; }
 
 /* ════════════════════════════════════════════════════════════
    5. Daily 成语接龙 (idiom chain) — FAB + overlay

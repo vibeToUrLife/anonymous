@@ -91,12 +91,14 @@
   const cancelBtn  = document.getElementById('riddleRevealCancel');
   const warnEl     = document.getElementById('riddleWarn');
   const solversEl  = document.getElementById('riddleSolvers');
+  const rankEl     = document.getElementById('riddleRank');
 
   const today    = L.dateKey();
   const DONE_KEY = 'riddle_done_' + today;   // localStorage: 'solved' | 'revealed'
   let riddle     = RIDDLES[L.dailyIndex(RIDDLES.length)];
   let _revealArmed = false;   // 查看答案 needs two taps (first arms the forfeit warning)
   let _solversUnsub = null;   // live "今日答对" subscription
+  let _rankUnsub = null;      // live "答对排行榜" (all-time count) subscription
 
   function doneState() { try { return localStorage.getItem(DONE_KEY); } catch (e) { return null; } }
   function setDone(v) { try { localStorage.setItem(DONE_KEY, v); } catch (e) {} }
@@ -167,6 +169,7 @@
     overlay.classList.add('show');
     fab.classList.remove('has-new');
     subscribeSolvers();   // live "今日答对" list (names only)
+    subscribeRank();      // live "答对排行榜" (all-time correct count)
     setTimeout(function () { if (!inputEl.disabled) inputEl.focus(); }, 60);
     // …then reconcile with the account: if THIS account already finished today
     // on another device, mirror that here and re-lock the UI.
@@ -174,7 +177,7 @@
     if (acct === 'solved' && doneState() !== 'solved') { setDone('solved'); render(); }
     else if (acct === 'revealed' && !doneState()) { setDone('revealed'); render(); }
   }
-  function close() { overlay.classList.remove('show'); unsubscribeSolvers(); }
+  function close() { overlay.classList.remove('show'); unsubscribeSolvers(); unsubscribeRank(); }
 
   // Award 100 coins, once per day. The transaction re-checks the day server-side
   // so the same day can't pay out twice (even from another device).
@@ -183,12 +186,16 @@
     const uid = auth.currentUser && auth.currentUser.uid;
     if (!uid) return 'noauth';
     const ref = db.collection('rooms').doc(uid);
+    const rankRef = db.collection('riddle_leaderboard').doc(uid);
     try {
       return await db.runTransaction(async function (tx) {
         const doc = await tx.get(ref);
         const data = doc.exists ? doc.data() : {};
         if (data.riddleLastSolvedDay === today) return 'already';
         tx.set(ref, { coins: (data.coins || 0) + L.REWARD, riddleLastSolvedDay: today }, { merge: true });
+        // Bump my all-time correct-answer count here too, so it can only ever go
+        // up once per day (the day-guard above runs in the same transaction).
+        tx.set(rankRef, { name: myName(), count: firebase.firestore.FieldValue.increment(1), at: Date.now() }, { merge: true });
         return 'granted';
       });
     } catch (e) { return 'error'; }
@@ -268,18 +275,23 @@
 
   /* ── "今日答对" live list (names only — never the answer) ── */
 
+  // The board display name: profile name first, else Firebase displayName, else 匿名.
+  function myName() {
+    let name = '';
+    try { name = localStorage.getItem('flappy_name') || ''; } catch (e) {}
+    if (!name) name = (auth.currentUser && auth.currentUser.displayName) || '匿名';
+    return name;
+  }
+
   // Record THIS account as having solved today. Owner-only doc at
   // riddle_solvers/{today}/solvers/{uid}; the name comes from the board profile.
   async function recordSolver() {
     if (typeof db === 'undefined' || typeof auth === 'undefined') return;
     const uid = auth.currentUser && auth.currentUser.uid;
     if (!uid) return;
-    let name = '';
-    try { name = localStorage.getItem('flappy_name') || ''; } catch (e) {}
-    if (!name) name = (auth.currentUser && auth.currentUser.displayName) || '匿名';
     try {
       await db.collection('riddle_solvers').doc(today).collection('solvers').doc(uid)
-        .set({ name: name, at: Date.now() }, { merge: true });
+        .set({ name: myName(), at: Date.now() }, { merge: true });
     } catch (e) {}
   }
 
@@ -316,6 +328,44 @@
   }
   function unsubscribeSolvers() {
     if (_solversUnsub) { _solversUnsub(); _solversUnsub = null; }
+  }
+
+  /* ── "🏅 答对排行榜" — all-time top solvers by total correct count ── */
+
+  const RANK_MEDALS = ['🥇', '🥈', '🥉'];
+
+  function renderRank(list) {
+    if (!rankEl) return;
+    rankEl.hidden = false;
+    const body = list.length
+      ? '<div class="riddle-rank-list">' +
+          list.map(function (r, i) {
+            return '<div class="riddle-rank-row">' +
+                     '<span class="riddle-rank-pos">' + (RANK_MEDALS[i] || (i + 1)) + '</span>' +
+                     '<span class="riddle-rank-name">' + _escapeName(r.name || '匿名') + '</span>' +
+                     '<span class="riddle-rank-count">' + (r.count || 0) + ' 次</span>' +
+                   '</div>';
+          }).join('') +
+        '</div>'
+      : '<div class="riddle-solvers-empty">还没有人上榜，答对就能登顶！</div>';
+    rankEl.innerHTML = '<div class="riddle-solvers-title">🏅 答对排行榜（累计）</div>' + body;
+  }
+
+  function subscribeRank() {
+    if (typeof db === 'undefined') { if (rankEl) rankEl.hidden = true; return; }
+    unsubscribeRank();
+    renderRank([]);   // show the section right away (empty state) while it loads
+    try {
+      _rankUnsub = db.collection('riddle_leaderboard').orderBy('count', 'desc').limit(10)
+        .onSnapshot(function (snap) {
+          const list = [];
+          snap.forEach(function (d) { list.push(d.data() || {}); });
+          renderRank(list);
+        }, function () {});
+    } catch (e) {}
+  }
+  function unsubscribeRank() {
+    if (_rankUnsub) { _rankUnsub(); _rankUnsub = null; }
   }
 
   fab.addEventListener('click', open);
