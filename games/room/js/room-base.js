@@ -2,6 +2,17 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
+    // Enable Firestore offline persistence (IndexedDB cache) so reloads paint
+    // from the local cache instantly instead of waiting on a cold network read.
+    // Must run before any other Firestore call (the first read is in initRoom).
+    db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
+      if (err.code === 'failed-precondition') {
+        console.warn('Firestore persistence unavailable: multiple tabs open');
+      } else if (err.code === 'unimplemented') {
+        console.warn('Firestore persistence not supported in this browser');
+      }
+    });
+
     /* ── Auth gate ── */
     const loginOverlay = document.getElementById('loginOverlay');
 
