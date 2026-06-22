@@ -1,6 +1,6 @@
 ﻿    async function saveRoom() {
-      if (viewingUid !== currentUid) return;
-      if (!_roomLoaded) return; // Don't save defaults before Firestore data loads
+      if (viewingUid !== currentUid) return false;
+      if (!_roomLoaded) return false; // Don't save defaults before Firestore data loads
       // Sync active layer's mutable state (wall/window/decors/plantPos) into layerData
       flushLayerData();
       const data = {
@@ -67,7 +67,15 @@
         layerData: roomData.layerData || {}
       };
       _lastLocalSaveTime = Date.now();
-      await userDocRef().set(data, { merge: true });
+      // Report success/failure so callers can roll back optimistic local changes
+      // (e.g. workshop collect) instead of silently desyncing on a failed write.
+      try {
+        await userDocRef().set(data, { merge: true });
+        return true;
+      } catch (e) {
+        console.error('saveRoom failed:', e);
+        return false;
+      }
     }
 
     // ── Room "while you were away" coin modal (mirrors the farm offline modal).

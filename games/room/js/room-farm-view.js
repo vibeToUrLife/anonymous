@@ -265,6 +265,7 @@
           if (document.hidden || !isFarmView) return;
           if (runFarmProduction() > 0) saveRoom();
           renderFarmPanel(); // keep food count + happiness fresh
+          renderWorkshopModal(); // flip a just-finished job to ✅ Collect if its modal is open
         }, 60 * 1000);
       }
     }
@@ -905,10 +906,17 @@
       if (!mc || !m || !m.jobs[slot]) return;
       const job = m.jobs[slot], recipe = mc.recipes[job.r] || mc.recipes[0];
       if (cropProgress(job.at, Date.now(), recipe.timeMs) < 1) return showToast('Still processing…', '');
+      // Apply locally, then persist. If the save fails, roll back — otherwise the
+      // collected item silently disappears when the next snapshot overwrites it.
       roomData.farmStock = roomData.farmStock || {};
       roomData.farmStock[recipe.out.id] = (roomData.farmStock[recipe.out.id] || 0) + recipe.out.qty;
       m.jobs[slot] = 0;
-      await saveRoom();
+      const ok = await saveRoom();
+      if (!ok) {
+        roomData.farmStock[recipe.out.id] -= recipe.out.qty;
+        m.jobs[slot] = job;
+        return showToast('Could not collect — save failed. Check your connection and try again.', 'error');
+      }
       const outM = farmProductMeta()[recipe.out.id];
       showToast('Collected ' + recipe.out.qty + ' ' + (outM ? outM.emoji + ' ' + outM.name : recipe.out.id) + '!', 'success');
       renderWorkshopModal(); renderFarmPanel(); renderAll();
