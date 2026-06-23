@@ -125,6 +125,7 @@
       }
 
       _auth.onAuthStateChanged((u) => {
+        if (window.SITE_MAINTENANCE) return; // Maintenance mode: don't start invite listener
         _unsubscribeChessInvites();
         if (!u) { _chessInvUid = null; return; }
         _chessInvUid = u.uid;

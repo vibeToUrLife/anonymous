@@ -70,6 +70,7 @@
     });
 
     auth.onAuthStateChanged((user) => {
+      if (window.SITE_MAINTENANCE) return; // Maintenance mode: don't load the room (saves Firestore reads)
       loginOverlay.classList.remove('loading');
       if (user) {
         loginOverlay.classList.add('hidden');
