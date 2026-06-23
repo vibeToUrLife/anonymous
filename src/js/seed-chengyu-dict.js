@@ -54,4 +54,4 @@ async function seedChengyuDict(startAt) {
 }
 
 // Auto-start when pasted into the console (resumes from saved progress).
-seedChengyuDict();
+seedChengyuDict(18500);

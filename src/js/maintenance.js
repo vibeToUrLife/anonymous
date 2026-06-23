@@ -5,7 +5,7 @@
      true  → the WHOLE site shows the "Under Maintenance" screen
      false → the site works normally again
    ════════════════════════════════════════════════════════════════ */
-window.SITE_MAINTENANCE = true;
+window.SITE_MAINTENANCE = false;
 
 if (window.SITE_MAINTENANCE) {
   // Hide all real page content immediately (prevents any flash of the page)
