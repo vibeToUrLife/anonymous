@@ -121,6 +121,7 @@
     let _lastLocalSaveTime = 0;
     let _unsubRoomSnap = null;
     let _roomLoaded = false;
+    let _postLoadHooksDone = false;   // daily-reward / achievements run once, after data loads
 
     // ── Helpers to detach/reattach room listener on visibility change ──
     function _subscribeRoomSnap() {
@@ -144,7 +145,10 @@
       // would overwrite an un-acknowledged change — e.g. a crop you just harvested
       // or a cake you just collected — and the 60s production tick could then
       // re-save that stale state, so it "comes back" after you leave and return.
-      if (snap.metadata && snap.metadata.hasPendingWrites) return;
+      // …but ONLY after the first load. The very first snapshot after a refresh can
+      // arrive from the offline cache with pending (un-acked) farm writes still queued;
+      // skipping it then would leave roomData on defaults and the loading overlay stuck.
+      if (_roomLoaded && snap.metadata && snap.metadata.hasPendingWrites) return;
       if (snap.exists) {
         // Check displayName sync once on first snapshot
         if (!_offlineCoinsCollected) {
@@ -365,6 +369,14 @@
       const _loadOv = document.getElementById('roomLoadingOverlay');
       const _wasFirstLoad = _loadOv && _loadOv.style.display !== 'none';
       if (_loadOv) _loadOv.style.display = 'none';
+      // One-time post-load hooks — gated on the room data actually being applied
+      // (_roomLoaded), NOT a blind timer, so the daily reward can never re-prompt
+      // against empty/default roomData after a refresh.
+      if (!_postLoadHooksDone && _roomLoaded) {
+        _postLoadHooksDone = true;
+        checkDailyOnLogin();
+        checkAchievements();
+      }
       // Deep-link: index.html "Farm" button links to room.html?view=farm — open it
       // once the room has loaded (own room only).
       if (_wasFirstLoad) _maybeOpenFarmFromUrl();
@@ -409,6 +421,7 @@
       _offlineCoinsCollected = false;
       _farmCatchupDone = false;
       _roomLoaded = false;
+      _postLoadHooksDone = false;
       // Unsubscribe previous room listener (account switch)
       _unsubscribeRoomSnap();
       if (unsubVisitList) { unsubVisitList(); unsubVisitList = null; }
@@ -502,7 +515,7 @@
         showToast('🌱 ' + _label + ' earned ' + earned + ' coins!', 'success');
       }, 5 * 60 * 1000);
 
-      // Check daily login reward & achievements on load
-      setTimeout(() => { checkDailyOnLogin(); checkAchievements(); }, 1500);
+      // Daily login reward & achievements now run from _handleRoomSnap once the room
+      // data has actually loaded (see _postLoadHooksDone) — no blind timer race.
     }
 
