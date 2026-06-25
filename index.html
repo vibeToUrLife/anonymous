@@ -950,6 +950,7 @@
           <button data-pet="bunny">🐰 Bunny</button>
           <button data-pet="fox">🦊 Fox</button>
           <button data-pet="panda">🐼 Panda</button>
+          <button data-pet="goose">🦢 Goose</button>
           <button data-pet="off">🚫 Hide</button>
         </div>
       </div>
@@ -1495,6 +1496,7 @@
   <script src="./games/pets/fox.js"></script>
   <script src="./games/pets/panda.js"></script>
   <script src="./games/pets/hamster.js"></script>
+  <script src="./games/pets/goose.js"></script>
   <script>
     // Initialize daily quote banner
     (function() {
@@ -1725,7 +1727,8 @@
         bunny:   typeof drawBunnyPet   === 'function' ? drawBunnyPet   : null,
         fox:     typeof drawFoxPet     === 'function' ? drawFoxPet     : null,
         panda:   typeof drawPandaPet   === 'function' ? drawPandaPet   : null,
-        hamster: typeof drawHamsterPet === 'function' ? drawHamsterPet : null
+        hamster: typeof drawHamsterPet === 'function' ? drawHamsterPet : null,
+        goose:   typeof drawGoosePet   === 'function' ? drawGoosePet   : null
       };
       /* Each animal's little speech-bubble sounds on click. */
       var SOUNDS = {
@@ -1734,7 +1737,8 @@
         bunny:   ['*hop*', 'Squeak!', 'Nibble~'],
         fox:     ['Yip!', 'Ring~', 'Skree!'],
         panda:   ['Munch~', '*rolls*', 'Maa~'],
-        hamster: ['Squeak!', '*nibble*', 'Eep!']
+        hamster: ['Squeak!', '*nibble*', 'Eep!'],
+        goose:   ['Honk!', 'HONK!', '*flap*']
       };
 
       /* ── Canvas setup (crisp on retina) ── */
