@@ -95,8 +95,39 @@
       return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     }
 
-    // Accrue daily pending credits and place drops up to the 5-per-floor cap.
-    function maybeGenerateDailyDrops() {
+    /* ── Timed drop regrow: collecting no longer refills instantly; the next drop
+       grows back after DROP_REGEN_MS. Timer is per-layer and local (not saved —
+       reopening the room tops the floor up to the cap as before). ── */
+    const DROP_FLOOR_CAP = 5;             // max drops on one floor at a time
+    const DROP_REGEN_MS  = 5 * 60 * 1000; // delay before the next drop grows back
+    let _dropRegenAt = {};                // { [layer]: timestamp when the next drop is due }
+
+    // Start the regrow timer for the current floor (if there's room and a pending drop).
+    function scheduleDropRegen() {
+      if (viewingUid !== currentUid) return;
+      if (_dropRegenAt[currentLayer]) return;          // already counting down
+      const layerPets = (roomData.pets || []).filter(p => p.layer === currentLayer);
+      if (!layerPets.length) return;
+      const floorCount = (roomData.petDrops || []).filter(d => d.layer === currentLayer).length;
+      if (floorCount >= DROP_FLOOR_CAP) return;        // floor already full
+      const pending = layerPets.reduce((n, p) => n + (p.pendingDrops || 0), 0);
+      if (pending <= 0) return;                         // nothing earned to regrow yet
+      _dropRegenAt[currentLayer] = Date.now() + DROP_REGEN_MS;
+    }
+
+    // Called each frame: when the timer is due, grow ONE drop back, then re-arm if more remain.
+    function processDropRegen() {
+      const at = _dropRegenAt[currentLayer];
+      if (!at || Date.now() < at) return;
+      _dropRegenAt[currentLayer] = 0;
+      maybeGenerateDailyDrops({ oneAtATime: true });
+      scheduleDropRegen();                              // chain the next regrow if still pending
+    }
+
+    // Accrue daily pending credits and place drops up to the per-floor cap.
+    // opts.oneAtATime → place at most ONE drop (used by the timed regrow after a collect).
+    function maybeGenerateDailyDrops(opts) {
+      opts = opts || {};
       if (viewingUid !== currentUid) return;          // only your own pets drop
       if (!roomData.pets || !roomData.pets.length) return;
       roomData.petDrops = roomData.petDrops || [];
@@ -105,9 +136,10 @@
       const layerPets = roomData.pets.filter(p => p.layer === currentLayer);
       if (!layerPets.length) return;
       const floorCount = roomData.petDrops.filter(dr => dr.layer === currentLayer).length;
+      const maxFloor = opts.oneAtATime ? Math.min(DROP_FLOOR_CAP, floorCount + 1) : DROP_FLOOR_CAP;
       const plan = planTopUp(
         layerPets.map(p => ({ id: p.id, lastDropDay: p.lastDropDay, pendingDrops: p.pendingDrops })),
-        floorCount, today
+        floorCount, today, { maxFloor: maxFloor }
       );
       let changed = false;
       plan.pets.forEach(u => {
@@ -168,7 +200,7 @@
         }
       }
       showToast(msg, 'success');
-      maybeGenerateDailyDrops();        // pull a pending drop into the freed slot
+      scheduleDropRegen();              // start the regrow timer (no instant refill)
       await saveRoom();
       if (_selectedPetId) updatePetStatusBar();
       if (_collectionOpenType) renderCollectionGrid(_collectionOpenType);
@@ -492,6 +524,7 @@
         }
         ctx.clearRect(0, 0, rw, rh);
         const now = Date.now();
+        processDropRegen();   // grow a drop back when its regrow timer is due
 
         for (const p of pets) { try {
           const st = petStates[p.id];
