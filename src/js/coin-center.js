@@ -39,8 +39,16 @@
     try { localStorage.setItem('board_cos', JSON.stringify(C.resolveEquip(equip))); } catch (e) {}
   }
   window.getEquippedCos = function () {
-    try { const o = JSON.parse(localStorage.getItem('board_cos')); return (o && Object.keys(o).length) ? o : null; }
-    catch (e) { return null; }
+    try {
+      const o = JSON.parse(localStorage.getItem('board_cos'));
+      if (!o || !Object.keys(o).length) return null;
+      if (o.ty && o.t && hasFB && auth.currentUser) {            // bake "N年/N个月" into the title at post time
+        const created = Date.parse(auth.currentUser.metadata?.creationTime);
+        if (created) o.t = C.titlePrefix(created, Date.now()) + ' ' + o.t;
+      }
+      delete o.ty;
+      return o;
+    } catch (e) { return null; }
   };
 
   async function loadRoom() {
@@ -360,11 +368,18 @@
   /* ── Rendering ────────────────────────────────────────────── */
   function updateCoins() { if (coinsEl) coinsEl.textContent = coins; }
 
+  // Current user's "N年 / N个月" prefix from account-creation time (empty if unknown).
+  function myTitlePrefix() {
+    if (!hasFB || !auth.currentUser) return '';
+    const created = Date.parse(auth.currentUser.metadata?.creationTime);
+    return created ? C.titlePrefix(created, Date.now()) + ' ' : '';
+  }
+
   function previewHtml(it) {
     if (it.type === 'color') return it.val === 'rainbow' ? '<span class="cos-name-rainbow">名字</span>' : '<span style="color:' + it.val + '">名字</span>';
     if (it.type === 'frame') return '<span class="cos-frame-' + it.val + ' cc-frame-prev">气泡</span>';
     if (it.type === 'badge') return '<span style="font-size:24px">' + it.val + '</span>';
-    if (it.type === 'title') return '<span class="cos-title">' + esc(it.val) + '</span>';
+    if (it.type === 'title') return '<span class="cos-title">' + esc(myTitlePrefix() + it.val) + '</span>';
     return '';
   }
 

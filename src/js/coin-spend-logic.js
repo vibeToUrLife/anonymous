@@ -38,12 +38,15 @@
     { id: 'b_fire',   type: 'badge', name: '火焰',     val: '🔥',       price: 15000,  rarity: 'R'   },
     { id: 'b_gem',    type: 'badge', name: '钻石',     val: '💎',       price: 40000,  rarity: 'SR'  },
     { id: 'b_crown',  type: 'badge', name: '皇冠',     val: '👑',       price: 100000, rarity: 'SSR' },
-    // Titles (shown after the name)
-    { id: 't_rookie', type: 'title', name: '称号·新人', val: '新人',     price: 5000,   rarity: 'N'   },
-    { id: 't_vip',    type: 'title', name: '称号·VIP',  val: 'VIP',      price: 15000,  rarity: 'R'   },
-    { id: 't_boss',   type: 'title', name: '称号·大佬', val: '大佬',     price: 45000,  rarity: 'SR'  },
-    { id: 't_legend', type: 'title', name: '称号·传奇', val: '传奇',     price: 90000,  rarity: 'SSR' },
-    { id: 't_hidden', type: 'title', name: '称号·隐藏BOSS', val: '隐藏BOSS', price: 150000, rarity: 'SSR' }
+    // Titles (shown after the name) — ordered by price (cheapest first)
+    { id: 't_rookie',  type: 'title', name: '称号·新人', val: '新人',     price: 5000,   rarity: 'N'   },
+    { id: 't_intern',  type: 'title', name: '称号·intern', val: 'intern', price: 5000,   rarity: 'N'   },
+    { id: 't_vip',     type: 'title', name: '称号·VIP',  val: 'VIP',      price: 15000,  rarity: 'R'   },
+    { id: 't_fisher',  type: 'title', name: '称号·钓鱼佬', val: '钓鱼佬', price: 15000,  rarity: 'R'   },
+    { id: 't_boss',    type: 'title', name: '称号·大佬', val: '大佬',     price: 45000,  rarity: 'SR'  },
+    { id: 't_fishking',type: 'title', name: '称号·鱼王',   val: '鱼王',   price: 45000,  rarity: 'SR'  },
+    { id: 't_legend',  type: 'title', name: '称号·传奇', val: '传奇',     price: 90000,  rarity: 'SSR' },
+    { id: 't_hidden',  type: 'title', name: '称号·隐藏BOSS', val: '隐藏BOSS', price: 150000, rarity: 'SSR' }
   ];
 
   CoinSpend.RARITY_NAMES = { N: '普通', R: '稀有', SR: '史诗', SSR: '传说' };
@@ -66,8 +69,16 @@
     const col = CoinSpend.getCosmetic(equip.color);  if (col) out.c = col.val;
     const fr  = CoinSpend.getCosmetic(equip.frame);  if (fr)  out.f = fr.val;
     const bd  = CoinSpend.getCosmetic(equip.badge);  if (bd)  out.b = bd.val;
-    const ti  = CoinSpend.getCosmetic(equip.title);  if (ti)  out.t = ti.val;
+    const ti  = CoinSpend.getCosmetic(equip.title);  if (ti)  { out.t = ti.val; out.ty = 1; }  // ty = needs time-in-service prefix at stamp time
     return out;
+  };
+
+  /** Time-in-service prefix shown before any equipped title, from the user's
+   *  account-creation time. ≥1 year → "N年"; otherwise months → "N个月" (min 1). */
+  CoinSpend.titlePrefix = function (creationMs, nowMs) {
+    const days = Math.max(0, (nowMs - creationMs) / 86400000);
+    const years = Math.floor(days / 365.25);
+    return years >= 1 ? years + '年' : Math.max(1, Math.floor(days / 30.44)) + '个月';
   };
 
   /* ─────────────────────────────────────────────────────────────
