@@ -82,7 +82,7 @@
           if (decorId && !roomData.ownedDecors.includes(decorId)) {
             roomData.ownedDecors.push(decorId);
             const ddef = DECORATIONS.find(d => d.id === decorId);
-            showToast('🎉 ' + dr.petType + ' collection complete! Unlocked ' + (ddef ? ddef.emoji + ' ' + ddef.name : 'a special decoration') + '!', 'success');
+            showToast('🎉 ' + dr.petType + ' collection complete! Unlocked ' + (ddef ? ddef.emoji + ' ' + ddef.name : 'a special decoration') + '! Place it from 🪑 Decor → 🪑 Furniture.', 'success');
           }
         }
       }
@@ -699,8 +699,8 @@
       const rewardEl = document.getElementById('petCollectionReward');
       if (rewardEl) {
         rewardEl.innerHTML = complete
-          ? '✨ Unlocked: ' + decorLabel + ' — place it from your decorations!'
-          : 'Complete all 9 to unlock: ' + decorLabel;
+          ? '✨ Unlocked: ' + decorLabel + ' — place it from 🪑 Decor → 🪑 Furniture.'
+          : 'Complete all 9 to unlock: ' + decorLabel + ' (placed from 🪑 Decor → 🪑 Furniture).';
       }
     }
 

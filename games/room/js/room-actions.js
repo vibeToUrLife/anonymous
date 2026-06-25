@@ -675,7 +675,7 @@
         const placed = [...(roomData.placedDecors || [])].reverse();
         for (const p of placed) {
           if (decorHitTest(mx, my, p)) {
-            decorDrag = { id: p.id, offsetX: mx - p.x, offsetY: my - p.y };
+            decorDrag = { id: p.id, offsetX: mx - p.x, offsetY: my - p.y, startX: mx, startY: my, moved: false };
             cvs.style.cursor = 'grabbing';
             e.preventDefault();
             e.stopPropagation(); // Prevent pet click from firing
@@ -706,8 +706,10 @@
         if (!decorDrag) return;
         e.preventDefault();
         const rect = cvs.getBoundingClientRect();
-        let nx = (e.clientX - rect.left) / rect.width - decorDrag.offsetX;
-        let ny = (e.clientY - rect.top) / rect.height - decorDrag.offsetY;
+        const px = (e.clientX - rect.left) / rect.width, py = (e.clientY - rect.top) / rect.height;
+        if (Math.abs(px - decorDrag.startX) > 0.012 || Math.abs(py - decorDrag.startY) > 0.012) decorDrag.moved = true;
+        let nx = px - decorDrag.offsetX;
+        let ny = py - decorDrag.offsetY;
 
         const def = DECORATIONS.find(d => d.id === decorDrag.id);
         if (def) {
@@ -723,7 +725,10 @@
       const endDrag = () => {
         if (!decorDrag) return;
         cvs.style.cursor = '';
+        // A tap (no drag) on the fish tank enters the aquarium view.
+        const tappedTank = !decorDrag.moved && decorDrag.id === 'aquarium';
         decorDrag = null;
+        if (tappedTank && typeof openAquarium === 'function') { openAquarium(); return; }
         // Debounce save
         clearTimeout(decorSaveTimer);
         decorSaveTimer = setTimeout(() => saveRoom(), 300);
@@ -740,7 +745,7 @@
         const placed = [...(roomData.placedDecors || [])].reverse();
         for (const p of placed) {
           if (decorHitTest(mx, my, p)) {
-            decorDrag = { id: p.id, offsetX: mx - p.x, offsetY: my - p.y };
+            decorDrag = { id: p.id, offsetX: mx - p.x, offsetY: my - p.y, startX: mx, startY: my, moved: false };
             e.preventDefault();
             e.stopPropagation();
             return;
@@ -753,8 +758,10 @@
         e.preventDefault();
         const touch = e.touches[0];
         const rect = cvs.getBoundingClientRect();
-        let nx = (touch.clientX - rect.left) / rect.width - decorDrag.offsetX;
-        let ny = (touch.clientY - rect.top) / rect.height - decorDrag.offsetY;
+        const px = (touch.clientX - rect.left) / rect.width, py = (touch.clientY - rect.top) / rect.height;
+        if (Math.abs(px - decorDrag.startX) > 0.012 || Math.abs(py - decorDrag.startY) > 0.012) decorDrag.moved = true;
+        let nx = px - decorDrag.offsetX;
+        let ny = py - decorDrag.offsetY;
         const def = DECORATIONS.find(d => d.id === decorDrag.id);
         if (def) {
           if (def.category === 'wall') { ny = Math.max(0.01, Math.min(0.60, ny)); }
@@ -767,6 +774,22 @@
 
       document.addEventListener('touchend', endDrag);
       document.addEventListener('touchcancel', endDrag);
+
+      // Visitors can't drag, but tapping the host's fish tank opens their aquarium.
+      const tankUnder = (e) => {
+        const t = e.touches ? e.touches[0] : e;
+        const rect = cvs.getBoundingClientRect();
+        const mx = (t.clientX - rect.left) / rect.width, my = (t.clientY - rect.top) / rect.height;
+        return (roomData.placedDecors || []).some(p => p.id === 'aquarium' && decorHitTest(mx, my, p));
+      };
+      room.addEventListener('click', (e) => {
+        if (isOwner()) return;                          // owners use the tap-vs-drag path above
+        if (tankUnder(e) && typeof openAquarium === 'function') openAquarium();
+      });
+      room.addEventListener('mousemove', (e) => {
+        if (isOwner() || decorDrag) return;
+        cvs.style.cursor = tankUnder(e) ? 'pointer' : '';
+      });
     }
 
     /* -- Plant drag-to-reposition -- */

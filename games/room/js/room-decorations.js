@@ -1519,7 +1519,7 @@
         ctx.save();
         const pos = getDecorPos('aquarium');
         const ax = pos.x * rw, ay = pos.y * rh;
-        const aw = rw * 0.09, ah = rw * 0.06;
+        const aw = rw * 0.14, ah = rw * 0.09;
         // Stand legs
         ctx.fillStyle = '#555';
         ctx.fillRect(ax - aw/2 + 3, ay + ah/2, 3, 10);
@@ -1539,14 +1539,14 @@
         const fx = ax - aw * 0.2 + Math.sin(fishT) * aw * 0.2;
         const fy = ay - 2 + Math.cos(fishT * 1.3) * 3;
         ctx.fillStyle = '#ff6b35';
-        ctx.beginPath(); ctx.ellipse(fx, fy, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(fx - 5, fy); ctx.lineTo(fx - 9, fy - 3); ctx.lineTo(fx - 9, fy + 3); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(fx, fy, 7, 4, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(fx - 7, fy); ctx.lineTo(fx - 13, fy - 4); ctx.lineTo(fx - 13, fy + 4); ctx.fill();
         // Second fish
         const fx2 = ax + aw * 0.15 + Math.sin(fishT + 2) * aw * 0.15;
         const fy2 = ay + 4 + Math.cos(fishT * 0.9 + 1) * 2;
         ctx.fillStyle = '#48dbfb';
-        ctx.beginPath(); ctx.ellipse(fx2, fy2, 4, 2.5, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(fx2 + 4, fy2); ctx.lineTo(fx2 + 7, fy2 - 2); ctx.lineTo(fx2 + 7, fy2 + 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(fx2, fy2, 6, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(fx2 + 6, fy2); ctx.lineTo(fx2 + 10, fy2 - 3); ctx.lineTo(fx2 + 10, fy2 + 3); ctx.fill();
         // Bubbles
         ctx.fillStyle = 'rgba(255,255,255,0.3)';
         const bub1y = ay - ah * 0.1 - ((t / 20) % ah * 0.4);
