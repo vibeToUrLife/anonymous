@@ -8,6 +8,87 @@
 
     let _collectionOpenType = null; // pet type whose 九宫格 modal is open, or null
 
+    /* ── Shake-and-drop reaction tuning (cosmetic only; nothing here is saved) ── */
+    const SHAKE_FLIP_MIN   = 0.010; // min horizontal travel (0–1) for one direction reversal to count
+    const SHAKE_FLIP_GAIN  = 1.0;   // energy added per qualifying reversal
+    const SHAKE_TRIGGER    = 1.5;   // energy at which the pet starts looking shaken
+    const SHAKE_DIZZY_PEAK = 4.0;   // peak energy that makes the drop land dizzy (vs a plain plop)
+    const SHAKE_DECAY      = 0.94;  // per-frame fade so energy persists between shake swings
+    const SHAKE_MAX        = 10.0;  // cap so wild shaking can't overflow the wobble
+    const HELD_SCALE       = 1.0;   // fixed draw scale while held/falling (no perspective shrink)
+    // ── Throw / drop physics (per-frame, normalized 0–1 units) ──
+    const THROW_SPEED       = 0.020; // release speed above which it flies as a thrown arc (vs plop in place)
+    const THROW_DIZZY_SPEED = 0.050; // a throw this hard also lands the pet dizzy
+    const DROP_GRAVITY      = 0.0022;// downward acceleration each frame while airborne
+    const AIR_DRAG          = 0.992; // mild horizontal slowdown each frame in the air
+    const BOUNCE_DAMP       = 0.5;   // fraction of speed kept after a wall/floor bounce
+    const FLOOR_FRICTION    = 0.68;  // horizontal speed kept after hitting the floor
+    const SETTLE_VY         = 0.012; // bounce slower than this → settle and land
+    const MAX_BOUNCES       = 3;     // hard cap on floor bounces before settling
+    const SPIN_FACTOR       = 3.0;   // tumble amount relative to horizontal speed
+    const FLY_FLOOR_Y       = 0.90;  // floor line for bouncing
+    const FLY_CEIL_Y        = 0.10;  // ceiling line
+    const FLY_LEFT_X        = 0.04;  // left wall
+    const FLY_RIGHT_X       = 0.96;  // right wall
+    const PLOP_DUR         = 600;   // ms — squash-and-bounce landing
+    const DIZZY_DUR        = 1500;  // ms — dizzy stagger after a hard shake
+
+    /* Trigger the landing reaction once a dropped pet reaches the floor. */
+    function landPet(st) {
+      st.flying = false;
+      st.vx = 0; st.vy = 0; st.spin = 0;
+      st.nextWander = 0;                 // wander again once the reaction ends
+      const now = Date.now();
+      st.action = st.dizzyOnLand ? 'dizzy' : 'plop';
+      st.actionDur = st.dizzyOnLand ? DIZZY_DUR : PLOP_DUR;
+      st.actionEnd = now + st.actionDur;
+      st.actionCooldown = st.actionEnd + 3000; // short rest before random idle actions resume
+      st.dizzyOnLand = false;
+      st.thrown = false;
+      st.shaking = false;
+      st.shakeEnergy = 0; st.shakePeak = 0;
+      // Persist the final resting spot (the reaction itself is not saved)
+      const inst = st.petId ? getPet(st.petId) : null;
+      if (inst) { inst.posX = st.x; inst.posY = st.y; inst.parked = false; st.parked = false; saveRoom(); }
+    }
+
+    /* Dizzy spirals + sweat + motion lines drawn over a pet while it's being shaken. */
+    function drawShakeEffect(ctx, px, py, size, ds, t, amp) {
+      ctx.save();
+      const headY = py - size * 0.55;
+      // Dizzy spiral "eyes"
+      ctx.strokeStyle = 'rgba(40,40,60,0.8)';
+      ctx.lineWidth = 1.6 * ds;
+      for (let e = 0; e < 2; e++) {
+        const ex = px + (e === 0 ? -1 : 1) * size * 0.18;
+        ctx.beginPath();
+        for (let k = 0; k <= 14; k++) {
+          const ka = k / 14;
+          const ang = ka * Math.PI * 3 + t / 120;
+          const r = ka * size * 0.12;
+          const sx = ex + Math.cos(ang) * r, sy = headY + Math.sin(ang) * r;
+          if (k === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+        }
+        ctx.stroke();
+      }
+      // Sweat drop
+      ctx.globalAlpha = 0.75;
+      ctx.fillStyle = 'rgba(120,190,255,0.85)';
+      ctx.beginPath();
+      ctx.arc(px + size * 0.42, headY - size * 0.05 + Math.sin(t / 200) * 3 * ds, 2.4 * ds, 0, Math.PI * 2);
+      ctx.fill();
+      // Motion lines, longer the harder the shake
+      ctx.strokeStyle = 'rgba(200,200,220,' + (0.3 + 0.4 * amp) + ')';
+      ctx.lineWidth = 1.4 * ds;
+      for (let i = 0; i < 3; i++) {
+        const ly = py - size * 0.5 + i * size * 0.3;
+        const off = (8 + i * 3) * ds * (0.6 + amp);
+        ctx.beginPath(); ctx.moveTo(px - size * 0.55, ly); ctx.lineTo(px - size * 0.55 - off, ly); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(px + size * 0.55, ly); ctx.lineTo(px + size * 0.55 + off, ly); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     // Local calendar day as 'YYYY-MM-DD' (matches lastLoginDay convention).
     function _todayStr() {
       const d = new Date();
@@ -108,7 +189,10 @@
           pauseUntil: 0,
           idlePhase: Math.random() * Math.PI * 2,
           stopped: false, // When true, pet stops for status bar
-          parked: false   // Dragging only repositions; pet keeps walking after drop
+          parked: false,  // Dragging only repositions; pet keeps walking after drop
+          petId: id,                                    // back-ref so a settle can persist position
+          shakeEnergy: 0, shakePeak: 0, shaking: false, // shake-to-dizzy state (cosmetic)
+          flying: false, bounces: 0, spin: 0, thrown: false, dizzyOnLand: false
         };
       }
       return petStates[id];
@@ -202,6 +286,9 @@
       let _dragMoved = false;     // became a real drag (vs a click)
       let _dragSuppressClick = false;
       let _dragStartX = 0, _dragStartY = 0;  // pointer-down spot (normalized)
+      let _dragLastX = 0, _dragDir = 0;       // for shake detection (last x + last move direction)
+      let _dragVX = 0, _dragVY = 0;            // smoothed release velocity (normalized per frame)
+      let _dragPrevX = 0, _dragPrevY = 0, _dragPrevT = 0; // for velocity sampling
       // Finger jitter on a tap fires tiny touchmoves; stay a tap until the
       // pointer clears this dead-zone, so taps aren't misread as drags on mobile.
       const DRAG_THRESHOLD = 0.03;
@@ -236,6 +323,11 @@
         _dragPetId = p.id;
         _dragMoved = false;
         _dragStartX = pos.x; _dragStartY = pos.y;
+        _dragLastX = pos.x; _dragDir = 0;
+        _dragVX = 0; _dragVY = 0;
+        _dragPrevX = pos.x; _dragPrevY = pos.y; _dragPrevT = Date.now();
+        const st0 = petStates[p.id];
+        if (st0) { st0.petId = p.id; st0.shakeEnergy = 0; st0.shakePeak = 0; st0.shaking = false; st0.flying = false; }
         // Keep the event off elements behind the canvas, but do NOT preventDefault
         // on touchstart — that cancels the synthetic 'click' we rely on for
         // tap-to-open-status on mobile. Native scroll/drag during an actual drag is
@@ -263,6 +355,23 @@
         st.x = Math.max(0.02, Math.min(0.98, pos.x));
         st.y = Math.max(0.10, Math.min(0.96, pos.y));
         st.vx = 0; st.vy = 0;
+        // Shake detection: a quick reversal of horizontal direction adds energy
+        const mdx = pos.x - _dragLastX;
+        if (Math.abs(mdx) > SHAKE_FLIP_MIN) {
+          const dir = mdx > 0 ? 1 : -1;
+          if (_dragDir !== 0 && dir !== _dragDir) {
+            st.shakeEnergy = Math.min(SHAKE_MAX, (st.shakeEnergy || 0) + SHAKE_FLIP_GAIN);
+            if (st.shakeEnergy > (st.shakePeak || 0)) st.shakePeak = st.shakeEnergy;
+          }
+          _dragDir = dir;
+          _dragLastX = pos.x;
+        }
+        // Sample release velocity (smoothed) so a flick can throw the pet in an arc
+        const vnow = Date.now();
+        const vdt = Math.max(1, vnow - _dragPrevT);
+        _dragVX = _dragVX * 0.5 + ((pos.x - _dragPrevX) / vdt * 33) * 0.5;
+        _dragVY = _dragVY * 0.5 + ((pos.y - _dragPrevY) / vdt * 33) * 0.5;
+        _dragPrevX = pos.x; _dragPrevY = pos.y; _dragPrevT = vnow;
       }
 
       function onPetPointerUp(e) {
@@ -270,15 +379,19 @@
         const st = petStates[_dragPetId];
         const petInst = getPet(_dragPetId);
         if (_dragMoved && st && petInst && viewingUid === currentUid) {
-          // Move the pet to the dropped spot, then let it keep wandering from there.
-          petInst.posX = st.x;
-          petInst.posY = st.y;
-          petInst.parked = false;
-          st.parked = false;
+          // Release: throw the pet with the flick velocity (arc + bounce), or plop in place.
           st.dragging = false;
-          st.nextWander = 0;          // pick a fresh wander target right away
           _dragSuppressClick = true;  // prevent the trailing click from feeding/status
-          saveRoom();
+          st.vx = _dragVX; st.vy = _dragVY;
+          const speed = Math.hypot(st.vx, st.vy);
+          st.dizzyOnLand = (st.shakePeak || 0) >= SHAKE_DIZZY_PEAK || speed >= THROW_DIZZY_SPEED;
+          if (st.y >= 0.88 && speed < THROW_SPEED) {
+            landPet(st);              // gentle release on the floor → simple plop in place
+          } else {
+            st.flying = true;         // flick or mid-air release → projectile arc
+            st.bounces = 0; st.spin = 0;
+            st.thrown = speed >= THROW_SPEED;
+          }
           if (e && e.cancelable) e.preventDefault();
           e.stopPropagation();
         }
@@ -390,10 +503,32 @@
           let currentAction = null;
           const color = petInst ? petInst.color : p.color;
 
+          // Shake energy fades every frame; only "shaking" while actively held
+          if (st.shakeEnergy) { st.shakeEnergy *= SHAKE_DECAY; if (st.shakeEnergy < 0.05) st.shakeEnergy = 0; }
+          st.shaking = st.dragging && st.shakeEnergy >= SHAKE_TRIGGER;
+
           // If pet is stopped (status bar open) or being dragged, don't wander or act
           if (st.stopped || st.dragging) {
             moving = false;
             st.vx = 0; st.vy = 0;
+          } else if (st.flying) {
+            // Projectile: gravity + horizontal arc + bounces, then settle into a reaction
+            st.vy += DROP_GRAVITY;
+            st.vx *= AIR_DRAG;
+            st.x += st.vx;
+            st.y += st.vy;
+            st.spin = (st.spin || 0) + st.vx * SPIN_FACTOR;
+            moving = false;
+            if (st.x < FLY_LEFT_X)  { st.x = FLY_LEFT_X;  st.vx = -st.vx * BOUNCE_DAMP; }
+            if (st.x > FLY_RIGHT_X) { st.x = FLY_RIGHT_X; st.vx = -st.vx * BOUNCE_DAMP; }
+            if (st.y < FLY_CEIL_Y)  { st.y = FLY_CEIL_Y;  st.vy = -st.vy * BOUNCE_DAMP; }
+            if (st.y >= FLY_FLOOR_Y) {
+              st.y = FLY_FLOOR_Y;
+              st.bounces = (st.bounces || 0) + 1;
+              st.vy = -st.vy * BOUNCE_DAMP;     // bounce back up
+              st.vx *= FLOOR_FRICTION;
+              if (Math.abs(st.vy) < SETTLE_VY || st.bounces >= MAX_BOUNCES) landPet(st);
+            }
           } else {
             // Action system
             if (st.action && now < st.actionEnd) {
@@ -463,8 +598,8 @@
             }
           }
 
-          // Parked/dragged pets may be placed anywhere; others stay on the floor
-          if (st.parked || st.dragging) {
+          // Parked/dragged/flying pets may be placed anywhere; others stay on the floor
+          if (st.parked || st.dragging || st.flying) {
             st.x = Math.max(0.02, Math.min(0.98, st.x));
             st.y = Math.max(0.10, Math.min(0.96, st.y));
           } else {
@@ -474,7 +609,9 @@
 
           const px = st.x * rw;
           const py = st.y * rh;
-          const depthScale = Math.max(0.4, 0.6 + (st.y - 0.6) * 2.0);
+          const depthScale = (st.dragging || st.flying)
+            ? HELD_SCALE
+            : Math.max(0.4, 0.6 + (st.y - 0.6) * 2.0);
           const baseSize = PET_SIZES[p.type] || 44;
           const size = baseSize * depthScale;
 
@@ -494,6 +631,15 @@
           }
           ctx.translate(0, bob);
 
+          // Fast comical jiggle while being shaken (held)
+          if (st.shaking) {
+            const amp = Math.min(1, st.shakeEnergy / SHAKE_MAX);
+            ctx.rotate(Math.sin(t / 28) * 0.22 * amp);
+            ctx.scale(1 + 0.06 * amp * Math.sin(t / 22), 1 - 0.04 * amp * Math.sin(t / 22));
+          } else if (st.flying) {
+            ctx.rotate(st.spin || 0);   // tumble through the air when thrown
+          }
+
           if (currentAction && actionProgress >= 0) {
             applyActionTransform(ctx, p.type, currentAction, actionProgress, size, t);
           }
@@ -511,6 +657,11 @@
             ctx.save();
             drawActionEffect(ctx, px, py, size, depthScale, p.type, currentAction, actionProgress, t);
             ctx.restore();
+          }
+
+          // Dizzy/sweat overlay while being shaken
+          if (st.shaking) {
+            drawShakeEffect(ctx, px, py, size, depthScale, t, Math.min(1, st.shakeEnergy / SHAKE_MAX));
           }
 
           // Hunger bar above pet
@@ -912,6 +1063,22 @@
           ctx.rotate(ap * Math.PI * 1.5);
           break;
         }
+        case 'plop': {
+          // Squash flat on impact, then spring back to normal
+          const sq = Math.sin(Math.min(1, ap * 2.2) * Math.PI);
+          ctx.translate(0, s * 0.10 * sq);
+          ctx.scale(1 + 0.30 * sq, 1 - 0.30 * sq);
+          break;
+        }
+        case 'dizzy': {
+          // Quick squash on landing, then a woozy sway that settles down
+          const land = Math.sin(Math.min(1, ap * 4) * Math.PI / 2); // 0→1 over first 25%
+          const settle = 1 - ap;
+          ctx.translate(Math.sin(t / 90) * s * 0.06 * settle, s * 0.06 * land);
+          ctx.rotate(Math.sin(t / 110) * 0.14 * settle);
+          ctx.scale(1 + 0.10 * (1 - land), 1 - 0.10 * (1 - land));
+          break;
+        }
       }
     }
 
@@ -1182,6 +1349,39 @@
             const cx = px + (Math.sin(t / 200 + i * 2) * 8 - 4) * ds;
             const cy = py - size * 0.2 + (ap * 30 + i * 6) * ds;
             ctx.beginPath(); ctx.arc(cx, cy, 1.5 * ds, 0, Math.PI * 2); ctx.fill();
+          }
+          break;
+        }
+        case 'plop': {
+          // Dust puff kicked up at the feet on impact
+          if (ap < 0.35) {
+            ctx.globalAlpha = (0.35 - ap) / 0.35 * 0.5;
+            ctx.fillStyle = 'rgba(180,160,130,0.45)';
+            for (let i = 0; i < 4; i++) {
+              const dir = i < 2 ? -1 : 1;
+              const dx = px + dir * (6 + (i % 2) * 8) * ds;
+              ctx.beginPath(); ctx.arc(dx, py + size * 0.28, (3 + (i % 2) * 2) * ds, 0, Math.PI * 2); ctx.fill();
+            }
+          }
+          break;
+        }
+        case 'dizzy': {
+          // Brief impact dust, then stars circling the head
+          if (ap < 0.2) {
+            ctx.globalAlpha = (0.2 - ap) / 0.2 * 0.5;
+            ctx.fillStyle = 'rgba(180,160,130,0.45)';
+            for (let i = 0; i < 3; i++) {
+              const dx = px + (i - 1) * 8 * ds;
+              ctx.beginPath(); ctx.arc(dx, py + size * 0.28, 4 * ds, 0, Math.PI * 2); ctx.fill();
+            }
+          }
+          const fade = ap < 0.85 ? 1 : (1 - ap) / 0.15;
+          ctx.globalAlpha = 0.9 * Math.max(0, fade);
+          ctx.fillStyle = 'rgba(255,230,120,0.95)';
+          const headY = py - size * 1.15;
+          for (let i = 0; i < 3; i++) {
+            const a = t / 220 + i * (Math.PI * 2 / 3);
+            drawStar(ctx, px + Math.cos(a) * size * 0.5, headY + Math.sin(a) * size * 0.18, 3 * ds);
           }
           break;
         }
