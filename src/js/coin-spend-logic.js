@@ -77,7 +77,7 @@
     const col = CoinSpend.getCosmetic(equip.color);  if (col) out.c = col.val;
     const fr  = CoinSpend.getCosmetic(equip.frame);  if (fr)  out.f = fr.val;
     const bd  = CoinSpend.getCosmetic(equip.badge);  if (bd)  out.b = bd.val;
-    const ti  = CoinSpend.getCosmetic(equip.title);  if (ti)  { out.t = ti.val; out.ty = 1; }  // ty = needs time-in-service prefix at stamp time
+    const ti  = CoinSpend.getCosmetic(equip.title);  if (ti)  { out.t = ti.val; out.ty = 1; out.tr = ti.rarity; }  // ty = needs time prefix; tr = rarity (styles the chip)
     return out;
   };
 

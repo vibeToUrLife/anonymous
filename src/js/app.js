@@ -1296,7 +1296,7 @@ function applyBubbleCos(bubble, a) {
     // Title after the name.
     if (cos.t) {
     const title = document.createElement('span');
-    title.className = 'cos-title';
+    title.className = 'cos-title' + (cos.tr ? ' cos-title-' + cos.tr : '');
     title.textContent = cos.t;
     senderEl.parentNode.appendChild(title);
     }

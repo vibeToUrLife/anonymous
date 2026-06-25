@@ -379,7 +379,7 @@
     if (it.type === 'color') return it.val === 'rainbow' ? '<span class="cos-name-rainbow">名字</span>' : '<span style="color:' + it.val + '">名字</span>';
     if (it.type === 'frame') return '<span class="cos-frame-' + it.val + ' cc-frame-prev">气泡</span>';
     if (it.type === 'badge') return '<span style="font-size:24px">' + it.val + '</span>';
-    if (it.type === 'title') return '<span class="cos-title">' + esc(myTitlePrefix() + it.val) + '</span>';
+    if (it.type === 'title') return '<span class="cos-title cos-title-' + it.rarity + '">' + esc(myTitlePrefix() + it.val) + '</span>';
     return '';
   }
 

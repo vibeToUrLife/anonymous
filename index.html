@@ -386,6 +386,13 @@
     .cos-name-rainbow { text-shadow:0 1px 2px rgba(0,0,0,.4); }
     /* keep paid cosmetics legible on the white clay card (base colours vanish on --surface) */
     .cos-title { color:#2a1c08 !important; background:#f1c85b !important; }
+    /* 称号 chips styled by rarity (two-class selectors beat the generic .cos-title above) */
+    .cos-title.cos-title-N  { color:#1f2937 !important; background:#e5e7eb !important; }
+    .cos-title.cos-title-R  { color:#fff !important; background:linear-gradient(135deg,#60a5fa,#3b82f6) !important; box-shadow:0 0 6px rgba(59,130,246,.45); }
+    .cos-title.cos-title-SR { color:#fff !important; background:linear-gradient(135deg,#c084fc,#a855f7) !important; box-shadow:0 0 9px rgba(168,85,247,.55); }
+    .cos-title.cos-title-SSR{ color:#2a1c08 !important; background:linear-gradient(135deg,#ffe580,#f5b301,#ffd24d) !important; background-size:200% 100% !important; box-shadow:0 0 12px rgba(245,179,1,.6); animation:cosTitleShimmer 2.5s linear infinite; }
+    @keyframes cosTitleShimmer { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
+    @media (prefers-reduced-motion: reduce) { .cos-title.cos-title-SSR { animation:none; } }
     .bubble.cos-frame-simple { border-color:var(--ink-faint) !important; }
     /* reaction chips inside a note → clay pills */
     .bubble .reaction-btn { background:var(--bg) !important; border:1px solid var(--border) !important; color:var(--ink-soft) !important; }
@@ -1462,7 +1469,7 @@
   <script src="./src/js/upcoming-events.js?v=3"></script>
   <!-- Clay design system theme controller (must load before app.js wires the toggle) -->
   <script src="./src/js/theme.js?v=2"></script>
-  <script src="./src/js/app.js?v=13"></script>
+  <script src="./src/js/app.js?v=14"></script>
   <!-- Live, interactive board features (load after app.js for shared db/auth) -->
   <script src="./src/js/board-live-logic.js"></script>
   <script src="./src/js/presence.js"></script>
@@ -1477,8 +1484,8 @@
   <script src="./src/js/chengyu-data.js?v=2"></script>
   <script src="./src/js/chengyu-chain.js?v=6"></script>
   <!-- Coin sinks: cosmetics shop / gacha / slot / boost (金币乐园) -->
-  <script src="./src/js/coin-spend-logic.js?v=2"></script>
-  <script src="./src/js/coin-center.js?v=2"></script>
+  <script src="./src/js/coin-spend-logic.js?v=3"></script>
+  <script src="./src/js/coin-center.js?v=3"></script>
 
   <!-- Walking-pet animal art (shared with the room pets) -->
   <script src="./games/pets/shared.js"></script>
