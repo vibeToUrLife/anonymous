@@ -41,11 +41,19 @@
     // Titles (shown after the name) — ordered by price (cheapest first)
     { id: 't_rookie',  type: 'title', name: '称号·新人', val: '新人',     price: 5000,   rarity: 'N'   },
     { id: 't_intern',  type: 'title', name: '称号·intern', val: 'intern', price: 5000,   rarity: 'N'   },
+    { id: 't_robot',   type: 'title', name: '称号·收到机器人', val: '收到机器人', price: 8000, rarity: 'N' },
     { id: 't_vip',     type: 'title', name: '称号·VIP',  val: 'VIP',      price: 15000,  rarity: 'R'   },
     { id: 't_fisher',  type: 'title', name: '称号·钓鱼佬', val: '钓鱼佬', price: 15000,  rarity: 'R'   },
+    { id: 't_monday',  type: 'title', name: '称号·周一恐惧症晚期患者', val: '周一恐惧症晚期患者', price: 18000, rarity: 'R' },
+    { id: 't_otnight', type: 'title', name: '称号·OT守夜人', val: 'OT守夜人', price: 22000, rarity: 'R' },
+    { id: 't_wellness',type: 'title', name: '称号·养生专家', val: '养生专家', price: 25000, rarity: 'R' },
     { id: 't_boss',    type: 'title', name: '称号·大佬', val: '大佬',     price: 45000,  rarity: 'SR'  },
     { id: 't_fishking',type: 'title', name: '称号·鱼王',   val: '鱼王',   price: 45000,  rarity: 'SR'  },
+    { id: 't_salary',  type: 'title', name: '称号·薪尽自然凉', val: '薪尽自然凉', price: 50000, rarity: 'SR' },
+    { id: 't_ctrl',    type: 'title', name: '称号·CTRL工程师', val: 'CTRL工程师', price: 55000, rarity: 'SR' },
+    { id: 't_yuan',    type: 'title', name: '称号·大怨种', val: '大怨种', price: 60000, rarity: 'SR' },
     { id: 't_legend',  type: 'title', name: '称号·传奇', val: '传奇',     price: 90000,  rarity: 'SSR' },
+    { id: 't_deadline',type: 'title', name: '称号·Deadline之子', val: 'Deadline之子', price: 100000, rarity: 'SSR' },
     { id: 't_hidden',  type: 'title', name: '称号·隐藏BOSS', val: '隐藏BOSS', price: 150000, rarity: 'SSR' }
   ];
 
