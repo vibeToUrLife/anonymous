@@ -110,14 +110,17 @@
   $('deniedSignOut').addEventListener('click', doSignOut);
 
   let booted = false;
-  auth.onAuthStateChanged((user) => {
+  auth.onAuthStateChanged(async (user) => {
     const label = user ? (user.displayName || user.email || user.uid) : '';
     $('whoami').textContent = label;
     $('avatar').textContent = label ? label.charAt(0).toUpperCase() : '';
     $('idChip').classList.toggle('hidden', !user);
     $('signOutBtn').classList.toggle('hidden', !user);
     if (!user) { show('authGate'); return; }
-    if (DEVELOPER_UIDS.indexOf(user.uid) === -1) { $('deniedUid').textContent = user.uid; show('deniedGate'); return; }
+    // Dev = a built-in bootstrap UID, OR present in the runtime developers/ allowlist.
+    let isDev = DEVELOPER_UIDS.indexOf(user.uid) !== -1;
+    if (!isDev) { try { isDev = (await db.collection('developers').doc(user.uid).get()).exists; } catch (e) {} }
+    if (!isDev) { $('deniedUid').textContent = user.uid; show('deniedGate'); return; }
     show('dashboard');
     if (!booted) { booted = true; initDashboard(); }
   });
@@ -128,11 +131,12 @@
     tabs.forEach(t => t.addEventListener('click', () => {
       tabs.forEach(x => x.classList.remove('active'));
       t.classList.add('active');
-      ['site', 'users', 'content', 'stats', 'games'].forEach(name =>
+      ['site', 'users', 'content', 'stats', 'games', 'economy'].forEach(name =>
         $('tab-' + name).classList.toggle('hidden', name !== t.dataset.tab));
       if (t.dataset.tab === 'content') loadContent();
       if (t.dataset.tab === 'stats')   loadStats();
       if (t.dataset.tab === 'games')   loadGames();
+      if (t.dataset.tab === 'economy') loadEconomy();
     }));
   }
 
@@ -257,6 +261,71 @@
         .then(() => { $('spinText').value = ''; setStatus($('spinStatus'), '✅ Cleared.', 'ok'); writeLog('spin_result', null, null, 'cleared'); })
         .catch(e => setStatus($('spinStatus'), e.message, 'err'));
     });
+
+    // Feature switches
+    loadFeatures();
+
+    // Developer allowlist
+    loadDevelopers();
+    $('devAddBtn').addEventListener('click', () => {
+      const uid = $('devUidInput').value.trim();
+      if (!uid) return setStatus($('devStatus'), '⚠️ Enter a UID.', 'err');
+      if (DEVELOPER_UIDS.indexOf(uid) !== -1) return setStatus($('devStatus'), 'Already a built-in developer.', 'err');
+      $('devAddBtn').disabled = true;
+      setStatus($('devStatus'), 'Adding…');
+      db.collection('developers').doc(uid).set({ at: Date.now(), by: auth.currentUser.uid })
+        .then(() => { setStatus($('devStatus'), '✅ Developer added.', 'ok'); $('devUidInput').value = ''; writeLog('dev_add', uid, null, ''); loadDevelopers(); })
+        .catch(e => setStatus($('devStatus'), e.message, 'err'))
+        .finally(() => { $('devAddBtn').disabled = false; });
+    });
+  }
+
+  const FEATURES = [
+    { key: 'coin_rush', label: 'Coin Rush' },
+    { key: 'playground', label: 'Bubble Playground' },
+    { key: 'riddle', label: 'Daily Riddle' },
+    { key: 'chengyu', label: '成语接龙 Chain' },
+    { key: 'quote_comments', label: 'Quote Comments' }
+  ];
+  function loadFeatures() {
+    const featRef = db.doc('app_state/features');
+    featRef.get().then(s => {
+      const f = s.exists ? s.data() : {};
+      $('featureList').innerHTML = FEATURES.map(ft => {
+        const on = f[ft.key] !== false;
+        return '<div class="item"><div class="row" style="justify-content:space-between"><strong>' + esc(ft.label) + '</strong>' +
+          '<label class="switch"><input type="checkbox" data-feat="' + ft.key + '"' + (on ? ' checked' : '') + '><span class="slider"></span></label></div></div>';
+      }).join('');
+      $('featureList').querySelectorAll('[data-feat]').forEach(cb => cb.addEventListener('change', () => {
+        const key = cb.dataset.feat, on = cb.checked;
+        featRef.set({ [key]: on }, { merge: true })
+          .then(() => writeLog('feature_' + (on ? 'on' : 'off'), null, null, key))
+          .catch(e => { alert(e.message); cb.checked = !on; });
+      }));
+    }).catch(e => { $('featureList').innerHTML = '<div class="status err">' + esc(e.message) + '</div>'; });
+  }
+
+  function loadDevelopers() {
+    // Built-in (bootstrap) devs — permanent, shown as locked.
+    const builtins = DEVELOPER_UIDS.map(uid =>
+      '<div class="item"><div class="row" style="justify-content:space-between;gap:10px"><strong style="min-width:0;word-break:break-all">' + esc(uid) + '</strong><span class="chip good">built-in</span></div></div>'
+    ).join('');
+    db.collection('developers').get().then(snap => {
+      let extra = '';
+      snap.forEach(doc => {
+        extra += '<div class="item" data-uid="' + esc(doc.id) + '"><div class="row" style="justify-content:space-between;gap:10px">' +
+          '<strong style="min-width:0;word-break:break-all">' + esc(doc.id) + '</strong>' +
+          '<button class="btn sm danger" data-rmdev>Remove</button></div></div>';
+      });
+      $('devList').innerHTML = builtins + extra;
+      $('devList').querySelectorAll('[data-rmdev]').forEach(btn => btn.addEventListener('click', async () => {
+        const uid = btn.closest('[data-uid]').dataset.uid;
+        const ok = await confirmAction({ title: 'Remove developer', confirmLabel: 'Remove', message: 'Remove admin access for ' + uid + '?' });
+        if (!ok) return;
+        try { await db.collection('developers').doc(uid).delete(); writeLog('dev_remove', uid, null, ''); loadDevelopers(); }
+        catch (e) { setStatus($('devStatus'), e.message, 'err'); }
+      }));
+    }).catch(e => { $('devList').innerHTML = builtins + '<div class="status err">' + esc(e.message) + '</div>'; });
   }
   // Format a ms timestamp for an <input type="datetime-local"> (local time, YYYY-MM-DDTHH:mm).
   function toLocalInput(ts) {
@@ -840,6 +909,66 @@
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape' && !$('statModal').classList.contains('hidden')
           && $('confirmModal').classList.contains('hidden')) closeStatModal();
+    });
+  }
+
+  /* ═══════════════ ECONOMY TAB ═══════════════ */
+  // Mirrors the hardcoded defaults in coin-spend-logic.js (odds shown as %).
+  const ECON_DEFAULTS = {
+    gacha: { pullCost: 800, tenCost: 7200, dupRefund: 100, odds: { SSR: 2, SR: 8, R: 30, N: 60 } },
+    slot: { bets: [50, 100, 500], twoCherry: 2 },
+    fortune: { cost: 500 }
+  };
+  const econRef = db.doc('app_state/economy');
+  let _econBound = false;
+
+  function loadEconomy() {
+    if (!_econBound) { _econBound = true; bindEconomy(); }
+    econRef.get().then(s => {
+      const c = s.exists ? s.data() : {};
+      const g = c.gacha || {}, sl = c.slot || {}, ft = c.fortune || {}, D = ECON_DEFAULTS;
+      $('ecGachaPull').value = g.pullCost ?? D.gacha.pullCost;
+      $('ecGachaTen').value = g.tenCost ?? D.gacha.tenCost;
+      $('ecGachaDup').value = g.dupRefund ?? D.gacha.dupRefund;
+      const od = g.odds || {};
+      $('ecOddsSSR').value = od.SSR != null ? +(od.SSR * 100).toFixed(2) : D.gacha.odds.SSR;
+      $('ecOddsSR').value = od.SR != null ? +(od.SR * 100).toFixed(2) : D.gacha.odds.SR;
+      $('ecOddsR').value = od.R != null ? +(od.R * 100).toFixed(2) : D.gacha.odds.R;
+      $('ecOddsN').value = od.N != null ? +(od.N * 100).toFixed(2) : D.gacha.odds.N;
+      const bets = Array.isArray(sl.bets) ? sl.bets : D.slot.bets;
+      $('ecSlotBet1').value = bets[0] ?? D.slot.bets[0];
+      $('ecSlotBet2').value = bets[1] ?? D.slot.bets[1];
+      $('ecSlotBet3').value = bets[2] ?? D.slot.bets[2];
+      $('ecSlotCherry').value = sl.twoCherry ?? D.slot.twoCherry;
+      $('ecFortuneCost').value = ft.cost ?? D.fortune.cost;
+    }).catch(e => setStatus($('ecGachaStatus'), e.message, 'err'));
+  }
+
+  function bindEconomy() {
+    $('ecGachaSave').addEventListener('click', () => {
+      const pull = parseInt($('ecGachaPull').value, 10), ten = parseInt($('ecGachaTen').value, 10), dup = parseInt($('ecGachaDup').value, 10);
+      const ssr = parseFloat($('ecOddsSSR').value), sr = parseFloat($('ecOddsSR').value), r = parseFloat($('ecOddsR').value), n = parseFloat($('ecOddsN').value);
+      if ([pull, ten, dup, ssr, sr, r, n].some(x => isNaN(x) || x < 0)) return setStatus($('ecGachaStatus'), '⚠️ All fields must be numbers ≥ 0.', 'err');
+      const sum = ssr + sr + r + n;
+      if (Math.abs(sum - 100) > 0.01) return setStatus($('ecGachaStatus'), '⚠️ Odds must total 100% (now ' + sum + '%).', 'err');
+      econRef.set({ gacha: { pullCost: pull, tenCost: ten, dupRefund: dup, odds: { SSR: ssr / 100, SR: sr / 100, R: r / 100, N: n / 100 } } }, { merge: true })
+        .then(() => { setStatus($('ecGachaStatus'), '✅ Saved. Applies on users’ next load.', 'ok'); writeLog('economy_gacha', null, null, 'pull ' + pull + ', odds ' + ssr + '/' + sr + '/' + r + '/' + n); })
+        .catch(e => setStatus($('ecGachaStatus'), e.message, 'err'));
+    });
+    $('ecSlotSave').addEventListener('click', () => {
+      const b = [parseInt($('ecSlotBet1').value, 10), parseInt($('ecSlotBet2').value, 10), parseInt($('ecSlotBet3').value, 10)];
+      const cherry = parseInt($('ecSlotCherry').value, 10);
+      if (b.some(x => isNaN(x) || x <= 0) || isNaN(cherry) || cherry < 0) return setStatus($('ecSlotStatus'), '⚠️ Enter valid numbers.', 'err');
+      econRef.set({ slot: { bets: b, twoCherry: cherry } }, { merge: true })
+        .then(() => { setStatus($('ecSlotStatus'), '✅ Saved. Applies on users’ next load.', 'ok'); writeLog('economy_slot', null, null, b.join('/') + ' ×' + cherry); })
+        .catch(e => setStatus($('ecSlotStatus'), e.message, 'err'));
+    });
+    $('ecFortuneSave').addEventListener('click', () => {
+      const cost = parseInt($('ecFortuneCost').value, 10);
+      if (isNaN(cost) || cost < 0) return setStatus($('ecFortuneStatus'), '⚠️ Enter a valid cost.', 'err');
+      econRef.set({ fortune: { cost } }, { merge: true })
+        .then(() => { setStatus($('ecFortuneStatus'), '✅ Saved. Applies on users’ next load.', 'ok'); writeLog('economy_fortune', null, null, String(cost)); })
+        .catch(e => setStatus($('ecFortuneStatus'), e.message, 'err'));
     });
   }
 

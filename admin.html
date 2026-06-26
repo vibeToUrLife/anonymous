@@ -278,6 +278,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/><rect x="2" y="6" width="20" height="12" rx="4"/></svg>
         Games
       </button>
+      <button class="tab" data-tab="economy">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/></svg>
+        Economy
+      </button>
       <button class="tab" data-tab="stats">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6" rx="1"/><rect x="12" y="7" width="3" height="10" rx="1"/><rect x="17" y="13" width="3" height="4" rx="1"/></svg>
         Stats
@@ -342,6 +346,23 @@
           <input type="text" id="spinText" placeholder="e.g. 🍜 Ramen" />
           <div class="row" style="margin-top:12px"><button class="btn primary" id="spinSet">Set result</button><button class="btn" id="spinClear">Clear</button></div>
           <div class="status" id="spinStatus"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg></span><h2>Developer access</h2></div>
+          <div class="hint">Who can open this panel and run developer actions. Built-in devs are permanent; add or remove others by UID.</div>
+          <div class="row">
+            <input type="text" id="devUidInput" class="grow" placeholder="User UID to grant admin…" autocomplete="off" />
+            <button class="btn primary" id="devAddBtn">Add developer</button>
+          </div>
+          <div class="status" id="devStatus"></div>
+          <div class="list" id="devList" style="margin-top:12px"><div class="muted">Loading…</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v10M18.4 6.6a9 9 0 1 1-12.8 0"/></svg></span><h2>Feature switches</h2></div>
+          <div class="hint">Turn a feature off to hide it for all users (applies on their next page load). Default is on.</div>
+          <div class="list" id="featureList"><div class="muted">Loading…</div></div>
         </div>
       </section>
 
@@ -484,6 +505,52 @@
           <div class="row"><button class="btn" id="crLoad">Load today</button><button class="btn danger" id="crReset">Reset today</button></div>
           <div class="status" id="crStatus"></div>
           <div class="list" id="crList" style="margin-top:12px"></div>
+        </div>
+      </section>
+
+      <!-- ───────── ECONOMY ───────── -->
+      <section id="tab-economy" class="hidden">
+        <div class="page-head"><h1>Economy</h1><div class="sub">Tune coin sinks live. Saved values apply on users’ next page load; blanks keep the built-in default.</div></div>
+
+        <div class="card">
+          <div class="card-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9" width="16" height="11" rx="2"/><path d="M8 9V6a4 4 0 0 1 8 0v3M9 14h.01M15 14h.01"/></svg></span><h2>Gacha · 扭蛋机</h2></div>
+          <div class="hint">Pull costs, duplicate refund, and rarity odds (must total 100%).</div>
+          <div class="row">
+            <div class="grow"><label class="fld" for="ecGachaPull">Single pull</label><input type="number" id="ecGachaPull" /></div>
+            <div class="grow"><label class="fld" for="ecGachaTen">10-pull</label><input type="number" id="ecGachaTen" /></div>
+            <div class="grow"><label class="fld" for="ecGachaDup">Duplicate refund</label><input type="number" id="ecGachaDup" /></div>
+          </div>
+          <label class="fld">Odds % — SSR / SR / R / N</label>
+          <div class="row">
+            <input type="number" id="ecOddsSSR" class="grow" placeholder="SSR %" />
+            <input type="number" id="ecOddsSR" class="grow" placeholder="SR %" />
+            <input type="number" id="ecOddsR" class="grow" placeholder="R %" />
+            <input type="number" id="ecOddsN" class="grow" placeholder="N %" />
+          </div>
+          <div class="row" style="margin-top:12px"><button class="btn primary" id="ecGachaSave">Save gacha</button></div>
+          <div class="status" id="ecGachaStatus"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 9v6M12 9v6M16 9v6"/></svg></span><h2>Slot machine · 老虎机</h2></div>
+          <div class="hint">Bet amounts and the two-cherry multiplier.</div>
+          <div class="row">
+            <div class="grow"><label class="fld" for="ecSlotBet1">Bet 1</label><input type="number" id="ecSlotBet1" /></div>
+            <div class="grow"><label class="fld" for="ecSlotBet2">Bet 2</label><input type="number" id="ecSlotBet2" /></div>
+            <div class="grow"><label class="fld" for="ecSlotBet3">Bet 3</label><input type="number" id="ecSlotBet3" /></div>
+            <div class="grow"><label class="fld" for="ecSlotCherry">Two-cherry ×</label><input type="number" id="ecSlotCherry" /></div>
+          </div>
+          <div class="row" style="margin-top:12px"><button class="btn primary" id="ecSlotSave">Save slot</button></div>
+          <div class="status" id="ecSlotStatus"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14l-1 7a6 6 0 0 1-12 0Z"/><path d="M9 21h6M12 17v4"/></svg></span><h2>Daily Fortune · 求签</h2></div>
+          <div class="hint">Cost per draw.</div>
+          <label class="fld" for="ecFortuneCost">Draw cost</label>
+          <input type="number" id="ecFortuneCost" />
+          <div class="row" style="margin-top:12px"><button class="btn primary" id="ecFortuneSave">Save fortune</button></div>
+          <div class="status" id="ecFortuneStatus"></div>
         </div>
       </section>
 

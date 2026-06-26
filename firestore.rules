@@ -9,10 +9,12 @@ service cloud.firestore {
       return isAuth() && request.auth.uid == uid;
     }
     function isDeveloper(uid) {
+      // Bootstrap devs are hardcoded so you can NEVER be locked out. Additional devs
+      // are managed at runtime via the developers/{uid} collection (admin panel).
       return uid in [
         'HClZmAeuEaUVjHqUaFLFFMTMQnd2',
         'eUs3isAgsaRT9VLKEFI4HEFbCnk1'
-      ];
+      ] || exists(/databases/$(database)/documents/developers/$(uid));
     }
     // A user is blocked when a doc exists at banned/{uid}. exists() inside rules runs
     // with admin privileges, so it works regardless of the banned/ read rule.
@@ -196,6 +198,12 @@ service cloud.firestore {
     //     admin_log/{id}: append-only audit trail of every admin action.
     // ═══════════════════════════════════════
     match /banned/{uid} {
+      allow read:  if isAuth();
+      allow write: if isAuth() && isDeveloper(request.auth.uid);
+    }
+    // Runtime developer allowlist (in addition to the hardcoded bootstrap above).
+    // Only an existing developer may grant/revoke admin access.
+    match /developers/{uid} {
       allow read:  if isAuth();
       allow write: if isAuth() && isDeveloper(request.auth.uid);
     }
