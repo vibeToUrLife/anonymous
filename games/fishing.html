@@ -180,6 +180,10 @@
     .fish-card .fish-pts {
       font-size: 8px; color: var(--g-ink-faint); margin-top: 2px;
     }
+    .fish-card .fish-prob {
+      font-size: 8px; color: #2d8f83; font-weight: 700; margin-top: 2px;
+    }
+    .fish-card.uncaught .fish-prob { color: var(--g-ink-faint); }
 
     /* ── Responsive ── */
     @media (max-width: 560px) {
@@ -444,6 +448,8 @@
       const catchable = FISH_TYPES.filter(f => f.rarity !== 'junk');
       const discovered = catchable.filter(f => caughtFishSet.has(f.name)).length;
       countEl.textContent = discovered + ' / ' + catchable.length + ' discovered';
+      // Catch chance = fish weight ÷ total weight of ALL fish (junk included, matching pickFishType)
+      const totalWeight = FISH_TYPES.reduce((s, f) => s + f.weight, 0);
       grid.innerHTML = '';
       catchable.forEach(f => {
         const card = document.createElement('div');
@@ -454,7 +460,8 @@
         meta.innerHTML =
           '<div class="fish-name">' + (caught ? f.name : '???') + '</div>' +
           '<div class="fish-rarity" style="color:' + RARITY_COLORS_DOM[f.rarity] + '">' + f.rarity + '</div>' +
-          '<div class="fish-pts">' + f.points + ' pts</div>';
+          '<div class="fish-pts">' + f.points + ' pts</div>' +
+          '<div class="fish-prob">' + (f.weight / totalWeight * 100).toFixed(1) + '% chance</div>';
         card.appendChild(meta);
         grid.appendChild(card);
       });
