@@ -20,6 +20,11 @@
   const hasFB = (typeof db !== 'undefined' && typeof auth !== 'undefined' && typeof firebase !== 'undefined');
   const FieldValue = hasFB ? firebase.firestore.FieldValue : null;
 
+  // Developer UIDs (must match WN_DEV_UIDS in index.html / isDeveloper() in firestore.rules).
+  // These users get the exclusive "开发者" signature title when no other title is equipped.
+  const DEV_UIDS = ['eUs3isAgsaRT9VLKEFI4HEFbCnk1'];
+  function isDev() { return hasFB && auth.currentUser && DEV_UIDS.indexOf(auth.currentUser.uid) !== -1; }
+
   // ── State ──
   let coins = 0;
   let owned = [];
@@ -39,16 +44,16 @@
     try { localStorage.setItem('board_cos', JSON.stringify(C.resolveEquip(equip))); } catch (e) {}
   }
   window.getEquippedCos = function () {
-    try {
-      const o = JSON.parse(localStorage.getItem('board_cos'));
-      if (!o || !Object.keys(o).length) return null;
-      if (o.ty && o.t && hasFB && auth.currentUser) {            // bake "N年/N个月" into the title at post time
-        const created = Date.parse(auth.currentUser.metadata?.creationTime);
-        if (created) o.t = C.titlePrefix(created, Date.now()) + ' ' + o.t;
-      }
-      delete o.ty;
-      return o;
-    } catch (e) { return null; }
+    let o;
+    try { o = JSON.parse(localStorage.getItem('board_cos')) || {}; } catch (e) { o = {}; }
+    if (o.ty && o.t && hasFB && auth.currentUser) {            // bake "N年/N个月" into a bought title at post time
+      const created = Date.parse(auth.currentUser.metadata?.creationTime);
+      if (created) o.t = C.titlePrefix(created, Date.now()) + ' ' + o.t;
+    }
+    delete o.ty;
+    // Developer signature title — shown only to devs, and only when no other title is equipped.
+    if (!o.t && isDev()) { o.t = '开发者'; o.tr = 'DEV'; }
+    return Object.keys(o).length ? o : null;
   };
 
   async function loadRoom() {

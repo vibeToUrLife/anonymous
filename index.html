@@ -393,6 +393,20 @@
     .cos-title.cos-title-SSR{ color:#2a1c08 !important; background:linear-gradient(135deg,#ffe580,#f5b301,#ffd24d) !important; background-size:200% 100% !important; box-shadow:0 0 12px rgba(245,179,1,.6); animation:cosTitleShimmer 2.5s linear infinite; }
     @keyframes cosTitleShimmer { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
     @media (prefers-reduced-motion: reduce) { .cos-title.cos-title-SSR { animation:none; } }
+    /* 开发者 — developer-only signature title; the rarest chip of all, above every
+       gacha tier (animated holographic rainbow sweep + crown + multi-colour glow). */
+    .cos-title.cos-title-DEV {
+      color:#fff !important;
+      background:linear-gradient(120deg,#ff5f6d,#ffc371,#47e891,#3b82f6,#a855f7,#ff5f6d) !important;
+      background-size:300% 100% !important;
+      font-weight:800 !important; letter-spacing:0.3px;
+      text-shadow:0 1px 2px rgba(0,0,0,.55);
+      box-shadow:0 0 10px rgba(168,85,247,.6), 0 0 20px rgba(59,130,246,.45), inset 0 0 0 1px rgba(255,255,255,.35);
+      animation:cosTitleDev 3s linear infinite;
+    }
+    .cos-title.cos-title-DEV::before { content:'👑 '; }
+    @keyframes cosTitleDev { 0%{background-position:0% 50%} 100%{background-position:300% 50%} }
+    @media (prefers-reduced-motion: reduce) { .cos-title.cos-title-DEV { animation:none; } }
     .bubble.cos-frame-simple { border-color:var(--ink-faint) !important; }
     /* reaction chips inside a note → clay pills */
     .bubble .reaction-btn { background:var(--bg) !important; border:1px solid var(--border) !important; color:var(--ink-soft) !important; }
