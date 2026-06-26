@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Dev Admin</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <style>
+    /* ═══ Design system — Dark Mode (OLED) + Data-Dense + Minimalism ═══ */
+    :root{
+      --bg:#020617; --surface:#0b1120; --card:#0e1526; --card-2:#131c30; --raised:#16203a;
+      --border:#1e2a44; --border-soft:#172036;
+      --ink:#f1f5f9; --ink-soft:#94a3b8; --ink-faint:#64748b;
+      --primary:#6366f1; --primary-hov:#7c83ff; --on-primary:#fff;
+      --good:#22c55e; --good-bg:rgba(34,197,94,.12);
+      --warn:#f59e0b; --warn-bg:rgba(245,158,11,.12);
+      --bad:#ef4444;  --bad-bg:rgba(239,68,68,.12);
+      --ring:0 0 0 3px rgba(99,102,241,.40);
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+      --r:14px; --r-sm:10px;
+      --ui:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      --mono:ui-monospace,"Cascadia Code","Segoe UI Mono",Consolas,"Liberation Mono",monospace;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0}
+    body{
+      background:
+        radial-gradient(1200px 600px at 100% -10%, rgba(99,102,241,.10), transparent 60%),
+        radial-gradient(900px 500px at -10% 110%, rgba(34,197,94,.06), transparent 55%),
+        var(--bg);
+      color:var(--ink); font-family:var(--ui); font-size:14px; line-height:1.55;
+      -webkit-font-smoothing:antialiased; min-height:100dvh;
+    }
+    h1,h2,h3{margin:0;font-weight:650;letter-spacing:-.01em}
+    .num,.kv,.meta,.stat .n,.chip,code,#udUid,#udCoins{font-variant-numeric:tabular-nums}
+    .muted{color:var(--ink-soft)}
+    .hidden{display:none!important}
+    code{font-family:var(--mono);background:var(--card-2);border:1px solid var(--border);border-radius:6px;padding:1px 6px;font-size:12px;color:var(--ink-soft)}
+
+    /* ── Topbar ── */
+    .topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:12px;
+      padding:12px 18px;border-bottom:1px solid var(--border);
+      background:rgba(2,6,23,.82);backdrop-filter:blur(10px)}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.02em}
+    .brand .logo{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;
+      background:linear-gradient(135deg,var(--primary),#8b5cf6);color:#fff;box-shadow:var(--shadow)}
+    .brand .logo svg{width:18px;height:18px}
+    .spacer{flex:1}
+    .idchip{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);
+      border-radius:999px;padding:4px 10px 4px 4px;font-size:12px;color:var(--ink-soft);max-width:230px}
+    .idchip .av{width:26px;height:26px;border-radius:50%;flex:none;display:grid;place-items:center;
+      background:linear-gradient(135deg,#6366f1,#22c55e);color:#fff;font-weight:700;font-size:12px}
+    .idchip .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+    /* ── Buttons ── */
+    .btn{appearance:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink);
+      background:var(--card-2);border:1px solid var(--border);border-radius:var(--r-sm);
+      padding:9px 14px;min-height:40px;cursor:pointer;transition:background .15s,border-color .15s,transform .05s;
+      display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+    .btn:hover{border-color:#334766;background:var(--raised)}
+    .btn:active{transform:translateY(1px)}
+    .btn:focus-visible{outline:none;box-shadow:var(--ring)}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .btn svg{width:16px;height:16px}
+    .btn.primary{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+    .btn.primary:hover{background:var(--primary-hov);border-color:var(--primary-hov)}
+    .btn.danger{background:transparent;border-color:rgba(239,68,68,.45);color:#fca5a5}
+    .btn.danger:hover{background:var(--bad-bg);border-color:var(--bad)}
+    .btn.sm{min-height:34px;padding:6px 11px;font-size:12px;border-radius:8px}
+    .btn.ghost{background:transparent;border-color:transparent;color:var(--ink-soft)}
+    .btn.ghost:hover{background:var(--card-2);color:var(--ink)}
+
+    /* ── Gates ── */
+    .center{min-height:72vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:14px;text-align:center;padding:24px}
+    .center .glyph{width:72px;height:72px;border-radius:20px;display:grid;place-items:center;
+      background:var(--card);border:1px solid var(--border);box-shadow:var(--shadow);margin-bottom:4px}
+    .center .glyph svg{width:34px;height:34px}
+    .center h2{font-size:20px}
+    .center p{max-width:380px;margin:0;color:var(--ink-soft)}
+    .spin{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+
+    /* ── Dashboard layout ── */
+    #dashboard{display:grid;grid-template-columns:236px 1fr;gap:0;align-items:start;
+      max-width:1180px;margin:0 auto;min-height:calc(100dvh - 56px)}
+    .sidebar{position:sticky;top:56px;align-self:start;padding:18px 12px;display:flex;flex-direction:column;gap:4px;
+      border-right:1px solid var(--border);min-height:calc(100dvh - 56px)}
+    .nav-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+      color:var(--ink-faint);padding:8px 12px 4px}
+    .tab{display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+      background:none;border:1px solid transparent;color:var(--ink-soft);
+      font-family:inherit;font-size:14px;font-weight:550;padding:10px 12px;border-radius:var(--r-sm);
+      cursor:pointer;transition:background .15s,color .15s;min-height:42px}
+    .tab svg{width:18px;height:18px;flex:none}
+    .tab:hover{background:var(--card-2);color:var(--ink)}
+    .tab:focus-visible{outline:none;box-shadow:var(--ring)}
+    .tab.active{background:linear-gradient(90deg,rgba(99,102,241,.18),rgba(99,102,241,.04));
+      color:var(--ink);border-color:var(--border);position:relative}
+    .tab.active::before{content:"";position:absolute;left:-12px;top:9px;bottom:9px;width:3px;
+      border-radius:3px;background:var(--primary)}
+    .content{padding:22px 24px 60px;min-width:0}
+    .page-head{margin:2px 0 18px}
+    .page-head h1{font-size:21px}
+    .page-head .sub{color:var(--ink-soft);font-size:13px;margin-top:3px}
+
+    /* ── Cards ── */
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+      padding:18px;margin-bottom:16px;box-shadow:var(--shadow)}
+    .card-head{display:flex;align-items:center;gap:10px;margin-bottom:3px}
+    .card-head .ico{width:30px;height:30px;border-radius:9px;flex:none;display:grid;place-items:center;
+      background:var(--card-2);border:1px solid var(--border);color:var(--primary-hov)}
+    .card-head .ico svg{width:17px;height:17px}
+    .card h2{font-size:15px}
+    .card.collapsible > .card-head{cursor:pointer;margin-bottom:0;user-select:none}
+    .card.collapsible:not(.collapsed) > .card-head{margin-bottom:3px}
+    .card.collapsible > .card-head::after{content:'';margin-left:auto;flex:none;width:9px;height:9px;
+      border-right:2px solid var(--ink-faint);border-bottom:2px solid var(--ink-faint);transform:rotate(45deg);transition:transform .15s}
+    .card.collapsed > .card-head::after{transform:rotate(-45deg)}
+    .card.collapsed > *:not(.card-head){display:none!important}
+    .hint{color:var(--ink-soft);font-size:12.5px;margin:2px 0 14px}
+    .divider{height:1px;background:var(--border);margin:16px 0}
+
+    /* ── Form controls ── */
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .grow{flex:1;min-width:160px}
+    label.fld{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin:12px 0 5px}
+    input[type=text],input[type=number],input[type=datetime-local],textarea,select{width:100%;font-family:inherit;font-size:13.5px;
+      color:var(--ink);background:var(--card-2);border:1px solid var(--border);border-radius:var(--r-sm);
+      padding:10px 12px;min-height:40px;transition:border-color .15s,box-shadow .15s}
+    input::placeholder,textarea::placeholder{color:var(--ink-faint)}
+    textarea{resize:vertical;min-height:84px;line-height:1.5}
+    input:focus,textarea:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:var(--ring)}
+
+    /* ── Toggle ── */
+    .switch{position:relative;display:inline-block;width:46px;height:26px;flex:none}
+    .switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+    .slider{position:absolute;inset:0;background:var(--card-2);border:1px solid var(--border);
+      border-radius:999px;transition:.2s;pointer-events:none}
+    .slider:before{content:"";position:absolute;height:18px;width:18px;left:3px;top:3px;
+      background:#cbd5e1;border-radius:50%;transition:.2s}
+    .switch input:checked + .slider{background:var(--good);border-color:var(--good)}
+    .switch input:checked + .slider:before{transform:translateX(20px);background:#fff}
+    .switch input:focus-visible + .slider{box-shadow:var(--ring)}
+
+    /* ── Status text ── */
+    .status{font-size:12.5px;margin-top:10px;min-height:16px;color:var(--ink-soft)}
+    .status.ok{color:#4ade80} .status.err{color:#fca5a5}
+
+    /* ── Chips / lists ── */
+    .chip{display:inline-flex;align-items:center;gap:5px;background:var(--card-2);border:1px solid var(--border);
+      border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:600;color:var(--ink-soft)}
+    .chip.good{color:#4ade80;background:var(--good-bg);border-color:rgba(34,197,94,.35)}
+    .chip.warn{color:#fbbf24;background:var(--warn-bg);border-color:rgba(245,158,11,.35)}
+    .chip.bad{color:#fca5a5;background:var(--bad-bg);border-color:rgba(239,68,68,.35)}
+    .list{display:flex;flex-direction:column;gap:9px}
+    .item{background:var(--card-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 13px;transition:border-color .15s}
+    .item:hover{border-color:#334766}
+    .item .meta{color:var(--ink-soft);font-size:12px;margin-top:3px}
+    .item.tap{cursor:pointer}
+    .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13px;margin:10px 0}
+    .kv .k{color:var(--ink-soft)}
+    .collapse-toggle{display:flex;align-items:center;gap:8px;width:100%;text-align:left;font:inherit;font-weight:600;font-size:13px;
+      color:var(--ink);background:var(--card-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;cursor:pointer;min-height:40px}
+    .collapse-toggle:hover{border-color:#334766}
+    .collapse-toggle:focus-visible{outline:none;box-shadow:var(--ring)}
+    .collapse-toggle .chev{flex:none;transition:transform .15s}
+    .collapse-toggle.open .chev{transform:rotate(90deg)}
+
+    /* ── Stats ── */
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:13px}
+    .stat{background:var(--card-2);border:1px solid var(--border);border-radius:var(--r);padding:16px;position:relative;overflow:hidden}
+    .stat .si{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;margin-bottom:12px;
+      background:var(--card);border:1px solid var(--border)}
+    .stat .si svg{width:18px;height:18px}
+    .stat .n{font-size:28px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+    .stat .l{color:var(--ink-soft);font-size:12px;margin-top:3px}
+    .stat.s-online .si{color:#4ade80} .stat.s-users .si{color:var(--primary-hov)}
+    .stat.s-coins .si{color:#fbbf24}  .stat.s-banned .si{color:#fca5a5}
+    .stat.clickable{cursor:pointer}
+    .stat.clickable:hover{border-color:#334766;background:var(--raised)}
+    .stat.clickable:focus-visible{outline:none;box-shadow:var(--ring)}
+    .stat .go{position:absolute;top:13px;right:13px;color:var(--ink-faint);opacity:0;transition:opacity .15s}
+    .stat .go svg{display:block}
+    .stat.clickable:hover .go,.stat.clickable:focus-visible .go{opacity:1}
+
+    /* ── Modal ── */
+    .modal-scrim{position:fixed;inset:0;z-index:100;background:rgba(2,6,23,.66);backdrop-filter:blur(3px);
+      display:flex;align-items:center;justify-content:center;padding:20px;animation:fade .15s ease-out}
+    .modal{background:var(--card);border:1px solid var(--border);border-radius:16px;
+      box-shadow:0 24px 64px -16px rgba(0,0,0,.75);width:100%;max-width:540px;max-height:82dvh;
+      display:flex;flex-direction:column;animation:pop .18s ease-out}
+    .modal-head{display:flex;align-items:center;gap:10px;padding:15px 16px 15px 18px;border-bottom:1px solid var(--border)}
+    .modal-head h3{font-size:16px;flex:1}
+    .modal-body{padding:16px 18px;overflow:auto}
+    .modal-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:16px}
+    .modal-sum .b{background:var(--card-2);border:1px solid var(--border);border-radius:11px;padding:12px}
+    .modal-sum .b .n{font-size:21px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+    .modal-sum .b .l{color:var(--ink-soft);font-size:11px;margin-top:2px}
+    @keyframes fade{from{opacity:0}to{opacity:1}}
+    @keyframes pop{from{opacity:0;transform:scale(.96) translateY(6px)}to{opacity:1;transform:none}}
+
+    @media (max-width:860px){
+      #dashboard{grid-template-columns:1fr}
+      .sidebar{position:static;flex-direction:row;min-height:0;overflow-x:auto;border-right:none;
+        border-bottom:1px solid var(--border);padding:8px 10px;gap:6px}
+      .sidebar .nav-label{display:none}
+      .tab{white-space:nowrap;min-height:38px;padding:8px 12px}
+      .tab.active::before{display:none}
+      .content{padding:18px 16px 60px}
+    }
+    @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  </style>
+</head>
+<body>
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.1 2.1-2.3-.6-.6-2.3 2-1.9Z"/></svg>
+      </span>
+      Dev Admin
+    </div>
+    <div class="spacer"></div>
+    <span class="idchip hidden" id="idChip"><span class="av" id="avatar"></span><span class="nm" id="whoami"></span></span>
+    <a class="btn sm ghost" href="index.html" aria-label="View site">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+      Site
+    </a>
+    <button class="btn sm hidden" id="signOutBtn">Sign out</button>
+  </div>
+
+  <!-- Loading -->
+  <div class="center" id="loadingGate">
+    <div class="glyph"><svg class="spin" viewBox="0 0 24 24" fill="none" stroke="var(--primary-hov)" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg></div>
+    <p class="muted">Checking access…</p>
+  </div>
+
+  <!-- Not signed in -->
+  <div class="center hidden" id="authGate">
+    <div class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="var(--primary-hov)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+    <h2>Developer sign-in</h2>
+    <p class="muted">Sign in with your developer Google account to manage the site.</p>
+    <button class="btn primary" id="googleSignInBtn">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="#fff" d="M12 11v2.8h3.9c-.2 1-1.5 2.9-3.9 2.9A4.7 4.7 0 0 1 12 7.3a4.2 4.2 0 0 1 3 1.2l2-2A7.2 7.2 0 0 0 12 4.5 7.5 7.5 0 1 0 12 19.5c4.3 0 7.2-3 7.2-7.3 0-.5 0-.8-.1-1.2H12Z"/></svg>
+      Sign in with Google
+    </button>
+    <div class="status err" id="authError"></div>
+  </div>
+
+  <!-- Signed in but not a developer -->
+  <div class="center hidden" id="deniedGate">
+    <div class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="#fca5a5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m4.9 4.9 14.2 14.2"/></svg></div>
+    <h2>Access denied</h2>
+    <p class="muted">This account is not a developer. Add your UID to <code>isDeveloper()</code> in firestore.rules to grant access.</p>
+    <p class="muted">Your UID: <code id="deniedUid"></code></p>
+    <button class="btn" id="deniedSignOut">Sign out</button>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="hidden" id="dashboard">
+    <!-- Sidebar nav -->
+    <nav class="sidebar" aria-label="Admin sections">
+      <span class="nav-label">Manage</span>
+      <button class="tab active" data-tab="site">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+        Site
+      </button>
+      <button class="tab" data-tab="users">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1A4 4 0 0 1 16 11"/></svg>
+        Users
+      </button>
+      <button class="tab" data-tab="content">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>
+        Content
+      </button>
+      <button class="tab" data-tab="games">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/><rect x="2" y="6" width="20" height="12" rx="4"/></svg>
+        Games
+      </button>
+      <button class="tab" data-tab="stats">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6" rx="1"/><rect x="12" y="7" width="3" height="10" rx="1"/><rect x="17" y="13" width="3" height="4" rx="1"/></svg>
+        Stats
+      </button>
+    </nav>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- ───────── SITE ───────── -->
+      <section id="tab-site">
+        <div class="page-head"><h1>Site controls</h1><div class="sub">Maintenance, access code, and announcements.</div></div>
+
+        <div class="card">
+          <div class="card-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.1 2.1-2.3-.6-.6-2.3 2-1.9Z"/></svg></span><h2>Maintenance mode</h2></div>
+          <div class="hint">When ON, every page shows the “Under Maintenance” screen on load.</div>
+          <div class="row">
+            <label class="switch"><input type="checkbox" id="maintToggle" aria-label="Toggle maintenance mode"><span class="slider"></span></label>
+            <strong id="maintState" class="chip">Loading…</strong>
+          </div>
+          <label class="fld" for="maintMsg">Custom message (optional)</label>
+          <textarea id="maintMsg" placeholder="We're doing some upgrades right now…"></textarea>
+          <div class="row" style="margin-top:12px"><button class="btn primary" id="maintSave">Save maintenance</button></div>
+          <div class="status" id="maintStatus"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><h2>Access code</h2></div>
+          <div class="hint">The code users must enter to open the site. Changing it locks out anyone who hasn’t entered the new code.</div>
+          <label class="fld" for="codeInput">Current access code</label>
+          <input type="text" id="codeInput" autocomplete="off" placeholder="Loading…" />
+          <div class="row" style="margin-top:12px"><button class="btn primary" id="codeSave">Save code</button></div>
+          <div class="status" id="codeStatus"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 21 4l-3 16-5-4-3 3v-5Z"/></svg></span><h2>Announcement · What’s New</h2></div>
+          <div class="hint">Shown as a popup once per <em>version key</em>. Change the version to re-show it. Each line is one bullet (HTML allowed).</div>
+          <div class="row">
+            <div class="grow"><label class="fld" for="wnVersion">Version key</label><input type="text" id="wnVersion" placeholder="e.g. 2026-06-26" /></div>
+            <div class="grow"><label class="fld" for="wnBadge">Badge title</label><input type="text" id="wnBadge" placeholder="What's New" /></div>
+          </div>
+          <label class="fld" for="wnItems">Items (one per line)</label>
+          <textarea id="wnItems" placeholder="Added a new game&#10;Coin rewards rebalanced"></textarea>
+          <div class="row" style="margin-top:12px"><button class="btn primary" id="wnSave">Publish announcement</button></div>
+          <div class="status" id="wnStatus"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M12 2h0M9 2h6"/></svg></span><h2>Countdown timer</h2></div>
+          <div class="hint">A site-wide countdown everyone sees; it fires a celebration when it hits zero. Clearing falls back to the default schedule.</div>
+          <label class="fld" for="cdTime">Target date &amp; time</label>
+          <input type="datetime-local" id="cdTime" />
+          <div class="row" style="margin-top:12px"><button class="btn primary" id="cdSet">Set countdown</button><button class="btn" id="cdClear">Clear</button></div>
+          <div class="status" id="cdStatus"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg></span><h2>Food spin result</h2></div>
+          <div class="hint">Override the shared lunch/dinner spin result everyone sees, or clear it.</div>
+          <label class="fld" for="spinText">Result text</label>
+          <input type="text" id="spinText" placeholder="e.g. 🍜 Ramen" />
+          <div class="row" style="margin-top:12px"><button class="btn primary" id="spinSet">Set result</button><button class="btn" id="spinClear">Clear</button></div>
+          <div class="status" id="spinStatus"></div>
+        </div>
+      </section>
+
+      <!-- ───────── USERS ───────── -->
+      <section id="tab-users" class="hidden">
+        <div class="page-head"><h1>Users</h1><div class="sub">Look up accounts, adjust coins, rename, ban, or reset.</div></div>
+
+        <div class="card">
+          <div class="card-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span><h2>Find a user</h2></div>
+          <div class="hint">Search by exact display name, or paste a UID.</div>
+          <div class="row">
+            <input type="text" id="userQuery" class="grow" placeholder="Display name or UID…" />
+            <button class="btn primary" id="userSearch">Search</button>
+          </div>
+          <div class="status" id="userSearchStatus"></div>
+          <div class="list" id="userResults" style="margin-top:12px"></div>
+        </div>
+
+        <div class="card hidden" id="userDetail">
+          <div class="card-head">
+            <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg></span>
+            <div><h2 id="udName">—</h2><div class="meta muted" id="udUid"></div></div>
+          </div>
+          <div class="kv" id="udProfile"></div>
+          <div class="divider"></div>
+
+          <label class="fld">Coins — current: <strong id="udCoins">—</strong></label>
+          <div class="row">
+            <input type="number" id="coinAmt" class="grow" placeholder="amount" />
+            <button class="btn sm" id="coinGrant">＋ Grant</button>
+            <button class="btn sm" id="coinDeduct">－ Deduct</button>
+            <button class="btn sm" id="coinSet">＝ Set exact</button>
+          </div>
+
+          <label class="fld" for="nameEdit">Display name</label>
+          <div class="row">
+            <input type="text" id="nameEdit" class="grow" />
+            <button class="btn sm" id="nameSave">Rename</button>
+          </div>
+
+          <div class="divider"></div>
+          <div class="row">
+            <button class="btn danger" id="banBtn">Ban user</button>
+            <button class="btn danger" id="resetBtn">Reset account</button>
+          </div>
+          <label class="fld">Advanced — targeted resets</label>
+          <div class="row">
+            <button class="btn sm" id="clearAchBtn">Clear achievements</button>
+            <button class="btn sm" id="resetRiddleBtn">Reset riddle progress</button>
+          </div>
+          <div class="status" id="userActionStatus"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></span><h2>Recent admin actions</h2></div>
+          <div class="hint">Audit log of coin changes, renames, resets and bans.</div>
+          <div class="list" id="auditLog"><div class="muted">Loading…</div></div>
+        </div>
+      </section>
+
+      <!-- ───────── CONTENT ───────── -->
+      <section id="tab-content" class="hidden">
+        <div class="page-head"><h1>Content</h1><div class="sub">Moderate community events and the bubble board.</div></div>
+
+        <div class="card">
+          <div class="card-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><h2>Upcoming events</h2></div>
+          <div class="hint">Remove junk or off-topic notes.</div>
+          <div class="list" id="eventsList"><div class="muted">Loading…</div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3v18M8 3v6a2 2 0 0 1-4 0V3M18 3c-1.7 0-3 2.5-3 6s.6 4 1.5 4H18v8"/></svg></span><h2>Food suggestions</h2></div>
+          <div class="hint">Remove spam or junk entries from the food suggestion list.</div>
+          <div class="list" id="foodList"><div class="muted">Loading…</div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 19a5.5 5.5 0 1 1 3.8-9.5A4 4 0 1 1 17 14h-.5"/><circle cx="18" cy="18" r="3"/></svg></span><h2>Bubble board</h2></div>
+          <div class="hint">Recent messages on the bubble board. Posts made anonymously show no name (the board never stores the sender’s account). Remove anything inappropriate.</div>
+          <div class="list" id="bubbleList"><div class="muted">Loading…</div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 10h8M8 14h5M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12Z"/></svg></span><h2>Quote comments</h2></div>
+          <div class="hint">Comments on the daily quote, last 7 days. Remove anything inappropriate.</div>
+          <div class="list" id="commentList"><div class="muted">Loading…</div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5h16v2M9 5v14M7 19h4M14 11h6M17 9v8"/></svg></span><h2>成语接龙 chain</h2></div>
+          <div class="hint">Today’s idiom chain — trim junk links, clear wrong attempts, or reset the day.</div>
+          <div id="chengyuBox"><div class="muted">Loading…</div></div>
+        </div>
+      </section>
+
+      <!-- ───────── STATS ───────── -->
+      <section id="tab-stats" class="hidden">
+        <div class="page-head"><h1>Stats</h1><div class="sub">A live snapshot of the community.</div></div>
+        <div class="card">
+          <div class="row" style="justify-content:space-between;margin-bottom:14px">
+            <div class="card-head" style="margin:0"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg></span><h2>Overview</h2></div>
+            <button class="btn sm" id="statsRefresh">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
+              Refresh
+            </button>
+          </div>
+          <span class="status" id="statsStatus"></span>
+          <div class="stat-grid" style="margin-top:8px">
+            <div class="stat s-online clickable" data-metric="online" role="button" tabindex="0" aria-label="View who is online"><span class="go"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg></span><div class="n" id="statOnline">—</div><div class="l">Online now</div></div>
+            <div class="stat s-users clickable" data-metric="users" role="button" tabindex="0" aria-label="View all users"><span class="go"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/></svg></span><div class="n" id="statUsers">—</div><div class="l">Total users</div></div>
+            <div class="stat s-coins clickable" data-metric="coins" role="button" tabindex="0" aria-label="View coin economy"><span class="go"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/></svg></span><div class="n" id="statCoins">—</div><div class="l">Coins in economy</div></div>
+            <div class="stat s-banned clickable" data-metric="banned" role="button" tabindex="0" aria-label="View banned users"><span class="go"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m4.9 4.9 14.2 14.2"/></svg></span><div class="n" id="statBanned">—</div><div class="l">Banned users</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ───────── GAMES ───────── -->
+      <section id="tab-games" class="hidden">
+        <div class="page-head"><h1>Games</h1><div class="sub">Clean up leaderboards and the daily Coin Rush.</div></div>
+
+        <div class="card">
+          <div class="card-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0Z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg></span><h2>Leaderboards</h2></div>
+          <div class="hint">Remove a cheater’s entry or reset an entire board.</div>
+          <div class="row">
+            <select id="lbGame" class="grow">
+              <option value="leaderboard_2048">2048</option>
+              <option value="leaderboard_snake">Snake</option>
+              <option value="leaderboard_blockblast">Block Blast</option>
+              <option value="leaderboard_fishing">Fishing</option>
+              <option value="leaderboard_carrace">Subway Dash</option>
+              <option value="leaderboard_flappy">Flappy</option>
+              <option value="leaderboard_tetris">Tetris</option>
+            </select>
+            <button class="btn" id="lbLoad">Load</button>
+            <button class="btn danger" id="lbReset">Reset board</button>
+          </div>
+          <div class="status" id="lbStatus"></div>
+          <div class="list" id="lbList" style="margin-top:12px"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/></svg></span><h2>Daily Coin Rush</h2></div>
+          <div class="hint">Today’s synced bubble-pop competition. Reset wipes today’s scores and bonus claims.</div>
+          <div class="row"><button class="btn" id="crLoad">Load today</button><button class="btn danger" id="crReset">Reset today</button></div>
+          <div class="status" id="crStatus"></div>
+          <div class="list" id="crList" style="margin-top:12px"></div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- Stat drill-down modal -->
+  <div class="modal-scrim hidden" id="statModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="statModalTitle">
+      <div class="modal-head">
+        <h3 id="statModalTitle">Details</h3>
+        <button class="btn ghost sm" id="statModalClose" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" id="statModalBody"></div>
+    </div>
+  </div>
+
+  <!-- Confirmation dialog (ban / reset / delete) -->
+  <div class="modal-scrim hidden" id="confirmModal" style="z-index:200">
+    <div class="modal" style="max-width:430px" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMsg">
+      <div class="modal-head">
+        <h3 id="confirmTitle">Confirm</h3>
+        <button class="btn ghost sm" id="confirmX" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p id="confirmMsg" class="muted" style="margin:0;line-height:1.6"></p>
+        <div id="confirmTypeWrap" class="hidden">
+          <label class="fld" id="confirmTypeLabel" for="confirmTypeInput"></label>
+          <input type="text" id="confirmTypeInput" autocomplete="off" />
+        </div>
+        <div class="row" style="justify-content:flex-end;margin-top:20px">
+          <button class="btn" id="confirmCancel">Cancel</button>
+          <button class="btn danger" id="confirmOk">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase (same SDK/version the rest of the site uses) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="./src/js/firebase-config.js"></script>
+  <script src="./src/js/admin.js"></script>
+</body>
+</html>

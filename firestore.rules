@@ -14,6 +14,11 @@ service cloud.firestore {
         'eUs3isAgsaRT9VLKEFI4HEFbCnk1'
       ];
     }
+    // A user is blocked when a doc exists at banned/{uid}. exists() inside rules runs
+    // with admin privileges, so it works regardless of the banned/ read rule.
+    function isBanned(uid) {
+      return exists(/databases/$(database)/documents/banned/$(uid));
+    }
 
     // ═══════════════════════════════════════
     // 1. ROOMS — user profiles / virtual rooms
@@ -62,8 +67,16 @@ service cloud.firestore {
     match /rooms/{uid} {
       allow read: if isAuth();
       allow create: if isOwner(uid);
-      allow update: if isOwner(uid)
+      // - Owner may write their own room, UNLESS banned (a banned user can't earn/play).
+      // - Developers (admin dashboard) may write ANY room: adjust coins, rename, reset.
+      // - A signed-in (non-banned) user may add only coins/gifts/aquariumLikes to SOMEONE
+      //   ELSE's room (gifting / pop rewards). The `uid != self` term is essential: without
+      //   it a banned user could self-grant coins through this clause and bypass the ban.
+      allow update: if (isOwner(uid) && !isBanned(uid))
+                    || (isAuth() && isDeveloper(request.auth.uid))
                     || (isAuth()
+                        && request.auth.uid != uid
+                        && !isBanned(request.auth.uid)
                         && request.resource.data.diff(resource.data)
                            .affectedKeys()
                            .hasOnly(['coins', 'giftsReceived', 'aquariumLikes']));
@@ -108,26 +121,27 @@ service cloud.firestore {
     // ═══════════════════════════════════════
     // 4. LEADERBOARDS — UID-keyed (2048, snake, blockblast)
     // ═══════════════════════════════════════
+    // Owner writes their own score; developers (admin) may correct/delete any entry.
     match /leaderboard_2048/{uid} {
       allow read: if isAuth();
-      allow write: if isOwner(uid);
+      allow write: if isOwner(uid) || (isAuth() && isDeveloper(request.auth.uid));
     }
     match /leaderboard_snake/{uid} {
       allow read: if isAuth();
-      allow write: if isOwner(uid);
+      allow write: if isOwner(uid) || (isAuth() && isDeveloper(request.auth.uid));
     }
     match /leaderboard_blockblast/{uid} {
       allow read: if isAuth();
-      allow write: if isOwner(uid);
+      allow write: if isOwner(uid) || (isAuth() && isDeveloper(request.auth.uid));
     }
     match /leaderboard_fishing/{uid} {
       allow read: if isAuth();
-      allow write: if isOwner(uid);
+      allow write: if isOwner(uid) || (isAuth() && isDeveloper(request.auth.uid));
     }
-    // Subway Dash (endless runner) — UID-keyed, owner-only writes.
+    // Subway Dash (endless runner) — UID-keyed, owner-only writes (+ developer).
     match /leaderboard_carrace/{uid} {
       allow read: if isAuth();
-      allow write: if isOwner(uid);
+      allow write: if isOwner(uid) || (isAuth() && isDeveloper(request.auth.uid));
     }
 
     // ═══════════════════════════════════════
@@ -156,9 +170,39 @@ service cloud.firestore {
       allow read: if isAuth();
       allow write: if isAuth() && isDeveloper(request.auth.uid);
     }
+    // Site-wide maintenance switch — flipped from the admin dashboard.
+    // Public read so maintenance.js can show the screen before login.
+    match /app_state/maintenance {
+      allow read: if true;
+      allow write: if isAuth() && isDeveloper(request.auth.uid);
+    }
+    // Shared game state that any signed-in user legitimately writes.
+    match /app_state/spin_result { allow read: if isAuth(); allow write: if isAuth(); }
+    match /app_state/countdown   { allow read: if isAuth(); allow write: if isAuth(); }
+    // Everything else under app_state is developer-only. This closes the old
+    // blanket-write hole where this wildcard let ANY signed-in user overwrite
+    // access_code / whats_new / maintenance through the OR-match semantics.
     match /app_state/{docId} {
       allow read: if isAuth();
-      allow write: if isAuth();
+      allow write: if isAuth() && isDeveloper(request.auth.uid);
+    }
+
+    // ═══════════════════════════════════════
+    // 6a. ADMIN — bans & audit log (developer-only)
+    //     banned/{uid}: the doc's existence = user is blocked. Enforced in the rooms
+    //       owner-write rule (isBanned) so a banned user can't earn/play, and in the
+    //       app (blocked screen + sign-out on login). Kept SEPARATE from the user's
+    //       own room so a banned user can't lift their own ban.
+    //     admin_log/{id}: append-only audit trail of every admin action.
+    // ═══════════════════════════════════════
+    match /banned/{uid} {
+      allow read:  if isAuth();
+      allow write: if isAuth() && isDeveloper(request.auth.uid);
+    }
+    match /admin_log/{logId} {
+      allow read:   if isAuth() && isDeveloper(request.auth.uid);
+      allow create: if isAuth() && isDeveloper(request.auth.uid);
+      allow update, delete: if false;
     }
 
     // ═══════════════════════════════════════
@@ -176,6 +220,8 @@ service cloud.firestore {
                      && request.resource.data.score is number
                      && request.resource.data.score >= 0
                      && request.resource.data.score <= 2000;
+        // Developers may delete entries to reset the day's competition.
+        allow delete: if isAuth() && isDeveloper(request.auth.uid);
       }
       match /claims/{uid} {
         allow read: if isAuth();
@@ -183,7 +229,8 @@ service cloud.firestore {
                       && request.resource.data.bonus is number
                       && request.resource.data.bonus >= 0
                       && request.resource.data.bonus <= 1000;
-        allow update, delete: if false;
+        allow update: if false;
+        allow delete: if isAuth() && isDeveloper(request.auth.uid);
       }
     }
 
@@ -237,7 +284,13 @@ service cloud.firestore {
     // ═══════════════════════════════════════
     match /_meta/{docId} {
       allow read: if isAuth();
-      allow write: if isAuth();
+      // The daily auto-reset is run by whichever signed-in client loads first after
+      // midnight; it writes ONLY the {day} marker. Restrict non-developers to exactly
+      // that shape so they can't corrupt other internal state. Developers write freely.
+      allow write: if (isAuth() && isDeveloper(request.auth.uid))
+                   || (isAuth()
+                       && request.resource.data.keys().hasOnly(['day'])
+                       && request.resource.data.day is string);
     }
 
     // ═══════════════════════════════════════
@@ -284,7 +337,8 @@ service cloud.firestore {
                       && request.resource.data.createdAt is number;
         allow update: if false;
         allow delete: if isAuth()
-                      && resource.data.uid == request.auth.uid;
+                      && (resource.data.uid == request.auth.uid
+                          || isDeveloper(request.auth.uid));
       }
     }
 

@@ -46,9 +46,30 @@ googleLoginBtn.addEventListener('click', async () => {
 });
 
 let _lastSeenInterval = null;
+
+// Full-screen "you're blocked" overlay for banned accounts. The real enforcement
+// is in firestore.rules (a banned user can't write their room); this is just a
+// friendly screen + sign-out so they aren't left staring at a broken app.
+function showBlockedScreen() {
+    if (document.getElementById('blockedScreen')) return;
+    const d = document.createElement('div');
+    d.id = 'blockedScreen';
+    d.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#0b0e14;color:#e8eaf0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;font-family:system-ui,-apple-system,sans-serif';
+    d.innerHTML =
+        '<div style="font-size:64px">⛔</div>' +
+        '<h1 style="margin:0;font-size:22px">Access blocked</h1>' +
+        '<p style="margin:0;max-width:340px;font-size:14px;color:#9aa0ad;line-height:1.6">Your account has been blocked from this site. If you think this is a mistake, please contact the admin.</p>';
+    document.body.appendChild(d);
+}
+
 auth.onAuthStateChanged(async (user) => {
     loginOverlay.classList.remove('loading');
     if (user) {
+    // Enforce bans on the client too (defense in depth — the rules are the real boundary).
+    try {
+        const banSnap = await db.collection('banned').doc(user.uid).get();
+        if (banSnap.exists) { showBlockedScreen(); await auth.signOut(); return; }
+    } catch (e) {}
     loginOverlay.classList.add('hidden');
     appContent.classList.add('visible');
     // Display name: Firestore rooms/{uid}.displayName is the source of truth so a
