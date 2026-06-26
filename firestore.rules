@@ -65,6 +65,10 @@ service cloud.firestore {
     //          localStorage is just the instant-load cache). Owner-only write. The notif flag is
     //          a preference only — actual browser push is still gated per-device by the browser's
     //          Notification permission, so a synced "on" can't push where it was never allowed.
+    //    NOTE: totalStaySec (number) — lifetime ACTIVE seconds spent across the whole site
+    //          (board + every mini-game + room/farm/aquarium). Accrued client-side by
+    //          stay-time.js and folded in via increment(); owner-only write (covered by isOwner).
+    //          Powers the 停留榜 leaderboard via orderBy('totalStaySec').
     // ═══════════════════════════════════════
     match /rooms/{uid} {
       allow read: if isAuth();

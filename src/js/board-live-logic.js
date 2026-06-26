@@ -160,6 +160,28 @@
     return { granted: granted, state: { day: today, count: count } };
   };
 
+  /* ─────────────────────────────────────────────────────────────
+     Stay time (总停留时间) — formatting
+     ───────────────────────────────────────────────────────────── */
+
+  /**
+   * Human-friendly Chinese duration from a whole-second count, e.g.
+   * 90 → "1分钟", 3700 → "1小时1分", 90000 → "1天1小时". Sub-minute totals
+   * collapse to "不到1分钟" so the board never shows a bare "0".
+   * @param {number} sec  total seconds (negatives / NaN treated as 0)
+   * @returns {string}
+   */
+  BoardLive.formatDuration = function (sec) {
+    sec = Math.max(0, Math.floor(sec) || 0);
+    const d = Math.floor(sec / 86400);
+    const h = Math.floor((sec % 86400) / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    if (d > 0) return d + '天' + (h > 0 ? h + '小时' : '');
+    if (h > 0) return h + '小时' + (m > 0 ? m + '分' : '');
+    if (m > 0) return m + '分钟';
+    return '不到1分钟';
+  };
+
   // Export for both browser (window.BoardLive) and Node/CommonJS.
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = BoardLive;
