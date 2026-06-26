@@ -25,6 +25,12 @@
   const DEV_UIDS = ['eUs3isAgsaRT9VLKEFI4HEFbCnk1'];
   function isDev() { return hasFB && auth.currentUser && DEV_UIDS.indexOf(auth.currentUser.uid) !== -1; }
 
+  // Dev test mode: every coin sink is FREE for developers — no balance requirement,
+  // no deduction, no coinsSpent tally — so a dev can buy/equip/test anything at 0 coins.
+  function affordOK(cur, cost)   { return isDev() || cur >= cost; }
+  function chargedCoins(cur, cost) { return isDev() ? cur : cur - cost; }
+  function spentTally(prev, cost)  { return (prev || 0) + (isDev() ? 0 : cost); }
+
   // ── State ──
   let coins = 0;
   let owned = [];
@@ -56,6 +62,15 @@
     return Object.keys(o).length ? o : null;
   };
 
+  // Dev-only console helper: set/empty your own coin balance, e.g. devCoins(0) to empty.
+  window.devCoins = function (n) {
+    if (!isDev()) { console.warn('devCoins: not a developer account'); return; }
+    n = Math.max(0, n | 0);
+    roomRef().set({ coins: n }, { merge: true })
+      .then(function () { coins = n; updateCoins(); console.log('coins set to', n); })
+      .catch(function (e) { console.error('devCoins failed', e); });
+  };
+
   async function loadRoom() {
     if (!hasFB || !auth.currentUser) return;
     try {
@@ -78,10 +93,11 @@
         const ref = roomRef(); const doc = await tx.get(ref); const d = doc.exists ? doc.data() : {};
         const cur = d.coins || 0; const own = Array.isArray(d.boardCosOwned) ? d.boardCosOwned.slice() : [];
         if (own.indexOf(id) !== -1) return { ok: false, reason: 'owned' };
-        if (cur < it.price) return { ok: false, reason: 'insufficient' };
+        if (!affordOK(cur, it.price)) return { ok: false, reason: 'insufficient' };
         own.push(id);
-        tx.set(ref, { coins: cur - it.price, boardCosOwned: own, coinsSpent: (d.coinsSpent || 0) + it.price }, { merge: true });
-        return { ok: true, coins: cur - it.price, owned: own };
+        const nc = chargedCoins(cur, it.price);
+        tx.set(ref, { coins: nc, boardCosOwned: own, coinsSpent: spentTally(d.coinsSpent, it.price) }, { merge: true });
+        return { ok: true, coins: nc, owned: own };
       });
     } catch (e) { return { ok: false, reason: 'error' }; }
   }
@@ -92,7 +108,7 @@
     try {
       return await db.runTransaction(async function (tx) {
         const ref = roomRef(); const doc = await tx.get(ref); const d = doc.exists ? doc.data() : {};
-        const cur = d.coins || 0; if (cur < cost) return { ok: false, reason: 'insufficient' };
+        const cur = d.coins || 0; if (!affordOK(cur, cost)) return { ok: false, reason: 'insufficient' };
         const own = Array.isArray(d.boardCosOwned) ? d.boardCosOwned.slice() : [];
         let refund = 0; const results = [];
         rolled.forEach(function (it) {
@@ -100,8 +116,8 @@
           if (dup) refund += C.GACHA.dupRefund; else own.push(it.id);
           results.push({ id: it.id, dup: dup });
         });
-        const newCoins = cur - cost + refund;
-        tx.set(ref, { coins: newCoins, boardCosOwned: own, coinsSpent: (d.coinsSpent || 0) + cost }, { merge: true });
+        const newCoins = isDev() ? cur : cur - cost + refund;
+        tx.set(ref, { coins: newCoins, boardCosOwned: own, coinsSpent: spentTally(d.coinsSpent, cost) }, { merge: true });
         return { ok: true, results: results, coins: newCoins, owned: own, refund: refund };
       });
     } catch (e) { return { ok: false, reason: 'error' }; }
@@ -113,9 +129,9 @@
     try {
       const res = await db.runTransaction(async function (tx) {
         const ref = roomRef(); const doc = await tx.get(ref); const d = doc.exists ? doc.data() : {};
-        const cur = d.coins || 0; if (cur < bet) return { ok: false, reason: 'insufficient' };
-        const newCoins = cur - bet + payout;
-        tx.set(ref, { coins: newCoins, coinsSpent: (d.coinsSpent || 0) + bet }, { merge: true });
+        const cur = d.coins || 0; if (!affordOK(cur, bet)) return { ok: false, reason: 'insufficient' };
+        const newCoins = isDev() ? cur : cur - bet + payout;
+        tx.set(ref, { coins: newCoins, coinsSpent: spentTally(d.coinsSpent, bet) }, { merge: true });
         return { ok: true, coins: newCoins };
       });
       if (!res.ok) return res;
@@ -127,14 +143,15 @@
     try {
       const res = await db.runTransaction(async function (tx) {
         const ref = roomRef(); const doc = await tx.get(ref); const d = doc.exists ? doc.data() : {};
-        const cur = d.coins || 0; if (cur < price) return { ok: false, reason: 'insufficient' };
-        tx.set(ref, { coins: cur - price, coinsSpent: (d.coinsSpent || 0) + price }, { merge: true });
-        return { ok: true, coins: cur - price };
+        const cur = d.coins || 0; if (!affordOK(cur, price)) return { ok: false, reason: 'insufficient' };
+        const nc = chargedCoins(cur, price);
+        tx.set(ref, { coins: nc, coinsSpent: spentTally(d.coinsSpent, price) }, { merge: true });
+        return { ok: true, coins: nc };
       });
       if (!res.ok) return res;
       const until = Date.now() + hours * 3600000;
       try { await db.collection('answers').doc(answerId).set({ boostUntil: until }, { merge: true }); }
-      catch (e) { roomRef().set({ coins: res.coins + price }, { merge: true }).catch(function () {}); return { ok: false, reason: 'error' }; }
+      catch (e) { roomRef().set({ coins: res.coins + (isDev() ? 0 : price) }, { merge: true }).catch(function () {}); return { ok: false, reason: 'error' }; }
       coins = res.coins;
       return { ok: true, coins: res.coins };
     } catch (e) { return { ok: false, reason: 'error' }; }
@@ -185,9 +202,10 @@
     try {
       return await db.runTransaction(async function (tx) {
         const ref = roomRef(); const doc = await tx.get(ref); const d = doc.exists ? doc.data() : {};
-        const cur = d.coins || 0; if (cur < amount) return { ok: false, reason: 'insufficient' };
-        tx.set(ref, { coins: cur - amount, coinsSpent: (d.coinsSpent || 0) + amount }, { merge: true });
-        return { ok: true, coins: cur - amount };
+        const cur = d.coins || 0; if (!affordOK(cur, amount)) return { ok: false, reason: 'insufficient' };
+        const nc = chargedCoins(cur, amount);
+        tx.set(ref, { coins: nc, coinsSpent: spentTally(d.coinsSpent, amount) }, { merge: true });
+        return { ok: true, coins: nc };
       });
     } catch (e) { return { ok: false, reason: 'error' }; }
   }
@@ -233,9 +251,10 @@
     try {
       return await db.runTransaction(async function (tx) {
         const ref = roomRef(); const doc = await tx.get(ref); const d = doc.exists ? doc.data() : {};
-        const cur = d.coins || 0; if (cur < e.price) return { ok: false, reason: 'insufficient' };
-        tx.set(ref, { coins: cur - e.price, coinsSpent: (d.coinsSpent || 0) + e.price }, { merge: true });
-        return { ok: true, coins: cur - e.price };
+        const cur = d.coins || 0; if (!affordOK(cur, e.price)) return { ok: false, reason: 'insufficient' };
+        const nc = chargedCoins(cur, e.price);
+        tx.set(ref, { coins: nc, coinsSpent: spentTally(d.coinsSpent, e.price) }, { merge: true });
+        return { ok: true, coins: nc };
       });
     } catch (err) { return { ok: false, reason: 'error' }; }
   }
@@ -280,9 +299,9 @@
         if (d.fortuneDay === today && d.fortuneResult) {
           return { ok: true, coins: d.coins || 0, draw: d.fortuneResult, already: true };
         }
-        const cur = d.coins || 0; if (cur < C.FORTUNE_COST) return { ok: false, reason: 'insufficient' };
-        const newCoins = cur - C.FORTUNE_COST + rolled.bonus;
-        tx.set(ref, { coins: newCoins, coinsSpent: (d.coinsSpent || 0) + C.FORTUNE_COST, fortuneDay: today, fortuneResult: rolled }, { merge: true });
+        const cur = d.coins || 0; if (!affordOK(cur, C.FORTUNE_COST)) return { ok: false, reason: 'insufficient' };
+        const newCoins = isDev() ? cur : cur - C.FORTUNE_COST + rolled.bonus;
+        tx.set(ref, { coins: newCoins, coinsSpent: spentTally(d.coinsSpent, C.FORTUNE_COST), fortuneDay: today, fortuneResult: rolled }, { merge: true });
         return { ok: true, coins: newCoins, draw: rolled, already: false };
       });
     } catch (e) { return { ok: false, reason: 'error' }; }
@@ -315,9 +334,10 @@
     try {
       const res = await db.runTransaction(async function (tx) {
         const ref = roomRef(); const doc = await tx.get(ref); const d = doc.exists ? doc.data() : {};
-        const cur = d.coins || 0; if (cur < a.price) return { ok: false, reason: 'insufficient' };
-        tx.set(ref, { coins: cur - a.price, coinsSpent: (d.coinsSpent || 0) + a.price }, { merge: true });
-        return { ok: true, coins: cur - a.price };
+        const cur = d.coins || 0; if (!affordOK(cur, a.price)) return { ok: false, reason: 'insufficient' };
+        const nc = chargedCoins(cur, a.price);
+        tx.set(ref, { coins: nc, coinsSpent: spentTally(d.coinsSpent, a.price) }, { merge: true });
+        return { ok: true, coins: nc };
       });
       if (!res.ok) return res;
       try {
@@ -326,8 +346,8 @@
         patch.awards[awardId] = FieldValue.increment(1);
         await db.collection('answers').doc(answerId).set(patch, { merge: true });
       } catch (e) {
-        // Refund if stamping the award failed.
-        roomRef().set({ coins: res.coins + a.price, coinsSpent: FieldValue.increment(-a.price) }, { merge: true }).catch(function () {});
+        // Refund if stamping the award failed (no-op for devs — nothing was charged).
+        if (!isDev()) roomRef().set({ coins: res.coins + a.price, coinsSpent: FieldValue.increment(-a.price) }, { merge: true }).catch(function () {});
         return { ok: false, reason: 'error' };
       }
       coins = res.coins;
@@ -478,7 +498,7 @@
   }
   async function onSpin() {
     if (spinning) return;
-    if (coins < curBet) { toast('金币不足', 'error'); return; }
+    if (!affordOK(coins, curBet)) { toast('金币不足', 'error'); return; }
     spinning = true;
     const res = await slotTx(curBet);
     if (!res.ok) { spinning = false; toast(res.reason === 'insufficient' ? '金币不足' : '出错了', 'error'); return; }
