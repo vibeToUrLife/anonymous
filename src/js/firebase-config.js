@@ -4,10 +4,12 @@
 const firebaseConfig = {
   apiKey:            "AIzaSyAAehhBjbxeEI6s3oz39u25woNlqi4c27E",
   authDomain:        "nymous-4bce7.firebaseapp.com",
-  // TODO (Boss): replace with the EXACT URL from Firebase Console → Realtime
-  // Database. This Singapore value is only a placeholder/guess. Needed for the
-  // Coin Rush "robbing" mode; until it's correct, robbing falls back to solo.
-  databaseURL:       "https://console.firebase.google.com/project/nymous-4bce7/database/nymous-4bce7-default-rtdb/data/~2F",
+  // Realtime Database URL (needed for Coin Rush "robbing" + the multiplayer Pet
+  // World). This is the regional form for a Singapore (asia-southeast1) instance.
+  // ⚠️ VERIFY in Firebase Console → Realtime Database: the URL shown at the top of
+  // the Data tab must match EXACTLY (region + instance name). If your DB is in
+  // us-central1 the form is instead https://nymous-4bce7-default-rtdb.firebaseio.com
+  databaseURL:       "https://nymous-4bce7-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId:         "nymous-4bce7",
   storageBucket:     "nymous-4bce7.firebasestorage.app",
   messagingSenderId: "613451077785",

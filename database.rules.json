@@ -16,6 +16,28 @@
           }
         }
       }
+    },
+
+    "world": {
+      "scenes": {
+        "$scene": {
+          ".read": "auth != null",
+
+          "$shard": {
+            "players": {
+              "$uid": {
+                ".write": "auth != null && auth.uid == $uid && (!newData.exists() || (newData.hasChildren(['x','y','name']) && newData.child('x').isNumber() && newData.child('x').val() >= 0 && newData.child('x').val() <= 1 && newData.child('y').isNumber() && newData.child('y').val() >= 0 && newData.child('y').val() <= 1 && newData.child('name').isString() && newData.child('name').val().length <= 40))"
+              }
+            },
+
+            "chat": {
+              "$msg": {
+                ".write": "auth != null && newData.hasChildren(['uid','text','ts']) && newData.child('uid').val() == auth.uid && newData.child('text').isString() && newData.child('text').val().length <= 100"
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

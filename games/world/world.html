@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>🌍 Pet World</title>
+  <script src="../../src/js/maintenance.js"></script>
+  <script>if(localStorage.getItem('access_code_verified')!=='true'){document.documentElement.style.display='none';window.location.replace('../../index.html');}</script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/world.css?v=w1" />
+
+  <!-- Firebase (compat 10.12.0) — same versions as room.html, plus Realtime Database for live sync -->
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script defer src="../../src/js/firebase-config.js"></script>
+
+  <!-- Reused pet art (pure) + accessory renderer (declaration-only, safe standalone) -->
+  <script defer src="../pets/shared.js?v=w1"></script>
+  <script defer src="../pets/cat.js?v=w1"></script>
+  <script defer src="../pets/dog.js?v=w1"></script>
+  <script defer src="../pets/bunny.js?v=w1"></script>
+  <script defer src="../pets/hamster.js?v=w1"></script>
+  <script defer src="../pets/fox.js?v=w1"></script>
+  <script defer src="../pets/panda.js?v=w1"></script>
+  <script defer src="../pets/goose.js?v=w1"></script>
+  <script defer src="../room/js/room-accessories.js?v=w1"></script>
+
+  <!-- World modules (core LAST so every dependency is defined) -->
+  <script defer src="js/world-pet-data.js?v=w1"></script>
+  <script defer src="js/world-config.js?v=w1"></script>
+  <script defer src="js/world-logic.js?v=w1"></script>
+  <script defer src="js/world-moderation.js?v=w1"></script>
+  <script defer src="js/world-actions.js?v=w1"></script>
+  <script defer src="js/world-input.js?v=w1"></script>
+  <script defer src="js/world-net.js?v=w1"></script>
+  <script defer src="js/world-actors.js?v=w1"></script>
+  <script defer src="js/world-chat.js?v=w1"></script>
+  <script defer src="js/world-outfit.js?v=w1"></script>
+  <script defer src="js/world-scene-pool.js?v=w1"></script>
+  <script defer src="js/world-scene-egypt.js?v=w1"></script>
+  <script defer src="js/world-scene-grassland.js?v=w1"></script>
+  <script defer src="js/world-core.js?v=w1"></script>
+</head>
+<body>
+  <div id="worldStage">
+    <canvas id="worldCanvas"></canvas>
+    <div id="worldTagLayer"></div>
+  </div>
+
+  <div id="worldTopbar">
+    <a class="world-back" href="../room.html" title="Back to room">←</a>
+    <div id="worldSceneName">🌍 Pet World</div>
+    <div class="world-top-actions">
+      <button id="worldPetBtn">🐾 Pet</button>
+      <button id="worldWearBtn">👕 Wear</button>
+    </div>
+  </div>
+
+  <div id="worldSceneTabs"></div>
+
+  <div id="worldJoystick"></div>
+  <div id="worldActionBtns"></div>
+
+  <div id="worldChat">
+    <div id="worldChatLog"></div>
+    <div id="worldChatRow">
+      <input id="worldChatInput" maxlength="100" autocomplete="off" placeholder="Say hi… (be kind 🌸)" />
+      <button id="worldChatSend" title="Send">➤</button>
+    </div>
+  </div>
+  <div id="worldChatHint"></div>
+
+  <div id="worldMenu" data-pane="pet">
+    <button id="worldMenuClose">✕</button>
+    <div id="worldPetPane"><h3>🐾 Choose your pet</h3><div id="worldPetPicker"></div></div>
+    <div id="worldWearPane" style="display:none"><h3>👕 Change your outfit</h3><div id="worldWardrobe"></div></div>
+  </div>
+
+  <div id="worldGate">
+    <h1>🌍 Pet World</h1>
+    <p>Please open the World from inside the app so we know who you are.</p>
+    <a href="../../index.html">Go to the app</a>
+  </div>
+</body>
+</html>

@@ -15,7 +15,8 @@
     playground:     ['pgToggle'],
     riddle:         ['riddleFab'],
     chengyu:        ['cjFab'],
-    quote_comments: ['quoteCommentSection', 'quoteCommentToggle']
+    quote_comments: ['quoteCommentSection', 'quoteCommentToggle'],
+    world:          ['worldEntry']
   };
 
   function apply(flags) {
