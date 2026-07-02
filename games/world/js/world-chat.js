@@ -19,10 +19,12 @@ const WorldChat = (function () {
   function unblock(uid) { blocked.delete(uid); persist(); }
 
   function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+  // Hide-timer lives ON the element — world-core's flashHint() shares it, and
+  // separate timers would let a stale one cut a fresh toast short.
   function flash(msg) {
     if (!hintEl || !msg) return;
     hintEl.textContent = msg; hintEl.classList.add('show');
-    clearTimeout(flash._t); flash._t = setTimeout(() => hintEl.classList.remove('show'), 2200);
+    clearTimeout(hintEl._hideT); hintEl._hideT = setTimeout(() => hintEl.classList.remove('show'), 2200);
   }
 
   function setBubble(uid, text) {

@@ -19,6 +19,8 @@ const WORLD_ACTIONS = {
   dance:   { kind: 'emote', emoji: '🎵', dur: 1400, label: 'Dance' },
   cry:     { kind: 'emote', emoji: '😢', dur: 1200, label: 'Cry' },
   sparkle: { kind: 'emote', emoji: '✨', dur: 1000, label: 'Sparkle' },
+  // ── Social (reciprocal — matched across clients in world-core) ──
+  highfive: { kind: 'social', emoji: '✋', dur: 4000, label: 'High-five' },
   // ── Scene-themed ──
   splash:  { kind: 'scene', emoji: '💦', dur: 850, label: 'Splash' },
   dive:    { kind: 'scene', emoji: '🤿', dur: 900, label: 'Dive' },
@@ -60,6 +62,13 @@ function applyWorldActionTransform(ctx, action, ap, s, t) {
     case 'dance':   ctx.rotate(Math.sin(ap * Math.PI * 4) * 0.18); ctx.translate(Math.sin(ap * Math.PI * 4) * 0.06 * s, 0); break;
     case 'cry':     ctx.translate(0, up * 0.05 * s); ctx.scale(1, 1 - up * 0.06); break;
     case 'sparkle': ctx.scale(1 + up * 0.08, 1 + up * 0.08); break;
+    // Social
+    case 'highfive': { // rear back with a paw held high, bouncing gently while waiting
+      const in_ = Math.min(1, ap / 0.12), bounce = Math.sin(t / 150) * 0.025;
+      ctx.rotate(-0.16 * in_);
+      ctx.translate(0, (-0.05 * in_ + bounce) * s);
+      ctx.scale(1, 1 + 0.04 * in_);
+      break; }
     // Scene-themed
     case 'splash':  ctx.translate(0, -up * 0.18 * s); ctx.scale(1 + 0.05 * up, 1 - 0.05 * up); break;
     case 'dive':    ctx.rotate(ap * Math.PI * 0.6); ctx.scale(1 - ap * 0.2, 1 - ap * 0.2); ctx.translate(0, ap * 0.1 * s); break;
@@ -113,6 +122,19 @@ function drawWorldActionEffect(ctx, px, py, size, ds, action, ap, t, sceneFx) {
     return;
   }
 
+  if (meta.kind === 'social') {
+    // A held emoji that bobs above the head for the whole offer (an invitation,
+    // not a one-shot), fading out over the last stretch if nobody responds.
+    ctx.save();
+    ctx.globalAlpha = ap > 0.75 ? (1 - ap) / 0.25 : 1;
+    ctx.font = ((size * ds * 0.55) | 0) + 'px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(meta.emoji, px, py - size * ds * 1.0 + Math.sin(t / 150) * size * ds * 0.05);
+    ctx.restore();
+    return;
+  }
+
   // Scene + signature actions kick up a flavoured burst at the feet.
   const pal = WORLD_SCENE_FX[sceneFx] || WORLD_SCENE_FX.petal;
   const footY = py + 0.30 * size * ds;
@@ -142,6 +164,26 @@ function drawWorldActionEffect(ctx, px, py, size, ds, action, ap, t, sceneFx) {
     ctx.textAlign = 'center';
     ctx.fillText('⭐', px, py - size * ds * 0.7 - ap * size * ds * 0.3);
   }
+  ctx.restore();
+}
+
+// Celebration for a MATCHED high-five, drawn at the pair's midpoint (absolute
+// pixels, depth-scaled like the pets). p is progress 0→1 over WORLD_HIGHFIVE.burstMs.
+function drawWorldHighfiveBurst(ctx, px, py, ds, p) {
+  const n = 10, r = ds * (14 + p * 70);
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, 1 - p);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = ((ds * (16 + p * 10)) | 0) + 'px serif';
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + p * 1.2;
+    ctx.fillText(i % 2 ? '❤️' : '⭐',
+      px + Math.cos(a) * r,
+      py + Math.sin(a) * r * 0.55 - p * ds * 26);
+  }
+  ctx.font = ((ds * (24 + p * 14)) | 0) + 'px serif';
+  ctx.fillText('🤝', px, py - p * ds * 38);
   ctx.restore();
 }
 

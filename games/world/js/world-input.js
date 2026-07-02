@@ -36,6 +36,10 @@ const WorldInput = (function () {
 
   function onKeyDown(e) {
     if (isTyping()) return;
+    // OS key auto-repeat: movement uses the `held` map (set on the first press),
+    // and actions must not re-fire — each re-trigger resets actionTs, which would
+    // force an RTDB write per repeat and restart the animation on every client.
+    if (e.repeat) { e.preventDefault(); return; }
     const k = (e.key || '').toLowerCase();
     if (isMoveKey(k)) { held[k] = true; e.preventDefault(); return; }
     const intent = WORLD_ACTION_KEYS[k];
@@ -98,8 +102,8 @@ const WorldInput = (function () {
     });
     // Signature move
     addBtn('⭐', 'Signature move', 'sig', () => onAction({ kind: 'signature', index: 0 }));
-    // Play with nearby pet
-    addBtn('🤝', 'Play with nearby pet', 'play', () => onAction({ kind: 'play', index: 0 }));
+    // High-five a nearby pet (the reciprocal "play" verb)
+    addBtn('🤝', 'High-five a nearby pet', 'play', () => onAction({ kind: 'play', index: 0 }));
 
     // Emote tray (popover of the 6 emotes). Appended to the container as a SIBLING
     // of the toggle button — nesting it inside the button is invalid HTML and makes

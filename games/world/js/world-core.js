@@ -34,10 +34,12 @@
 
   function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
   function el(id) { return document.getElementById(id); }
+  // Hide-timer lives ON the element: WorldChat's flash() shares #worldChatHint,
+  // and two independent timers let a stale one cut a fresh toast short.
   function flashHint(msg) {
     const h = el('worldChatHint'); if (!h || !msg) return;
     h.textContent = msg; h.classList.add('show');
-    clearTimeout(flashHint._t); flashHint._t = setTimeout(() => h.classList.remove('show'), 2200);
+    clearTimeout(h._hideT); h._hideT = setTimeout(() => h.classList.remove('show'), 2200);
   }
 
   // Live sync status chip — also the multiplayer diagnostic. Shows connection
@@ -74,24 +76,121 @@
 
   // ── Actions ──
   function triggerAction(aid) { if (!aid) return; me.action = aid; me.actionTs = WorldNet.serverNow(); }
-  function nearestRemote() {
+  // Nearest in-range pet, skipping blocked players (they still render, but no
+  // social verb should target them — matching skips them too). Optional `pred`
+  // narrows the search (e.g. "only pets currently offering a high-five").
+  function nearestRemote(pred) {
     const remotes = WorldNet.getRemotes();
     let best = null, bd = WORLD_PLAY_RADIUS;
-    Object.keys(remotes).forEach(k => { const r = remotes[k]; const d = worldDist(me, r); if (d < bd) { bd = d; best = { uid: k, r: r }; } });
+    Object.keys(remotes).forEach(k => {
+      const r = remotes[k];
+      if (WorldChat.isBlocked(k) || (pred && !pred(r))) return;
+      const d = worldDist(me, r); if (d < bd) { bd = d; best = { uid: k, r: r }; }
+    });
     return best;
   }
-  function triggerPlay() {
-    const near = nearestRemote();
+  // ── Reciprocal high-five (the Q "Play" verb) ──
+  // An offer is just the replicated 'highfive' action; the MATCH is detected
+  // independently on every client from (action, actionTs, position) — same
+  // replicated data + same math (highfiveMatch) → every screen agrees, with no
+  // coordination layer. Spectators see the celebration too, for free.
+  const hfSeen = new Map();     // match key → detection time (celebrate each match once)
+  const hfBursts = [];          // live celebrations: { x, y, start } at the pair's midpoint
+  const hfPrompted = new Set(); // offer keys (uid:actionTs) already invited-for or answered
+
+  function offerHighfive(targetUid) {
+    if (me.action === WORLD_HIGHFIVE.actionId) return; // one live offer at a time — re-press mints no new match key
+    // Offering requires standing still: the frame loop withdraws the offer on
+    // movement, so a mid-walk Q would toast an offer that dies before it ever
+    // replicates. Refusing up front keeps the rule legible.
+    const vec = WorldInput.getMoveVector();
+    if (vec.x || vec.y) { flashHint('Stand still to high-five ✋'); return; }
+    let near = null;
+    if (targetUid) {
+      const r = WorldNet.getRemotes()[targetUid];
+      if (r && !WorldChat.isBlocked(targetUid)) near = { uid: targetUid, r: r };
+      if (near && worldDist(me, near.r) > WORLD_PLAY_RADIUS) {
+        // The tag menu can pick a pet across the map; an out-of-range offer can
+        // never match and the target is never prompted — tell the player instead.
+        flashHint('Get closer to ' + (near.r.name || 'them') + ' to high-five 🐾');
+        return;
+      }
+    } else {
+      // Prefer the nearest pet who is already offering (answer their invite —
+      // otherwise a closer idle pet would steal the facing + toast), then any pet.
+      near = nearestRemote(r => r.action === WORLD_HIGHFIVE.actionId) || nearestRemote();
+    }
     if (!near) { flashHint('Get closer to another pet to play 🐾'); return; }
     me.facing = near.r.x >= me.x ? 1 : -1;
-    triggerAction('dance');
-    flashHint('Playing with ' + (near.r.name || 'a friend') + ' 🎉');
+    triggerAction(WORLD_HIGHFIVE.actionId);
+    // If they're already offering, the match fires next frame with its own toast.
+    if (near.r.action !== WORLD_HIGHFIVE.actionId)
+      flashHint('You offered a high five to ' + (near.r.name || 'a friend') + '! ✋');
   }
+
+  function updateHighfives(t, remotes) {
+    const opts = { actionId: WORLD_HIGHFIVE.actionId, windowMs: WORLD_HIGHFIVE.windowMs, radius: WORLD_PLAY_RADIUS };
+    const actors = [me];
+    Object.keys(remotes).forEach(k => {
+      if (WorldChat.isBlocked(k)) return;
+      const r = remotes[k];
+      // Match on targetX/targetY — the last REPLICATED coordinates — not the
+      // locally interpolated x/y, so every client judges the radius against the
+      // same numbers (agreement is then bounded only by write cadence, and an
+      // offer force-writes exact position+action together via actionRestarted).
+      actors.push({ uid: k, name: r.name, x: r.targetX, y: r.targetY, action: r.action, actionTs: r.actionTs });
+    });
+    const myPartners = [];
+    for (let i = 0; i < actors.length; i++) {
+      for (let j = i + 1; j < actors.length; j++) {
+        const a = actors[i], b = actors[j];
+        if (!highfiveMatch(a, b, opts)) continue;
+        const key = highfiveKey(a.uid, a.actionTs, b.uid, b.actionTs);
+        if (hfSeen.has(key)) continue;
+        hfSeen.set(key, t);
+        hfBursts.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 - 0.05, start: t });
+        if (a.uid === me.uid || b.uid === me.uid) {
+          const other = a.uid === me.uid ? b : a;
+          hfPrompted.add(other.uid + ':' + other.actionTs); // answered — never prompt for it
+          myPartners.push(other.name || 'a friend');
+        }
+      }
+    }
+    // One toast even when a single press matches several clustered offers
+    // (flashHint is single-slot; sequential toasts would overwrite each other).
+    if (myPartners.length) flashHint('High five with ' + myPartners.join(' & ') + '! 🎉');
+    if (hfSeen.size > 64) hfSeen.forEach((ts, k) => { if (t - ts > 10000) hfSeen.delete(k); });
+
+    // Invite prompt: someone near me is offering and I haven't joined in.
+    // Keyed per OFFER (uid + actionTs), so a second concurrent offer still gets
+    // its toast and a re-offer prompts afresh; one new invite per frame.
+    if (me.action !== opts.actionId) {
+      for (let i = 1; i < actors.length; i++) {
+        const r = actors[i];
+        if (r.action !== opts.actionId || worldDist(me, r) > opts.radius) continue;
+        const key = r.uid + ':' + r.actionTs;
+        if (hfPrompted.has(key)) continue;
+        hfPrompted.add(key);
+        flashHint('✋ ' + (r.name || 'A pet') + ' wants a high five! Press Q or tap 🤝');
+        break;
+      }
+      if (hfPrompted.size > 128) hfPrompted.clear(); // keys are per-offer; stale ones never recur
+    }
+  }
+
+  function drawHighfives(t, W, H) {
+    for (let i = hfBursts.length - 1; i >= 0; i--) {
+      const b = hfBursts[i], p = (t - b.start) / WORLD_HIGHFIVE.burstMs;
+      if (p >= 1) { hfBursts.splice(i, 1); continue; }
+      drawWorldHighfiveBurst(ctx, b.x * W, b.y * H, depthScale(b.y), p);
+    }
+  }
+
   function onAction(intent) {
     if (intent.kind === 'scene') triggerAction(sceneObj.themed[intent.index]);
     else if (intent.kind === 'emote') triggerAction(WORLD_EMOTES[intent.index]);
     else if (intent.kind === 'signature') triggerAction(signatureFor(me.pet));
-    else if (intent.kind === 'play') triggerPlay();
+    else if (intent.kind === 'play') offerHighfive();
   }
 
   // ── Remote tag menu: play / report / block ──
@@ -104,14 +203,14 @@
     menu.className = 'world-tagmenu'; menu.id = 'worldTagMenu';
     menu.innerHTML =
       '<div class="world-tagmenu-name">' + esc(r.name || 'Pet') + '</div>' +
-      '<button data-act="play">🤝 Play</button>' +
+      '<button data-act="play">✋ High-five</button>' +
       '<button data-act="report">🚩 Report</button>' +
       '<button data-act="block">🚫 Block</button>';
     document.body.appendChild(menu);
     const rect = anchor.getBoundingClientRect();
     menu.style.left = Math.min(rect.left, window.innerWidth - 150) + 'px';
     menu.style.top = (rect.bottom + 6) + 'px';
-    menu.querySelector('[data-act=play]').onclick = () => { me.facing = r.x >= me.x ? 1 : -1; triggerAction('dance'); flashHint('Playing with ' + (r.name || 'friend') + ' 🎉'); closeTagMenu(); };
+    menu.querySelector('[data-act=play]').onclick = () => { offerHighfive(uid); closeTagMenu(); };
     menu.querySelector('[data-act=report]').onclick = () => { WorldNet.reportUser(uid, ''); flashHint('Reported. Thanks for keeping the World kind 💛'); closeTagMenu(); };
     menu.querySelector('[data-act=block]').onclick = () => { WorldChat.block(uid); flashHint("Blocked. You won't see them anymore."); closeTagMenu(); };
     setTimeout(() => document.addEventListener('click', outsideClose), 0);
@@ -127,6 +226,7 @@
     if (!s || s.id === me.scene) return;
     me.scene = s.id; sceneObj = s;
     me.x = s.spawn.x; me.y = s.spawn.y; me.action = null;
+    hfBursts.length = 0; hfPrompted.clear(); // celebrations/prompts don't cross scenes
     WorldActors.clearTags();
     WorldNet.switchScene(s.id, me);
     WorldInput.buildActionButtons(el('worldActionBtns'), s.id);
@@ -212,6 +312,14 @@
     me.x = step.x; me.y = step.y;
     me.moving = (vec.x !== 0 || vec.y !== 0);
     if (vec.x > 0.01) me.facing = 1; else if (vec.x < -0.01) me.facing = -1;
+    // Walking away withdraws a pending high-five offer — it's a stationary
+    // invitation, and the paw-up pose layered on the walk cycle reads as broken.
+    // Known accepted race: the cancel replicates within ~200ms (write rate cap),
+    // so an answer landing inside that window celebrates on the answerer's
+    // screen but not the withdrawer's. Honoring such answers locally would need
+    // a "ghost offer" that can't distinguish a late answer from a fresh offer,
+    // trading this rare miss for a wrong-side celebration — not worth it.
+    if (me.moving && me.action === WORLD_HIGHFIVE.actionId) me.action = null;
     if (me.action && (t - me.actionTs) > worldActionDuration(me.action)) me.action = null;
 
     // Interpolate remotes toward their last-synced targets + expire their actions
@@ -223,6 +331,8 @@
       if (r.action && (t - (r.actionTs || 0)) > worldActionDuration(r.action)) r.action = '';
     });
 
+    updateHighfives(t, remotes); // detect mutual offers + prompt nearby invitations
+
     WorldNet.writeState(me); // throttled + delta-gated inside
 
     const size = resize();
@@ -231,6 +341,7 @@
     if (drawFn) { try { drawFn(ctx, size.w, size.h, t / 1000); } catch (e) { fallbackBg(size.w, size.h); } }
     else fallbackBg(size.w, size.h);
     WorldActors.render(ctx, size.w, size.h, t, me, remotes, sceneObj);
+    drawHighfives(t, size.w, size.h); // matched-pair celebrations on top of the actors
 
     requestAnimationFrame(frame);
   }

@@ -63,6 +63,15 @@ function signatureFor(petType) { return PET_SIGNATURE[petType] || 'sig_spin'; }
 // Distance (normalized) within which two pets can do a reciprocal play action.
 const WORLD_PLAY_RADIUS = 0.12;
 
+// Reciprocal high-five (the Q "Play" verb). The offer pose lasts
+// WORLD_ACTIONS.highfive.dur (4000ms); windowMs — the max gap between the two
+// offers that still counts as a match — is deliberately SHORTER by a network-
+// latency margin, so an answer accepted on the responder's screen always
+// arrives before the offer expires on the offerer's screen (a last-instant
+// answer would otherwise celebrate on one side only). burstMs is how long the
+// shared celebration plays at the pair's midpoint.
+const WORLD_HIGHFIVE = { actionId: 'highfive', windowMs: 3400, burstMs: 1100 };
+
 // ── Chat ──────────────────────────────────────────────────────────
 const WORLD_CHAT = {
   maxLen: 100,
@@ -106,6 +115,6 @@ const WORLD_ACTION_KEYS = {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     WORLD_SYNC, WORLD_SHARD_CAP, WORLD_SCENES, worldSceneById, WORLD_EMOTES,
-    PET_SIGNATURE, signatureFor, WORLD_PLAY_RADIUS, WORLD_CHAT, WORLD_KEYS, WORLD_ACTION_KEYS,
+    PET_SIGNATURE, signatureFor, WORLD_PLAY_RADIUS, WORLD_HIGHFIVE, WORLD_CHAT, WORLD_KEYS, WORLD_ACTION_KEYS,
   };
 }

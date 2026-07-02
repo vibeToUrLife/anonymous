@@ -87,3 +87,38 @@ test('isFresh respects the TTL window', () => {
   assert.equal(L.isFresh(1000, 1000 + 5000, 30000), true);
   assert.equal(L.isFresh(1000, 1000 + 40000, 30000), false);
 });
+
+const HF = { actionId: 'highfive', windowMs: 4000, radius: 0.12 };
+const hfActor = (over) => Object.assign({ x: 0.5, y: 0.7, action: 'highfive', actionTs: 1000 }, over);
+
+test('highfiveMatch: both offering, close, within window → match', () => {
+  assert.equal(L.highfiveMatch(hfActor(), hfActor({ x: 0.55, actionTs: 2500 }), HF), true);
+});
+
+test('highfiveMatch: no match unless BOTH are in the highfive action', () => {
+  assert.equal(L.highfiveMatch(hfActor(), hfActor({ action: 'dance' }), HF), false);
+  assert.equal(L.highfiveMatch(hfActor({ action: '' }), hfActor(), HF), false);
+});
+
+test('highfiveMatch: too far apart → no match', () => {
+  assert.equal(L.highfiveMatch(hfActor(), hfActor({ x: 0.5 + 0.13 }), HF), false);
+  // exactly at the radius still counts (inclusive, generous for 5 Hz sync)
+  assert.equal(L.highfiveMatch(hfActor(), hfActor({ x: 0.5 + 0.12 }), HF), true);
+});
+
+test('highfiveMatch: offers too far apart in time → no match', () => {
+  assert.equal(L.highfiveMatch(hfActor(), hfActor({ actionTs: 1000 + 4001 }), HF), false);
+  assert.equal(L.highfiveMatch(hfActor({ actionTs: 9000 }), hfActor({ actionTs: 5500 }), HF), true);
+});
+
+test('highfiveMatch: tolerates missing actors and missing actionTs', () => {
+  assert.equal(L.highfiveMatch(null, hfActor(), HF), false);
+  assert.equal(L.highfiveMatch(hfActor(), null, HF), false);
+  assert.equal(L.highfiveMatch(hfActor({ actionTs: undefined }), hfActor({ actionTs: 3000 }), HF), true);
+});
+
+test('highfiveKey is order-independent so every client builds the same key', () => {
+  assert.equal(L.highfiveKey('alice', 1000, 'bob', 2000), L.highfiveKey('bob', 2000, 'alice', 1000));
+  // a later re-highfive between the same pair is a NEW key (new celebration)
+  assert.notEqual(L.highfiveKey('alice', 1000, 'bob', 2000), L.highfiveKey('alice', 8000, 'bob', 9000));
+});

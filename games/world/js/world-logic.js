@@ -90,9 +90,30 @@ function assignShard(counts, cap) {
   return counts.length; // all full → new shard
 }
 
+// Reciprocal high-five: two actors {x,y,action,actionTs} match when BOTH are
+// mid-offer, their offers started within windowMs of each other, and they are
+// within radius (inclusive — generous, since positions sync at ≤5 Hz). Every
+// client runs this on the same replicated data, so all screens agree.
+function highfiveMatch(a, b, opts) {
+  if (!a || !b) return false;
+  if (a.action !== opts.actionId || b.action !== opts.actionId) return false;
+  if (Math.abs((a.actionTs || 0) - (b.actionTs || 0)) > opts.windowMs) return false;
+  return worldDist(a, b) <= opts.radius;
+}
+
+// Order-independent id for one matched high-five (uid pair + both offer
+// timestamps), so every client dedupes the same celebration exactly once and a
+// later re-highfive between the same pair reads as a new event.
+function highfiveKey(uidA, tsA, uidB, tsB) {
+  return uidA < uidB
+    ? uidA + ':' + tsA + '|' + uidB + ':' + tsB
+    : uidB + ':' + tsB + '|' + uidA + ':' + tsA;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     wClamp, clampToBounds, normalizeVector, stepPosition, shouldWritePosition,
     lerp, lerpToward, depthScale, projectToPixel, worldDist, isFresh, assignShard,
+    highfiveMatch, highfiveKey,
   };
 }
