@@ -153,6 +153,22 @@ body.world-touch #worldJoystick { display: block; }
 }
 #worldChatHint.show { opacity: 1; }
 
+/* High-five back — the primary affordance for answering a nearby offer. Big,
+   centered, pulsing; shown only while a nearby pet is offering (no Q key needed,
+   so mobile players just tap it). Sits clear of the corner joystick/buttons. */
+#worldHighfiveBack {
+  position: absolute; left: 50%; bottom: 300px; transform: translateX(-50%); z-index: 30;
+  border: 0; border-radius: 999px; padding: 15px 26px; font-family: inherit; font-weight: 800;
+  font-size: 17px; color: #fff; background: var(--w-accent); cursor: pointer; white-space: nowrap;
+  box-shadow: 0 8px 22px rgba(255, 120, 60, 0.5); animation: hfPulse 1.1s ease-in-out infinite;
+}
+#worldHighfiveBack[hidden] { display: none; }
+#worldHighfiveBack:active { transform: translateX(-50%) scale(0.94); }
+@keyframes hfPulse {
+  0%, 100% { box-shadow: 0 8px 22px rgba(255, 120, 60, 0.45); }
+  50%      { box-shadow: 0 10px 32px rgba(255, 120, 60, 0.85); }
+}
+
 /* Slide-in menu (pet / wear) */
 #worldMenu {
   position: absolute; top: 0; right: 0; bottom: 0; z-index: 40; width: min(360px, 88vw);

@@ -52,7 +52,10 @@ const WorldActors = (function () {
     ctx.scale(a.facing > 0 ? ds : -ds, ds);
     const bob = moving ? Math.sin(t / 100) * 1.6 : Math.sin(t / 800 + idleSeed) * 1.0;
     ctx.translate(0, bob);
-    if (action) applyWorldActionTransform(ctx, action, ap, size, t);
+    // The high-five offer can persist while walking (mobile-friendly); don't
+    // layer its stationary paw-up pose on the walk cycle — the floating ✋ drawn
+    // in the effect pass already signals it.
+    if (action && !(moving && action === WORLD_HIGHFIVE.actionId)) applyWorldActionTransform(ctx, action, ap, size, t);
     // Accessory back layer (cape/wings) → pet body → accessory front layer.
     if (a.outfit) { try { drawPetAccessory(ctx, a.pet, a.outfit, size, 'back'); } catch (e) {} }
     worldDrawPet(ctx, a.pet, size, legPhase, moving, action, ap, t, a.color);

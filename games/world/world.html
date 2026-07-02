@@ -7,7 +7,7 @@
   <script src="../../src/js/maintenance.js"></script>
   <script>if(localStorage.getItem('access_code_verified')!=='true'){document.documentElement.style.display='none';window.location.replace('../../index.html');}</script>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/world.css?v=w3" />
+  <link rel="stylesheet" href="css/world.css?v=w4" />
 
   <!-- Firebase (compat 10.12.0) — same versions as room.html, plus Realtime Database for live sync -->
   <script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -35,13 +35,13 @@
   <script defer src="js/world-actions.js?v=w3"></script>
   <script defer src="js/world-input.js?v=w3"></script>
   <script defer src="js/world-net.js?v=w2"></script>
-  <script defer src="js/world-actors.js?v=w2"></script>
+  <script defer src="js/world-actors.js?v=w3"></script>
   <script defer src="js/world-chat.js?v=w4"></script>
   <script defer src="js/world-outfit.js?v=w2"></script>
   <script defer src="js/world-scene-pool.js?v=w2"></script>
   <script defer src="js/world-scene-egypt.js?v=w2"></script>
   <script defer src="js/world-scene-grassland.js?v=w2"></script>
-  <script defer src="js/world-core.js?v=w4"></script>
+  <script defer src="js/world-core.js?v=w5"></script>
 </head>
 <body>
   <div id="worldStage">
@@ -63,6 +63,7 @@
 
   <div id="worldJoystick"></div>
   <div id="worldActionBtns"></div>
+  <button id="worldHighfiveBack" hidden>✋ High-five back!</button>
 
   <div id="worldChat" class="collapsed">
     <button id="worldChatToggle" aria-label="Toggle chat">

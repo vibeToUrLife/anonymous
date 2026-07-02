@@ -18,6 +18,7 @@
   const canvas = document.getElementById('worldCanvas');
   const stage = document.getElementById('worldStage');
   const tagLayer = document.getElementById('worldTagLayer');
+  const hfBackBtn = document.getElementById('worldHighfiveBack');
   if (!canvas || !stage) { console.error('[world] missing canvas/stage'); return; }
   const ctx = canvas.getContext('2d');
 
@@ -96,15 +97,9 @@
   // coordination layer. Spectators see the celebration too, for free.
   const hfSeen = new Map();     // match key → detection time (celebrate each match once)
   const hfBursts = [];          // live celebrations: { x, y, start } at the pair's midpoint
-  const hfPrompted = new Set(); // offer keys (uid:actionTs) already invited-for or answered
 
   function offerHighfive(targetUid) {
     if (me.action === WORLD_HIGHFIVE.actionId) return; // one live offer at a time — re-press mints no new match key
-    // Offering requires standing still: the frame loop withdraws the offer on
-    // movement, so a mid-walk Q would toast an offer that dies before it ever
-    // replicates. Refusing up front keeps the rule legible.
-    const vec = WorldInput.getMoveVector();
-    if (vec.x || vec.y) { flashHint('Stand still to high-five ✋'); return; }
     let near = null;
     if (targetUid) {
       const r = WorldNet.getRemotes()[targetUid];
@@ -151,7 +146,6 @@
         hfBursts.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 - 0.05, start: t });
         if (a.uid === me.uid || b.uid === me.uid) {
           const other = a.uid === me.uid ? b : a;
-          hfPrompted.add(other.uid + ':' + other.actionTs); // answered — never prompt for it
           myPartners.push(other.name || 'a friend');
         }
       }
@@ -161,21 +155,25 @@
     if (myPartners.length) flashHint('High five with ' + myPartners.join(' & ') + '! 🎉');
     if (hfSeen.size > 64) hfSeen.forEach((ts, k) => { if (t - ts > 10000) hfSeen.delete(k); });
 
-    // Invite prompt: someone near me is offering and I haven't joined in.
-    // Keyed per OFFER (uid + actionTs), so a second concurrent offer still gets
-    // its toast and a re-offer prompts afresh; one new invite per frame.
+    // Persistent "high-five back" prompt: a big, always-tappable button (not a
+    // fleeting toast) whenever a nearby pet is offering and I haven't joined in.
+    // Mobile has no Q key and a 2.2s toast is too brief to react to, so this is
+    // the primary touch affordance; tapping it answers the nearest offerer.
+    let offerer = null;
     if (me.action !== opts.actionId) {
+      let bd = opts.radius;
       for (let i = 1; i < actors.length; i++) {
         const r = actors[i];
-        if (r.action !== opts.actionId || worldDist(me, r) > opts.radius) continue;
-        const key = r.uid + ':' + r.actionTs;
-        if (hfPrompted.has(key)) continue;
-        hfPrompted.add(key);
-        flashHint('✋ ' + (r.name || 'A pet') + ' wants a high five! Press Q or tap 🤝');
-        break;
+        if (r.action !== opts.actionId) continue;
+        const d = worldDist(me, r); if (d <= bd) { bd = d; offerer = r; }
       }
-      if (hfPrompted.size > 128) hfPrompted.clear(); // keys are per-offer; stale ones never recur
     }
+    setHighfiveBackBtn(!!offerer);
+  }
+
+  // Show/hide the big centered "High-five back!" button (idempotent per frame).
+  function setHighfiveBackBtn(show) {
+    if (hfBackBtn) hfBackBtn.hidden = !show;
   }
 
   function drawHighfives(t, W, H) {
@@ -226,7 +224,7 @@
     if (!s || s.id === me.scene) return;
     me.scene = s.id; sceneObj = s;
     me.x = s.spawn.x; me.y = s.spawn.y; me.action = null;
-    hfBursts.length = 0; hfPrompted.clear(); // celebrations/prompts don't cross scenes
+    hfBursts.length = 0; setHighfiveBackBtn(false); // celebrations/prompts don't cross scenes
     WorldActors.clearTags();
     WorldNet.switchScene(s.id, me);
     WorldInput.buildActionButtons(el('worldActionBtns'), s.id);
@@ -312,14 +310,9 @@
     me.x = step.x; me.y = step.y;
     me.moving = (vec.x !== 0 || vec.y !== 0);
     if (vec.x > 0.01) me.facing = 1; else if (vec.x < -0.01) me.facing = -1;
-    // Walking away withdraws a pending high-five offer — it's a stationary
-    // invitation, and the paw-up pose layered on the walk cycle reads as broken.
-    // Known accepted race: the cancel replicates within ~200ms (write rate cap),
-    // so an answer landing inside that window celebrates on the answerer's
-    // screen but not the withdrawer's. Honoring such answers locally would need
-    // a "ghost offer" that can't distinguish a late answer from a fresh offer,
-    // trading this rare miss for a wrong-side celebration — not worth it.
-    if (me.moving && me.action === WORLD_HIGHFIVE.actionId) me.action = null;
+    // The high-five offer persists while walking (mobile players keep a thumb on
+    // the joystick) and simply expires with its duration; world-actors drops the
+    // paw-up pose while moving so it never layers on the walk cycle.
     if (me.action && (t - me.actionTs) > worldActionDuration(me.action)) me.action = null;
 
     // Interpolate remotes toward their last-synced targets + expire their actions
@@ -392,6 +385,7 @@
   el('worldPetBtn') && el('worldPetBtn').addEventListener('click', () => toggleMenu('pet'));
   el('worldWearBtn') && el('worldWearBtn').addEventListener('click', () => toggleMenu('wear'));
   el('worldMenuClose') && el('worldMenuClose').addEventListener('click', () => { const m = el('worldMenu'); if (m) m.classList.remove('open'); });
+  hfBackBtn && hfBackBtn.addEventListener('click', e => { e.preventDefault(); offerHighfive(); });
 
   // Auth gate — the World inherits the app's persisted Google session.
   wAuth.onAuthStateChanged(function (u) {
