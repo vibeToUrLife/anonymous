@@ -8,6 +8,8 @@
 const WorldChat = (function () {
   let inputEl = null, logEl = null, hintEl = null, onSend = function () {};
   let myUid = null;
+  let chatEl = null, toggleEl = null, labelEl = null, unreadEl = null;
+  let collapsed = true, unread = false;
   let rateHistory = [];
   const bubbles = {}; // uid → { text, until }
   let blocked = new Set();
@@ -63,12 +65,36 @@ const WorldChat = (function () {
       logEl.scrollTop = logEl.scrollHeight;
     }
     // Bubble only genuinely-recent messages (not the backlog loaded on join).
-    visible.forEach(m => { if (now - (m.ts || 0) < WORLD_CHAT.bubbleMs) setBubble(m.uid, m.text); });
+    let freshFromOthers = false;
+    visible.forEach(m => {
+      if (now - (m.ts || 0) >= WORLD_CHAT.bubbleMs) return;
+      setBubble(m.uid, m.text);
+      if (m.uid !== myUid) freshFromOthers = true;
+    });
+    // A genuinely-new message from someone else while collapsed lights the dot.
+    if (collapsed && freshFromOthers && !unread) { unread = true; renderToggle(); }
+  }
+
+  // ── Collapse / expand ──
+  function renderToggle() {
+    if (labelEl) labelEl.textContent = collapsed ? '💬 Chat' : '💬 Hide';
+    if (unreadEl) unreadEl.hidden = !(collapsed && unread);
+  }
+  function setCollapsed(v) {
+    collapsed = !!v;
+    if (chatEl) chatEl.classList.toggle('collapsed', collapsed);
+    if (collapsed) { if (inputEl) inputEl.blur(); } // release key capture so movement keys resume
+    else { unread = false; }                        // opening clears the unread dot
+    renderToggle();
   }
 
   function init(opts) {
     inputEl = opts.inputEl; logEl = opts.logEl; hintEl = opts.hintEl;
     onSend = opts.onSend || onSend; myUid = opts.myUid;
+    chatEl = opts.chatEl || null; toggleEl = opts.toggleEl || null;
+    labelEl = opts.labelEl || null; unreadEl = opts.unreadEl || null;
+    if (toggleEl) toggleEl.addEventListener('click', e => { e.preventDefault(); setCollapsed(!collapsed); });
+    setCollapsed(true); // start collapsed so the world is unobstructed
     if (inputEl) inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); trySend(); } });
     if (opts.sendBtn) opts.sendBtn.addEventListener('click', e => { e.preventDefault(); trySend(); });
   }

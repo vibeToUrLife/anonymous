@@ -114,7 +114,23 @@ body.world-touch #worldJoystick { display: block; }
 .world-emote-btn { border: 0; background: #fff; width: 40px; height: 40px; border-radius: 50%; font-size: 20px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.12); }
 
 /* Chat */
-#worldChat { position: absolute; left: 50%; transform: translateX(-50%); bottom: 16px; z-index: 24; width: min(460px, 92vw); }
+#worldChat {
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: 16px; z-index: 24;
+  width: min(460px, 92vw); display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+/* Collapsed: only the toggle pill shows. width:auto shrinks the container to the
+   button so its empty area doesn't sit over the canvas / block name-tag clicks. */
+#worldChat.collapsed { width: auto; }
+#worldChat.collapsed #worldChatPanel { display: none; }
+#worldChatToggle {
+  border: 0; border-radius: 999px; padding: 8px 16px; font-weight: 700; font-size: 14px; line-height: 1;
+  background: var(--w-card); color: var(--w-ink); box-shadow: var(--w-shadow); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+#worldChatToggle:active { transform: scale(0.94); }
+#worldChatUnread { width: 9px; height: 9px; border-radius: 50%; background: var(--w-accent); box-shadow: 0 0 0 2px #fff; }
+#worldChatUnread[hidden] { display: none; }
+#worldChatPanel { width: 100%; }
 #worldChatLog {
   max-height: 108px; overflow-y: auto; margin-bottom: 6px; padding: 4px 0;
   display: flex; flex-direction: column; gap: 3px; scrollbar-width: thin;
