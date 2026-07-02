@@ -69,6 +69,11 @@ service cloud.firestore {
     //          (board + every mini-game + room/farm/aquarium). Accrued client-side by
     //          stay-time.js and folded in via increment(); owner-only write (covered by isOwner).
     //          Powers the 停留榜 leaderboard via orderBy('totalStaySec').
+    //    NOTE: Pet World (multiplayer) — worldPet (string type), worldColor (string key),
+    //          worldOutfit (string accessory id|null): the player's chosen World avatar,
+    //          persisted so it follows them across devices. Owner-only write (covered by
+    //          the isOwner update rule). Live position/chat are NOT here — they live in the
+    //          Realtime Database (see database.rules.json world/*), not Firestore.
     // ═══════════════════════════════════════
     match /rooms/{uid} {
       allow read: if isAuth();
@@ -491,6 +496,23 @@ service cloud.firestore {
       allow delete: if isAuth()
                     && (resource.data.uid == request.auth.uid
                         || isDeveloper(request.auth.uid));
+    }
+
+    // ═══════════════════════════════════════
+    // 18. MODERATION REPORTS — player reports from the Pet World
+    //     Path: moderation_reports/{autoId}
+    //     Fields: reporterUid, targetUid, scene, text (≤200 chars), ts
+    //     Any signed-in user may FILE a report (as themselves = reporterUid);
+    //     only developers may read / resolve them (reviewed in admin.html).
+    //     Create-only for users so a reporter can't tamper with a filed report.
+    // ═══════════════════════════════════════
+    match /moderation_reports/{reportId} {
+      allow read:   if isAuth() && isDeveloper(request.auth.uid);
+      allow create: if isAuth()
+                    && request.resource.data.reporterUid == request.auth.uid
+                    && request.resource.data.text is string
+                    && request.resource.data.text.size() <= 200;
+      allow update, delete: if isAuth() && isDeveloper(request.auth.uid);
     }
 
     // ═══════════════════════════════════════
