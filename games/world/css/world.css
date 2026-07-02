@@ -69,6 +69,18 @@ html, body {
 }
 .world-scene-chip.active { background: var(--w-accent); color: #fff; }
 
+/* Sync status chip (connection + player count / errors) */
+.world-status {
+  position: absolute; top: 96px; left: 12px; z-index: 22;
+  padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  box-shadow: var(--w-shadow); pointer-events: none; white-space: nowrap;
+  max-width: 92vw; overflow: hidden; text-overflow: ellipsis;
+  background: var(--w-card); color: var(--w-ink);
+}
+.world-status.ok   { background: #d8f5d0; color: #2f6b2f; }
+.world-status.warn { background: #fff0c2; color: #8a6a1f; }
+.world-status.err  { background: #ffd9d9; color: #9a2b2b; }
+
 /* Virtual joystick (touch only) */
 #worldJoystick {
   display: none; position: absolute; left: 20px; bottom: 24px; z-index: 25;

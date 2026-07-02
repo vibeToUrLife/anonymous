@@ -40,6 +40,22 @@
     clearTimeout(flashHint._t); flashHint._t = setTimeout(() => h.classList.remove('show'), 2200);
   }
 
+  // Live sync status chip — also the multiplayer diagnostic. Shows connection
+  // state + how many pets are in this shard, or a clear error if the Realtime
+  // Database can't be reached (wrong databaseURL) or writes are denied (rules
+  // not deployed). Without this, sync failures are invisible.
+  let diagConn = false, diagErr = null;
+  function onDiag(d) {
+    if (!d) return;
+    if (d.type === 'conn') diagConn = d.connected;
+    else if (d.type === 'error') diagErr = d.message || 'sync error';
+    const chip = el('worldStatus'); if (!chip) return;
+    const here = 1 + Object.keys(WorldNet.getRemotes()).length;
+    if (diagErr) { chip.textContent = '⚠️ can’t sync: ' + diagErr; chip.className = 'world-status err'; }
+    else if (!diagConn) { chip.textContent = '🔴 connecting to server…'; chip.className = 'world-status warn'; }
+    else { chip.textContent = '🟢 ' + here + ' pet' + (here === 1 ? '' : 's') + ' here'; chip.className = 'world-status ok'; }
+  }
+
   function worldPlayerName(uid) {
     const custom = uid ? localStorage.getItem('flappy_custom_name_' + uid) : null;
     if (custom) return custom;
@@ -226,7 +242,7 @@
     me.x = sceneObj.spawn.x; me.y = sceneObj.spawn.y;
 
     // Subsystems
-    WorldNet.init({ db: wDb, uid: uid, getName: () => me.name, onRemotes: function () {}, onChat: function (list) { WorldChat.receive(list); } });
+    WorldNet.init({ db: wDb, uid: uid, getName: () => me.name, onRemotes: function () {}, onChat: function (list) { WorldChat.receive(list); }, onDiag: onDiag });
     WorldActors.init({ tagLayer: tagLayer, onTagClick: openTagMenu, getBubble: function (u) { return WorldChat.getBubble(u); } });
     WorldChat.init({ inputEl: el('worldChatInput'), logEl: el('worldChatLog'), hintEl: el('worldChatHint'), sendBtn: el('worldChatSend'), onSend: function (text) { WorldNet.sendChat(text); }, myUid: uid });
     WorldOutfit.init({ db: wDb, uid: uid, panelEl: el('worldWardrobe'), onChange: onOutfitChange });

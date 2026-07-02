@@ -21,6 +21,7 @@ const WorldNet = (function () {
   const remotes = {};           // uid → { name,pet,color,outfit,x,y,targetX,targetY,facing,action,actionTs,ts }
   let onRemotes = function () {};
   let onChat = function () {};
+  let onDiag = function () {};   // surfaces connection / permission errors to the UI
   let getName = function () { return 'Anonymous'; };
 
   // Server-aligned clock: Date.now() + offset ≈ Firebase server time. Using this
@@ -81,6 +82,7 @@ const WorldNet = (function () {
     });
     Object.keys(remotes).forEach(k => { if (!seen[k]) delete remotes[k]; }); // despawn
     onRemotes(remotes);
+    onDiag({ type: 'players', count: Object.keys(remotes).length });
   }
 
   function handleChat(val) {
@@ -98,11 +100,18 @@ const WorldNet = (function () {
     try {
       await myRef.set(serialize(me));
       myRef.onDisconnect().remove();
-    } catch (e) { return { scene, shard, online: false }; }
+    } catch (e) {
+      // Most common causes: RTDB rules not deployed (permission_denied) or a wrong
+      // databaseURL (can't reach the instance). Surface it instead of failing silently.
+      onDiag({ type: 'error', where: 'write', message: (e && e.message) || 'write failed' });
+      return { scene, shard, online: false };
+    }
     lastSent = { x: r3(me.x), y: r3(me.y), facing: me.facing, action: me.action || '', actionTs: me.actionTs || 0, ts: nowMs() };
 
     playersRef = base().child('players');
-    playersCb = playersRef.on('value', s => handlePlayers(s.val() || {}));
+    playersCb = playersRef.on('value',
+      s => handlePlayers(s.val() || {}),
+      err => onDiag({ type: 'error', where: 'read', message: (err && err.message) || 'read denied' }));
     chatRef = base().child('chat').limitToLast(WORLD_CHAT.historyLimit);
     chatCb = chatRef.on('value', s => handleChat(s.val() || {}));
 
@@ -170,10 +179,16 @@ const WorldNet = (function () {
     getName = opts.getName || getName;
     onRemotes = opts.onRemotes || onRemotes;
     onChat = opts.onChat || onChat;
+    onDiag = opts.onDiag || onDiag;
     // RTDB is optional — guard exactly like coin-rush.js.
     try { rtdb = (firebase && firebase.database) ? firebase.database() : null; } catch (e) { rtdb = null; }
-    // Learn the client↔server clock offset so timing is consistent across players.
-    try { if (rtdb) rtdb.ref('.info/serverTimeOffset').on('value', s => { serverOffset = s.val() || 0; }); } catch (e) {}
+    if (!rtdb) { onDiag({ type: 'conn', connected: false, reason: 'no-rtdb' }); }
+    else {
+      // Learn the client↔server clock offset so timing is consistent across players.
+      try { rtdb.ref('.info/serverTimeOffset').on('value', s => { serverOffset = s.val() || 0; }); } catch (e) {}
+      // Live connection state so the UI can show whether we actually reached the DB.
+      try { rtdb.ref('.info/connected').on('value', s => onDiag({ type: 'conn', connected: !!(s && s.val()) })); } catch (e) {}
+    }
     // Clean our node if the tab is closed mid-session (belt-and-suspenders to onDisconnect).
     window.addEventListener('beforeunload', () => { try { if (myRef) myRef.remove(); } catch (e) {} });
     return { online: !!rtdb };
