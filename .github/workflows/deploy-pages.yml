@@ -1,0 +1,66 @@
+# Deploy the static site to GitHub Pages.
+#
+# Why this file exists:
+#   The site was previously published by GitHub's auto-generated "classic"
+#   Pages pipeline (dynamic/pages/pages-build-deployment). That pipeline
+#   cannot be re-run or manually triggered by us, and its deploy step aborts
+#   as soon as GitHub's Pages queue is slow ("Timeout reached, aborting!"),
+#   which is exactly the failure we hit. This explicit workflow replaces it
+#   with a deploy we control: it can be re-run, it can be triggered by hand,
+#   and it waits longer before giving up on a slow queue.
+#
+# IMPORTANT one-time setting: in the repo, go to
+#   Settings -> Pages -> Build and deployment -> Source
+# and switch it from "Deploy from a branch" to "GitHub Actions".
+# Until that is done, this workflow will not publish the live site.
+
+name: Deploy static site to Pages
+
+on:
+  # Publish automatically on every push to the production branch.
+  push:
+    branches: [master]
+  # Allow re-running / kicking a deploy by hand from the Actions tab.
+  workflow_dispatch:
+
+# Least-privilege token: only what Pages deployment needs.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never run two deploys at once; let an in-progress deploy finish rather than
+# cancelling it (avoids leaving the live site half-updated).
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      # Upload the whole repo as a plain static site. This is a static
+      # HTML/JS project (no _config.yml), so we skip the Jekyll build step
+      # entirely and remove that failure surface.
+      - name: Upload static artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          # GitHub's Pages queue occasionally stays "deployment_queued" for
+          # several minutes. The default 10-minute cap aborted our deploy;
+          # 20 minutes lets a slow queue clear instead of failing the run.
+          timeout: 1200000
