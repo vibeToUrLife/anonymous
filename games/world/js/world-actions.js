@@ -68,14 +68,30 @@ function applyWorldActionTransform(ctx, action, ap, s, t) {
     case 'digSand': ctx.translate(0, Math.abs(Math.sin(ap * Math.PI * 5)) * 0.05 * s); ctx.rotate(Math.sin(ap * Math.PI * 5) * 0.05); break;
     case 'roll':    ctx.rotate(ap * Math.PI * 2); break;
     case 'pounce':  ctx.translate(0, -up * 0.22 * s); ctx.rotate(-up * 0.15); break;
-    // Signatures
-    case 'sig_pounce':   ctx.translate(0, -up * 0.26 * s); ctx.rotate(up * Math.PI * 0.5); ctx.scale(1 + 0.06 * up, 1 - 0.06 * up); break;
-    case 'sig_spin':     ctx.rotate(ap * Math.PI * 2); break;
-    case 'sig_bighop':   ctx.translate(0, -up * 0.3 * s); ctx.scale(1 - 0.08 * up, 1 + 0.12 * up); break;
-    case 'sig_wiggle':   ctx.rotate(Math.sin(ap * Math.PI * 8) * 0.14); ctx.scale(1 + Math.sin(ap * Math.PI * 4) * 0.05, 1); break;
-    case 'sig_backflip': ctx.translate(0, -up * 0.22 * s); ctx.rotate(-ap * Math.PI * 2); break;
-    case 'sig_tumble':   ctx.rotate(ap * Math.PI * 2); ctx.translate(Math.sin(ap * Math.PI * 2) * 0.05 * s, -up * 0.1 * s); break;
-    case 'sig_flap':     ctx.translate(0, -Math.abs(Math.sin(ap * Math.PI * 6)) * 0.12 * s); ctx.rotate(Math.sin(ap * Math.PI * 6) * 0.06); break;
+    // ── Signatures (one characterful move per pet: anticipation → action → land) ──
+    case 'sig_pounce': { // cat: crouch, then a forward pouncing leap with a twist
+      if (ap < 0.22) { const a = ap / 0.22; ctx.scale(1 + 0.14 * a, 1 - 0.16 * a); ctx.translate(0, 0.06 * a * s); }
+      else { const a = (ap - 0.22) / 0.78, arc = Math.sin(a * Math.PI); ctx.translate((a - 0.15) * 0.14 * s, -arc * 0.30 * s); ctx.rotate(-arc * 0.4); ctx.scale(1 + 0.05 * arc, 1 - 0.03 * arc); }
+      break; }
+    case 'sig_spin': { // dog: two excited tail-chasing spins with a happy bob
+      ctx.rotate(ap * Math.PI * 4); const b = Math.abs(Math.sin(ap * Math.PI * 2)); ctx.translate(0, -b * 0.07 * s); ctx.scale(1 + 0.05 * b, 1 - 0.05 * b);
+      break; }
+    case 'sig_bighop': { // bunny: a bouncy triple binky with mid-air ear flicks
+      const hops = Math.abs(Math.sin(ap * Math.PI * 3)); ctx.translate(0, -hops * 0.28 * s); ctx.scale(1 - 0.09 * hops, 1 + 0.13 * hops); ctx.rotate(Math.sin(ap * Math.PI * 6) * 0.13);
+      break; }
+    case 'sig_wiggle': { // hamster: fast happy shimmy + a puffed-cheek pulse
+      ctx.rotate(Math.sin(ap * Math.PI * 12) * 0.17); const puff = Math.sin(ap * Math.PI); ctx.scale(1 + 0.11 * puff, 1 + 0.06 * puff); ctx.translate(0, -Math.abs(Math.sin(ap * Math.PI * 4)) * 0.05 * s);
+      break; }
+    case 'sig_backflip': { // fox: a crouch then a clean arcing backflip
+      if (ap < 0.18) { const a = ap / 0.18; ctx.scale(1 + 0.09 * a, 1 - 0.11 * a); ctx.translate(0, 0.05 * a * s); }
+      else { const a = (ap - 0.18) / 0.82, arc = Math.sin(a * Math.PI); ctx.translate(-0.05 * s, -arc * 0.34 * s); ctx.rotate(-a * Math.PI * 2); }
+      break; }
+    case 'sig_tumble': { // panda: a rolling forward tumble that travels + bounces
+      ctx.rotate(ap * Math.PI * 2); const arc = Math.sin(ap * Math.PI); ctx.translate((ap - 0.5) * 0.16 * s, -arc * 0.13 * s);
+      break; }
+    case 'sig_flap': { // goose: a flappy hover — rise on beating wings, then settle
+      const rise = Math.sin(ap * Math.PI), beat = Math.sin(ap * Math.PI * 8); ctx.translate(beat * 0.02 * s, -rise * 0.22 * s); ctx.rotate(beat * 0.11); ctx.scale(1, 1 + 0.05 * beat);
+      break; }
     default: break;
   }
 }
