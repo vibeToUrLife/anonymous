@@ -182,7 +182,12 @@
       bunny:   { hx:  0.30, hy: -0.16, r: 0.26 },
       hamster: { hx:  0.25, hy: -0.10, r: 0.30 },
       fox:     { hx:  0.38, hy: -0.14, r: 0.27 },
-      panda:   { hx:  0.05, hy: -0.30, r: 0.30 }
+      panda:   { hx:  0.05, hy: -0.30, r: 0.30 },
+      // Goose's head sits high on its long neck (see drawGoosePet: head centre
+      // at 0.42,-0.66 with radius 0.16), far from the body centre — without this
+      // entry head-worn accessories fell back to the default and floated over the
+      // body instead of the head. Values taken straight from the goose geometry.
+      goose:   { hx:  0.42, hy: -0.66, r: 0.16 }
     };
 
     // Accessories that render behind the pet body
