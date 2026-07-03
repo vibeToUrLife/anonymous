@@ -377,12 +377,33 @@
         checkDailyOnLogin();
         checkAchievements();
       }
-      // Deep-link: index.html "Farm" button links to room.html?view=farm — open it
-      // once the room has loaded (own room only).
-      if (_wasFirstLoad) _maybeOpenFarmFromUrl();
+      // Deep-link: a shared "visit" link (?visit=<uid>) opens a read-only tour of
+      // someone else's space; otherwise the "Farm/Aquarium" own-view links apply.
+      if (_wasFirstLoad) { if (!_maybeVisitFromUrl()) _maybeOpenFarmFromUrl(); }
       // Always render on first load; skip only if a local save just triggered this snapshot
       if (!_wasFirstLoad && Date.now() - _lastLocalSaveTime < 2000) return;
       renderAllDebounced();
+    }
+
+    // One-time: if the URL asks to VISIT someone's space (?visit=<uid> with an
+    // optional &view=farm|aquarium), open a READ-ONLY tour of THEIR room/farm/
+    // aquarium via the existing visit* helpers. Returns true if it handled a
+    // visit link (so the own-view handler below is skipped). A link pointing at
+    // your OWN uid falls through to the normal own-view behaviour.
+    let _visitUrlHandled = false;
+    function _maybeVisitFromUrl() {
+      if (_visitUrlHandled) return false;
+      try {
+        const p = new URLSearchParams(location.search);
+        const uid = p.get('visit');
+        if (!uid || uid === currentUid) return false;
+        _visitUrlHandled = true;
+        const v = p.get('view');
+        if (v === 'farm' && typeof visitFarm === 'function') visitFarm(uid);
+        else if (v === 'aquarium' && typeof visitAquarium === 'function') visitAquarium(uid);
+        else if (typeof visitRoom === 'function') visitRoom(uid);
+        return true;
+      } catch (e) { return false; }
     }
 
     // One-time: if the URL asks for the farm view, open it after load.
