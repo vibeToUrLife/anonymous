@@ -79,7 +79,9 @@ const WORLD_HIGHFIVE = { actionId: 'highfive', windowMs: 3400, burstMs: 1100 };
 // revealRadius (a hot/cold search) and are collected by walking within
 // collectRadius. tzOffsetMin sets the local day boundary (480 = UTC+8) so the
 // hunt resets at local midnight.
-const WORLD_SPARKLES = { perScene: 3, collectRadius: 0.055, revealRadius: 0.22, margin: 0.06, tzOffsetMin: 480 };
+// `reward` coins are credited (atomic increment on rooms/{uid}.coins) when the
+// whole day's hunt is completed.
+const WORLD_SPARKLES = { perScene: 3, collectRadius: 0.055, revealRadius: 0.22, margin: 0.06, tzOffsetMin: 480, reward: 500 };
 
 // ── Chat ──────────────────────────────────────────────────────────
 const WORLD_CHAT = {

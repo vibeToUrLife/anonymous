@@ -50,13 +50,18 @@
     chip.textContent = '✨ ' + found + '/' + total;
     chip.classList.toggle('done', found >= total);
   }
-  // Finishing the whole day's hunt unlocks a random rare (gacha) accessory —
-  // a real, wearable, visible-to-everyone reward built from the existing
-  // ownedAccessories wardrobe gate.
+  // Finishing the whole day's hunt awards coins. The World runs its own Firebase
+  // app (no room coin machinery), so credit rooms/{uid}.coins directly with an
+  // atomic increment — race-safe against the room's own coin writes, and the
+  // room picks up the new balance next time it loads.
   function onSparkleComplete() {
-    const acc = WorldOutfit.grantRandomGacha();
-    if (acc) flashHint('🎉 All sparkles found! Unlocked ' + acc.emoji + ' ' + acc.name + ' — see 👕 Wear');
-    else flashHint('🎉 All sparkles found! You own every rare accessory 🌟');
+    const amt = (WORLD_SPARKLES && WORLD_SPARKLES.reward) || 500;
+    if (me.uid) {
+      wDb.collection('rooms').doc(me.uid).set(
+        { coins: firebase.firestore.FieldValue.increment(amt) }, { merge: true }
+      ).catch(function () {});
+    }
+    flashHint('🎉 All sparkles found! You earned ' + amt + ' coins 💰');
   }
 
   // Live sync status chip — also the multiplayer diagnostic. Shows connection
@@ -376,7 +381,7 @@
     });
     if (!localStorage.getItem('world_sparkle_intro')) {
       localStorage.setItem('world_sparkle_intro', '1');
-      setTimeout(function () { flashHint('✨ 3 sparkles hide in each scene (9 total). Collect them all for a rare accessory!'); }, 1600);
+      setTimeout(function () { flashHint('✨ 3 sparkles hide in each scene (9 total). Collect them all for ' + ((WORLD_SPARKLES && WORLD_SPARKLES.reward) || 500) + ' coins 💰'); }, 1600);
     }
 
     // Load saved avatar + owned accessories, then build the pickers.

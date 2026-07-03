@@ -7,7 +7,6 @@
 const WorldOutfit = (function () {
   let db = null, uid = null, panelEl = null, onChange = function () {};
   let owned = new Set();
-  let lastRendered = null; // remember the equipped id so a reward re-render keeps the highlight
 
   async function loadOwned() {
     if (!db || !uid) return;
@@ -24,7 +23,6 @@ const WorldOutfit = (function () {
 
   function render(outfit) {
     if (!panelEl) return;
-    lastRendered = outfit;
     const items = available();
     panelEl.innerHTML =
       '<div class="world-wardrobe-grid">' +
@@ -43,24 +41,6 @@ const WorldOutfit = (function () {
       }));
   }
 
-  // Grant a random not-yet-owned gacha accessory (the Daily Sparkle Hunt reward).
-  // arrayUnions it into rooms/{uid}.ownedAccessories — the wardrobe gates on
-  // exactly that array — and re-renders so it shows up immediately. Returns the
-  // granted accessory { id, name, emoji }, or null if the player owns them all.
-  function grantRandomGacha() {
-    const locked = PET_ACCESSORIES.filter(a => a.gachaOnly && !owned.has(a.id));
-    if (!locked.length) return null;
-    const a = locked[Math.floor(Math.random() * locked.length)];
-    owned.add(a.id);
-    if (db && uid) {
-      db.collection('rooms').doc(uid).set(
-        { ownedAccessories: firebase.firestore.FieldValue.arrayUnion(a.id) }, { merge: true }
-      ).catch(function () {});
-    }
-    render(lastRendered);
-    return a;
-  }
-
   function init(opts) { db = opts.db; uid = opts.uid; panelEl = opts.panelEl; onChange = opts.onChange || onChange; }
-  return { init, loadOwned, render, grantRandomGacha };
+  return { init, loadOwned, render };
 })();
