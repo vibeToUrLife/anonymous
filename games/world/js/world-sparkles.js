@@ -14,8 +14,10 @@ const WorldSparkles = (function () {
   let flashHint = function () {};
   let triggerSparkle = function () {};   // fire the 'sparkle' emote so others see a find
   let onProgress = function () {};
+  let onComplete = function () {};       // all-collected → core grants the daily reward
 
   let dayKey = '';
+  let rewardedDay = '';                  // guard: reward the full hunt at most once per day
   const found = new Set();      // "sceneId:index" collected today (this player)
   const spotCache = {};         // sceneId → [{x,y}] for today
   const bursts = [];            // collect celebrations { x, y, start }
@@ -56,6 +58,7 @@ const WorldSparkles = (function () {
     flashHint = opts.flashHint || flashHint;
     triggerSparkle = opts.triggerSparkle || triggerSparkle;
     onProgress = opts.onProgress || onProgress;
+    onComplete = opts.onComplete || onComplete;
     total = sceneCount() * cfg().perScene;
     dayKey = worldDayKey(serverNow(), cfg().tzOffsetMin);
     // Load today's collected set (ignore a stale prior day).
@@ -86,8 +89,16 @@ const WorldSparkles = (function () {
       persist();
       onProgress(found.size, total);
       triggerSparkle();                 // nearby players see the ✨ — a free social signal
-      if (found.size >= total) { flashHint('✨ You found every sparkle today! 🎉'); celebrateUntil = serverNow() + 2400; }
-      else { flashHint('✨ Sparkle found! ' + found.size + '/' + total + ' today'); }
+      let sceneFound = 0;               // how many of THIS scene's are done (tells players it's 3/scene)
+      found.forEach(function (k) { if (k.slice(0, me.scene.length + 1) === me.scene + ':') sceneFound++; });
+      if (found.size >= total) {
+        celebrateUntil = serverNow() + 2400;
+        if (rewardedDay !== dayKey) { rewardedDay = dayKey; onComplete(); } // core grants the reward + shows the toast
+      } else if (sceneFound >= c.perScene) {
+        flashHint('✨ All ' + c.perScene + ' sparkles in this scene found! On to the next 🗺️');
+      } else {
+        flashHint('✨ Sparkle found! ' + found.size + '/' + total + ' today');
+      }
     }
   }
 

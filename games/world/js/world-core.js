@@ -50,6 +50,14 @@
     chip.textContent = '✨ ' + found + '/' + total;
     chip.classList.toggle('done', found >= total);
   }
+  // Finishing the whole day's hunt unlocks a random rare (gacha) accessory —
+  // a real, wearable, visible-to-everyone reward built from the existing
+  // ownedAccessories wardrobe gate.
+  function onSparkleComplete() {
+    const acc = WorldOutfit.grantRandomGacha();
+    if (acc) flashHint('🎉 All sparkles found! Unlocked ' + acc.emoji + ' ' + acc.name + ' — see 👕 Wear');
+    else flashHint('🎉 All sparkles found! You own every rare accessory 🌟');
+  }
 
   // Live sync status chip — also the multiplayer diagnostic. Shows connection
   // state + how many pets are in this shard, or a clear error if the Realtime
@@ -363,11 +371,12 @@
     WorldInput.init({ onAction: onAction, joystickEl: el('worldJoystick') });
     WorldSparkles.init({
       db: wDb, uid: uid, serverNow: WorldNet.serverNow, flashHint: flashHint,
-      triggerSparkle: function () { triggerAction('sparkle'); }, onProgress: updateSparkleChip,
+      triggerSparkle: function () { triggerAction('sparkle'); },
+      onProgress: updateSparkleChip, onComplete: onSparkleComplete,
     });
     if (!localStorage.getItem('world_sparkle_intro')) {
       localStorage.setItem('world_sparkle_intro', '1');
-      setTimeout(function () { flashHint('✨ Hidden sparkles hide in every scene — explore to find them!'); }, 1600);
+      setTimeout(function () { flashHint('✨ 3 sparkles hide in each scene (9 total). Collect them all for a rare accessory!'); }, 1600);
     }
 
     // Load saved avatar + owned accessories, then build the pickers.

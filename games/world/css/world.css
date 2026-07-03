@@ -153,8 +153,9 @@ body.world-touch #worldJoystick { display: block; }
 #worldChatSend { border: 0; border-radius: 50%; width: 46px; height: 46px; font-size: 18px; background: var(--w-accent); color: #fff; cursor: pointer; box-shadow: var(--w-shadow); }
 #worldChatHint {
   position: absolute; left: 50%; transform: translateX(-50%); bottom: 84px; z-index: 26;
-  background: rgba(74, 59, 47, 0.9); color: #fff; padding: 8px 16px; border-radius: 999px; font-size: 13px;
-  font-weight: 600; opacity: 0; transition: opacity 0.2s; pointer-events: none; white-space: nowrap;
+  background: rgba(74, 59, 47, 0.9); color: #fff; padding: 8px 16px; border-radius: 16px; font-size: 13px;
+  font-weight: 600; opacity: 0; transition: opacity 0.2s; pointer-events: none;
+  max-width: 88vw; text-align: center; white-space: normal; line-height: 1.35; /* wrap on phones */
 }
 #worldChatHint.show { opacity: 1; }
 
