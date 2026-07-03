@@ -110,10 +110,58 @@ function highfiveKey(uidA, tsA, uidB, tsB) {
     : uidB + ':' + tsB + '|' + uidA + ':' + tsA;
 }
 
+// ── Daily Sparkle Hunt: deterministic placement + hot/cold reveal ──
+
+// Small deterministic PRNG (same idiom as the scene painters): fract(sin(...)).
+function worldRnd(seed) {
+  const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+// Stable 32-bit string hash (FNV-1a) → seeds placement from a date+scene string.
+function worldStrHash(str) {
+  let h = 2166136261;
+  const s = String(str);
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+
+// The calendar day (YYYY-MM-DD) at nowMs shifted by tzOffsetMin, so the hunt
+// resets at local midnight and every client agrees on "today" (fed the
+// server-aligned clock, not the device clock).
+function worldDayKey(nowMs, tzOffsetMin) {
+  const d = new Date(nowMs + (tzOffsetMin || 0) * 60000);
+  const p = n => (n < 10 ? '0' + n : '' + n);
+  return d.getUTCFullYear() + '-' + p(d.getUTCMonth() + 1) + '-' + p(d.getUTCDate());
+}
+
+// `count` deterministic sparkle positions for one scene+day, inset by `margin`
+// from the scene's walkable bounds so they're always reachable. Same inputs →
+// same spots on every client, so the layout never needs networking.
+function sparkleSpots(dayKey, sceneId, bounds, count, margin) {
+  const x0 = bounds.minX + margin, x1 = bounds.maxX - margin;
+  const y0 = bounds.minY + margin, y1 = bounds.maxY - margin;
+  const spots = [];
+  for (let i = 0; i < count; i++) {
+    const rx = worldRnd(worldStrHash(dayKey + '|' + sceneId + '|' + i + '|x') % 100000);
+    const ry = worldRnd(worldStrHash(dayKey + '|' + sceneId + '|' + i + '|y') % 100000);
+    spots.push({ x: x0 + rx * (x1 - x0), y: y0 + ry * (y1 - y0) });
+  }
+  return spots;
+}
+
+// Hot/cold reveal: 0 when farther than revealRadius (sparkle stays hidden),
+// ramping to 1 as the player reaches it.
+function sparkleGlow(dist, revealRadius) {
+  if (dist >= revealRadius) return 0;
+  return 1 - dist / revealRadius;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     wClamp, clampToBounds, normalizeVector, stepPosition, shouldWritePosition,
     lerp, lerpToward, depthScale, projectToPixel, worldDist, isFresh, assignShard,
     highfiveMatch, highfiveKey,
+    worldRnd, worldStrHash, worldDayKey, sparkleSpots, sparkleGlow,
   };
 }

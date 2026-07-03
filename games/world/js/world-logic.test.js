@@ -122,3 +122,48 @@ test('highfiveKey is order-independent so every client builds the same key', () 
   // a later re-highfive between the same pair is a NEW key (new celebration)
   assert.notEqual(L.highfiveKey('alice', 1000, 'bob', 2000), L.highfiveKey('alice', 8000, 'bob', 9000));
 });
+
+// ── Daily Sparkle Hunt ──
+const SB = { minX: 0.1, minY: 0.5, maxX: 0.9, maxY: 0.95 };
+
+test('worldRnd is deterministic and in [0,1)', () => {
+  assert.equal(L.worldRnd(5), L.worldRnd(5));
+  const v = L.worldRnd(42);
+  assert.ok(v >= 0 && v < 1, 'in range');
+});
+
+test('worldStrHash is deterministic and separates distinct strings', () => {
+  assert.equal(L.worldStrHash('pool|0'), L.worldStrHash('pool|0'));
+  assert.notEqual(L.worldStrHash('pool|0'), L.worldStrHash('pool|1'));
+});
+
+test('worldDayKey formats the tz-shifted UTC date', () => {
+  assert.equal(L.worldDayKey(0, 0), '1970-01-01');
+  assert.equal(L.worldDayKey(0, 480), '1970-01-01'); // epoch +8h stays same day
+  const t = Date.UTC(2026, 6, 3, 20, 0, 0);          // 2026-07-03 20:00 UTC
+  assert.equal(L.worldDayKey(t, 0), '2026-07-03');
+  assert.equal(L.worldDayKey(t, 480), '2026-07-04'); // +8h crosses into next local day
+});
+
+test('sparkleSpots is deterministic and inside the inset bounds', () => {
+  const a = L.sparkleSpots('2026-07-04', 'pool', SB, 3, 0.06);
+  assert.deepEqual(a, L.sparkleSpots('2026-07-04', 'pool', SB, 3, 0.06));
+  assert.equal(a.length, 3);
+  for (const s of a) {
+    assert.ok(s.x >= SB.minX + 0.06 - 1e-9 && s.x <= SB.maxX - 0.06 + 1e-9, 'x inside');
+    assert.ok(s.y >= SB.minY + 0.06 - 1e-9 && s.y <= SB.maxY - 0.06 + 1e-9, 'y inside');
+  }
+});
+
+test('sparkleSpots differs by day and by scene', () => {
+  const p = JSON.stringify(L.sparkleSpots('2026-07-04', 'pool', SB, 3, 0.06));
+  assert.notEqual(p, JSON.stringify(L.sparkleSpots('2026-07-05', 'pool', SB, 3, 0.06)));
+  assert.notEqual(p, JSON.stringify(L.sparkleSpots('2026-07-04', 'egypt', SB, 3, 0.06)));
+});
+
+test('sparkleGlow ramps from 0 at the reveal edge to 1 at the spot', () => {
+  assert.equal(L.sparkleGlow(0.3, 0.22), 0);    // beyond radius → hidden
+  assert.equal(L.sparkleGlow(0.22, 0.22), 0);   // exactly at edge → hidden
+  assert.equal(L.sparkleGlow(0, 0.22), 1);      // on the spot → full glow
+  assert.ok(L.sparkleGlow(0.05, 0.22) > L.sparkleGlow(0.15, 0.22)); // closer → brighter
+});

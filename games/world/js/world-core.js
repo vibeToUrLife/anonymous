@@ -43,6 +43,14 @@
     clearTimeout(h._hideT); h._hideT = setTimeout(() => h.classList.remove('show'), 2200);
   }
 
+  // Daily Sparkle Hunt progress chip (top-right). Driven by WorldSparkles.
+  function updateSparkleChip(found, total) {
+    const chip = el('worldSparkleChip'); if (!chip) return;
+    chip.hidden = false;
+    chip.textContent = '✨ ' + found + '/' + total;
+    chip.classList.toggle('done', found >= total);
+  }
+
   // Live sync status chip — also the multiplayer diagnostic. Shows connection
   // state + how many pets are in this shard, or a clear error if the Realtime
   // Database can't be reached (wrong databaseURL) or writes are denied (rules
@@ -325,6 +333,7 @@
     });
 
     updateHighfives(t, remotes); // detect mutual offers + prompt nearby invitations
+    WorldSparkles.update(me);    // collect any hidden sparkle walked onto
 
     WorldNet.writeState(me); // throttled + delta-gated inside
 
@@ -334,6 +343,7 @@
     if (drawFn) { try { drawFn(ctx, size.w, size.h, t / 1000); } catch (e) { fallbackBg(size.w, size.h); } }
     else fallbackBg(size.w, size.h);
     WorldActors.render(ctx, size.w, size.h, t, me, remotes, sceneObj);
+    WorldSparkles.draw(ctx, size.w, size.h, t / 1000, me, me.scene); // hidden-until-near sparkles (t in seconds for twinkle)
     drawHighfives(t, size.w, size.h); // matched-pair celebrations on top of the actors
 
     requestAnimationFrame(frame);
@@ -351,6 +361,14 @@
     WorldChat.init({ inputEl: el('worldChatInput'), logEl: el('worldChatLog'), hintEl: el('worldChatHint'), sendBtn: el('worldChatSend'), onSend: function (text) { WorldNet.sendChat(text); }, myUid: uid, chatEl: el('worldChat'), toggleEl: el('worldChatToggle'), labelEl: el('worldChatToggleLabel'), unreadEl: el('worldChatUnread') });
     WorldOutfit.init({ db: wDb, uid: uid, panelEl: el('worldWardrobe'), onChange: onOutfitChange });
     WorldInput.init({ onAction: onAction, joystickEl: el('worldJoystick') });
+    WorldSparkles.init({
+      db: wDb, uid: uid, serverNow: WorldNet.serverNow, flashHint: flashHint,
+      triggerSparkle: function () { triggerAction('sparkle'); }, onProgress: updateSparkleChip,
+    });
+    if (!localStorage.getItem('world_sparkle_intro')) {
+      localStorage.setItem('world_sparkle_intro', '1');
+      setTimeout(function () { flashHint('✨ Hidden sparkles hide in every scene — explore to find them!'); }, 1600);
+    }
 
     // Load saved avatar + owned accessories, then build the pickers.
     wDb.collection('rooms').doc(uid).get().then(d => {

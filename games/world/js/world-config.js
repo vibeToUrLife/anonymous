@@ -72,6 +72,15 @@ const WORLD_PLAY_RADIUS = 0.12;
 // shared celebration plays at the pair's midpoint.
 const WORLD_HIGHFIVE = { actionId: 'highfive', windowMs: 3400, burstMs: 1100 };
 
+// ── Daily Sparkle Hunt ──────────────────────────────────────────────
+// Hidden collectibles: `perScene` per scene, placed deterministically per day so
+// every client sees the same spots with zero networking, yet each player
+// collects their own set. They stay invisible until the player is within
+// revealRadius (a hot/cold search) and are collected by walking within
+// collectRadius. tzOffsetMin sets the local day boundary (480 = UTC+8) so the
+// hunt resets at local midnight.
+const WORLD_SPARKLES = { perScene: 3, collectRadius: 0.055, revealRadius: 0.22, margin: 0.06, tzOffsetMin: 480 };
+
 // ── Chat ──────────────────────────────────────────────────────────
 const WORLD_CHAT = {
   maxLen: 100,
@@ -115,6 +124,6 @@ const WORLD_ACTION_KEYS = {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     WORLD_SYNC, WORLD_SHARD_CAP, WORLD_SCENES, worldSceneById, WORLD_EMOTES,
-    PET_SIGNATURE, signatureFor, WORLD_PLAY_RADIUS, WORLD_HIGHFIVE, WORLD_CHAT, WORLD_KEYS, WORLD_ACTION_KEYS,
+    PET_SIGNATURE, signatureFor, WORLD_PLAY_RADIUS, WORLD_HIGHFIVE, WORLD_SPARKLES, WORLD_CHAT, WORLD_KEYS, WORLD_ACTION_KEYS,
   };
 }

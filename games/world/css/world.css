@@ -81,6 +81,11 @@ html, body {
 .world-status.warn { background: #fff0c2; color: #8a6a1f; }
 .world-status.err  { background: #ffd9d9; color: #9a2b2b; }
 
+/* Daily Sparkle Hunt progress chip — reuses .world-status, pinned top-right. */
+#worldSparkleChip { left: auto; right: 12px; background: var(--w-card); color: var(--w-ink); }
+#worldSparkleChip.done { background: #ffe9a8; color: #8a5a00; }
+#worldSparkleChip[hidden] { display: none; }
+
 /* Virtual joystick (touch only) */
 #worldJoystick {
   display: none; position: absolute; left: 20px; bottom: 24px; z-index: 25;
