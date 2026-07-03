@@ -208,6 +208,10 @@
         .finally(() => { $('codeSave').disabled = false; });
     });
 
+    // Access-code wrong attempts (post-login gate) — list offenders + unlock.
+    $('accessAttemptsRefresh').addEventListener('click', loadAccessAttempts);
+    loadAccessAttempts();
+
     // Announcement (What's New) — same shape index.html reads: {version, badge, items[]}
     wnRef.get().then(s => {
       const d = s.exists ? s.data() : {};
@@ -531,6 +535,52 @@
       });
       $('auditLog').innerHTML = html;
     }).catch(e => { $('auditLog').innerHTML = '<div class="status err">' + esc(e.message) + '</div>'; });
+  }
+
+  // ── Access-code wrong attempts (from the post-login gate) ──
+  // Only fetches OFFENDERS (failedCount > 0) so verified users don't bloat the
+  // read. Single-field index (auto) — no composite index needed.
+  function loadAccessAttempts() {
+    const box = $('accessAttemptsList');
+    box.innerHTML = '<div class="muted">Loading…</div>';
+    db.collection('access_attempts')
+      .where('failedCount', '>', 0)
+      .orderBy('failedCount', 'desc')
+      .limit(100).get()
+      .then(snap => {
+        if (snap.empty) { box.innerHTML = '<div class="muted">No wrong attempts. 🎉</div>'; return; }
+        let html = '';
+        snap.forEach(doc => {
+          const a = doc.data();
+          const name = a.displayName || a.email || doc.id;
+          // The actual wrong strings they typed — useful for spotting typos vs. probing.
+          const tried = Array.isArray(a.wrongCodes)
+            ? a.wrongCodes.map(w => esc(w.code)).join(', ') : '';
+          const lastAt = Array.isArray(a.wrongCodes) && a.wrongCodes.length
+            ? a.wrongCodes[a.wrongCodes.length - 1].at : a.updatedAt;
+          const lockedTag = a.locked
+            ? ' <span class="badge" style="color:#fca5a5">LOCKED</span>' : '';
+          html += '<div class="item"><strong>' + esc(name) + '</strong>' + lockedTag +
+            ' <span class="muted">· ' + (a.failedCount || 0) + '/3 wrong</span>' +
+            (a.email ? '<div class="meta">' + esc(a.email) + '</div>' : '') +
+            (tried ? '<div class="meta">tried: ' + tried + '</div>' : '') +
+            '<div class="meta">' + fmtDate(lastAt) + '</div>' +
+            '<div class="row" style="margin-top:8px"><button class="btn" data-unlock="' + esc(doc.id) +
+              '">Unlock / reset</button></div></div>';
+        });
+        box.innerHTML = html;
+        box.querySelectorAll('[data-unlock]').forEach(b =>
+          b.addEventListener('click', () => unlockAccess(b.getAttribute('data-unlock'))));
+      })
+      .catch(e => { box.innerHTML = '<div class="status err">' + esc(e.message) + '</div>'; });
+  }
+
+  // Clear a user's failed count + lock so they can try the gate again.
+  function unlockAccess(uid) {
+    db.collection('access_attempts').doc(uid)
+      .set({ failedCount: 0, locked: false, wrongCodes: [], updatedAt: Date.now() }, { merge: true })
+      .then(() => { writeLog('access_unlock', uid, null, 'reset attempts'); loadAccessAttempts(); loadAuditLog(); })
+      .catch(e => alert('Unlock failed: ' + e.message));
   }
 
   /* ═══════════════ CONTENT TAB ═══════════════ */
