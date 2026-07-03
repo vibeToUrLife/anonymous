@@ -386,6 +386,15 @@
   el('worldWearBtn') && el('worldWearBtn').addEventListener('click', () => toggleMenu('wear'));
   el('worldMenuClose') && el('worldMenuClose').addEventListener('click', () => { const m = el('worldMenu'); if (m) m.classList.remove('open'); });
   hfBackBtn && hfBackBtn.addEventListener('click', e => { e.preventDefault(); offerHighfive(); });
+  // Post THIS world (current scene) to the bubble board so others can join. Uses
+  // the world's own Firestore instance; the scene link drops joiners in the same
+  // shard (shard 0 fills first), so clicking the board card lands them here too.
+  el('worldShareBtn') && el('worldShareBtn').addEventListener('click', () => {
+    if (!window.ShareToBoard || !wAuth.currentUser) { flashHint('Sign in first to share.'); return; }
+    ShareToBoard.postSpace(wDb, wAuth.currentUser, { kind: 'world', scene: me.scene, ownerName: me.name })
+      .then(() => flashHint('📢 Shared Pet World to the board!'))
+      .catch(err => flashHint(err && err.code === 'cooldown' ? 'Just shared — give it a moment.' : 'Could not share.'));
+  });
 
   // Auth gate — the World inherits the app's persisted Google session.
   wAuth.onAuthStateChanged(function (u) {

@@ -433,6 +433,19 @@
     .bubble .poll-option-row { background:var(--sunken) !important; border-color:var(--border) !important; }
     .bubble .poll-option-bar { background:var(--primary-tint) !important; }
     .bubble .poll-vote-count, .bubble .poll-total { color:var(--ink-faint) !important; }
+    /* Shared-space card (room / farm / aquarium / pet-world) inside a note */
+    .space-card {
+      display:flex; align-items:center; gap:12px; margin:6px 0 2px;
+      padding:12px 14px; border-radius:14px; text-decoration:none;
+      background:var(--sunken); border:1px solid var(--border);
+      box-shadow:var(--clay-in); transition:transform .12s ease, box-shadow .12s ease;
+    }
+    .space-card:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(120,90,60,.22); background:var(--primary-tint); }
+    .space-card-icon { font-size:30px; line-height:1; flex:0 0 auto; }
+    .space-card-body { display:flex; flex-direction:column; min-width:0; }
+    .space-card-title { font-weight:800; font-size:15px; color:var(--ink); }
+    .space-card-sub { font-size:12px; color:var(--ink-soft); margin-top:2px; }
+    .space-card.space-world { background:linear-gradient(135deg,var(--primary-tint),var(--sunken)); }
     /* award / boost text on a note */
     .bubble-award-givers, .award-toggle, .boost-toggle { color:var(--warn) !important; }
 
@@ -1492,6 +1505,8 @@
   <script src="./src/js/upcoming-events.js?v=3"></script>
   <!-- Clay design system theme controller (must load before app.js wires the toggle) -->
   <script src="./src/js/theme.js?v=2"></script>
+  <!-- Shared-space link helper (defines window.ShareToBoard for the board render). -->
+  <script src="./src/js/share-to-board.js?v=1"></script>
   <script src="./src/js/app.js?v=14"></script>
   <!-- Access code gate — must load after app.js (uses its shared auth/db). Shows after Google login. -->
   <script src="./src/js/access-code-gate.js?v=1"></script>

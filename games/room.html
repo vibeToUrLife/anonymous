@@ -26,6 +26,9 @@
 
   <a class="back-btn" href="../index.html">← Back</a>
   <button class="settings-btn" id="settingsBtn" title="Settings">⚙️</button>
+  <!-- Share the space you're currently viewing (room/farm/aquarium) to the
+       bubble board so others can visit. Hidden while visiting someone else. -->
+  <button class="share-board-btn hidden" id="shareBoardBtn" title="Share to bubble board">📢</button>
 
   <!-- Settings modal -->
   <div class="settings-overlay hidden" id="settingsOverlay">
@@ -406,6 +409,49 @@
   <script defer src="room/js/room-weather.js?v=cb52"></script>
   <script defer src="room/js/room-gacha.js?v=cb52"></script>
   <script defer src="room/js/room-leaderboard.js?v=cb52"></script>
+  <!-- Share-to-board helper + wiring for the 📢 button. -->
+  <script defer src="../src/js/share-to-board.js?v=1"></script>
+  <script>
+    // Wire the "Share to board" button. DOMContentLoaded fires after all the
+    // deferred room scripts have run, so the room globals (viewingUid,
+    // currentUid, isFarmView, isAquariumView, roomData, showToast, db, auth)
+    // are all defined by the time this runs.
+    window.addEventListener('DOMContentLoaded', function () {
+      var btn = document.getElementById('shareBoardBtn');
+      if (!btn) return;
+
+      // Show the button only when you're looking at YOUR OWN space.
+      function refreshShareBtn() {
+        var own = (typeof viewingUid !== 'undefined') && (typeof currentUid !== 'undefined')
+          && viewingUid === currentUid && !!currentUid;
+        btn.classList.toggle('hidden', !own);
+      }
+      // Re-check periodically — visiting/returning flips viewingUid without a hook.
+      refreshShareBtn();
+      setInterval(refreshShareBtn, 1000);
+
+      btn.addEventListener('click', function () {
+        if (viewingUid !== currentUid) return;             // safety: only your own
+        // Which space am I in right now? aquarium/farm overlays win over the room.
+        var kind = (typeof isAquariumView !== 'undefined' && isAquariumView) ? 'aquarium'
+                 : (typeof isFarmView !== 'undefined' && isFarmView) ? 'farm' : 'room';
+        var ownerName = (roomData && roomData.displayName)
+          || (auth.currentUser && auth.currentUser.displayName)
+          || localStorage.getItem('flappy_custom_name_' + currentUid) || 'Someone';
+        ShareToBoard.postSpace(db, auth.currentUser, { kind: kind, uid: currentUid, ownerName: ownerName })
+          .then(function () {
+            if (typeof showToast === 'function') showToast('📢 Shared your ' + kind + ' to the board!', 'success');
+          })
+          .catch(function (e) {
+            if (e && e.code === 'cooldown') {
+              if (typeof showToast === 'function') showToast('You just shared that — give it a moment.', 'error');
+            } else if (typeof showToast === 'function') {
+              showToast('Could not share. Try again.', 'error');
+            }
+          });
+      });
+    });
+  </script>
   <div id="petCollectionModal" style="display:none;position:fixed;inset:0;z-index:9550;background:var(--g-scrim);align-items:center;justify-content:center" onclick="if(event.target===this)closePetCollection()">
     <div style="background:var(--g-card);border:1px solid var(--g-border);border-top:2px solid rgba(255,122,92,0.45);border-radius:16px;padding:18px;max-width:340px;width:90%;box-shadow:var(--g-shadow)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">

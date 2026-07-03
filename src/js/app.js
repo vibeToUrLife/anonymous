@@ -893,6 +893,50 @@ async function pollAddOption(docId, text) {
     }
 }
 
+// Render a shared "space" bubble (room / farm / aquarium / pet-world) as a
+// clickable card that navigates to that space. The destination URL is owned by
+// ShareToBoard.linkFor so the board and the poster never disagree. All text is
+// injected via textContent, so the owner name can't break out into HTML.
+function buildSpaceContent(space) {
+    const KIND = {
+        room:     { icon: '🏠', label: 'Room',      verb: 'Visit' },
+        farm:     { icon: '🌾', label: 'Farm',      verb: 'Visit' },
+        aquarium: { icon: '🐟', label: 'Aquarium',  verb: 'Visit' },
+        world:    { icon: '🌍', label: 'Pet World', verb: 'Join'  },
+    };
+    const meta = KIND[space.kind] || KIND.room;
+    const owner = space.ownerName || 'Someone';
+
+    const card = document.createElement('a');
+    card.className = 'space-card space-' + (space.kind || 'room');
+    card.href = window.ShareToBoard ? ShareToBoard.linkFor(space) : '#';
+    // Don't let the click also trigger the bubble/playground handlers.
+    card.addEventListener('click', (e) => e.stopPropagation());
+
+    const icon = document.createElement('span');
+    icon.className = 'space-card-icon';
+    icon.textContent = meta.icon;
+    card.appendChild(icon);
+
+    const body = document.createElement('span');
+    body.className = 'space-card-body';
+
+    const title = document.createElement('span');
+    title.className = 'space-card-title';
+    title.textContent = space.kind === 'world' ? 'Join Pet World' : (owner + '’s ' + meta.label);
+    body.appendChild(title);
+
+    const sub = document.createElement('span');
+    sub.className = 'space-card-sub';
+    sub.textContent = space.kind === 'world'
+        ? 'Come hang out together →'
+        : (meta.verb + ' this ' + meta.label.toLowerCase() + ' →');
+    body.appendChild(sub);
+
+    card.appendChild(body);
+    return card;
+}
+
 function buildPollContent(a) {
     const container = document.createElement('div');
     container.className = 'poll-content';
@@ -1189,6 +1233,11 @@ function render(items) {
         // Poll bubble — render poll UI instead of text/image
         bubble.appendChild(makeCmdPfx(a.ts));
         bubble.appendChild(buildPollContent(a));
+    } else if (a.type === 'space' && a.space) {
+        // Shared space bubble — a clickable card that visits a room/farm/
+        // aquarium or joins the Pet World.
+        bubble.appendChild(makeCmdPfx(a.ts));
+        bubble.appendChild(buildSpaceContent(a.space));
     } else {
         if (a.image) {
             const img = document.createElement('img');
@@ -2779,7 +2828,7 @@ function _subscribeAnswers() {
     const d = doc.data();
     // Normally messages live 6 hours; a paid pin keeps it alive until the pin expires.
     if (now - d.ts < SIX_HOURS || (d.boostUntil && d.boostUntil > now)) {
-        temp = { id: doc.id, text: d.text ?? '', ts: d.ts, image: d.image ?? null, replies: d.replies ?? [], reactions: d.reactions ?? {}, type: d.type ?? null, pollOptions: d.pollOptions ?? null, pollVotes: d.pollVotes ?? {}, cos: d.cos ?? null, boostUntil: d.boostUntil ?? 0, awards: d.awards ?? null, awardGivers: d.awardGivers ?? null };
+        temp = { id: doc.id, text: d.text ?? '', ts: d.ts, image: d.image ?? null, replies: d.replies ?? [], reactions: d.reactions ?? {}, type: d.type ?? null, pollOptions: d.pollOptions ?? null, pollVotes: d.pollVotes ?? {}, cos: d.cos ?? null, boostUntil: d.boostUntil ?? 0, awards: d.awards ?? null, awardGivers: d.awardGivers ?? null, space: d.space ?? null };
         if (d.name) temp.name = d.name ?? '';
         items.push(temp);
     }

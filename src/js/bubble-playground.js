@@ -71,6 +71,9 @@
   function extractText(bubbleEl) {
     const pollQ = bubbleEl.querySelector('.poll-question');
     if (pollQ) return ('📊 ' + (pollQ.textContent || '').trim()).slice(0, 60);
+    // Shared-space card → use its title (e.g. "🏠 Alex's Room").
+    const spaceTitle = bubbleEl.querySelector('.space-card-title');
+    if (spaceTitle) return (spaceTitle.textContent || '').trim().slice(0, 60);
     const clone = bubbleEl.cloneNode(true);
     clone.querySelectorAll(
       '.bubble-hp-wrapper,.bubble-reactions,.bubble-footer,.bubble-deco,.replies-container,.answer-sender,img'

@@ -358,6 +358,12 @@
     .settings-btn:hover { background: var(--g-card-hover); color: var(--g-accent); transform: rotate(45deg); }
     .achieve-header-btn { position: fixed; top: 14px; right: 190px; z-index: 50; width: 40px; height: 40px; border: 1px solid var(--g-border); border-radius: 50%; background: var(--g-card-90); backdrop-filter: blur(10px); color: var(--g-ink-soft); font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s, color 0.2s; box-shadow: var(--g-shadow-sm); }
     .achieve-header-btn:hover { background: var(--g-card-hover); color: var(--g-accent); }
+    /* "Share to bubble board" — sits left of the other top-right controls. Hidden
+       while visiting someone else's space (you can only share your own). */
+    .share-board-btn { position: fixed; top: 14px; right: 240px; z-index: 50; width: 40px; height: 40px; border: 1px solid var(--g-border); border-radius: 50%; background: var(--g-card-90); backdrop-filter: blur(10px); color: var(--g-ink-soft); font-size: 19px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s, color 0.2s, transform 0.2s; box-shadow: var(--g-shadow-sm); }
+    .share-board-btn:hover { background: var(--g-card-hover); color: var(--g-accent); transform: translateY(-1px); }
+    .share-board-btn.hidden { display: none; }
+    @media (max-width: 768px) { .share-board-btn { top: 10px; right: 200px; width: 36px; height: 36px; font-size: 17px; } }
     .panel-shortcuts{display:flex;gap:6px;padding:10px 16px;border-top:1px solid var(--g-border);flex-shrink:0}
     .panel-shortcut-btn{flex:1;padding:8px 4px;border:1px solid var(--g-border);border-radius:10px;background:var(--g-slot);color:var(--g-ink-soft);font-size:11px;font-weight:600;cursor:pointer;text-align:center;transition:all .2s}
     .panel-shortcut-btn:hover{background: var(--g-card-hover);color:var(--g-accent)}
