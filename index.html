@@ -687,6 +687,34 @@
     .cd-bubble-close:hover { color: var(--bad); background: var(--primary-tint); }
     @media (prefers-reduced-motion: reduce) { .cd-bubble { animation: none; } }
 
+    /* ── Last-10-seconds full-screen pixel number (text only — no background/box) ── */
+    .cd-final {
+      position: fixed; inset: 0; z-index: 9800;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent;            /* just the pixel number, nothing behind it */
+      pointer-events: none;               /* never blocks the board underneath */
+      image-rendering: pixelated;
+      font-family: 'Press Start 2P', 'Courier New', monospace;
+      -webkit-font-smoothing: none;
+    }
+    .cd-final.hidden { display: none; }
+    .cd-final-num {
+      font-size: clamp(120px, 42vw, 440px); line-height: 1;
+      color: #ff5d8f;
+      /* Stardew-style thick 8-way outline + extruded base + drop shadow */
+      text-shadow:
+        -4px -4px 0 #2b1408, 4px -4px 0 #2b1408, -4px 4px 0 #2b1408, 4px 4px 0 #2b1408,
+        0 -4px 0 #2b1408, 0 4px 0 #2b1408, -4px 0 0 #2b1408, 4px 0 0 #2b1408,
+        0 10px 0 #7a1a3a, 0 14px 12px rgba(0,0,0,0.5);
+    }
+    .cd-final-num.pop { animation: cdFinalPop 0.6s steps(4) both; }
+    @keyframes cdFinalPop {
+      0%   { transform: scale(0.5);  opacity: 0.3; }
+      55%  { transform: scale(1.08); opacity: 1; }
+      100% { transform: scale(1);    opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) { .cd-final-num.pop { animation: none; } }
+
     /* ══════════════════════════════════════════════════════════════
        Upcoming Events — pinned 便利贴 (sticky notes) on the board, plus a
        full-page 8-bit pixel reminder that pops when an event is near.
@@ -1480,6 +1508,11 @@
       <div class="ue-reminder-time" id="ueReminderTime"></div>
       <div class="ue-reminder-press">&#9654; PRESS ANYWHERE TO CLOSE &#9664;</div>
     </div>
+  </div>
+
+  <!-- Last-10-seconds full-screen pixel number (toggled by app.js countdown) -->
+  <div class="cd-final hidden" id="countdownFinal" aria-hidden="true">
+    <span class="cd-final-num" id="countdownFinalNum"></span>
   </div>
 
   </div> <!-- /app-content -->

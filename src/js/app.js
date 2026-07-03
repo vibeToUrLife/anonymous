@@ -2985,6 +2985,9 @@ const cdBubbleLabel  = document.getElementById('cdBubbleLabel');
 const cdBubbleTime   = document.getElementById('cdBubbleTime');
 const cdBubbleAt     = document.getElementById('cdBubbleAt');
 const cdBubbleClose  = document.getElementById('cdBubbleClose');
+// ── Final-10-sec full-screen pixel number (just the number, no background) ──
+const cdFinal        = document.getElementById('countdownFinal');
+const cdFinalNum     = document.getElementById('countdownFinalNum');
 const CD_BUBBLE_WINDOW = 30 * 60 * 1000;   // show only in the last 30 minutes
 let cdCurrentTarget    = null;             // target the visible bubble is tracking
 let cdDismissedTarget  = null;             // target the user closed (stay hidden until next window)
@@ -3016,6 +3019,21 @@ function updateCountdownBubble(diff, targetTs, type) {
     cdBubbleAt.textContent    = 'at ' + formatClock(targetTs);
     cdBubble.classList.toggle('urgent', diff <= 5 * 60 * 1000);   // turn time red in last 5 min
     cdBubble.classList.remove('hidden');
+}
+function hideCountdownFinal() {
+    if (cdFinal) cdFinal.classList.add('hidden');
+}
+// Show a giant pixel number full-screen in the last 10 seconds (10 → 1), replaying the pop each second.
+function updateCountdownFinal(diff) {
+    if (!cdFinal) return;
+    if (diff <= 0 || diff > 10000) { hideCountdownFinal(); return; }
+    const n = String(Math.ceil(diff / 1000));
+    if (cdFinalNum.textContent === n && !cdFinal.classList.contains('hidden')) return;
+    cdFinalNum.textContent = n;
+    cdFinal.classList.remove('hidden');
+    cdFinalNum.classList.remove('pop');
+    void cdFinalNum.offsetWidth;          // reflow → replay the pop animation on the new number
+    cdFinalNum.classList.add('pop');
 }
 if (cdBubbleClose) cdBubbleClose.addEventListener('click', () => {
     cdDismissedTarget = cdCurrentTarget;        // suppress this target; reappears next window
@@ -3151,6 +3169,7 @@ function tickCountdown(targetTs, type) {
     if (diff <= 0) {
         clearInterval(countdownInterval);
         hideCountdownBubble();
+        hideCountdownFinal();
         if (type === 'lunch') {
         countdownDigits.innerHTML = '<span class="countdown-done">🍽️ Lunch time! 🍽️</span>';
         countdownLabel.textContent = 'Go eat & recharge!';
@@ -3170,6 +3189,7 @@ function tickCountdown(targetTs, type) {
     countdownDigits.textContent = padZ(h) + ':' + padZ(m) + ':' + padZ(s);
     countdownLabel.textContent = type === 'lunch' ? 'until lunch 🍜' : 'until freedom 🏃';
     updateCountdownBubble(diff, targetTs, type);
+    updateCountdownFinal(diff);
     }
     update();
     countdownInterval = setInterval(update, 1000);
@@ -3198,6 +3218,7 @@ countdownClear.addEventListener('click', async () => {
     try {
     await countdownRef.delete();
     clearInterval(countdownInterval);
+    hideCountdownFinal();
     applyDefaultCountdown();
     showToast('Countdown cleared — using default', 'success');
     } catch {
