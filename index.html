@@ -152,7 +152,9 @@
 
     /* ── Access Code Gate ── */
     .access-gate {
-      position: fixed; inset: 0; z-index: 10000;
+      /* Shown AFTER Google login. Sits above every in-app overlay (What's New,
+         settings, etc.) but below the "account blocked" screen. */
+      position: fixed; inset: 0; z-index: 2000000;
       display: flex; align-items: center; justify-content: center;
       background: radial-gradient(1100px 560px at 50% -8%, var(--primary-tint), transparent 62%), var(--bg);
     }
@@ -858,8 +860,9 @@
        in sync for legacy corkboard rules still present during the migration. -->
   <script>(function(){try{var s=localStorage.getItem('theme');var t=(s==='dark'||s==='terminal')?s:'light';document.documentElement.setAttribute('data-theme',t);if(t==='light')document.body&&document.body.classList.add('light-theme');}catch(e){}})();</script>
 
-  <!-- Access code gate — must enter correct code to proceed -->
-  <div class="access-gate" id="accessGate">
+  <!-- Access code gate — shown AFTER Google login (see src/js/access-code-gate.js).
+       Hidden by default so it never flashes before the user is signed in. -->
+  <div class="access-gate hidden" id="accessGate">
     <div class="access-gate-box">
       <div class="access-gate-icon">🔑</div>
       <h2>Enter Access Code</h2>
@@ -1490,6 +1493,8 @@
   <!-- Clay design system theme controller (must load before app.js wires the toggle) -->
   <script src="./src/js/theme.js?v=2"></script>
   <script src="./src/js/app.js?v=14"></script>
+  <!-- Access code gate — must load after app.js (uses its shared auth/db). Shows after Google login. -->
+  <script src="./src/js/access-code-gate.js?v=1"></script>
   <script src="./src/js/feature-flags.js"></script>
   <!-- Live, interactive board features (load after app.js for shared db/auth) -->
   <script src="./src/js/board-live-logic.js"></script>
@@ -1543,72 +1548,8 @@
     }
 
     // ── Access Code Gate ──
-    (async function() {
-      var ACCESS_CODE_KEY = 'access_code_verified';
-      var gate = document.getElementById('accessGate');
-      var input = document.getElementById('accessCodeInput');
-      var btn = document.getElementById('accessEnterBtn');
-      var errorEl = document.getElementById('accessError');
-
-      // If already verified, hide the gate immediately
-      if (localStorage.getItem(ACCESS_CODE_KEY) === 'true') {
-        gate.classList.add('hidden');
-        return;
-      }
-
-      // Fetch access code from Firestore (unauthenticated read allowed for this doc)
-      var _accessCode = await getAccessCode();
-
-      function verifyCode() {
-        var code = (input.value || '').trim();
-        if (!_accessCode) {
-          errorEl.textContent = 'Loading... please try again.';
-          // Retry fetch
-          db.collection('app_state').doc('access_code').get().then(function(doc) {
-            if (doc.exists && doc.data().code) {
-              _accessCode = doc.data().code;
-            }
-          });
-          return;
-        }
-        if (code === _accessCode) {
-          localStorage.setItem(ACCESS_CODE_KEY, 'true');
-          gate.classList.add('hidden');
-          errorEl.textContent = '';
-        } else {
-          errorEl.textContent = 'Incorrect code. Try again.';
-          input.value = '';
-          input.focus();
-        }
-      }
-
-      btn.addEventListener('click', verifyCode);
-      input.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') verifyCode();
-      });
-
-      // Auto verify using `code` from URL query params (if provided).
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get('code');
-
-      if (code) {
-        input.value = code;
-        verifyCode();
-      }
-    })();
-
-    function getAccessCode() {
-      return db.collection('app_state').doc('access_code').get().then(function(doc) {
-          if (doc.exists && doc.data().code) {
-            _accessCode = doc.data().code;
-          }
-
-          return _accessCode;
-        }).catch(function(err) {
-          console.error('Failed to fetch access code:', err);
-          return null;
-        });
-    }
+    // Moved to src/js/access-code-gate.js and now runs AFTER Google login.
+    // The gate shows only once the user is signed in (see that module).
 
     // ── What's New: fetch from Firestore, show once per version ──
     // Developer UIDs (must match isDeveloper() in firestore.rules)

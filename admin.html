@@ -318,6 +318,13 @@
         </div>
 
         <div class="card">
+          <div class="card-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></span><h2>Access code · wrong attempts</h2></div>
+          <div class="hint">Users who entered the <strong>wrong</strong> code after signing in. Each account gets 3 tries before it is locked out. Unlock resets their count.</div>
+          <div class="row" style="margin-bottom:10px"><button class="btn" id="accessAttemptsRefresh">Refresh</button></div>
+          <div id="accessAttemptsList"><div class="muted">Loading…</div></div>
+        </div>
+
+        <div class="card">
           <div class="card-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 21 4l-3 16-5-4-3 3v-5Z"/></svg></span><h2>Announcement · What’s New</h2></div>
           <div class="hint">Shown as a popup once per <em>version key</em>. Change the version to re-show it. Each line is one bullet (HTML allowed).</div>
           <div class="row">

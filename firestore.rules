@@ -172,8 +172,9 @@ service cloud.firestore {
     // 6. APP STATE — spin result, countdown
     // ═══════════════════════════════════════
     match /app_state/access_code {
-      // Allow unauthenticated read for the access gate (runs before login)
-      allow read: if true;
+      // The access gate now runs AFTER Google login, so the code is only ever
+      // read by a signed-in user — no need to expose it to the public anymore.
+      allow read: if isAuth();
       allow write: if isAuth() && isDeveloper(request.auth.uid);
     }
     match /app_state/whats_new {
@@ -220,6 +221,31 @@ service cloud.firestore {
       allow read:   if isAuth() && isDeveloper(request.auth.uid);
       allow create: if isAuth() && isDeveloper(request.auth.uid);
       allow update, delete: if false;
+    }
+
+    // ═══════════════════════════════════════
+    // 6b. ACCESS-CODE ATTEMPTS — the post-login code gate's per-user record.
+    //     access_attempts/{uid}: { uid, email, displayName, failedCount,
+    //       verified, locked, wrongCodes:[{code,at}], firstSeenAt, updatedAt }
+    //     Written by the user as they try the gate; surfaced in the admin panel
+    //     so devs can see wrong attempts and unlock people.
+    //
+    //     NOTE: the code is checked client-side (there's no Cloud Function), so
+    //     these rules are about integrity + visibility, not hard secrecy — they
+    //     cap failedCount at 3 to keep the 3-strike limit honest, let a user
+    //     touch ONLY their own record, and let developers read/clear everyone's.
+    // ═══════════════════════════════════════
+    match /access_attempts/{uid} {
+      allow read: if isOwner(uid) || (isAuth() && isDeveloper(request.auth.uid));
+      // The user may write only their own record, and never past the 3-strike
+      // cap. Developers may write freely (e.g. to unlock / reset a user).
+      allow create, update:
+        if (isOwner(uid)
+              && request.resource.data.failedCount is int
+              && request.resource.data.failedCount >= 0
+              && request.resource.data.failedCount <= 3)
+           || (isAuth() && isDeveloper(request.auth.uid));
+      allow delete: if isAuth() && isDeveloper(request.auth.uid);
     }
 
     // ═══════════════════════════════════════
