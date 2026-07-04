@@ -197,32 +197,62 @@ body.world-touch .world-note-key { display: none; } /* mobile has no keyboard �
   50%      { box-shadow: 0 10px 30px rgba(59, 125, 216, 0.85); }
 }
 
-/* Notice-board note composer — a small centered card to type a note before
-   pinning it at the pet's spot. Sits above the action buttons; touch-friendly. */
-#worldNoteComposer {
-  position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%) translateY(8px);
-  z-index: 45; width: min(360px, 90vw); background: var(--w-cream);
-  border-radius: 18px; box-shadow: 0 12px 32px rgba(0,0,0,0.28); padding: 14px 16px;
-  opacity: 0; transition: opacity 0.18s ease, transform 0.18s ease;
+/* Full-screen notes board — a corkboard of sticky notes you open at the board.
+   Read everyone's notes (paginated when there are lots), add your own, close. */
+#worldBoardModal {
+  position: absolute; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
+  background: rgba(20, 14, 8, 0.55); padding: 14px; box-sizing: border-box;
 }
-#worldNoteComposer.open { opacity: 1; transform: translateX(-50%) translateY(0); }
-#worldNoteComposer[hidden] { display: none; }
-.world-note-title { font-weight: 800; font-size: 15px; color: var(--w-ink); margin-bottom: 8px; }
-#worldNoteInput {
-  width: 100%; box-sizing: border-box; border: 0; border-radius: 12px; padding: 11px 14px;
-  font-size: 15px; font-family: inherit; background: var(--w-card); box-shadow: var(--w-shadow);
-  outline: none; color: var(--w-ink);
+#worldBoardModal[hidden] { display: none; }
+.world-board-frame {
+  width: min(780px, 96vw); max-height: 92vh; display: flex; flex-direction: column;
+  background: #b9783f; /* wooden frame */ border-radius: 18px; padding: 12px;
+  box-shadow: 0 22px 60px rgba(0,0,0,0.5); box-sizing: border-box;
 }
-.world-note-actions { display: flex; gap: 8px; margin-top: 10px; }
-#worldNotePin {
-  flex: 1; border: 0; border-radius: 999px; padding: 11px 14px; font-family: inherit; font-weight: 800;
-  font-size: 15px; color: #fff; background: var(--w-accent); cursor: pointer; box-shadow: var(--w-shadow);
+.world-board-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 4px 10px; }
+#worldBoardTitle { font-weight: 800; font-size: 17px; color: #fff; }
+#worldBoardClose {
+  border: 0; background: rgba(255,255,255,0.22); color: #fff; width: 34px; height: 34px;
+  border-radius: 50%; font-size: 16px; cursor: pointer; flex: none;
 }
-#worldNotePin:active { transform: scale(0.96); }
-#worldNoteCancel {
-  border: 0; border-radius: 999px; padding: 11px 16px; font-family: inherit; font-weight: 700;
-  font-size: 14px; color: var(--w-ink); background: rgba(0,0,0,0.08); cursor: pointer;
+#worldBoardGrid {
+  flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 180px; border-radius: 10px; padding: 26px 28px;
+  background-color: #d8b483; /* cork */
+  background-image: radial-gradient(rgba(120,80,40,0.18) 1.5px, transparent 1.5px);
+  background-size: 13px 13px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(138px, 1fr)); gap: 24px 20px; align-content: start;
 }
+.world-sticky {
+  position: relative; padding: 15px 12px 10px; border-radius: 3px; min-height: 96px;
+  box-shadow: 0 5px 12px rgba(0,0,0,0.22); color: #4a3a22; font-size: 14px; line-height: 1.32;
+  word-break: break-word; display: flex; flex-direction: column;
+}
+.world-sticky-pin {
+  position: absolute; top: -6px; left: 50%; transform: translateX(-50%); width: 13px; height: 13px;
+  border-radius: 50%; background: #e5533b; box-shadow: 0 2px 3px rgba(0,0,0,0.35), inset -2px -2px 3px rgba(0,0,0,0.2);
+}
+.world-sticky-text { flex: 1; }
+.world-sticky-by { margin-top: 8px; font-size: 11px; color: rgba(74,58,34,0.72); text-align: right; }
+.world-board-empty { grid-column: 1 / -1; text-align: center; color: #6b543a; font-weight: 600; padding: 44px 12px; }
+.world-board-foot { padding-top: 10px; }
+#worldBoardPager { display: flex; align-items: center; justify-content: center; gap: 12px; color: #fff; font-weight: 700; font-size: 13px; }
+#worldBoardPager:not(:empty) { margin-bottom: 8px; }
+#worldBoardPager button {
+  border: 0; background: rgba(255,255,255,0.22); color: #fff; width: 32px; height: 32px;
+  border-radius: 8px; font-size: 16px; cursor: pointer;
+}
+#worldBoardPager button:disabled { opacity: 0.4; cursor: default; }
+.world-board-write { display: flex; gap: 8px; }
+#worldBoardInput {
+  flex: 1; box-sizing: border-box; border: 0; border-radius: 10px; padding: 11px 14px;
+  font-size: 15px; font-family: inherit; outline: none; color: var(--w-ink); background: #fff8ec;
+}
+#worldBoardAdd {
+  border: 0; border-radius: 10px; padding: 11px 18px; font-family: inherit; font-weight: 800;
+  font-size: 15px; color: #fff; background: var(--w-accent); cursor: pointer; white-space: nowrap;
+}
+#worldBoardAdd:active { transform: scale(0.96); }
+#worldBoardMsg { min-height: 16px; margin-top: 7px; text-align: center; color: #fff2d8; font-size: 12.5px; font-weight: 600; }
 
 /* Slide-in menu (pet / wear) */
 #worldMenu {

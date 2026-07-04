@@ -1,28 +1,31 @@
 /* ════════════════════════════════════════════════════════════════
-   world-notes.js — "leave a trace" pinned notes. Tap 📌, type a short kind line,
-   and it pins a little folded-note card at your pet's feet. It STAYS (unlike a
-   chat bubble), so later visitors discover it hot/cold: the card fades in as you
-   wander near, then blooms open into a readable speech bubble once you're close.
+   world-notes.js — the community NOTES BOARD. Each scene has a physical notice
+   board (drawn here as a scene prop). Walk up to it and open it, and the whole
+   board fills the screen (that UI lives in world-core) showing everyone's notes
+   as sticky notes you can page through, plus a box to add your own and a close
+   button. Notes are NOT drawn on the floor — only on the board.
 
-   Text runs through the SAME moderation as chat (moderateMessage + WORLD_CHAT.banned),
-   so there's no new safety surface. Notes persist per scene-shard in RTDB
-   (world-net getNotes/pinNote, aged out by limitToLast). A pin is added optimistically
-   to a local list first, so it shows instantly and still appears even if the shared
-   write is denied (rule not deployed) — solo/local fallback, exactly like the ball.
-   Pure discovery math (sparkleGlow) is reused from world-logic.
+   This module owns the DATA + the board prop:
+     - list(sceneId): every note for that scene (shared + my optimistic ones),
+       newest first, for the board grid.
+     - pin(text, me): moderate (same rules as chat) + write; returns {ok,reason}.
+     - drawBoard(...): the little notice-board prop in the scene, with a ✍️ hint
+       when the player is near.
+   Notes persist per scene-shard in RTDB (world-net getNotes/pinNote, kept to the
+   last historyLimit). A pin is added optimistically first, so it shows instantly
+   and survives a denied shared write (solo/local fallback, like the ball).
    ════════════════════════════════════════════════════════════════ */
 const WorldNotes = (function () {
   let serverNow = function () { return Date.now(); };
   let getNotes = function () { return []; };
   let pinNoteNet = function () { return false; };
-  let flashHint = function () {};
   let myUid = null;
-  let mine = [];          // optimistic notes I pinned this session: {uid,name,text,x,y,ts,scene}
+  let mine = [];          // optimistic notes I added this session: {uid,name,text,x,y,ts,scene}
   let lastPinAt = 0;
 
   function cfg() {
     return (typeof WORLD_NOTES !== 'undefined') ? WORLD_NOTES
-      : { maxLen: 80, discoverRadius: 0.30, revealRadius: 0.14, historyLimit: 20, cooldownMs: 4000 };
+      : { maxLen: 80, historyLimit: 300, perPage: 8, cooldownMs: 4000, boardRadius: 0.09, boards: {} };
   }
   function bannedList() { return (typeof WORLD_CHAT !== 'undefined' && WORLD_CHAT.banned) || []; }
 
@@ -30,14 +33,13 @@ const WorldNotes = (function () {
     serverNow = opts.serverNow || serverNow;
     getNotes = opts.getNotes || getNotes;
     pinNoteNet = opts.pinNote || pinNoteNet;
-    flashHint = opts.flashHint || flashHint;
     myUid = opts.myUid || null;
   }
 
   function keyOf(n) { return (n.uid || '') + ':' + (n.ts || 0); }
 
-  // Notes to render for the current scene: the shard's shared notes (already this
-  // scene by construction) plus my optimistic ones not yet echoed back, deduped.
+  // Every note for a scene: the shard's shared notes (already this scene by
+  // construction) plus my optimistic ones not yet echoed back, deduped.
   function notesForScene(sceneId) {
     const net = getNotes() || [];
     const seen = {};
@@ -47,21 +49,26 @@ const WorldNotes = (function () {
     return net.concat(localHere);
   }
 
-  // Pin the composer text at the player's current position. Returns true on success.
-  function pin(rawText, me) {
-    const c = cfg();
-    const now = serverNow();
-    if (now - lastPinAt < c.cooldownMs) { flashHint('Give it a moment before pinning again ⏳'); return false; }
-    const mod = moderateMessage(rawText, { maxLen: c.maxLen, banned: bannedList() });
-    if (!mod.ok) { flashHint(mod.reason === 'blocked' ? "Let's keep notes kind 🌸" : 'Write a little something first ✍️'); return false; }
-    lastPinAt = now;
-    mine.push({ uid: myUid, name: (me && me.name) || 'Pet', text: mod.text, x: me.x, y: me.y, ts: now, scene: me.scene });
-    pinNoteNet(mod.text, me.x, me.y); // shared write; silent no-op if denied → the note stays local
-    flashHint('📌 Note pinned! Others will find it here.');
-    return true;
+  // Newest-first list for the board UI.
+  function list(sceneId) {
+    return notesForScene(sceneId).slice().sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
   }
 
-  // ── Draw ──
+  // Moderate + add a note. Returns { ok, note?, reason? } so the board UI can show
+  // inline feedback ('empty' | 'blocked' | 'cooldown').
+  function pin(rawText, me) {
+    const c = cfg(), now = serverNow();
+    if (now - lastPinAt < c.cooldownMs) return { ok: false, reason: 'cooldown' };
+    const mod = moderateMessage(rawText, { maxLen: c.maxLen, banned: bannedList() });
+    if (!mod.ok) return { ok: false, reason: mod.reason }; // 'empty' | 'blocked'
+    lastPinAt = now;
+    const note = { uid: myUid, name: (me && me.name) || 'Pet', text: mod.text, x: me.x, y: me.y, ts: now, scene: me.scene };
+    mine.push(note);
+    pinNoteNet(mod.text, me.x, me.y); // shared write; silent no-op if denied → stays local
+    return { ok: true, note: note };
+  }
+
+  // ── Board prop drawn in the scene ──
   function roundRectPath(ctx, x, y, w, h, r) {
     r = Math.min(r, w / 2, h / 2);
     ctx.beginPath();
@@ -72,72 +79,13 @@ const WorldNotes = (function () {
     ctx.arcTo(x, y, x + w, y, r);
     ctx.closePath();
   }
-  function wrapText(ctx, text, maxW) {
-    const words = String(text).split(' ');
-    const lines = []; let line = '';
-    for (let i = 0; i < words.length; i++) {
-      const test = line ? line + ' ' + words[i] : words[i];
-      if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = words[i]; }
-      else line = test;
-    }
-    if (line) lines.push(line);
-    return lines;
-  }
-
-  // A folded-paper card with a pushpin — the discoverable anchor on the ground.
-  function drawCard(ctx, px, py, ds, alpha) {
-    if (alpha <= 0.01) return;
-    ctx.save();
-    ctx.globalAlpha = Math.min(1, alpha);
-    const w = ds * 18, h = ds * 13, x = px - w / 2, y = py - h - ds * 2;
-    ctx.fillStyle = 'rgba(0,0,0,0.14)';
-    ctx.beginPath(); ctx.ellipse(px, py + ds * 2, w * 0.5, ds * 3, 0, 0, Math.PI * 2); ctx.fill();
-    roundRectPath(ctx, x, y, w, h, ds * 2.5); ctx.fillStyle = '#fff6dd'; ctx.fill();
-    ctx.fillStyle = 'rgba(208,178,118,0.9)';
-    ctx.beginPath(); ctx.moveTo(x + w - ds * 5, y); ctx.lineTo(x + w, y + ds * 5); ctx.lineTo(x + w - ds * 5, y + ds * 5); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = 'rgba(150,120,80,0.35)'; ctx.lineWidth = 1;
-    for (let i = 1; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(x + ds * 3, y + h * i / 3); ctx.lineTo(x + w - ds * 3, y + h * i / 3); ctx.stroke(); }
-    ctx.fillStyle = '#e5533b'; ctx.beginPath(); ctx.arc(px, y, ds * 2.6, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.arc(px - ds * 0.8, y - ds * 0.8, ds * 0.9, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
-  }
-
-  // The message itself, blooming open above the card as you get close. `alpha`
-  // saturates to opaque at a comfortable reading distance (not only dead-centre);
-  // `scale` gives the little bloom-in pop.
-  function drawBubble(ctx, px, py, ds, alpha, scale, text, name) {
-    ctx.save();
-    const fontPx = Math.max(11, Math.round(ds * 13));
-    ctx.font = fontPx + 'px "Noto Sans SC", sans-serif';
-    const maxW = 150;
-    const lines = wrapText(ctx, text, maxW);
-    let tw = 0; for (let i = 0; i < lines.length; i++) tw = Math.max(tw, ctx.measureText(lines[i]).width);
-    const padX = 10, padY = 8, lineH = fontPx * 1.25, nameH = name ? fontPx * 0.95 : 0;
-    const bw = Math.min(maxW, tw) + padX * 2, bh = lines.length * lineH + nameH + padY * 2;
-    const cardTop = py - ds * 15, by = cardTop - bh - ds * 4, bx = px - bw / 2;
-    const sc = scale;
-    ctx.globalAlpha = alpha;
-    ctx.translate(px, by + bh); ctx.scale(sc, sc); ctx.translate(-px, -(by + bh)); // bloom about the tail
-    ctx.shadowColor = 'rgba(0,0,0,0.18)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
-    roundRectPath(ctx, bx, by, bw, bh, 10); ctx.fillStyle = '#fff8e6'; ctx.fill();
-    ctx.shadowColor = 'transparent';
-    ctx.beginPath(); ctx.moveTo(px - 7, by + bh - 1); ctx.lineTo(px + 7, by + bh - 1); ctx.lineTo(px, by + bh + 9); ctx.closePath(); ctx.fillStyle = '#fff8e6'; ctx.fill();
-    ctx.strokeStyle = 'rgba(120,90,40,0.22)'; ctx.lineWidth = 1.5; roundRectPath(ctx, bx, by, bw, bh, 10); ctx.stroke();
-    ctx.fillStyle = '#5b4630'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    ctx.font = fontPx + 'px "Noto Sans SC", sans-serif';
-    let ty = by + padY;
-    for (let i = 0; i < lines.length; i++) { ctx.fillText(lines[i], px, ty); ty += lineH; }
-    if (name) { ctx.fillStyle = 'rgba(120,90,40,0.7)'; ctx.font = ((fontPx * 0.8) | 0) + 'px sans-serif'; ctx.fillText('— ' + name, px, ty + 2); }
-    ctx.restore();
-  }
-
   function boardFor(sceneId) {
     return (typeof WORLD_NOTES !== 'undefined' && WORLD_NOTES.boards) ? (WORLD_NOTES.boards[sceneId] || null) : null;
   }
 
-  // The scene's community notice board (a framed cork board on two posts with a
-  // few pinned sticky-notes). Drawn UNDER the pets so they can stand in front of
-  // it. When the player is near, a ✍️ bobs above it inviting them to write.
+  // The scene's notice board (framed cork board on two posts with pinned
+  // sticky-notes). Drawn UNDER the pets so they can stand in front. When the
+  // player is near, a ✍️ bobs above it inviting them to open it.
   function drawBoard(ctx, W, H, t, sceneId, near) {
     const b = boardFor(sceneId); if (!b) return;
     const px = b.x * W, py = b.y * H, ds = depthScale(b.y);
@@ -153,7 +101,6 @@ const WorldNotes = (function () {
     ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = 'bold ' + Math.max(8, (ds * 8) | 0) + 'px "Noto Sans SC", sans-serif';
     ctx.fillText('📋 NOTES', px, top + ds * 8.4);
-    // sticky notes pinned to the cork
     const stickies = [['#bfe3ff', ds * 6, ds * 17], ['#ffe6a8', ds * 24, ds * 19], ['#ffc9d6', ds * 40, ds * 17]];
     for (let i = 0; i < stickies.length; i++) {
       const s = stickies[i];
@@ -170,24 +117,5 @@ const WorldNotes = (function () {
     ctx.restore();
   }
 
-  function draw(ctx, W, H, t, me, sceneId) {
-    if (!me) return;
-    const c = cfg();
-    const notes = notesForScene(sceneId).slice();
-    // Nearest last so a close bubble draws over farther ones.
-    notes.sort(function (a, b) { return worldDist(b, me) - worldDist(a, me); });
-    for (let i = 0; i < notes.length; i++) {
-      const n = notes[i], dist = worldDist(me, n);
-      const show = sparkleGlow(dist, c.discoverRadius);
-      if (show <= 0) continue;                       // hidden until you wander near
-      const reveal = sparkleGlow(dist, c.revealRadius);
-      const bloom = Math.min(1, reveal * 1.6);       // bloom-in pop
-      const alpha = Math.min(1, reveal * 2.2);       // readable well before dead-centre
-      const px = n.x * W, py = n.y * H, ds = depthScale(n.y);
-      drawCard(ctx, px, py, ds, Math.min(1, show * 1.7) * (1 - 0.5 * bloom)); // bolder pin; recedes as the bubble blooms
-      if (reveal > 0.01) drawBubble(ctx, px, py, ds, alpha, 0.85 + 0.15 * bloom, n.text, n.name);
-    }
-  }
-
-  return { init, pin, draw, drawBoard };
+  return { init, pin, list, drawBoard };
 })();

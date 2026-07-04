@@ -155,12 +155,11 @@ const WORLD_BALLS = {
 // still shows locally (solo fallback). `boards` is the board spot per scene and
 // `boardRadius` is how near you must be to write.
 const WORLD_NOTES = {
-  maxLen: 80,             // a pinned line is shorter than a chat message
-  discoverRadius: 0.30,   // the folded-note card starts fading in within this range
-  revealRadius: 0.16,     // the message blooms open within this range (saturates to opaque well before the centre)
-  historyLimit: 20,       // RTDB limitToLast(N) — old notes gently age out
-  cooldownMs: 4000,       // min gap between one player's pins (anti-spam)
-  boardRadius: 0.09,      // must be right up at the board to write / be prompted (small on purpose)
+  maxLen: 80,             // a sticky note is short
+  historyLimit: 300,      // RTDB limitToLast(N) — effectively "unlimited" for this scale
+  perPage: 8,             // sticky notes shown per board page; the rest paginate
+  cooldownMs: 4000,       // min gap between one player's notes (anti-spam)
+  boardRadius: 0.09,      // must be right up at the board to open it (small on purpose)
   boards: {               // the notice-board spot in each scene (normalized, inside bounds)
     pool:      { x: 0.20, y: 0.62 },
     egypt:     { x: 0.17, y: 0.66 },

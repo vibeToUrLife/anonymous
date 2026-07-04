@@ -7,7 +7,7 @@
   <script src="../../src/js/maintenance.js"></script>
   <script>if(localStorage.getItem('access_code_verified')!=='true'){document.documentElement.style.display='none';window.location.replace('../../index.html');}</script>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/world.css?v=w8" />
+  <link rel="stylesheet" href="css/world.css?v=w9" />
 
   <!-- Firebase (compat 10.12.0) — same versions as room.html, plus Realtime Database for live sync -->
   <script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -31,7 +31,7 @@
 
   <!-- World modules (core LAST so every dependency is defined) -->
   <script defer src="js/world-pet-data.js?v=w2"></script>
-  <script defer src="js/world-config.js?v=w12"></script>
+  <script defer src="js/world-config.js?v=w13"></script>
   <script defer src="js/world-logic.js?v=w6"></script>
   <script defer src="js/world-moderation.js?v=w2"></script>
   <script defer src="js/world-actions.js?v=w3"></script>
@@ -44,13 +44,13 @@
   <script defer src="js/world-critters.js?v=w2"></script>
   <script defer src="js/world-sky.js?v=w1"></script>
   <script defer src="js/world-fireflies.js?v=w1"></script>
-  <script defer src="js/world-notes.js?v=w2"></script>
+  <script defer src="js/world-notes.js?v=w3"></script>
   <script defer src="js/world-chat.js?v=w4"></script>
   <script defer src="js/world-outfit.js?v=w4"></script>
   <script defer src="js/world-scene-pool.js?v=w2"></script>
   <script defer src="js/world-scene-egypt.js?v=w2"></script>
   <script defer src="js/world-scene-grassland.js?v=w2"></script>
-  <script defer src="js/world-core.js?v=w15"></script>
+  <script defer src="js/world-core.js?v=w16"></script>
 </head>
 <body>
   <div id="worldStage">
@@ -75,14 +75,23 @@
   <div id="worldJoystick"></div>
   <div id="worldActionBtns"></div>
   <button id="worldHighfiveBack" hidden>✋ High-five back!</button>
-  <button id="worldNotePrompt" hidden>✍️ Write a note<span class="world-note-key">Enter</span></button>
+  <button id="worldNotePrompt" hidden>📋 Open board<span class="world-note-key">Enter</span></button>
 
-  <div id="worldNoteComposer" hidden>
-    <div class="world-note-title">📋 Leave a note on the board</div>
-    <input id="worldNoteInput" maxlength="80" autocomplete="off" placeholder="A kind word for the next visitor… 🌸" />
-    <div class="world-note-actions">
-      <button id="worldNotePin">📌 Pin it</button>
-      <button id="worldNoteCancel">Cancel</button>
+  <div id="worldBoardModal" hidden>
+    <div class="world-board-frame">
+      <div class="world-board-head">
+        <span id="worldBoardTitle">📋 Notes Board</span>
+        <button id="worldBoardClose" aria-label="Close board">✕</button>
+      </div>
+      <div id="worldBoardGrid"></div>
+      <div class="world-board-foot">
+        <div id="worldBoardPager"></div>
+        <div class="world-board-write">
+          <input id="worldBoardInput" maxlength="80" autocomplete="off" placeholder="Write a note for the board… 🌸" />
+          <button id="worldBoardAdd">📌 Pin</button>
+        </div>
+        <div id="worldBoardMsg"></div>
+      </div>
     </div>
   </div>
 

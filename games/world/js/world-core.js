@@ -212,32 +212,77 @@
     else if (intent.kind === 'play') offerHighfive();
   }
 
-  // ── Notice board: walk up to write a note ──
+  // ── Notice board: walk up to it, then open the full-screen board ──
   function currentBoard() { return (WORLD_NOTES.boards && WORLD_NOTES.boards[me.scene]) || null; }
   function nearBoard() { const b = currentBoard(); return !!b && worldDist(me, b) <= WORLD_NOTES.boardRadius; }
-  function noteComposerOpen() { const box = el('worldNoteComposer'); return !!box && !box.hidden; }
-  // The "✍️ Write a note" prompt (tappable on mobile; Enter on desktop) is shown
-  // only while standing at the board and not already composing.
+  function boardOpen() { const m = el('worldBoardModal'); return !!m && !m.hidden; }
+  // The "📋 Open board" prompt (tappable on mobile; Enter on desktop) is shown
+  // only while standing at the board and not already viewing it.
   function setNotePrompt(show) { const p = el('worldNotePrompt'); if (p) p.hidden = !show; }
 
-  // A tiny overlay to type a note; pinning drops it at the pet's current spot
-  // (right by the board). Only opens while the player is at a board.
-  function openNoteComposer() {
-    if (!nearBoard()) return;
-    const box = el('worldNoteComposer'), inp = el('worldNoteInput');
-    if (!box || !inp) return;
-    setNotePrompt(false);
-    box.hidden = false; box.classList.add('open');
-    inp.value = ''; setTimeout(function () { inp.focus(); }, 0);
+  let boardPage = 0, boardMsgT = null;
+  function showBoardMsg(msg) {
+    const m = el('worldBoardMsg'); if (!m) return;
+    m.textContent = msg || ''; clearTimeout(boardMsgT);
+    if (msg) boardMsgT = setTimeout(function () { m.textContent = ''; }, 2200);
   }
-  function closeNoteComposer() {
-    const box = el('worldNoteComposer'), inp = el('worldNoteInput');
-    if (box) { box.hidden = true; box.classList.remove('open'); }
-    if (inp) inp.blur();
+
+  // Rebuild the sticky-note grid + pager for the current scene's board.
+  function renderBoard() {
+    const grid = el('worldBoardGrid'); if (!grid) return;
+    const title = el('worldBoardTitle');
+    if (title) title.textContent = '📋 ' + sceneObj.emoji + ' ' + sceneObj.name + ' — Notes';
+    const notes = WorldNotes.list(me.scene);
+    const per = WORLD_NOTES.perPage || 8;
+    const pages = Math.max(1, Math.ceil(notes.length / per));
+    boardPage = Math.max(0, Math.min(boardPage, pages - 1));
+    const start = boardPage * per, slice = notes.slice(start, start + per);
+    const colors = ['#bfe3ff', '#ffe6a8', '#ffc9d6', '#c9f0d0', '#e6d4ff', '#ffd9b3'];
+    if (!slice.length) {
+      grid.innerHTML = '<div class="world-board-empty">No notes yet — be the first to leave one! 🌸</div>';
+    } else {
+      grid.innerHTML = slice.map(function (n, i) {
+        const c = colors[(start + i) % colors.length];
+        // Seeded per-note so each sticky sits at a casual random tilt + offset
+        // (a messy corkboard, not a tidy grid) yet never jumps on re-render.
+        const seed = worldStrHash((n.uid || '') + ':' + (n.ts || 0));
+        const rot = (seed % 23) - 11;         // -11..11°
+        const tx = ((seed >> 4) % 25) - 12;   // -12..12px
+        const ty = ((seed >> 9) % 21) - 10;   // -10..10px
+        return '<div class="world-sticky" style="background:' + c + ';transform:translate(' + tx + 'px,' + ty + 'px) rotate(' + rot + 'deg)">' +
+          '<span class="world-sticky-pin"></span>' +
+          '<div class="world-sticky-text">' + esc(n.text || '') + '</div>' +
+          '<div class="world-sticky-by">— ' + esc(n.name || 'Pet') + '</div></div>';
+      }).join('');
+    }
+    const pager = el('worldBoardPager');
+    if (pager) {
+      if (pages <= 1) pager.innerHTML = '';
+      else {
+        pager.innerHTML = '<button id="wbPrev"' + (boardPage === 0 ? ' disabled' : '') + '>‹</button>' +
+          '<span>Page ' + (boardPage + 1) + ' / ' + pages + '</span>' +
+          '<button id="wbNext"' + (boardPage >= pages - 1 ? ' disabled' : '') + '>›</button>';
+        const prev = el('wbPrev'), next = el('wbNext');
+        if (prev) prev.onclick = function () { boardPage--; renderBoard(); };
+        if (next) next.onclick = function () { boardPage++; renderBoard(); };
+      }
+    }
   }
-  function submitNote() {
-    const inp = el('worldNoteInput'); if (!inp) return;
-    if (WorldNotes.pin(inp.value, me)) closeNoteComposer();
+
+  function openBoard() {
+    if (!nearBoard() || boardOpen()) return;
+    setNotePrompt(false); boardPage = 0; showBoardMsg(''); renderBoard();
+    const m = el('worldBoardModal'); if (m) { m.hidden = false; m.classList.add('open'); }
+  }
+  function closeBoard() {
+    const m = el('worldBoardModal'); if (m) { m.hidden = true; m.classList.remove('open'); }
+    const inp = el('worldBoardInput'); if (inp) inp.blur();
+  }
+  function addFromBoard() {
+    const inp = el('worldBoardInput'); if (!inp) return;
+    const res = WorldNotes.pin(inp.value, me);
+    if (res.ok) { inp.value = ''; boardPage = 0; renderBoard(); showBoardMsg('📌 Pinned to the board!'); }
+    else showBoardMsg(res.reason === 'blocked' ? "Let's keep it kind 🌸" : res.reason === 'cooldown' ? 'Give it a moment ⏳' : 'Write something first ✍️');
   }
 
   // ── Remote tag menu: play / report / block ──
@@ -281,7 +326,7 @@
     WorldReactive.reset();                          // marks/props don't carry across scenes
     WorldBall.reset(); WorldCritters.reset();       // ball + critters are per-scene
     WorldFireflies.reset();                         // fireflies re-seed per scene
-    setNotePrompt(false); closeNoteComposer();      // the board prompt is per-scene
+    setNotePrompt(false); closeBoard();             // the board is per-scene
     WorldActors.clearTags();
     WorldNet.switchScene(s.id, me);
     WorldInput.buildActionButtons(el('worldActionBtns'), s.id);
@@ -428,9 +473,11 @@
     let dt = (t - lastT) / 1000; if (dt > 0.05) dt = 0.05; if (dt < 0) dt = 0; lastT = t;
     const sky = WorldSky.state(); // time-of-day tint (pure from the shared clock); drives fireflies too
 
-    // Local movement — frozen while a scene-transition wipe plays.
+    // Local movement — frozen while a transition wipe plays or the board is open.
     if (trans) {
       advanceTransition(t);
+      me.moving = false;
+    } else if (boardOpen()) {
       me.moving = false;
     } else {
       const vec = WorldInput.getMoveVector();
@@ -461,7 +508,7 @@
     WorldCritters.update(dt, me, remotes, me.scene);    // fish/lizards/butterflies flee passing pets
     WorldFireflies.update(dt, me, remotes, sky.star, t); // at dusk/night, gather around a still pet
     const atBoard = nearBoard();                        // standing at the notice board?
-    setNotePrompt(atBoard && !noteComposerOpen());      // show/hide the ✍️ write prompt
+    setNotePrompt(atBoard && !boardOpen());             // show/hide the "open board" prompt
 
     WorldNet.writeState(me); // throttled + delta-gated inside
 
@@ -478,7 +525,6 @@
     WorldActors.render(ctx, size.w, size.h, t, me, remotes, sceneObj);
     WorldFireflies.draw(ctx, size.w, size.h, t, sky.star); // glowing fireflies over the pets at night
     WorldSky.drawWash(ctx, size.w, size.h, sky);          // subtle warm glow over everything at golden hour
-    WorldNotes.draw(ctx, size.w, size.h, t, me, me.scene); // pinned notes: cards hot/cold, bloom when near
     WorldSparkles.draw(ctx, size.w, size.h, t / 1000, me, me.scene); // hidden-until-near sparkles (t in seconds for twinkle)
     drawHighfives(t, size.w, size.h); // matched-pair celebrations on top of the actors
     drawEdgeArrows(ctx, size.w, size.h, t); // faint ‹ › cues marking edges that cross to another scene
@@ -546,18 +592,21 @@
   el('worldWearBtn') && el('worldWearBtn').addEventListener('click', () => toggleMenu('wear'));
   el('worldMenuClose') && el('worldMenuClose').addEventListener('click', () => { const m = el('worldMenu'); if (m) m.classList.remove('open'); });
   hfBackBtn && hfBackBtn.addEventListener('click', e => { e.preventDefault(); offerHighfive(); });
-  // Notice-board note composer wiring
-  el('worldNotePrompt') && el('worldNotePrompt').addEventListener('click', e => { e.preventDefault(); openNoteComposer(); });
-  el('worldNotePin') && el('worldNotePin').addEventListener('click', e => { e.preventDefault(); submitNote(); });
-  el('worldNoteCancel') && el('worldNoteCancel').addEventListener('click', e => { e.preventDefault(); closeNoteComposer(); });
-  el('worldNoteInput') && el('worldNoteInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); submitNote(); }
-    else if (e.key === 'Escape') { e.preventDefault(); closeNoteComposer(); }
+  // Notice-board wiring
+  el('worldNotePrompt') && el('worldNotePrompt').addEventListener('click', e => { e.preventDefault(); openBoard(); });
+  el('worldBoardClose') && el('worldBoardClose').addEventListener('click', e => { e.preventDefault(); closeBoard(); });
+  el('worldBoardAdd') && el('worldBoardAdd').addEventListener('click', e => { e.preventDefault(); addFromBoard(); });
+  el('worldBoardInput') && el('worldBoardInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); addFromBoard(); }
+    else if (e.key === 'Escape') { e.preventDefault(); closeBoard(); }
   });
-  // Desktop: Enter at the board opens the composer (mobile taps the ✍️ prompt).
+  // Tap the dimmed backdrop (outside the board frame) to close.
+  el('worldBoardModal') && el('worldBoardModal').addEventListener('click', e => { if (e.target === el('worldBoardModal')) closeBoard(); });
+  // Desktop: Enter at the board opens it (mobile taps the 📋 prompt); Esc closes.
   window.addEventListener('keydown', e => {
-    if (e.key !== 'Enter' || e.repeat || WorldInput.isTyping()) return;
-    if (nearBoard()) { e.preventDefault(); openNoteComposer(); }
+    if (e.repeat || WorldInput.isTyping()) return;
+    if (e.key === 'Enter' && !boardOpen() && nearBoard()) { e.preventDefault(); openBoard(); }
+    else if (e.key === 'Escape' && boardOpen()) { e.preventDefault(); closeBoard(); }
   });
   // Post THIS world (current scene) to the bubble board so others can join. Uses
   // the world's own Firestore instance; the scene link drops joiners in the same
