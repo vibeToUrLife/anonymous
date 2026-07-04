@@ -14,14 +14,30 @@
    Notes persist per scene-shard in RTDB (world-net getNotes/pinNote, kept to the
    last historyLimit). A pin is added optimistically first, so it shows instantly
    and survives a denied shared write (solo/local fallback, like the ball).
+   My own notes are ALSO mirrored to localStorage so they survive a page reload
+   even when the shared write never lands (rules not deployed / offline / solo).
+   Once the shared DB echoes a note back, its local copy is pruned — so the DB
+   stays the source of truth and moderation/eviction still win.
    ════════════════════════════════════════════════════════════════ */
 const WorldNotes = (function () {
+  const STORE_KEY = 'world_notes_mine';
   let serverNow = function () { return Date.now(); };
   let getNotes = function () { return []; };
   let pinNoteNet = function () { return false; };
   let myUid = null;
-  let mine = [];          // optimistic notes I added this session: {uid,name,text,x,y,ts,scene}
+  let mine = [];          // my optimistic notes not yet echoed by the DB: {uid,name,text,x,y,ts,scene}
   let lastPinAt = 0;
+
+  // Persist / restore my own not-yet-confirmed notes so they outlive a reload.
+  function loadMine() {
+    try {
+      const arr = JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
+      return Array.isArray(arr) ? arr.filter(function (n) { return n && n.text; }) : [];
+    } catch (e) { return []; }
+  }
+  function saveMine() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(mine)); } catch (e) {}
+  }
 
   function cfg() {
     return (typeof WORLD_NOTES !== 'undefined') ? WORLD_NOTES
@@ -34,6 +50,7 @@ const WorldNotes = (function () {
     getNotes = opts.getNotes || getNotes;
     pinNoteNet = opts.pinNote || pinNoteNet;
     myUid = opts.myUid || null;
+    mine = loadMine();      // rehydrate my notes from a previous session
   }
 
   function keyOf(n) { return (n.uid || '') + ':' + (n.ts || 0); }
@@ -44,7 +61,9 @@ const WorldNotes = (function () {
     const net = getNotes() || [];
     const seen = {};
     net.forEach(function (n) { if (n) seen[keyOf(n)] = true; });
+    const before = mine.length;
     mine = mine.filter(function (n) { return !seen[keyOf(n)]; }); // drop optimistic once shared echoes it
+    if (mine.length !== before) saveMine();                       // ...and forget the persisted copy too
     const localHere = mine.filter(function (n) { return n.scene === sceneId; });
     return net.concat(localHere);
   }
@@ -64,6 +83,7 @@ const WorldNotes = (function () {
     lastPinAt = now;
     const note = { uid: myUid, name: (me && me.name) || 'Pet', text: mod.text, x: me.x, y: me.y, ts: now, scene: me.scene };
     mine.push(note);
+    saveMine();             // survive a reload even if the shared write below never lands
     // Pass `now` so the shared write carries the SAME ts as this optimistic note;
     // keyOf() dedups on uid:ts, so the RTDB echo collapses onto this one (no double).
     pinNoteNet(mod.text, me.x, me.y, now); // shared write; silent no-op if denied → stays local
