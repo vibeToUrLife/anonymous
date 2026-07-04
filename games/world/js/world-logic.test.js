@@ -167,3 +167,80 @@ test('sparkleGlow ramps from 0 at the reveal edge to 1 at the spot', () => {
   assert.equal(L.sparkleGlow(0, 0.22), 1);      // on the spot → full glow
   assert.ok(L.sparkleGlow(0.05, 0.22) > L.sparkleGlow(0.15, 0.22)); // closer → brighter
 });
+
+// ── Shared kickable ball ──
+test('reflectRange leaves in-range values untouched', () => {
+  assert.equal(L.reflectRange(0.5, 0.1, 0.9), 0.5);
+  assert.equal(L.reflectRange(0.1, 0.1, 0.9), 0.1); // on the edges
+  assert.equal(L.reflectRange(0.9, 0.1, 0.9), 0.9);
+});
+
+test('reflectRange mirrors a single overshoot back into range', () => {
+  // 0.05 past the far wall (0.9) reflects to 0.05 short of it.
+  assert.ok(Math.abs(L.reflectRange(0.95, 0.1, 0.9) - 0.85) < 1e-9);
+  // 0.05 past the near wall (0.1) reflects inward.
+  assert.ok(Math.abs(L.reflectRange(0.05, 0.1, 0.9) - 0.15) < 1e-9);
+});
+
+test('reflectRange folds many reflections and stays inside', () => {
+  for (let p = -3; p <= 3; p += 0.137) {
+    const r = L.reflectRange(p, 0.1, 0.9);
+    assert.ok(r >= 0.1 - 1e-9 && r <= 0.9 + 1e-9, 'folded value stays in range');
+  }
+  assert.equal(L.reflectRange(5, 0.3, 0.3), 0.3); // degenerate zero span
+});
+
+const BB = { minX: 0.1, minY: 0.5, maxX: 0.9, maxY: 0.95 };
+
+test('ballState returns null with no snapshot (caller uses home)', () => {
+  assert.equal(L.ballState(null, 1000, BB, 2.6, 0.02), null);
+  assert.equal(L.ballState({ s0: 1 }, 1000, BB, 2.6, 0.02), null); // missing x0/y0
+});
+
+test('ballState at t=0 sits exactly at the start point, full speed', () => {
+  const snap = { x0: 0.5, y0: 0.7, dx: 1, dy: 0, s0: 0.9, ts: 1000 };
+  const s = L.ballState(snap, 1000, BB, 2.6, 0.02);
+  assert.ok(Math.abs(s.x - 0.5) < 1e-9 && Math.abs(s.y - 0.7) < 1e-9);
+  assert.ok(Math.abs(s.speed - 0.9) < 1e-9);
+  assert.equal(s.resting, false);
+});
+
+test('ballState travels forward then slows to rest, deterministically', () => {
+  const snap = { x0: 0.3, y0: 0.7, dx: 1, dy: 0, s0: 0.9, ts: 0 };
+  const early = L.ballState(snap, 200, BB, 2.6, 0.02);
+  const later = L.ballState(snap, 1200, BB, 2.6, 0.02);
+  assert.ok(later.dist > early.dist, 'keeps moving forward');
+  assert.ok(later.speed < early.speed, 'slows down');
+  // Same inputs → identical output on every client.
+  assert.deepEqual(L.ballState(snap, 1200, BB, 2.6, 0.02), later);
+});
+
+test('ballState converges to a fixed resting spot (dist → s0/k, folded)', () => {
+  const snap = { x0: 0.3, y0: 0.7, dx: 1, dy: 0, s0: 0.9, ts: 0 };
+  const far = L.ballState(snap, 100000, BB, 2.6, 0.02);
+  const rest = L.reflectRange(0.3 + 0.9 / 2.6, BB.minX, BB.maxX);
+  assert.ok(far.resting, 'has come to rest');
+  assert.ok(Math.abs(far.x - rest) < 1e-6, 'rests at the folded asymptote');
+  assert.ok(far.x >= BB.minX && far.x <= BB.maxX, 'stays inside bounds');
+});
+
+test('ballState clamps a future/skewed timestamp to t=0', () => {
+  const snap = { x0: 0.5, y0: 0.7, dx: 1, dy: 0, s0: 0.9, ts: 2000 };
+  const s = L.ballState(snap, 1000, BB, 2.6, 0.02); // nowMs before ts
+  assert.ok(Math.abs(s.dist) < 1e-12 && Math.abs(s.x - 0.5) < 1e-9);
+});
+
+test('ballKick pushes the ball directly away from the pet (unit dir)', () => {
+  const k = L.ballKick(0.7, 0.7, 0.6, 0.7, 0.9, 1, 5000); // pet to the left
+  assert.ok(Math.abs(Math.hypot(k.dx, k.dy) - 1) < 1e-9, 'unit direction');
+  assert.ok(k.dx > 0, 'ball goes right, away from the pet');
+  assert.equal(k.s0, 0.9); assert.equal(k.ts, 5000);
+  assert.equal(k.x0, 0.7); assert.equal(k.y0, 0.7);
+});
+
+test('ballKick falls back to facing when pet sits on the ball', () => {
+  const kr = L.ballKick(0.5, 0.7, 0.5, 0.7, 0.9, 1, 0);
+  assert.deepEqual([kr.dx, kr.dy], [1, 0]);
+  const kl = L.ballKick(0.5, 0.7, 0.5, 0.7, 0.9, -1, 0);
+  assert.deepEqual([kl.dx, kl.dy], [-1, 0]);
+});

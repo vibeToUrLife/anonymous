@@ -247,6 +247,7 @@
     me.x = s.spawn.x; me.y = s.spawn.y; me.action = null;
     hfBursts.length = 0; setHighfiveBackBtn(false); // celebrations/prompts don't cross scenes
     WorldReactive.reset();                          // marks/props don't carry across scenes
+    WorldBall.reset(); WorldCritters.reset();       // ball + critters are per-scene
     WorldActors.clearTags();
     WorldNet.switchScene(s.id, me);
     WorldInput.buildActionButtons(el('worldActionBtns'), s.id);
@@ -349,6 +350,8 @@
     updateHighfives(t, remotes); // detect mutual offers + prompt nearby invitations
     WorldSparkles.update(me);    // collect any hidden sparkle walked onto
     WorldReactive.update(t, dt, me, remotes, me.scene); // scene reacts to pets that move/touch
+    WorldBall.update(t, dt, me, remotes, me.scene);     // kick the shared pool ball on contact
+    WorldCritters.update(dt, me, remotes, me.scene);    // fish/lizards/butterflies flee passing pets
 
     WorldNet.writeState(me); // throttled + delta-gated inside
 
@@ -358,6 +361,8 @@
     if (drawFn) { try { drawFn(ctx, size.w, size.h, t / 1000); } catch (e) { fallbackBg(size.w, size.h); } }
     else fallbackBg(size.w, size.h);
     WorldReactive.draw(ctx, size.w, size.h, t, me.scene); // contact marks + props, under the pets
+    WorldBall.draw(ctx, size.w, size.h, t, me.scene);     // shared kickable ball, under the pets
+    WorldCritters.draw(ctx, size.w, size.h, t, me.scene); // ambient critters, under the pets
     WorldActors.render(ctx, size.w, size.h, t, me, remotes, sceneObj);
     WorldSparkles.draw(ctx, size.w, size.h, t / 1000, me, me.scene); // hidden-until-near sparkles (t in seconds for twinkle)
     drawHighfives(t, size.w, size.h); // matched-pair celebrations on top of the actors
@@ -373,6 +378,7 @@
 
     // Subsystems
     WorldNet.init({ db: wDb, uid: uid, getName: () => me.name, onRemotes: function () {}, onChat: function (list) { WorldChat.receive(list); }, onDiag: onDiag });
+    WorldBall.init({ serverNow: WorldNet.serverNow, getBall: WorldNet.getBall, kickBall: WorldNet.kickBall });
     WorldActors.init({ tagLayer: tagLayer, onTagClick: openTagMenu, getBubble: function (u) { return WorldChat.getBubble(u); } });
     WorldChat.init({ inputEl: el('worldChatInput'), logEl: el('worldChatLog'), hintEl: el('worldChatHint'), sendBtn: el('worldChatSend'), onSend: function (text) { WorldNet.sendChat(text); }, myUid: uid, chatEl: el('worldChat'), toggleEl: el('worldChatToggle'), labelEl: el('worldChatToggleLabel'), unreadEl: el('worldChatUnread') });
     WorldOutfit.init({ db: wDb, uid: uid, panelEl: el('worldWardrobe'), onChange: onOutfitChange });

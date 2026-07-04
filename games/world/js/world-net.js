@@ -16,6 +16,7 @@ const WorldNet = (function () {
   let rtdb = null, db = null, uid = null;
   let scene = 'pool', shard = 0;
   let playersRef = null, chatRef = null, playersCb = null, chatCb = null, myRef = null;
+  let ballRef = null, ballCb = null, ballSnap = null;   // shared kickable ball (this shard)
   let lastSent = null;
   let heartbeat = null;
   const remotes = {};           // uid → { name,pet,color,outfit,x,y,targetX,targetY,facing,action,actionTs,ts }
@@ -115,6 +116,11 @@ const WorldNet = (function () {
     chatRef = base().child('chat').limitToLast(WORLD_CHAT.historyLimit);
     chatCb = chatRef.on('value', s => handleChat(s.val() || {}));
 
+    // Shared kickable ball for this shard (world-ball.js reads/writes the snapshot).
+    ballSnap = null;
+    ballRef = base().child('ball');
+    ballCb = ballRef.on('value', s => { ballSnap = s.val() || null; }, () => {});
+
     clearInterval(heartbeat);
     heartbeat = setInterval(() => {
       // Keep our node fresh while idle so others' TTL doesn't despawn us.
@@ -163,12 +169,29 @@ const WorldNet = (function () {
 
   function getRemotes() { return remotes; }
 
+  // ── Shared kickable ball ──
+  // The latest kick snapshot for this shard (or null). world-ball.js turns it
+  // into a live position via world-logic.ballState.
+  function getBall() { return ballSnap; }
+  // Publish a new kick snapshot. One tiny write per kick; every client's ball
+  // listener picks it up and renders the same trajectory. No-ops when offline
+  // (the ball then just rolls locally on the kicker's screen).
+  function kickBall(snap) {
+    if (!rtdb || !uid || !myRef) return;
+    // .set() rejects ASYNChronously on permission-denied (e.g. the ball rule not
+    // yet deployed); the .catch keeps that a silent no-op like every other write
+    // here, so the ball just rolls locally instead of logging on every kick.
+    try { base().child('ball').set(snap).catch(() => {}); } catch (e) {}
+  }
+
   function leave() {
     clearInterval(heartbeat); heartbeat = null;
     try { if (playersRef && playersCb) playersRef.off('value', playersCb); } catch (e) {}
     try { if (chatRef && chatCb) chatRef.off('value', chatCb); } catch (e) {}
+    try { if (ballRef && ballCb) ballRef.off('value', ballCb); } catch (e) {}
     try { if (myRef) { myRef.onDisconnect().cancel(); myRef.remove(); } } catch (e) {}
     playersRef = chatRef = playersCb = chatCb = myRef = null;
+    ballRef = ballCb = null; ballSnap = null;
     Object.keys(remotes).forEach(k => delete remotes[k]);
   }
 
@@ -194,5 +217,5 @@ const WorldNet = (function () {
     return { online: !!rtdb };
   }
 
-  return { init, join, leave, switchScene, writeState, forceUpdate, sendChat, reportUser, getRemotes, serverNow: nowMs };
+  return { init, join, leave, switchScene, writeState, forceUpdate, sendChat, reportUser, getRemotes, getBall, kickBall, serverNow: nowMs };
 })();

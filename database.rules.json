@@ -34,6 +34,10 @@
               "$msg": {
                 ".write": "auth != null && newData.hasChildren(['uid','text','ts']) && newData.child('uid').val() == auth.uid && newData.child('text').isString() && newData.child('text').val().length <= 100"
               }
+            },
+
+            "ball": {
+              ".write": "auth != null && newData.hasChildren(['x0','y0','dx','dy','s0','ts']) && newData.child('x0').isNumber() && newData.child('x0').val() >= 0 && newData.child('x0').val() <= 1 && newData.child('y0').isNumber() && newData.child('y0').val() >= 0 && newData.child('y0').val() <= 1 && newData.child('dx').isNumber() && newData.child('dx').val() >= -1 && newData.child('dx').val() <= 1 && newData.child('dy').isNumber() && newData.child('dy').val() >= -1 && newData.child('dy').val() <= 1 && newData.child('s0').isNumber() && newData.child('s0').val() >= 0 && newData.child('s0').val() <= 5 && newData.child('ts').isNumber()"
             }
           }
         }

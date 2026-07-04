@@ -85,16 +85,59 @@ const WORLD_SPARKLES = { perScene: 3, collectRadius: 0.055, revealRadius: 0.22, 
 
 // ── Reactive scenes ─────────────────────────────────────────────────
 // The world reacts to pets as they MOVE (no buttons): ambient contact marks
-// under every pet + one signature prop per scene that bumps and springs back
-// when a pet walks into it. `contact` is the touch radius (normalized); props
-// are drawn/animated by world-reactive.js from the already-synced positions.
+// under every pet + props that respond when a pet walks into them. `contact` is
+// the touch radius (normalized). Each prop has a `react` style:
+//   bump  — springs away in the push direction, then settles (palm/bush/…)
+//   sink  — presses down while a pet stands on it, ripples (lily pads)
+//   bloom — opens/scales up while a pet is near, then closes (flowers)
+// Everything is drawn/animated by world-reactive.js from the already-synced
+// positions, so every client renders identical reactions with zero networking.
+// `critters` are ambient creatures that flee an approaching pet and drift back
+// (world-critters.js) — also purely local from the synced pet positions.
 const WORLD_REACTIVE = {
   contact: 0.07,
   props: {
-    pool:      { type: 'ball', x: 0.70, y: 0.72 },
-    egypt:     { type: 'palm', x: 0.80, y: 0.66 },
-    grassland: { type: 'bush', x: 0.30, y: 0.72 },
+    pool: [
+      { type: 'floatie',  react: 'bump',  x: 0.20, y: 0.64 },
+      { type: 'lilypad',  react: 'sink',  x: 0.45, y: 0.82 },
+      { type: 'lilypad',  react: 'sink',  x: 0.80, y: 0.86 },
+    ],
+    egypt: [
+      { type: 'palm',     react: 'bump',  x: 0.80, y: 0.66 },
+      { type: 'cactus',   react: 'bump',  x: 0.18, y: 0.72 },
+    ],
+    grassland: [
+      { type: 'bush',     react: 'bump',  x: 0.30, y: 0.72 },
+      { type: 'mushroom', react: 'bump',  x: 0.70, y: 0.66 },
+      { type: 'flower',   react: 'bloom', x: 0.52, y: 0.84 },
+      { type: 'flower',   react: 'bloom', x: 0.14, y: 0.86 },
+    ],
   },
+  critters: {
+    pool:      { type: 'fish',      count: 4, fleeRadius: 0.16, margin: 0.08 },
+    egypt:     { type: 'lizard',    count: 3, fleeRadius: 0.15, margin: 0.08 },
+    grassland: { type: 'butterfly', count: 5, fleeRadius: 0.18, margin: 0.08 },
+  },
+};
+
+// ── Shared kickable ball (the pool's toy) ───────────────────────────
+// One ball, shared by everyone in a pool shard. It is NOT synced per-frame:
+// each kick writes a single snapshot (start pos, unit direction, speed, server
+// ts) to world/scenes/pool/{shard}/ball, and every client renders the ball as a
+// deterministic function of that snapshot + the server clock (world-logic
+// ballState), so all screens agree and settle on the same spot. A pet kicks by
+// walking into a resting ball (mobile-first: no button). `friction` is the
+// exponential decay k; total roll distance ≈ kickSpeed / friction. If RTDB is
+// unavailable the ball still rolls locally (solo fallback).
+const WORLD_BALL = {
+  scene: 'pool',
+  home: { x: 0.70, y: 0.72 },
+  contact: 0.06,     // touch radius to trigger a kick
+  kickSpeed: 0.95,   // initial speed (normalized units/sec)
+  friction: 2.6,     // exponential decay; roll distance ≈ kickSpeed/friction ≈ 0.37
+  restEps: 0.03,     // speed below which the ball is "at rest" and re-kickable
+  cooldownMs: 220,   // min gap between one player's kicks (dedupe double-writes)
+  radius: 0.028,     // visual radius (normalized) at depth 1
 };
 
 // ── Chat ──────────────────────────────────────────────────────────
@@ -140,6 +183,6 @@ const WORLD_ACTION_KEYS = {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     WORLD_SYNC, WORLD_SHARD_CAP, WORLD_SCENES, worldSceneById, WORLD_EMOTES,
-    PET_SIGNATURE, signatureFor, WORLD_PLAY_RADIUS, WORLD_HIGHFIVE, WORLD_SPARKLES, WORLD_REACTIVE, WORLD_CHAT, WORLD_KEYS, WORLD_ACTION_KEYS,
+    PET_SIGNATURE, signatureFor, WORLD_PLAY_RADIUS, WORLD_HIGHFIVE, WORLD_SPARKLES, WORLD_REACTIVE, WORLD_BALL, WORLD_CHAT, WORLD_KEYS, WORLD_ACTION_KEYS,
   };
 }

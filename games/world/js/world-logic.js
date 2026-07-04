@@ -157,11 +157,64 @@ function sparkleGlow(dist, revealRadius) {
   return 1 - dist / revealRadius;
 }
 
+// ── Shared kickable ball: deterministic physics ─────────────────────
+// The pool ball is a shared toy. Rather than sync its position every frame, we
+// sync ONE snapshot per kick — { x0,y0 (start), dx,dy (unit dir), s0 (start
+// speed), ts (server ms) } — and every client renders the ball as a PURE
+// function of that snapshot and the server-aligned clock. So all screens agree
+// and converge to the exact same resting spot with a single write per kick.
+
+// Fold a coordinate into [min,max] by mirror reflection (a 1-D billiard bounce).
+// For an axis-aligned rectangle, folding x and y independently is the EXACT
+// unfolding of a constant-direction bounce, so the ball cleanly bounces off the
+// walls. Handles p outside the range by any amount (many reflections).
+function reflectRange(p, min, max) {
+  const span = max - min;
+  if (span <= 0) return min;
+  let q = (p - min) % (2 * span);
+  if (q < 0) q += 2 * span;
+  return min + (q > span ? 2 * span - q : q);
+}
+
+// Ball position/speed at `nowMs` from a kick snapshot, under exponential
+// friction (speed = s0·e^(−k·t); distance travelled = (s0/k)(1−e^(−k·t))).
+// Returns { x, y, speed, dist, resting } with x,y folded into `bounds`.
+// Deterministic: same snapshot + clock ⇒ identical result on every client, and
+// as t→∞ the ball settles at one fixed folded point. Returns null when there is
+// no snapshot yet (caller falls back to the ball's home spot).
+function ballState(snap, nowMs, bounds, k, restEps) {
+  if (!snap || typeof snap.x0 !== 'number' || typeof snap.y0 !== 'number') return null;
+  const t = Math.max(0, (nowMs - (snap.ts || 0)) / 1000);
+  const decay = Math.exp(-k * t);
+  const s0 = snap.s0 || 0;
+  const speed = s0 * decay;
+  const dist = k > 0 ? (s0 / k) * (1 - decay) : 0;
+  const ux = snap.x0 + (snap.dx || 0) * dist;
+  const uy = snap.y0 + (snap.dy || 0) * dist;
+  return {
+    x: reflectRange(ux, bounds.minX, bounds.maxX),
+    y: reflectRange(uy, bounds.minY, bounds.maxY),
+    speed: speed, dist: dist, resting: speed < (restEps || 0.02),
+  };
+}
+
+// Build a kick snapshot: the ball starts at (bx,by) and is pushed away from the
+// pet at (px,py) at `speed`. If the pet sits exactly on the ball, fall back to
+// `facing` (or +x) so we never emit a zero-length direction.
+function ballKick(bx, by, px, py, speed, facing, tsMs) {
+  let dx = bx - px, dy = by - py;
+  const m = Math.hypot(dx, dy);
+  if (m < 1e-6) { dx = (facing || 1) >= 0 ? 1 : -1; dy = 0; }
+  else { dx /= m; dy /= m; }
+  return { x0: bx, y0: by, dx: dx, dy: dy, s0: speed, ts: tsMs };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     wClamp, clampToBounds, normalizeVector, stepPosition, shouldWritePosition,
     lerp, lerpToward, depthScale, projectToPixel, worldDist, isFresh, assignShard,
     highfiveMatch, highfiveKey,
     worldRnd, worldStrHash, worldDayKey, sparkleSpots, sparkleGlow,
+    reflectRange, ballState, ballKick,
   };
 }
