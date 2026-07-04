@@ -98,7 +98,6 @@ const WORLD_REACTIVE = {
   contact: 0.07,
   props: {
     pool: [
-      { type: 'floatie',  react: 'bump',  x: 0.20, y: 0.64 },
       { type: 'lilypad',  react: 'sink',  x: 0.45, y: 0.82 },
       { type: 'lilypad',  react: 'sink',  x: 0.80, y: 0.86 },
     ],
@@ -120,25 +119,27 @@ const WORLD_REACTIVE = {
   },
 };
 
-// ── Shared kickable ball (the pool's toy) ───────────────────────────
-// One ball, shared by everyone in a pool shard. It is NOT synced per-frame:
-// each kick writes a single snapshot (start pos, unit direction, speed, server
-// ts) to world/scenes/pool/{shard}/ball, and every client renders the ball as a
-// deterministic function of that snapshot + the server clock (world-logic
-// ballState), so all screens agree and settle on the same spot. A pet kicks by
-// walking into a resting ball (mobile-first: no button). `friction` is the
-// exponential decay k; total roll distance ≈ kickSpeed / friction. If RTDB is
-// unavailable the ball still rolls locally (solo fallback).
-const WORLD_BALL = {
-  scene: 'pool',
-  home: { x: 0.42, y: 0.72 }, // near-centre so a kick has a full roll of room to travel
-                              // (an off-centre home would just bounce the ball back off the wall)
+// ── Shared kickable floaties (the pool's toys) ──────────────────────
+// Each floaty in `items` is shared by everyone in a pool shard. It is NOT synced
+// per-frame: each kick writes ONE snapshot (start pos, unit direction, speed,
+// server ts) to world/scenes/pool/{shard}/balls/{id}, and every client renders
+// the floaty as a deterministic function of that snapshot + the server clock
+// (world-logic ballState), so all screens agree and settle on the same spot. A
+// pet kicks by walking into a resting floaty (mobile-first: no button). The
+// physics fields are shared by every floaty; `friction` is the exponential decay
+// k, so roll distance ≈ kickSpeed / friction. Homes are near-centre so a kick has
+// a full roll of open water to travel (an off-centre home just bounces off the
+// wall). If RTDB is unavailable a floaty still rolls locally (solo fallback).
+const WORLD_BALLS = {
   contact: 0.075,    // touch radius to trigger a kick (generous for touch)
   kickSpeed: 0.95,   // initial speed (normalized units/sec)
   friction: 2.6,     // exponential decay; roll distance ≈ kickSpeed/friction ≈ 0.37
-  restEps: 0.03,     // speed below which the ball is "at rest" and re-kickable
+  restEps: 0.03,     // speed below which a floaty is "at rest" and re-kickable
   cooldownMs: 220,   // min gap between one player's kicks (dedupe double-writes)
-  radius: 0.028,     // visual radius (normalized) at depth 1
+  items: [
+    { id: 'beach', scene: 'pool', type: 'beachball', home: { x: 0.40, y: 0.72 }, radius: 0.028 },
+    { id: 'ring',  scene: 'pool', type: 'ring',      home: { x: 0.64, y: 0.68 }, radius: 0.032 },
+  ],
 };
 
 // ── Chat ──────────────────────────────────────────────────────────
@@ -184,6 +185,6 @@ const WORLD_ACTION_KEYS = {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     WORLD_SYNC, WORLD_SHARD_CAP, WORLD_SCENES, worldSceneById, WORLD_EMOTES,
-    PET_SIGNATURE, signatureFor, WORLD_PLAY_RADIUS, WORLD_HIGHFIVE, WORLD_SPARKLES, WORLD_REACTIVE, WORLD_BALL, WORLD_CHAT, WORLD_KEYS, WORLD_ACTION_KEYS,
+    PET_SIGNATURE, signatureFor, WORLD_PLAY_RADIUS, WORLD_HIGHFIVE, WORLD_SPARKLES, WORLD_REACTIVE, WORLD_BALLS, WORLD_CHAT, WORLD_KEYS, WORLD_ACTION_KEYS,
   };
 }
