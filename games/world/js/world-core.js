@@ -240,11 +240,15 @@
     const nm = el('worldSceneName'); if (nm) nm.textContent = sceneObj.emoji + ' ' + sceneObj.name;
     document.querySelectorAll('.world-scene-chip').forEach(c => c.classList.toggle('active', c.dataset.scene === me.scene));
   }
-  function switchScene(id) {
+  // `entry` (optional) places the pet at a specific spot in the new scene — used
+  // by edge-walking so you arrive at the opposite edge instead of the spawn.
+  function switchScene(id, entry) {
     const s = worldSceneById(id);
     if (!s || s.id === me.scene) return;
     me.scene = s.id; sceneObj = s;
-    me.x = s.spawn.x; me.y = s.spawn.y; me.action = null;
+    if (entry) { me.x = wClamp(entry.x, s.bounds.minX, s.bounds.maxX); me.y = wClamp(entry.y, s.bounds.minY, s.bounds.maxY); }
+    else { me.x = s.spawn.x; me.y = s.spawn.y; }
+    me.action = null;
     hfBursts.length = 0; setHighfiveBackBtn(false); // celebrations/prompts don't cross scenes
     WorldReactive.reset();                          // marks/props don't carry across scenes
     WorldBall.reset(); WorldCritters.reset();       // ball + critters are per-scene
@@ -258,6 +262,44 @@
     const c = el('worldSceneTabs'); if (!c) return;
     c.innerHTML = WORLD_SCENES.map(s => '<button class="world-scene-chip" data-scene="' + s.id + '">' + s.emoji + ' ' + esc(s.name) + '</button>').join('');
     c.querySelectorAll('.world-scene-chip').forEach(b => b.addEventListener('click', () => switchScene(b.dataset.scene)));
+  }
+
+  // ── Edge-walking between scenes ──
+  // Walk into the right wall to go to the NEXT scene, the left wall for the
+  // PREVIOUS one (linear order: pool → egypt → grassland). You arrive at the
+  // opposite edge so it feels like one continuous world. Mobile-first — it's just
+  // walking — and a faint pulsing arrow marks each edge that leads somewhere.
+  let edgeUntil = 0; // brief lock after a transition so you don't bounce straight back
+  function sceneIdx() { return WORLD_SCENES.findIndex(s => s.id === me.scene); }
+  function maybeEdgeWalk(t, vec) {
+    if (t < edgeUntil) return;
+    const b = sceneObj.bounds, idx = sceneIdx();
+    if (me.x >= b.maxX - 1e-3 && vec.x > 0.05 && idx < WORLD_SCENES.length - 1) {
+      const nx = WORLD_SCENES[idx + 1]; edgeUntil = t + 800;
+      switchScene(nx.id, { x: nx.bounds.minX + 0.03, y: me.y });
+      flashHint('🚶 ' + nx.emoji + ' ' + nx.name);
+    } else if (me.x <= b.minX + 1e-3 && vec.x < -0.05 && idx > 0) {
+      const pv = WORLD_SCENES[idx - 1]; edgeUntil = t + 800;
+      switchScene(pv.id, { x: pv.bounds.maxX - 0.03, y: me.y });
+      flashHint('🚶 ' + pv.emoji + ' ' + pv.name);
+    }
+  }
+  function drawEdgeArrows(ctx, W, H, t) {
+    const idx = sceneIdx();
+    const right = idx < WORLD_SCENES.length - 1 ? WORLD_SCENES[idx + 1] : null;
+    const left = idx > 0 ? WORLD_SCENES[idx - 1] : null;
+    const pulse = 0.5 + 0.5 * Math.sin(t / 400);
+    ctx.save();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    function arrow(ch, x, y, scene) {
+      ctx.globalAlpha = 0.4 + 0.3 * pulse; ctx.fillStyle = '#fff';
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 3;
+      ctx.font = 'bold 34px sans-serif'; ctx.strokeText(ch, x, y); ctx.fillText(ch, x, y);
+      ctx.globalAlpha = 0.55; ctx.font = '20px serif'; ctx.fillText(scene.emoji, x, y + 30);
+    }
+    if (right) arrow('›', W - 24, H * 0.42, right);
+    if (left) arrow('‹', 24, H * 0.42, left);
+    ctx.restore();
   }
 
   // ── Pet picker ──
@@ -333,6 +375,7 @@
     me.x = step.x; me.y = step.y;
     me.moving = (vec.x !== 0 || vec.y !== 0);
     if (vec.x > 0.01) me.facing = 1; else if (vec.x < -0.01) me.facing = -1;
+    maybeEdgeWalk(t, vec); // walk into a side wall → cross to the neighbouring scene
     // The high-five offer persists while walking (mobile players keep a thumb on
     // the joystick) and simply expires with its duration; world-actors drops the
     // paw-up pose while moving so it never layers on the walk cycle.
@@ -366,6 +409,7 @@
     WorldActors.render(ctx, size.w, size.h, t, me, remotes, sceneObj);
     WorldSparkles.draw(ctx, size.w, size.h, t / 1000, me, me.scene); // hidden-until-near sparkles (t in seconds for twinkle)
     drawHighfives(t, size.w, size.h); // matched-pair celebrations on top of the actors
+    drawEdgeArrows(ctx, size.w, size.h, t); // faint ‹ › cues marking edges that cross to another scene
 
     requestAnimationFrame(frame);
   }
