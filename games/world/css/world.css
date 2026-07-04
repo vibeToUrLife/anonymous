@@ -175,6 +175,33 @@ body.world-touch #worldJoystick { display: block; }
   50%      { box-shadow: 0 10px 32px rgba(255, 120, 60, 0.85); }
 }
 
+/* Pinned-note composer — a small centered card to type a note before pinning it
+   at the pet's spot. Sits above the action buttons; fully touch-friendly. */
+#worldNoteComposer {
+  position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%) translateY(8px);
+  z-index: 45; width: min(360px, 90vw); background: var(--w-cream);
+  border-radius: 18px; box-shadow: 0 12px 32px rgba(0,0,0,0.28); padding: 14px 16px;
+  opacity: 0; transition: opacity 0.18s ease, transform 0.18s ease;
+}
+#worldNoteComposer.open { opacity: 1; transform: translateX(-50%) translateY(0); }
+#worldNoteComposer[hidden] { display: none; }
+.world-note-title { font-weight: 800; font-size: 15px; color: var(--w-ink); margin-bottom: 8px; }
+#worldNoteInput {
+  width: 100%; box-sizing: border-box; border: 0; border-radius: 12px; padding: 11px 14px;
+  font-size: 15px; font-family: inherit; background: var(--w-card); box-shadow: var(--w-shadow);
+  outline: none; color: var(--w-ink);
+}
+.world-note-actions { display: flex; gap: 8px; margin-top: 10px; }
+#worldNotePin {
+  flex: 1; border: 0; border-radius: 999px; padding: 11px 14px; font-family: inherit; font-weight: 800;
+  font-size: 15px; color: #fff; background: var(--w-accent); cursor: pointer; box-shadow: var(--w-shadow);
+}
+#worldNotePin:active { transform: scale(0.96); }
+#worldNoteCancel {
+  border: 0; border-radius: 999px; padding: 11px 16px; font-family: inherit; font-weight: 700;
+  font-size: 14px; color: var(--w-ink); background: rgba(0,0,0,0.08); cursor: pointer;
+}
+
 /* Slide-in menu (pet / wear) */
 #worldMenu {
   position: absolute; top: 0; right: 0; bottom: 0; z-index: 40; width: min(360px, 88vw);

@@ -142,6 +142,23 @@ const WORLD_BALLS = {
   ],
 };
 
+// ── Pinned Notes ────────────────────────────────────────────────────
+// Leave a short, kind message pinned to the spot you're standing. It stays
+// (unlike a chat bubble), and later visitors discover it hot/cold: a little
+// folded-note card fades in as you wander near (`discoverRadius`), then blooms
+// open into a readable bubble once you're close (`revealRadius`). Text runs
+// through the SAME moderation as chat (maxLen + WORLD_CHAT.banned). Persisted per
+// scene-shard at world/scenes/{scene}/{shard}/notes/{id}; `historyLimit` (RTDB
+// limitToLast) ages the oldest notes out so it never grows unbounded. If RTDB is
+// unavailable / the rule isn't deployed, a pin still shows locally (solo fallback).
+const WORLD_NOTES = {
+  maxLen: 80,             // a pinned line is shorter than a chat message
+  discoverRadius: 0.30,   // the folded-note card starts fading in within this range
+  revealRadius: 0.16,     // the message blooms open within this range (saturates to opaque well before the centre)
+  historyLimit: 20,       // RTDB limitToLast(N) — old notes gently age out
+  cooldownMs: 4000,       // min gap between one player's pins (anti-spam)
+};
+
 // ── Chat ──────────────────────────────────────────────────────────
 const WORLD_CHAT = {
   maxLen: 100,
@@ -185,6 +202,6 @@ const WORLD_ACTION_KEYS = {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     WORLD_SYNC, WORLD_SHARD_CAP, WORLD_SCENES, worldSceneById, WORLD_EMOTES,
-    PET_SIGNATURE, signatureFor, WORLD_PLAY_RADIUS, WORLD_HIGHFIVE, WORLD_SPARKLES, WORLD_REACTIVE, WORLD_BALLS, WORLD_CHAT, WORLD_KEYS, WORLD_ACTION_KEYS,
+    PET_SIGNATURE, signatureFor, WORLD_PLAY_RADIUS, WORLD_HIGHFIVE, WORLD_SPARKLES, WORLD_REACTIVE, WORLD_BALLS, WORLD_NOTES, WORLD_CHAT, WORLD_KEYS, WORLD_ACTION_KEYS,
   };
 }

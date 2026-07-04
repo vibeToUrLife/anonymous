@@ -10,6 +10,7 @@
      world/scenes/{sceneId}/{shard}/players/{uid} = { name,pet,color,outfit,
         x,y,facing,action,actionTs,ts }   // onDisconnect → removed
      world/scenes/{sceneId}/{shard}/chat/{pushId} = { uid,name,text,ts }
+     world/scenes/{sceneId}/{shard}/notes/{pushId} = { uid,name,text,x,y,ts } // pinned notes
    Moderation reports go to Firestore (moderation_reports).
    ════════════════════════════════════════════════════════════════ */
 const WorldNet = (function () {
@@ -17,6 +18,7 @@ const WorldNet = (function () {
   let scene = 'pool', shard = 0;
   let playersRef = null, chatRef = null, playersCb = null, chatCb = null, myRef = null;
   let ballsRef = null, ballsCb = null, ballsVal = {};   // shared kickable floaties (this shard): id → snapshot
+  let notesRef = null, notesCb = null, notesVal = [];   // pinned notes (this shard), newest last
   let lastSent = null;
   let heartbeat = null;
   const remotes = {};           // uid → { name,pet,color,outfit,x,y,targetX,targetY,facing,action,actionTs,ts }
@@ -121,6 +123,14 @@ const WorldNet = (function () {
     ballsRef = base().child('balls');
     ballsCb = ballsRef.on('value', s => { ballsVal = s.val() || {}; }, () => {});
 
+    // Pinned notes for this shard (world-notes.js reads them; newest last).
+    notesVal = [];
+    notesRef = base().child('notes').limitToLast(WORLD_NOTES.historyLimit);
+    notesCb = notesRef.on('value', s => {
+      const v = s.val() || {};
+      notesVal = Object.keys(v).map(k => v[k]).filter(Boolean).sort((a, b) => (a.ts || 0) - (b.ts || 0));
+    }, () => {});
+
     clearInterval(heartbeat);
     heartbeat = setInterval(() => {
       // Keep our node fresh while idle so others' TTL doesn't despawn us.
@@ -183,14 +193,27 @@ const WorldNet = (function () {
     try { base().child('balls').child(id).set(snap).catch(() => {}); } catch (e) {}
   }
 
+  // ── Pinned notes ──
+  // The shard's persisted notes (each { uid,name,text,x,y,ts }), oldest→newest.
+  function getNotes() { return notesVal; }
+  // Pin a note at (x,y). One push per pin; the listener echoes it to every client.
+  // Silent no-op on denied writes (rule not deployed) — the pin still shows locally.
+  function pinNote(text, x, y) {
+    if (!rtdb || !uid || !myRef) return false;
+    try { base().child('notes').push({ uid: uid, name: getName(), text: text, x: r3(x), y: r3(y), ts: nowMs() }); return true; }
+    catch (e) { return false; }
+  }
+
   function leave() {
     clearInterval(heartbeat); heartbeat = null;
     try { if (playersRef && playersCb) playersRef.off('value', playersCb); } catch (e) {}
     try { if (chatRef && chatCb) chatRef.off('value', chatCb); } catch (e) {}
     try { if (ballsRef && ballsCb) ballsRef.off('value', ballsCb); } catch (e) {}
+    try { if (notesRef && notesCb) notesRef.off('value', notesCb); } catch (e) {}
     try { if (myRef) { myRef.onDisconnect().cancel(); myRef.remove(); } } catch (e) {}
     playersRef = chatRef = playersCb = chatCb = myRef = null;
     ballsRef = ballsCb = null; ballsVal = {};
+    notesRef = notesCb = null; notesVal = [];
     Object.keys(remotes).forEach(k => delete remotes[k]);
   }
 
@@ -216,5 +239,5 @@ const WorldNet = (function () {
     return { online: !!rtdb };
   }
 
-  return { init, join, leave, switchScene, writeState, forceUpdate, sendChat, reportUser, getRemotes, getBall, kickBall, serverNow: nowMs };
+  return { init, join, leave, switchScene, writeState, forceUpdate, sendChat, reportUser, getRemotes, getBall, kickBall, getNotes, pinNote, serverNow: nowMs };
 })();

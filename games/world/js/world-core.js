@@ -210,6 +210,25 @@
     else if (intent.kind === 'emote') triggerAction(WORLD_EMOTES[intent.index]);
     else if (intent.kind === 'signature') triggerAction(signatureFor(me.pet));
     else if (intent.kind === 'play') offerHighfive();
+    else if (intent.kind === 'note') openNoteComposer();
+  }
+
+  // ── Pinned-note composer ──
+  // A tiny overlay to type a note; pinning drops it at the pet's current spot.
+  function openNoteComposer() {
+    const box = el('worldNoteComposer'), inp = el('worldNoteInput');
+    if (!box || !inp) return;
+    box.hidden = false; box.classList.add('open');
+    inp.value = ''; setTimeout(function () { inp.focus(); }, 0);
+  }
+  function closeNoteComposer() {
+    const box = el('worldNoteComposer'), inp = el('worldNoteInput');
+    if (box) { box.hidden = true; box.classList.remove('open'); }
+    if (inp) inp.blur();
+  }
+  function submitNote() {
+    const inp = el('worldNoteInput'); if (!inp) return;
+    if (WorldNotes.pin(inp.value, me)) closeNoteComposer();
   }
 
   // ── Remote tag menu: play / report / block ──
@@ -446,6 +465,7 @@
     WorldActors.render(ctx, size.w, size.h, t, me, remotes, sceneObj);
     WorldFireflies.draw(ctx, size.w, size.h, t, sky.star); // glowing fireflies over the pets at night
     WorldSky.drawWash(ctx, size.w, size.h, sky);          // subtle warm glow over everything at golden hour
+    WorldNotes.draw(ctx, size.w, size.h, t, me, me.scene); // pinned notes: cards hot/cold, bloom when near
     WorldSparkles.draw(ctx, size.w, size.h, t / 1000, me, me.scene); // hidden-until-near sparkles (t in seconds for twinkle)
     drawHighfives(t, size.w, size.h); // matched-pair celebrations on top of the actors
     drawEdgeArrows(ctx, size.w, size.h, t); // faint ‹ › cues marking edges that cross to another scene
@@ -464,6 +484,7 @@
     WorldNet.init({ db: wDb, uid: uid, getName: () => me.name, onRemotes: function () {}, onChat: function (list) { WorldChat.receive(list); }, onDiag: onDiag });
     WorldBall.init({ serverNow: WorldNet.serverNow, getBall: WorldNet.getBall, kickBall: WorldNet.kickBall });
     WorldSky.init({ serverNow: WorldNet.serverNow });
+    WorldNotes.init({ serverNow: WorldNet.serverNow, getNotes: WorldNet.getNotes, pinNote: WorldNet.pinNote, flashHint: flashHint, myUid: uid });
     WorldActors.init({ tagLayer: tagLayer, onTagClick: openTagMenu, getBubble: function (u) { return WorldChat.getBubble(u); } });
     WorldChat.init({ inputEl: el('worldChatInput'), logEl: el('worldChatLog'), hintEl: el('worldChatHint'), sendBtn: el('worldChatSend'), onSend: function (text) { WorldNet.sendChat(text); }, myUid: uid, chatEl: el('worldChat'), toggleEl: el('worldChatToggle'), labelEl: el('worldChatToggleLabel'), unreadEl: el('worldChatUnread') });
     WorldOutfit.init({ db: wDb, uid: uid, panelEl: el('worldWardrobe'), onChange: onOutfitChange });
@@ -512,6 +533,13 @@
   el('worldWearBtn') && el('worldWearBtn').addEventListener('click', () => toggleMenu('wear'));
   el('worldMenuClose') && el('worldMenuClose').addEventListener('click', () => { const m = el('worldMenu'); if (m) m.classList.remove('open'); });
   hfBackBtn && hfBackBtn.addEventListener('click', e => { e.preventDefault(); offerHighfive(); });
+  // Pinned-note composer wiring
+  el('worldNotePin') && el('worldNotePin').addEventListener('click', e => { e.preventDefault(); submitNote(); });
+  el('worldNoteCancel') && el('worldNoteCancel').addEventListener('click', e => { e.preventDefault(); closeNoteComposer(); });
+  el('worldNoteInput') && el('worldNoteInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); submitNote(); }
+    else if (e.key === 'Escape') { e.preventDefault(); closeNoteComposer(); }
+  });
   // Post THIS world (current scene) to the bubble board so others can join. Uses
   // the world's own Firestore instance; the scene link drops joiners in the same
   // shard (shard 0 fills first), so clicking the board card lands them here too.
