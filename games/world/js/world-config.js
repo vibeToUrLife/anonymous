@@ -160,7 +160,7 @@ const WORLD_NOTES = {
   revealRadius: 0.16,     // the message blooms open within this range (saturates to opaque well before the centre)
   historyLimit: 20,       // RTDB limitToLast(N) — old notes gently age out
   cooldownMs: 4000,       // min gap between one player's pins (anti-spam)
-  boardRadius: 0.19,      // how near the board you must be to write / be prompted
+  boardRadius: 0.09,      // must be right up at the board to write / be prompted (small on purpose)
   boards: {               // the notice-board spot in each scene (normalized, inside bounds)
     pool:      { x: 0.20, y: 0.62 },
     egypt:     { x: 0.17, y: 0.66 },
