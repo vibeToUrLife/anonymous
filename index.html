@@ -1255,8 +1255,8 @@
     <span class="live-presence" id="livePresence" title="People viewing the board right now">
       👀 <b id="liveOnlineCount">1</b> online
     </span>
-    <span class="live-presence" id="myStayTime" title="你在本站的总停留时间（聊天板 + 游戏 + 房间 + 农场 + 水族馆）" hidden>
-      ⏱️ 停留 <b id="myStayTimeVal">…</b>
+    <span class="live-presence" id="myStayTime" title="你在本站的总摸鱼时长（聊天板 + 游戏 + 房间 + 农场 + 水族馆 + Pet World）" hidden>
+      🐟 摸鱼 <b id="myStayTimeVal">…</b>
     </span>
     <span class="live-typing" id="liveTyping" hidden>
       <span class="live-typing-dots"><i></i><i></i><i></i></span> someone is typing…
@@ -1265,7 +1265,7 @@
     <button class="pg-toggle" id="pgToggle" type="button" title="Bubble Playground — fling &amp; pop the bubbles">🫧 Playground</button>
     <button class="pg-toggle" id="coinCenterBtn" type="button" title="金币乐园 — 商店 / 扭蛋 / 老虎机">🎰 金币乐园</button>
     <button class="pg-toggle" id="coinRankBtn" type="button" title="富豪榜 — 按当前金币排名">🏆 富豪榜</button>
-    <button class="pg-toggle" id="stayRankBtn" type="button" title="停留榜 — 按总停留时间排名">⏱️ 停留榜</button>
+    <button class="pg-toggle" id="stayRankBtn" type="button" title="摸鱼榜 — 按总摸鱼时长排名">🐟 摸鱼榜</button>
   </div>
 
   <!-- Daily 正能量 (motivational) quote banner -->
@@ -1563,9 +1563,9 @@
   <script src="./src/js/coin-center.js?v=3"></script>
   <!-- 富豪榜: rank players by current coin balance -->
   <script src="./src/js/coin-ranking.js?v=1"></script>
-  <!-- 停留时间: site-wide active-time tracker + 停留榜 leaderboard -->
-  <script src="./src/js/stay-time.js"></script>
-  <script src="./src/js/stay-ranking.js"></script>
+  <!-- 摸鱼时长: site-wide active-time tracker + 摸鱼榜 leaderboard (formerly 停留榜) -->
+  <script src="./src/js/stay-time.js?v=2"></script>
+  <script src="./src/js/stay-ranking.js?v=2"></script>
 
   <!-- Walking-pet animal art (shared with the room pets) -->
   <script src="./games/pets/shared.js"></script>

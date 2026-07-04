@@ -1,12 +1,14 @@
 /**
- * stay-time.js — Site-wide 停留时间 (active-time) tracker.
+ * stay-time.js — Site-wide 摸鱼时长 (active-time) tracker.
  *
- * Loaded on EVERY user-facing page (the board, every mini-game, and the
- * room / farm / aquarium). It measures only time the page is genuinely in use —
- * the tab must be visible AND the user must have interacted within IDLE_MS —
- * and folds those whole seconds into rooms/{uid}.totalStaySec with
- * FieldValue.increment. The bubble board reads that single field to show the
- * user's running total and to build the 停留榜 (see stay-ranking.js).
+ * Loaded on EVERY user-facing page (the board, every mini-game, the
+ * room / farm / aquarium, AND the multiplayer Pet World). It measures only time
+ * the page is genuinely in use — the tab must be visible AND the user must have
+ * interacted within IDLE_MS — and folds those whole seconds into
+ * rooms/{uid}.totalStaySec with FieldValue.increment. The bubble board reads
+ * that single field to show the user's running total and to build the 摸鱼榜
+ * (formerly 停留榜; see stay-ranking.js). Pet World inits the DEFAULT Firebase
+ * app + auth in world-core.js, so this file works there unchanged.
  *
  * Cheap & resilient, mirroring presence.js / bubble-playground.js:
  *  - accrues locally; writes at most once per FLUSH_MS, plus on tab-hide and

@@ -1,12 +1,15 @@
 /**
- * stay-ranking.js — 停留榜 (longest-staying players) for the bubble board.
+ * stay-ranking.js — 摸鱼榜 (formerly 停留榜; longest-slacking players) for the board.
  *
  * Two jobs, board-only:
- *   1. Live-show the signed-in user's OWN total 停留时间 in the live bar
+ *   1. Live-show the signed-in user's OWN total 摸鱼时长 in the live bar
  *      (#myStayTime), kept in sync with rooms/{uid}.totalStaySec.
- *   2. A 🏆-style popup, opened by the ⏱️ 停留榜 button, ranking players by
- *      total active time across the whole site (rooms.totalStaySec). The raw
- *      seconds are written site-wide by stay-time.js.
+ *   2. A 🏆-style popup, opened by the 🐟 摸鱼榜 button, ranking players by
+ *      total active time across the whole site — board + games + room + farm +
+ *      aquarium + Pet World (rooms.totalStaySec). The raw seconds are written
+ *      site-wide by stay-time.js. (Field/ID names keep the historical "stay"
+ *      spelling so existing data and DOM hooks are untouched — only the DISPLAY
+ *      name changed to 摸鱼榜.)
  *
  * Mirrors coin-ranking.js and reuses the .cc-* leaderboard styles already in
  * interactive.css. Depends on globals: db / auth (from app.js) and BoardLive
@@ -59,8 +62,8 @@
     overlay.innerHTML =
       '<div class="cc-card cc-boost" style="max-width:360px">'
       + '<button class="cc-close" title="关闭">✕</button>'
-      + '<div class="cc-title">⏱️ 停留榜</div>'
-      + '<div class="cc-hint">按在本站的总停留时间排名 · 玩得越久越靠前 👑</div>'
+      + '<div class="cc-title">🐟 摸鱼榜</div>'
+      + '<div class="cc-hint">按在本站摸鱼的总时长排名 · 摸得越久越靠前 🐟👑</div>'
       + '<div class="cc-lb" id="stayRankList">加载中…</div>'
       + '</div>';
     document.body.appendChild(overlay);
@@ -84,7 +87,7 @@
         rows.push({ rank: rank, name: x.displayName || 'Anonymous', sec: sec, me: doc.id === me });
       });
       if (!rows.length) {
-        listEl.innerHTML = '<div class="cc-hint">还没有人有停留记录，快去逛逛吧！</div>';
+        listEl.innerHTML = '<div class="cc-hint">还没有人开始摸鱼，快去摸一会儿吧！🐟</div>';
         return;
       }
       var medal = ['🥇', '🥈', '🥉'];
