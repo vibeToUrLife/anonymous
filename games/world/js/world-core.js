@@ -246,6 +246,7 @@
     me.scene = s.id; sceneObj = s;
     me.x = s.spawn.x; me.y = s.spawn.y; me.action = null;
     hfBursts.length = 0; setHighfiveBackBtn(false); // celebrations/prompts don't cross scenes
+    WorldReactive.reset();                          // marks/props don't carry across scenes
     WorldActors.clearTags();
     WorldNet.switchScene(s.id, me);
     WorldInput.buildActionButtons(el('worldActionBtns'), s.id);
@@ -347,6 +348,7 @@
 
     updateHighfives(t, remotes); // detect mutual offers + prompt nearby invitations
     WorldSparkles.update(me);    // collect any hidden sparkle walked onto
+    WorldReactive.update(t, dt, me, remotes, me.scene); // scene reacts to pets that move/touch
 
     WorldNet.writeState(me); // throttled + delta-gated inside
 
@@ -355,6 +357,7 @@
     const drawFn = window.WORLD_SCENE_DRAW && window.WORLD_SCENE_DRAW[me.scene];
     if (drawFn) { try { drawFn(ctx, size.w, size.h, t / 1000); } catch (e) { fallbackBg(size.w, size.h); } }
     else fallbackBg(size.w, size.h);
+    WorldReactive.draw(ctx, size.w, size.h, t, me.scene); // contact marks + props, under the pets
     WorldActors.render(ctx, size.w, size.h, t, me, remotes, sceneObj);
     WorldSparkles.draw(ctx, size.w, size.h, t / 1000, me, me.scene); // hidden-until-near sparkles (t in seconds for twinkle)
     drawHighfives(t, size.w, size.h); // matched-pair celebrations on top of the actors

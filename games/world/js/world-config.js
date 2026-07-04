@@ -83,6 +83,20 @@ const WORLD_HIGHFIVE = { actionId: 'highfive', windowMs: 3400, burstMs: 1100 };
 // whole day's hunt is completed.
 const WORLD_SPARKLES = { perScene: 3, collectRadius: 0.055, revealRadius: 0.22, margin: 0.06, tzOffsetMin: 480, reward: 500 };
 
+// ── Reactive scenes ─────────────────────────────────────────────────
+// The world reacts to pets as they MOVE (no buttons): ambient contact marks
+// under every pet + one signature prop per scene that bumps and springs back
+// when a pet walks into it. `contact` is the touch radius (normalized); props
+// are drawn/animated by world-reactive.js from the already-synced positions.
+const WORLD_REACTIVE = {
+  contact: 0.07,
+  props: {
+    pool:      { type: 'ball', x: 0.70, y: 0.72 },
+    egypt:     { type: 'palm', x: 0.80, y: 0.66 },
+    grassland: { type: 'bush', x: 0.30, y: 0.72 },
+  },
+};
+
 // ── Chat ──────────────────────────────────────────────────────────
 const WORLD_CHAT = {
   maxLen: 100,
@@ -126,6 +140,6 @@ const WORLD_ACTION_KEYS = {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     WORLD_SYNC, WORLD_SHARD_CAP, WORLD_SCENES, worldSceneById, WORLD_EMOTES,
-    PET_SIGNATURE, signatureFor, WORLD_PLAY_RADIUS, WORLD_HIGHFIVE, WORLD_SPARKLES, WORLD_CHAT, WORLD_KEYS, WORLD_ACTION_KEYS,
+    PET_SIGNATURE, signatureFor, WORLD_PLAY_RADIUS, WORLD_HIGHFIVE, WORLD_SPARKLES, WORLD_REACTIVE, WORLD_CHAT, WORLD_KEYS, WORLD_ACTION_KEYS,
   };
 }
