@@ -22,6 +22,7 @@ const WorldBall = (function () {
   let localDeadline = -1e9; // trust localSnap over an OLDER net snapshot only until here
   let lastKickTs = -1e9;   // dedupe double-kicks from one player
   let wasInside = false;   // contact edge-detect so holding still doesn't re-kick
+  let primed = false;      // first frame in-scene seeds wasInside without kicking
 
   const ECHO_MS = 800;     // grace for my own kick to echo back before I defer to the shared node
 
@@ -55,7 +56,7 @@ const WorldBall = (function () {
     return s || { x: c.home.x, y: c.home.y, speed: 0, dist: 0, resting: true };
   }
 
-  function reset() { localSnap = null; localDeadline = -1e9; wasInside = false; lastKickTs = -1e9; }
+  function reset() { localSnap = null; localDeadline = -1e9; wasInside = false; lastKickTs = -1e9; primed = false; }
 
   function init(opts) {
     opts = opts || {};
@@ -66,17 +67,18 @@ const WorldBall = (function () {
   }
 
   // Kick detection — only MY pet, only in the ball's scene. A kick fires on the
-  // rising edge of contact while (a) the ball is at rest and (b) the pet is
-  // actually WALKING (me.moving). Requiring movement means you kick by walking
-  // into the ball, never by spawning/teleporting on top of a resting one, and a
-  // ball that rolls to rest against a standing pet doesn't relaunch itself. The
-  // rest gate + cooldown let a pet dribble with pauses but not machine-gun it.
+  // RISING EDGE of contact while the ball is at rest (rest gate + cooldown let a
+  // pet dribble it with pauses but not machine-gun it). The `primed` latch seeds
+  // wasInside on the first in-scene frame, so a pet that spawns/teleports already
+  // on top of a resting ball is NOT treated as a rising edge and doesn't relaunch
+  // it — while a pet that walks in from outside still gets a genuine edge.
   function update(t, dtSec, me, remotes, sceneId) {
     const c = cfg();
-    if (!me || sceneId !== c.scene) { wasInside = false; return; }
+    if (!me || sceneId !== c.scene) { wasInside = false; primed = false; return; }
     const p = pos();
     const inside = worldDist(me, p) <= c.contact;
-    if (inside && !wasInside && p.resting && me.moving && (serverNow() - lastKickTs) > c.cooldownMs) {
+    if (!primed) { wasInside = inside; primed = true; return; }
+    if (inside && !wasInside && p.resting && (serverNow() - lastKickTs) > c.cooldownMs) {
       const now = serverNow();
       const snap = ballKick(p.x, p.y, me.x, me.y, c.kickSpeed, me.facing, now);
       localSnap = snap; lastKickTs = now; localDeadline = now + ECHO_MS;

@@ -131,8 +131,9 @@ const WORLD_REACTIVE = {
 // unavailable the ball still rolls locally (solo fallback).
 const WORLD_BALL = {
   scene: 'pool',
-  home: { x: 0.70, y: 0.72 },
-  contact: 0.06,     // touch radius to trigger a kick
+  home: { x: 0.42, y: 0.72 }, // near-centre so a kick has a full roll of room to travel
+                              // (an off-centre home would just bounce the ball back off the wall)
+  contact: 0.075,    // touch radius to trigger a kick (generous for touch)
   kickSpeed: 0.95,   // initial speed (normalized units/sec)
   friction: 2.6,     // exponential decay; roll distance ≈ kickSpeed/friction ≈ 0.37
   restEps: 0.03,     // speed below which the ball is "at rest" and re-kickable
