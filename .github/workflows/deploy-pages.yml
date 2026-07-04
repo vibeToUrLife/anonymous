@@ -17,17 +17,19 @@
 name: Deploy static site to Pages
 
 on:
-  # MANUAL ONLY. GitHub's built-in "pages build and deployment" pipeline already
-  # deploys automatically on every push to master. Running this workflow on push
-  # too made the two race for the single Pages deployment, and the loser failed
-  # with "Deployment failed, try again later" — a red X on every push even though
-  # the site deployed fine. So this stays a hand-triggered fallback: use it from
-  # the Actions tab (it has a longer timeout + is re-runnable) if the automatic
-  # deploy ever times out.
+  # Deploy on every push to master through this reliable Actions pipeline. This is
+  # now the SOLE deploy path: it replaces GitHub's classic "pages build and
+  # deployment" pipeline, which kept timing out ("Timeout reached, aborting!") and
+  # left the live site stuck several commits behind.
   #
-  # To make THIS the sole deploy pipeline instead (no classic pipeline, no race),
-  # set Settings → Pages → Source → "GitHub Actions", then re-add the `push:`
-  # trigger here.
+  # REQUIRED one-time repo setting (only the repo owner can do this, it is not in
+  # code): Settings → Pages → Build and deployment → Source → "GitHub Actions".
+  # That disables the flaky classic pipeline so the two can't race for the single
+  # Pages deployment. Until Source is "GitHub Actions", this workflow's deploy step
+  # cannot publish and pushes still won't go live.
+  push:
+    branches: [master]
+  # Also hand-triggerable from the Actions tab (longer timeout, re-runnable).
   workflow_dispatch:
 
 # Least-privilege token: only what Pages deployment needs.
