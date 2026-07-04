@@ -198,9 +198,13 @@ const WorldNet = (function () {
   function getNotes() { return notesVal; }
   // Pin a note at (x,y). One push per pin; the listener echoes it to every client.
   // Silent no-op on denied writes (rule not deployed) — the pin still shows locally.
-  function pinNote(text, x, y) {
+  // `ts` is passed in from world-notes.pin so the optimistic local note and this
+  // shared write carry the SAME timestamp; that's the dedup key (uid:ts), so when
+  // the write echoes back it collapses onto the optimistic one instead of showing
+  // as a second note. (Falls back to nowMs() if a caller omits it.)
+  function pinNote(text, x, y, ts) {
     if (!rtdb || !uid || !myRef) return false;
-    try { base().child('notes').push({ uid: uid, name: getName(), text: text, x: r3(x), y: r3(y), ts: nowMs() }); return true; }
+    try { base().child('notes').push({ uid: uid, name: getName(), text: text, x: r3(x), y: r3(y), ts: ts || nowMs() }); return true; }
     catch (e) { return false; }
   }
 

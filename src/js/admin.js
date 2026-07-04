@@ -16,6 +16,10 @@
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db   = firebase.firestore();
+  // Realtime Database — only used for moderating Pet World notice-board notes.
+  // Guarded so the rest of the panel still works if the RTDB SDK failed to load.
+  let rtdb = null;
+  try { rtdb = firebase.database ? firebase.database() : null; } catch (e) { rtdb = null; }
 
   const DEVELOPER_UIDS = ['eUs3isAgsaRT9VLKEFI4HEFbCnk1'];
   const PRESENCE_TTL_MS = 180000;  // a viewer counts as "online" if seen in the last 3 min
@@ -584,7 +588,61 @@
   }
 
   /* ═══════════════ CONTENT TAB ═══════════════ */
-  function loadContent() { loadEvents(); loadFood(); loadBubbles(); loadQuoteComments(); loadChengyu(); }
+  function loadContent() { loadEvents(); loadFood(); loadBubbles(); loadQuoteComments(); loadChengyu(); loadWorldNotes(); }
+
+  // ── Pet World notice-board notes (Realtime Database, not Firestore) ──
+  // Notes live at world/scenes/{scene}/{shard}/notes/{id} = {uid,name,text,x,y,ts}.
+  // We read each scene's whole node (one allowed read: world/scenes/$scene is
+  // ".read": auth) and flatten every shard's notes into one newest-first list.
+  const WORLD_SCENE_LABELS = { pool: '🏊 Splash Pool', egypt: '🐫 Desert of Egypt', grassland: '🌿 Green Grassland' };
+  function loadWorldNotes() {
+    const box = $('worldNotesList'); if (!box) return;
+    const rb = $('worldNotesRefresh');
+    if (rb && !rb._bound) { rb._bound = true; rb.addEventListener('click', loadWorldNotes); }
+    if (!rtdb) { box.innerHTML = '<div class="status err">Realtime Database SDK not loaded.</div>'; return; }
+    box.innerHTML = '<div class="muted">Loading…</div>';
+    const scenes = Object.keys(WORLD_SCENE_LABELS);
+    Promise.all(scenes.map(scene =>
+      rtdb.ref('world/scenes/' + scene).once('value')
+        .then(snap => ({ scene, val: snap.val() || {} }))
+        .catch(() => ({ scene, val: {} }))
+    )).then(results => {
+      const rows = [];
+      results.forEach(({ scene, val }) => {
+        Object.keys(val).forEach(shard => {
+          const notes = (val[shard] && val[shard].notes) || {};
+          Object.keys(notes).forEach(id => { if (notes[id]) rows.push({ scene, shard, id, n: notes[id] }); });
+        });
+      });
+      rows.sort((a, b) => (b.n.ts || 0) - (a.n.ts || 0));
+      if (!rows.length) { box.innerHTML = '<div class="muted">No notes on any board.</div>'; return; }
+      box.innerHTML = '';
+      rows.forEach(({ scene, shard, id, n }) => {
+        const label = WORLD_SCENE_LABELS[scene] || scene;
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerHTML =
+          '<div class="row" style="justify-content:space-between;gap:10px">' +
+            '<strong style="min-width:0;word-break:break-word">' + esc(n.text || '(empty)') + '</strong>' +
+            '<button class="btn sm danger">Delete</button>' +
+          '</div>' +
+          '<div class="meta">— ' + esc(n.name || 'Pet') + ' · <span class="chip">' + esc(label) + '</span> shard ' + esc(shard) + ' · ' + fmtDate(n.ts) + '</div>';
+        div.querySelector('button').addEventListener('click', async () => {
+          const ok = await confirmAction({ title: 'Delete board note', confirmLabel: 'Delete',
+            message: 'Delete “' + (n.text || 'this note') + '” from the ' + label + ' board? This removes it for everyone.' });
+          if (!ok) return;
+          try {
+            await rtdb.ref('world/scenes/' + scene + '/' + shard + '/notes/' + id).remove();
+            writeLog('world_note_delete', n.uid || null, n.name || null, (n.text || '').slice(0, 60));
+            loadWorldNotes();
+          } catch (e) {
+            alert((e && e.message) || 'Delete failed — check the Realtime Database rules are published with the admin-delete clause.');
+          }
+        });
+        box.appendChild(div);
+      });
+    }).catch(e => { box.innerHTML = '<div class="status err">' + esc(e.message) + '</div>'; });
+  }
 
   // YYYY-MM-DD for local "today" (matches the app's getTodayKey).
   function todayKey() { const d = new Date(), p = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }

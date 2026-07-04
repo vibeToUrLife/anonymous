@@ -44,7 +44,7 @@
 
             "notes": {
               "$id": {
-                ".write": "auth != null && (!newData.exists() ? data.child('uid').val() == auth.uid : (newData.hasChildren(['uid','text','x','y','ts']) && newData.child('uid').val() == auth.uid && newData.child('text').isString() && newData.child('text').val().length <= 80 && newData.child('x').isNumber() && newData.child('x').val() >= 0 && newData.child('x').val() <= 1 && newData.child('y').isNumber() && newData.child('y').val() >= 0 && newData.child('y').val() <= 1 && newData.child('ts').isNumber()))"
+                ".write": "auth != null && (!newData.exists() ? (data.child('uid').val() == auth.uid || auth.uid == 'HClZmAeuEaUVjHqUaFLFFMTMQnd2' || auth.uid == 'eUs3isAgsaRT9VLKEFI4HEFbCnk1') : (newData.hasChildren(['uid','text','x','y','ts']) && newData.child('uid').val() == auth.uid && newData.child('text').isString() && newData.child('text').val().length <= 80 && newData.child('x').isNumber() && newData.child('x').val() >= 0 && newData.child('x').val() <= 1 && newData.child('y').isNumber() && newData.child('y').val() >= 0 && newData.child('y').val() <= 1 && newData.child('ts').isNumber()))"
               }
             }
           }

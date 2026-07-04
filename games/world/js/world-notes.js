@@ -64,7 +64,9 @@ const WorldNotes = (function () {
     lastPinAt = now;
     const note = { uid: myUid, name: (me && me.name) || 'Pet', text: mod.text, x: me.x, y: me.y, ts: now, scene: me.scene };
     mine.push(note);
-    pinNoteNet(mod.text, me.x, me.y); // shared write; silent no-op if denied → stays local
+    // Pass `now` so the shared write carries the SAME ts as this optimistic note;
+    // keyOf() dedups on uid:ts, so the RTDB echo collapses onto this one (no double).
+    pinNoteNet(mod.text, me.x, me.y, now); // shared write; silent no-op if denied → stays local
     return { ok: true, note: note };
   }
 
