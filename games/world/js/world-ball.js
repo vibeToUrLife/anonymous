@@ -32,21 +32,22 @@ const WorldBall = (function () {
   }
   function bounds() { return worldSceneById(cfg().scene).bounds; }
 
-  // Freshest snapshot. The shared RTDB node is last-write-wins by ARRIVAL, which
-  // needn't agree with the `ts` field, so we can't just prefer the higher ts:
-  //   • net is my echo or a genuinely newer kick (net.ts >= mine) → it's
-  //     authoritative; drop my local copy and use it.
-  //   • net is OLDER than my kick → normally mine is fresher (the pre-echo
-  //     window), but if my write lost the race the node will never catch up, so
-  //     after ECHO_MS I stop shadowing and converge to the shared node.
-  //   • no net (offline / solo) → keep rolling on my local snapshot.
+  // Freshest snapshot. `localSnap` is my own last kick; `net` is the shared RTDB
+  // node — which can briefly hold an OPTIMISTIC value that Firebase then rolls
+  // back (a denied write, e.g. the ball rule not deployed, flips the node to my
+  // snapshot and immediately back to null). So we keep localSnap as a durable
+  // fallback and NEVER discard it here — otherwise the rollback-to-null would
+  // snap the ball home:
+  //   • no shared value (offline, or a write that rolled back) → keep my kick.
+  //   • shared value newer-or-equal to my kick → it's authoritative.
+  //   • shared value OLDER than my kick → hold my kick through the echo grace
+  //     window, then converge to the shared node (resolves a lost last-write race).
   function effectiveSnap() {
     const net = getBall();
-    if (net && typeof net.ts === 'number') {
-      if (!localSnap || net.ts >= localSnap.ts) { localSnap = null; return net; }
-      if (serverNow() > localDeadline) { localSnap = null; return net; }
-    }
-    return localSnap;
+    if (!net || typeof net.ts !== 'number') return localSnap;
+    if (!localSnap) return net;
+    if (net.ts >= localSnap.ts) return net;
+    return serverNow() <= localDeadline ? localSnap : net;
   }
 
   // Live ball position this instant (or its home spot before any kick).
