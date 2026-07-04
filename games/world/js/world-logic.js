@@ -209,6 +209,55 @@ function ballKick(bx, by, px, py, speed, facing, tsMs) {
   return { x0: bx, y0: by, dx: dx, dy: dy, s0: speed, ts: tsMs };
 }
 
+// ── Day/night Sky Clock: time-of-day → overlay tint (pure, tested) ──
+// Rather than sync any state, the sky is a pure function of the shared server
+// clock: every client with the same clock paints the same time-of-day, so two
+// pets standing together see an identical sky. skyState() returns how to tint the
+// scene RIGHT NOW — a translucent gradient (top/bottom RGB + alpha) laid over the
+// scene's own sky, plus star/moon and golden-hour strengths — interpolated
+// between keyframes with a smooth midnight wraparound.
+// Keyframe row: { h: local hour, top/bot: overlay RGB, a: overlay alpha,
+//   s: star/darkness strength 0–1, w: golden-hour warmth 0–1 }.
+const WORLD_SKY_KEYS = [
+  { h: 0.0,  top: [22, 26, 64],    bot: [44, 46, 92],    a: 0.55, s: 1.00, w: 0.00 }, // deep night
+  { h: 5.0,  top: [30, 34, 78],    bot: [72, 60, 112],   a: 0.52, s: 0.90, w: 0.05 }, // pre-dawn
+  { h: 6.2,  top: [120, 96, 150],  bot: [255, 168, 140], a: 0.40, s: 0.30, w: 0.35 }, // rosy dawn
+  { h: 7.5,  top: [255, 206, 130], bot: [255, 232, 175], a: 0.20, s: 0.00, w: 0.75 }, // sunrise glow
+  { h: 9.0,  top: [255, 255, 255], bot: [255, 255, 255], a: 0.00, s: 0.00, w: 0.00 }, // clear day
+  { h: 16.0, top: [255, 255, 255], bot: [255, 255, 255], a: 0.00, s: 0.00, w: 0.00 }, // clear day
+  { h: 17.6, top: [255, 178, 92],  bot: [255, 150, 110], a: 0.30, s: 0.00, w: 1.00 }, // golden hour
+  { h: 18.9, top: [116, 70, 128],  bot: [255, 122, 96],  a: 0.42, s: 0.35, w: 0.50 }, // dusk
+  { h: 20.2, top: [26, 30, 70],    bot: [48, 48, 96],    a: 0.55, s: 1.00, w: 0.00 }, // nightfall
+];
+
+// Local fractional hour [0,24) at nowMs, shifted by tzOffsetMin — same UTC-getter
+// idiom as worldDayKey so it's deterministic from the server clock, not the device.
+function skyLocalHour(nowMs, tzOffsetMin) {
+  const d = new Date(nowMs + (tzOffsetMin || 0) * 60000);
+  return d.getUTCHours() + d.getUTCMinutes() / 60 + d.getUTCSeconds() / 3600;
+}
+
+function skyState(nowMs, tzOffsetMin) {
+  const h = skyLocalHour(nowMs, tzOffsetMin);
+  const K = WORLD_SKY_KEYS, n = K.length;
+  // Default to the wrap segment (last keyframe → first, across the 24h seam).
+  let a = K[n - 1], b = K[0], span = (24 - a.h) + b.h;
+  let f = span > 0 ? ((h >= a.h ? h - a.h : h + (24 - a.h)) / span) : 0;
+  for (let i = 0; i < n - 1; i++) {
+    if (h >= K[i].h && h < K[i + 1].h) { a = K[i]; b = K[i + 1]; span = b.h - a.h; f = span > 0 ? (h - a.h) / span : 0; break; }
+  }
+  const mix = (u, v) => Math.round(u + (v - u) * f);
+  const lin = (u, v) => u + (v - u) * f;
+  return {
+    hour: h,
+    top: [mix(a.top[0], b.top[0]), mix(a.top[1], b.top[1]), mix(a.top[2], b.top[2])],
+    bottom: [mix(a.bot[0], b.bot[0]), mix(a.bot[1], b.bot[1]), mix(a.bot[2], b.bot[2])],
+    alpha: lin(a.a, b.a),
+    star: lin(a.s, b.s),
+    warm: lin(a.w, b.w),
+  };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     wClamp, clampToBounds, normalizeVector, stepPosition, shouldWritePosition,
@@ -216,5 +265,6 @@ if (typeof module !== 'undefined' && module.exports) {
     highfiveMatch, highfiveKey,
     worldRnd, worldStrHash, worldDayKey, sparkleSpots, sparkleGlow,
     reflectRange, ballState, ballKick,
+    skyLocalHour, skyState, WORLD_SKY_KEYS,
   };
 }

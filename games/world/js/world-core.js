@@ -252,6 +252,7 @@
     hfBursts.length = 0; setHighfiveBackBtn(false); // celebrations/prompts don't cross scenes
     WorldReactive.reset();                          // marks/props don't carry across scenes
     WorldBall.reset(); WorldCritters.reset();       // ball + critters are per-scene
+    WorldFireflies.reset();                         // fireflies re-seed per scene
     WorldActors.clearTags();
     WorldNet.switchScene(s.id, me);
     WorldInput.buildActionButtons(el('worldActionBtns'), s.id);
@@ -396,6 +397,7 @@
     if (!running) return;
     const t = WorldNet.serverNow(); // server-aligned clock so remote action timing matches
     let dt = (t - lastT) / 1000; if (dt > 0.05) dt = 0.05; if (dt < 0) dt = 0; lastT = t;
+    const sky = WorldSky.state(); // time-of-day tint (pure from the shared clock); drives fireflies too
 
     // Local movement — frozen while a scene-transition wipe plays.
     if (trans) {
@@ -428,6 +430,7 @@
     WorldReactive.update(t, dt, me, remotes, me.scene); // scene reacts to pets that move/touch
     WorldBall.update(t, dt, me, remotes, me.scene);     // kick the shared pool ball on contact
     WorldCritters.update(dt, me, remotes, me.scene);    // fish/lizards/butterflies flee passing pets
+    WorldFireflies.update(dt, me, remotes, sky.star, t); // at dusk/night, gather around a still pet
 
     WorldNet.writeState(me); // throttled + delta-gated inside
 
@@ -436,10 +439,13 @@
     const drawFn = window.WORLD_SCENE_DRAW && window.WORLD_SCENE_DRAW[me.scene];
     if (drawFn) { try { drawFn(ctx, size.w, size.h, t / 1000); } catch (e) { fallbackBg(size.w, size.h); } }
     else fallbackBg(size.w, size.h);
+    WorldSky.drawBg(ctx, size.w, size.h, t, sky);         // day/night tint + stars/moon, over the scene bg
     WorldReactive.draw(ctx, size.w, size.h, t, me.scene); // contact marks + props, under the pets
     WorldBall.draw(ctx, size.w, size.h, t, me.scene);     // shared kickable ball, under the pets
     WorldCritters.draw(ctx, size.w, size.h, t, me.scene); // ambient critters, under the pets
     WorldActors.render(ctx, size.w, size.h, t, me, remotes, sceneObj);
+    WorldFireflies.draw(ctx, size.w, size.h, t, sky.star); // glowing fireflies over the pets at night
+    WorldSky.drawWash(ctx, size.w, size.h, sky);          // subtle warm glow over everything at golden hour
     WorldSparkles.draw(ctx, size.w, size.h, t / 1000, me, me.scene); // hidden-until-near sparkles (t in seconds for twinkle)
     drawHighfives(t, size.w, size.h); // matched-pair celebrations on top of the actors
     drawEdgeArrows(ctx, size.w, size.h, t); // faint ‹ › cues marking edges that cross to another scene
@@ -457,6 +463,7 @@
     // Subsystems
     WorldNet.init({ db: wDb, uid: uid, getName: () => me.name, onRemotes: function () {}, onChat: function (list) { WorldChat.receive(list); }, onDiag: onDiag });
     WorldBall.init({ serverNow: WorldNet.serverNow, getBall: WorldNet.getBall, kickBall: WorldNet.kickBall });
+    WorldSky.init({ serverNow: WorldNet.serverNow });
     WorldActors.init({ tagLayer: tagLayer, onTagClick: openTagMenu, getBubble: function (u) { return WorldChat.getBubble(u); } });
     WorldChat.init({ inputEl: el('worldChatInput'), logEl: el('worldChatLog'), hintEl: el('worldChatHint'), sendBtn: el('worldChatSend'), onSend: function (text) { WorldNet.sendChat(text); }, myUid: uid, chatEl: el('worldChat'), toggleEl: el('worldChatToggle'), labelEl: el('worldChatToggleLabel'), unreadEl: el('worldChatUnread') });
     WorldOutfit.init({ db: wDb, uid: uid, panelEl: el('worldWardrobe'), onChange: onOutfitChange });

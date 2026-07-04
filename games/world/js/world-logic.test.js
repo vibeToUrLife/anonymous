@@ -244,3 +244,50 @@ test('ballKick falls back to facing when pet sits on the ball', () => {
   const kl = L.ballKick(0.5, 0.7, 0.5, 0.7, 0.9, -1, 0);
   assert.deepEqual([kl.dx, kl.dy], [-1, 0]);
 });
+
+// ── Sky Clock (day/night) ──
+const H = h => h * 3600000; // local hour → ms since epoch (with tzOffsetMin 0)
+
+test('skyLocalHour reads the local fractional hour and applies tz offset', () => {
+  assert.ok(Math.abs(L.skyLocalHour(H(13) + 30 * 60000, 0) - 13.5) < 1e-9);
+  assert.equal(L.skyLocalHour(0, 480), 8);   // UTC+8 → 08:00 local at epoch
+  assert.equal(L.skyLocalHour(0, 0), 0);
+});
+
+test('skyState: midday draws no overlay, no stars, no warmth', () => {
+  const s = L.skyState(H(12), 0);
+  assert.ok(s.alpha < 1e-9, 'transparent at noon (scene shows as-is)');
+  assert.equal(s.star, 0);
+  assert.equal(s.warm, 0);
+});
+
+test('skyState: deep night is dark and starry', () => {
+  const s = L.skyState(H(0), 0);
+  assert.ok(s.alpha > 0.5, 'strong dark overlay');
+  assert.ok(s.star > 0.9, 'stars out');
+  assert.equal(s.warm, 0);
+});
+
+test('skyState: golden hour is warm', () => {
+  const s = L.skyState(H(17) + 36 * 60000, 0); // 17.6
+  assert.ok(s.warm > 0.9, 'peak golden-hour warmth');
+  assert.equal(s.star, 0);
+});
+
+test('skyState is deterministic and stays in range all day', () => {
+  assert.deepEqual(L.skyState(H(9), 0), L.skyState(H(9), 0));
+  for (let m = 0; m < 24 * 60; m += 17) {
+    const s = L.skyState(m * 60000, 0);
+    assert.ok(s.alpha >= 0 && s.alpha <= 1, 'alpha in [0,1] at min ' + m);
+    assert.ok(s.star >= 0 && s.star <= 1, 'star in [0,1]');
+    assert.ok(s.warm >= 0 && s.warm <= 1, 'warm in [0,1]');
+    [...s.top, ...s.bottom].forEach(c => assert.ok(c >= 0 && c <= 255, 'colour byte in range'));
+  }
+});
+
+test('skyState wraps smoothly across midnight (23:30 and 00:30 both night)', () => {
+  const late = L.skyState(H(23) + 30 * 60000, 0);
+  const early = L.skyState(H(0) + 30 * 60000, 0);
+  assert.ok(late.star > 0.9 && early.star > 0.9, 'both sides of midnight are starry');
+  assert.ok(late.alpha > 0.5 && early.alpha > 0.5, 'both dark');
+});
