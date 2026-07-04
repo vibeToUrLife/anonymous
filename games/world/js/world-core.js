@@ -241,15 +241,25 @@
     if (!slice.length) {
       grid.innerHTML = '<div class="world-board-empty">No notes yet — be the first to leave one! 🌸</div>';
     } else {
+      // Scatter the notes at absolute positions on the cork, NOT in reading order:
+      // build a set of spread-out anchor cells (percent, inset from the edges) and
+      // SHUFFLE them deterministically per page, then drop each note in a shuffled
+      // cell with its own seeded jitter + tilt. So the layout is random-looking and
+      // stable per render, never a tidy sequence.
+      const cx = [20, 50, 80], cy = [24, 50, 76], cells = [];
+      for (let r = 0; r < cy.length; r++) for (let c = 0; c < cx.length; c++) cells.push({ x: cx[c], y: cy[r] });
+      const order = cells.map(function (c, i) { return { c: c, k: worldStrHash('cell|' + boardPage + '|' + i) }; })
+        .sort(function (a, b) { return a.k - b.k; }).map(function (o) { return o.c; });
       grid.innerHTML = slice.map(function (n, i) {
-        const c = colors[(start + i) % colors.length];
-        // Seeded per-note so each sticky sits at a casual random tilt + offset
-        // (a messy corkboard, not a tidy grid) yet never jumps on re-render.
+        const cell = order[i % order.length];
         const seed = worldStrHash((n.uid || '') + ':' + (n.ts || 0));
-        const rot = (seed % 23) - 11;         // -11..11°
-        const tx = ((seed >> 4) % 25) - 12;   // -12..12px
-        const ty = ((seed >> 9) % 21) - 10;   // -10..10px
-        return '<div class="world-sticky" style="background:' + c + ';transform:translate(' + tx + 'px,' + ty + 'px) rotate(' + rot + 'deg)">' +
+        const jx = ((seed % 100) / 100 - 0.5) * 15;         // ±7.5% jitter around the cell
+        const jy = (((seed >> 7) % 100) / 100 - 0.5) * 15;
+        const rot = ((seed >> 14) % 23) - 11;               // -11..11° tilt
+        const left = Math.max(17, Math.min(83, cell.x + jx));
+        const top = Math.max(18, Math.min(82, cell.y + jy));
+        const c = colors[(start + i) % colors.length];
+        return '<div class="world-sticky" style="left:' + left + '%;top:' + top + '%;z-index:' + (100 + per - i) + ';background:' + c + ';transform:translate(-50%,-50%) rotate(' + rot + 'deg)">' +
           '<span class="world-sticky-pin"></span>' +
           '<div class="world-sticky-text">' + esc(n.text || '') + '</div>' +
           '<div class="world-sticky-by">— ' + esc(n.name || 'Pet') + '</div></div>';

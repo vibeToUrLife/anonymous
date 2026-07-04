@@ -157,7 +157,7 @@ const WORLD_BALLS = {
 const WORLD_NOTES = {
   maxLen: 80,             // a sticky note is short
   historyLimit: 300,      // RTDB limitToLast(N) — effectively "unlimited" for this scale
-  perPage: 8,             // sticky notes shown per board page; the rest paginate
+  perPage: 9,             // sticky notes scattered per board page; the rest paginate
   cooldownMs: 4000,       // min gap between one player's notes (anti-spam)
   boardRadius: 0.09,      // must be right up at the board to open it (small on purpose)
   boards: {               // the notice-board spot in each scene (normalized, inside bounds)

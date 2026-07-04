@@ -205,7 +205,7 @@ body.world-touch .world-note-key { display: none; } /* mobile has no keyboard â€
 }
 #worldBoardModal[hidden] { display: none; }
 .world-board-frame {
-  width: min(780px, 96vw); max-height: 92vh; display: flex; flex-direction: column;
+  width: min(940px, 97vw); height: min(88vh, 640px); display: flex; flex-direction: column;
   background: #b9783f; /* wooden frame */ border-radius: 18px; padding: 12px;
   box-shadow: 0 22px 60px rgba(0,0,0,0.5); box-sizing: border-box;
 }
@@ -216,15 +216,15 @@ body.world-touch .world-note-key { display: none; } /* mobile has no keyboard â€
   border-radius: 50%; font-size: 16px; cursor: pointer; flex: none;
 }
 #worldBoardGrid {
-  flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 180px; border-radius: 10px; padding: 26px 28px;
+  position: relative; flex: 1; min-height: 300px; border-radius: 10px; overflow: hidden;
   background-color: #d8b483; /* cork */
   background-image: radial-gradient(rgba(120,80,40,0.18) 1.5px, transparent 1.5px);
   background-size: 13px 13px;
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(138px, 1fr)); gap: 24px 20px; align-content: start;
 }
 .world-sticky {
-  position: relative; padding: 15px 12px 10px; border-radius: 3px; min-height: 96px;
-  box-shadow: 0 5px 12px rgba(0,0,0,0.22); color: #4a3a22; font-size: 14px; line-height: 1.32;
+  position: absolute; width: min(30%, 200px); box-sizing: border-box;
+  padding: 15px 13px 10px; border-radius: 3px; min-height: 88px; transform-origin: center;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.25); color: #4a3a22; font-size: 14px; line-height: 1.32;
   word-break: break-word; display: flex; flex-direction: column;
 }
 .world-sticky-pin {
@@ -233,7 +233,7 @@ body.world-touch .world-note-key { display: none; } /* mobile has no keyboard â€
 }
 .world-sticky-text { flex: 1; }
 .world-sticky-by { margin-top: 8px; font-size: 11px; color: rgba(74,58,34,0.72); text-align: right; }
-.world-board-empty { grid-column: 1 / -1; text-align: center; color: #6b543a; font-weight: 600; padding: 44px 12px; }
+.world-board-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; color: #6b543a; font-weight: 600; padding: 24px; }
 .world-board-foot { padding-top: 10px; }
 #worldBoardPager { display: flex; align-items: center; justify-content: center; gap: 12px; color: #fff; font-weight: 700; font-size: 13px; }
 #worldBoardPager:not(:empty) { margin-bottom: 8px; }
