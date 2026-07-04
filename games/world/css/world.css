@@ -175,8 +175,30 @@ body.world-touch #worldJoystick { display: block; }
   50%      { box-shadow: 0 10px 32px rgba(255, 120, 60, 0.85); }
 }
 
-/* Pinned-note composer — a small centered card to type a note before pinning it
-   at the pet's spot. Sits above the action buttons; fully touch-friendly. */
+/* Notice-board write prompt — appears when standing at the board. Tappable on
+   mobile (the whole button); on desktop it also shows an "Enter" keycap and the
+   Enter key works. Distinct blue so it doesn't read as the high-five prompt. */
+#worldNotePrompt {
+  position: absolute; left: 50%; bottom: 300px; transform: translateX(-50%); z-index: 30;
+  display: inline-flex; align-items: center; gap: 10px;
+  border: 0; border-radius: 999px; padding: 14px 22px; font-family: inherit; font-weight: 800;
+  font-size: 16px; color: #fff; background: #3b7dd8; cursor: pointer; white-space: nowrap;
+  box-shadow: 0 8px 22px rgba(59, 125, 216, 0.5); animation: notePulse 1.2s ease-in-out infinite;
+}
+#worldNotePrompt[hidden] { display: none; }
+#worldNotePrompt:active { transform: translateX(-50%) scale(0.94); }
+.world-note-key {
+  font-size: 12px; font-weight: 700; background: rgba(255, 255, 255, 0.28); color: #fff;
+  padding: 2px 8px; border-radius: 6px; letter-spacing: 0.03em;
+}
+body.world-touch .world-note-key { display: none; } /* mobile has no keyboard — just tap the button */
+@keyframes notePulse {
+  0%, 100% { box-shadow: 0 8px 22px rgba(59, 125, 216, 0.45); }
+  50%      { box-shadow: 0 10px 30px rgba(59, 125, 216, 0.85); }
+}
+
+/* Notice-board note composer — a small centered card to type a note before
+   pinning it at the pet's spot. Sits above the action buttons; touch-friendly. */
 #worldNoteComposer {
   position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%) translateY(8px);
   z-index: 45; width: min(360px, 90vw); background: var(--w-cream);

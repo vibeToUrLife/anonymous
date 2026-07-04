@@ -131,6 +131,45 @@ const WorldNotes = (function () {
     ctx.restore();
   }
 
+  function boardFor(sceneId) {
+    return (typeof WORLD_NOTES !== 'undefined' && WORLD_NOTES.boards) ? (WORLD_NOTES.boards[sceneId] || null) : null;
+  }
+
+  // The scene's community notice board (a framed cork board on two posts with a
+  // few pinned sticky-notes). Drawn UNDER the pets so they can stand in front of
+  // it. When the player is near, a ✍️ bobs above it inviting them to write.
+  function drawBoard(ctx, W, H, t, sceneId, near) {
+    const b = boardFor(sceneId); if (!b) return;
+    const px = b.x * W, py = b.y * H, ds = depthScale(b.y);
+    const w = ds * 60, h = ds * 44, x = px - w / 2, top = py - ds * 66;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.14)'; ctx.beginPath(); ctx.ellipse(px, py, w * 0.48, ds * 5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#a9743f';
+    roundRectPath(ctx, px - ds * 24, top + h - ds * 6, ds * 6, ds * 74, ds * 2); ctx.fill();
+    roundRectPath(ctx, px + ds * 18, top + h - ds * 6, ds * 6, ds * 74, ds * 2); ctx.fill();
+    roundRectPath(ctx, x, top, w, h, ds * 5); ctx.fillStyle = '#e8c79a'; ctx.fill();       // cork panel
+    ctx.lineWidth = ds * 3; ctx.strokeStyle = '#a9743f'; roundRectPath(ctx, x, top, w, h, ds * 5); ctx.stroke(); // frame
+    roundRectPath(ctx, x + ds * 3, top + ds * 3, w - ds * 6, ds * 10, ds * 2.5); ctx.fillStyle = '#e5533b'; ctx.fill(); // header
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = 'bold ' + Math.max(8, (ds * 8) | 0) + 'px "Noto Sans SC", sans-serif';
+    ctx.fillText('📋 NOTES', px, top + ds * 8.4);
+    // sticky notes pinned to the cork
+    const stickies = [['#bfe3ff', ds * 6, ds * 17], ['#ffe6a8', ds * 24, ds * 19], ['#ffc9d6', ds * 40, ds * 17]];
+    for (let i = 0; i < stickies.length; i++) {
+      const s = stickies[i];
+      roundRectPath(ctx, x + s[1], top + s[2], ds * 13, ds * 12, ds * 1.5); ctx.fillStyle = s[0]; ctx.fill();
+      ctx.strokeStyle = 'rgba(120,90,40,0.25)'; ctx.lineWidth = 1;
+      for (let ln = 1; ln <= 2; ln++) { ctx.beginPath(); ctx.moveTo(x + s[1] + ds * 2, top + s[2] + ds * 4 * ln); ctx.lineTo(x + s[1] + ds * 11, top + s[2] + ds * 4 * ln); ctx.stroke(); }
+      ctx.fillStyle = ['#e5533b', '#3b7dd8', '#3bab5e'][i]; ctx.beginPath(); ctx.arc(x + s[1] + ds * 6.5, top + s[2] + ds * 1.5, ds * 1.7, 0, Math.PI * 2); ctx.fill();
+    }
+    if (near) {
+      const bob = Math.sin(t / 300) * ds * 2;
+      ctx.globalAlpha = 0.95; ctx.font = Math.max(15, (ds * 17) | 0) + 'px serif';
+      ctx.fillText('✍️', px, top - ds * 12 + bob);
+    }
+    ctx.restore();
+  }
+
   function draw(ctx, W, H, t, me, sceneId) {
     if (!me) return;
     const c = cfg();
@@ -150,5 +189,5 @@ const WorldNotes = (function () {
     }
   }
 
-  return { init, pin, draw };
+  return { init, pin, draw, drawBoard };
 })();

@@ -210,14 +210,23 @@
     else if (intent.kind === 'emote') triggerAction(WORLD_EMOTES[intent.index]);
     else if (intent.kind === 'signature') triggerAction(signatureFor(me.pet));
     else if (intent.kind === 'play') offerHighfive();
-    else if (intent.kind === 'note') openNoteComposer();
   }
 
-  // ── Pinned-note composer ──
-  // A tiny overlay to type a note; pinning drops it at the pet's current spot.
+  // ── Notice board: walk up to write a note ──
+  function currentBoard() { return (WORLD_NOTES.boards && WORLD_NOTES.boards[me.scene]) || null; }
+  function nearBoard() { const b = currentBoard(); return !!b && worldDist(me, b) <= WORLD_NOTES.boardRadius; }
+  function noteComposerOpen() { const box = el('worldNoteComposer'); return !!box && !box.hidden; }
+  // The "✍️ Write a note" prompt (tappable on mobile; Enter on desktop) is shown
+  // only while standing at the board and not already composing.
+  function setNotePrompt(show) { const p = el('worldNotePrompt'); if (p) p.hidden = !show; }
+
+  // A tiny overlay to type a note; pinning drops it at the pet's current spot
+  // (right by the board). Only opens while the player is at a board.
   function openNoteComposer() {
+    if (!nearBoard()) return;
     const box = el('worldNoteComposer'), inp = el('worldNoteInput');
     if (!box || !inp) return;
+    setNotePrompt(false);
     box.hidden = false; box.classList.add('open');
     inp.value = ''; setTimeout(function () { inp.focus(); }, 0);
   }
@@ -272,6 +281,7 @@
     WorldReactive.reset();                          // marks/props don't carry across scenes
     WorldBall.reset(); WorldCritters.reset();       // ball + critters are per-scene
     WorldFireflies.reset();                         // fireflies re-seed per scene
+    setNotePrompt(false); closeNoteComposer();      // the board prompt is per-scene
     WorldActors.clearTags();
     WorldNet.switchScene(s.id, me);
     WorldInput.buildActionButtons(el('worldActionBtns'), s.id);
@@ -450,6 +460,8 @@
     WorldBall.update(t, dt, me, remotes, me.scene);     // kick the shared pool ball on contact
     WorldCritters.update(dt, me, remotes, me.scene);    // fish/lizards/butterflies flee passing pets
     WorldFireflies.update(dt, me, remotes, sky.star, t); // at dusk/night, gather around a still pet
+    const atBoard = nearBoard();                        // standing at the notice board?
+    setNotePrompt(atBoard && !noteComposerOpen());      // show/hide the ✍️ write prompt
 
     WorldNet.writeState(me); // throttled + delta-gated inside
 
@@ -462,6 +474,7 @@
     WorldReactive.draw(ctx, size.w, size.h, t, me.scene); // contact marks + props, under the pets
     WorldBall.draw(ctx, size.w, size.h, t, me.scene);     // shared kickable ball, under the pets
     WorldCritters.draw(ctx, size.w, size.h, t, me.scene); // ambient critters, under the pets
+    WorldNotes.drawBoard(ctx, size.w, size.h, t, me.scene, atBoard); // notice board prop, under the pets
     WorldActors.render(ctx, size.w, size.h, t, me, remotes, sceneObj);
     WorldFireflies.draw(ctx, size.w, size.h, t, sky.star); // glowing fireflies over the pets at night
     WorldSky.drawWash(ctx, size.w, size.h, sky);          // subtle warm glow over everything at golden hour
@@ -533,12 +546,18 @@
   el('worldWearBtn') && el('worldWearBtn').addEventListener('click', () => toggleMenu('wear'));
   el('worldMenuClose') && el('worldMenuClose').addEventListener('click', () => { const m = el('worldMenu'); if (m) m.classList.remove('open'); });
   hfBackBtn && hfBackBtn.addEventListener('click', e => { e.preventDefault(); offerHighfive(); });
-  // Pinned-note composer wiring
+  // Notice-board note composer wiring
+  el('worldNotePrompt') && el('worldNotePrompt').addEventListener('click', e => { e.preventDefault(); openNoteComposer(); });
   el('worldNotePin') && el('worldNotePin').addEventListener('click', e => { e.preventDefault(); submitNote(); });
   el('worldNoteCancel') && el('worldNoteCancel').addEventListener('click', e => { e.preventDefault(); closeNoteComposer(); });
   el('worldNoteInput') && el('worldNoteInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); submitNote(); }
     else if (e.key === 'Escape') { e.preventDefault(); closeNoteComposer(); }
+  });
+  // Desktop: Enter at the board opens the composer (mobile taps the ✍️ prompt).
+  window.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || e.repeat || WorldInput.isTyping()) return;
+    if (nearBoard()) { e.preventDefault(); openNoteComposer(); }
   });
   // Post THIS world (current scene) to the bubble board so others can join. Uses
   // the world's own Firestore instance; the scene link drops joiners in the same

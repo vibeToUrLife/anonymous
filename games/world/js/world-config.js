@@ -142,21 +142,30 @@ const WORLD_BALLS = {
   ],
 };
 
-// ── Pinned Notes ────────────────────────────────────────────────────
-// Leave a short, kind message pinned to the spot you're standing. It stays
-// (unlike a chat bubble), and later visitors discover it hot/cold: a little
-// folded-note card fades in as you wander near (`discoverRadius`), then blooms
-// open into a readable bubble once you're close (`revealRadius`). Text runs
-// through the SAME moderation as chat (maxLen + WORLD_CHAT.banned). Persisted per
-// scene-shard at world/scenes/{scene}/{shard}/notes/{id}; `historyLimit` (RTDB
-// limitToLast) ages the oldest notes out so it never grows unbounded. If RTDB is
-// unavailable / the rule isn't deployed, a pin still shows locally (solo fallback).
+// ── Notes Board ─────────────────────────────────────────────────────
+// Each scene has a community notice board. Walk up to it and a prompt appears
+// ("press Enter to write a note" on desktop, a tappable ✍️ button on mobile);
+// your note then pins right where you're standing, next to the board. Notes STAY
+// (unlike a chat bubble) and later visitors discover them hot/cold: a folded-note
+// card fades in as you wander near (`discoverRadius`), then blooms open into a
+// readable bubble once you're close (`revealRadius`). Text runs through the SAME
+// moderation as chat (maxLen + WORLD_CHAT.banned). Persisted per scene-shard at
+// world/scenes/{scene}/{shard}/notes/{id}; `historyLimit` (RTDB limitToLast) ages
+// the oldest notes out. If RTDB is unavailable / the rule isn't deployed, a pin
+// still shows locally (solo fallback). `boards` is the board spot per scene and
+// `boardRadius` is how near you must be to write.
 const WORLD_NOTES = {
   maxLen: 80,             // a pinned line is shorter than a chat message
   discoverRadius: 0.30,   // the folded-note card starts fading in within this range
   revealRadius: 0.16,     // the message blooms open within this range (saturates to opaque well before the centre)
   historyLimit: 20,       // RTDB limitToLast(N) — old notes gently age out
   cooldownMs: 4000,       // min gap between one player's pins (anti-spam)
+  boardRadius: 0.19,      // how near the board you must be to write / be prompted
+  boards: {               // the notice-board spot in each scene (normalized, inside bounds)
+    pool:      { x: 0.20, y: 0.62 },
+    egypt:     { x: 0.17, y: 0.66 },
+    grassland: { x: 0.17, y: 0.60 },
+  },
 };
 
 // ── Chat ──────────────────────────────────────────────────────────

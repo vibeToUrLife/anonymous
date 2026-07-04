@@ -104,8 +104,8 @@ const WorldInput = (function () {
     addBtn('⭐', 'Signature move', 'sig', () => onAction({ kind: 'signature', index: 0 }));
     // High-five a nearby pet (the reciprocal "play" verb)
     addBtn('🤝', 'High-five a nearby pet', 'play', () => onAction({ kind: 'play', index: 0 }));
-    // Leave a pinned note for the next visitor (async social — great when alone)
-    addBtn('📌', 'Leave a note here', 'note', () => onAction({ kind: 'note', index: 0 }));
+    // (Notes are written at the per-scene notice board — walk up to it and the
+    //  ✍️ prompt appears — so there's no note button in the action bar.)
 
     // Emote tray (popover of the 6 emotes). Appended to the container as a SIBLING
     // of the toggle button — nesting it inside the button is invalid HTML and makes
