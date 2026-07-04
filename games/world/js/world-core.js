@@ -269,20 +269,48 @@
   // PREVIOUS one (linear order: pool → egypt → grassland). You arrive at the
   // opposite edge so it feels like one continuous world. Mobile-first — it's just
   // walking — and a faint pulsing arrow marks each edge that leads somewhere.
-  let edgeUntil = 0; // brief lock after a transition so you don't bounce straight back
+  let edgeUntil = 0;      // brief lock after a transition so you don't bounce straight back
+  let trans = null;       // active scene-transition wipe: { dir, start, toScene, entry, swapped }
+  const TRANS_MS = 720;   // full wipe duration; the scene swap is hidden at the half-way cover
   function sceneIdx() { return WORLD_SCENES.findIndex(s => s.id === me.scene); }
+  function startTrans(dir, scene, entry, t) {
+    trans = { dir: dir, start: t, toScene: scene.id, entry: entry, swapped: false };
+    edgeUntil = t + TRANS_MS + 300;
+  }
   function maybeEdgeWalk(t, vec) {
-    if (t < edgeUntil) return;
+    if (trans || t < edgeUntil) return;
     const b = sceneObj.bounds, idx = sceneIdx();
     if (me.x >= b.maxX - 1e-3 && vec.x > 0.05 && idx < WORLD_SCENES.length - 1) {
-      const nx = WORLD_SCENES[idx + 1]; edgeUntil = t + 800;
-      switchScene(nx.id, { x: nx.bounds.minX + 0.03, y: me.y });
-      flashHint('🚶 ' + nx.emoji + ' ' + nx.name);
+      const nx = WORLD_SCENES[idx + 1]; startTrans(1, nx, { x: nx.bounds.minX + 0.03, y: me.y }, t);
     } else if (me.x <= b.minX + 1e-3 && vec.x < -0.05 && idx > 0) {
-      const pv = WORLD_SCENES[idx - 1]; edgeUntil = t + 800;
-      switchScene(pv.id, { x: pv.bounds.maxX - 0.03, y: me.y });
-      flashHint('🚶 ' + pv.emoji + ' ' + pv.name);
+      const pv = WORLD_SCENES[idx - 1]; startTrans(-1, pv, { x: pv.bounds.maxX - 0.03, y: me.y }, t);
     }
+  }
+  // Advance the wipe: swap scenes at the half-way point (fully covered), end at 1.
+  function advanceTransition(t) {
+    if (!trans) return;
+    const p = (t - trans.start) / TRANS_MS;
+    if (!trans.swapped && p >= 0.5) { switchScene(trans.toScene, trans.entry); trans.swapped = true; }
+    if (p >= 1) trans = null;
+  }
+  // The travelling curtain: a full-screen panel in the destination's sky colours
+  // that slides across in the walk direction, carrying the destination's emoji +
+  // name. It fully covers at the mid-point (when the scene swaps underneath).
+  function drawTransition(ctx, W, H, t) {
+    if (!trans) return;
+    const p = Math.max(0, Math.min(1, (t - trans.start) / TRANS_MS));
+    const px = trans.dir > 0 ? (W - p * 2 * W) : (-W + p * 2 * W);
+    const dst = worldSceneById(trans.toScene);
+    ctx.save();
+    ctx.translate(px, 0);
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, dst.sky[0]); g.addColorStop(1, dst.sky[1]);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = ((H * 0.14) | 0) + 'px serif'; ctx.fillText(dst.emoji, W / 2, H * 0.4);
+    ctx.fillStyle = 'rgba(255,255,255,0.96)';
+    ctx.font = 'bold ' + ((H * 0.05) | 0) + 'px sans-serif'; ctx.fillText('🚶  ' + dst.name, W / 2, H * 0.55);
+    ctx.restore();
   }
   function drawEdgeArrows(ctx, W, H, t) {
     const idx = sceneIdx();
@@ -369,13 +397,18 @@
     const t = WorldNet.serverNow(); // server-aligned clock so remote action timing matches
     let dt = (t - lastT) / 1000; if (dt > 0.05) dt = 0.05; if (dt < 0) dt = 0; lastT = t;
 
-    // Local movement
-    const vec = WorldInput.getMoveVector();
-    const step = stepPosition(me.x, me.y, vec, WORLD_SYNC.moveSpeed, dt, sceneObj.bounds);
-    me.x = step.x; me.y = step.y;
-    me.moving = (vec.x !== 0 || vec.y !== 0);
-    if (vec.x > 0.01) me.facing = 1; else if (vec.x < -0.01) me.facing = -1;
-    maybeEdgeWalk(t, vec); // walk into a side wall → cross to the neighbouring scene
+    // Local movement — frozen while a scene-transition wipe plays.
+    if (trans) {
+      advanceTransition(t);
+      me.moving = false;
+    } else {
+      const vec = WorldInput.getMoveVector();
+      const step = stepPosition(me.x, me.y, vec, WORLD_SYNC.moveSpeed, dt, sceneObj.bounds);
+      me.x = step.x; me.y = step.y;
+      me.moving = (vec.x !== 0 || vec.y !== 0);
+      if (vec.x > 0.01) me.facing = 1; else if (vec.x < -0.01) me.facing = -1;
+      maybeEdgeWalk(t, vec); // walk into a side wall → cross to the neighbouring scene
+    }
     // The high-five offer persists while walking (mobile players keep a thumb on
     // the joystick) and simply expires with its duration; world-actors drops the
     // paw-up pose while moving so it never layers on the walk cycle.
@@ -410,6 +443,7 @@
     WorldSparkles.draw(ctx, size.w, size.h, t / 1000, me, me.scene); // hidden-until-near sparkles (t in seconds for twinkle)
     drawHighfives(t, size.w, size.h); // matched-pair celebrations on top of the actors
     drawEdgeArrows(ctx, size.w, size.h, t); // faint ‹ › cues marking edges that cross to another scene
+    drawTransition(ctx, size.w, size.h, t); // travelling wipe on top of everything during a scene change
 
     requestAnimationFrame(frame);
   }
