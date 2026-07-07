@@ -136,6 +136,16 @@
       { emoji:'🍞', name:'Fresh Loaf' }, { emoji:'🔔', name:'Honk Bell' }, { emoji:'🥨', name:'Pretzel' },
       { emoji:'💎', name:'Goose Gem' }, { emoji:'👑', name:'Goose Crown' }, { emoji:'🥚', name:'Golden Goose Egg' },
     ],
+    tom: [
+      { emoji:'🐾', name:'Paw Print' }, { emoji:'🐟', name:'Fish' }, { emoji:'🥛', name:'Milk Saucer' },
+      { emoji:'🔔', name:'Collar Bell' }, { emoji:'🧶', name:'Yarn Ball' }, { emoji:'🪤', name:'Mousetrap' },
+      { emoji:'🏆', name:'Chase Trophy' }, { emoji:'💎', name:'Gem Collar' }, { emoji:'👑', name:'Cat Crown' },
+    ],
+    jerry: [
+      { emoji:'🧀', name:'Cheese Wedge' }, { emoji:'🌰', name:'Acorn' }, { emoji:'🐾', name:'Mouse Print' },
+      { emoji:'🍪', name:'Cookie Crumb' }, { emoji:'🔔', name:'Tiny Bell' }, { emoji:'🎈', name:'Balloon' },
+      { emoji:'🏆', name:'Getaway Trophy' }, { emoji:'💎', name:'Gemstone' }, { emoji:'👑', name:'Mouse Crown' },
+    ],
   };
 
   const PET_COLLECTION_DECOR = {
@@ -146,6 +156,8 @@
     fox:     'decor_fox_den',
     panda:   'decor_panda_garden',
     goose:   'decor_goose_pond',
+    tom:     'decor_tom_armchair',
+    jerry:   'decor_jerry_mousehole',
   };
 
   return {

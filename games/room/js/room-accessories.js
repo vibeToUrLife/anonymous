@@ -19,6 +19,10 @@
       panda:   [{ id: 'trick_wave', name: 'Wave', minAffection: 100 }, { id: 'trick_roll', name: 'Roll', minAffection: 300 }, { id: 'trick_dance', name: 'Dance', minAffection: 700 }],
       // Goose: flap its wings → spin → waddle-dance.
       goose:   [{ id: 'trick_flap', name: 'Flap', minAffection: 80 }, { id: 'trick_spin', name: 'Spin', minAffection: 250 }, { id: 'trick_dance', name: 'Dance', minAffection: 600 }],
+      // Tom: sit → wave → dance → a show-off backflip.
+      tom:     [{ id: 'trick_sit', name: 'Sit', minAffection: 80 }, { id: 'trick_wave', name: 'Wave', minAffection: 250 }, { id: 'trick_dance', name: 'Dance', minAffection: 550 }, { id: 'trick_backflip', name: 'Backflip', minAffection: 1100 }],
+      // Jerry: stand up → spin → a quick hop → dance.
+      jerry:   [{ id: 'trick_stand', name: 'Stand Up', minAffection: 60 }, { id: 'trick_spin', name: 'Spin', minAffection: 200 }, { id: 'trick_binky', name: 'Hop', minAffection: 450 }, { id: 'trick_dance', name: 'Dance', minAffection: 800 }],
     };
 
     function triggerPetTrick(petId, trickId) {
@@ -187,7 +191,11 @@
       // at 0.42,-0.66 with radius 0.16), far from the body centre — without this
       // entry head-worn accessories fell back to the default and floated over the
       // body instead of the head. Values taken straight from the goose geometry.
-      goose:   { hx:  0.42, hy: -0.66, r: 0.16 }
+      goose:   { hx:  0.42, hy: -0.66, r: 0.16 },
+      // Tom & Jerry are upright with a big head centred over the body (front view).
+      // Values taken from their head geometry (tom: arc 0,-0.32 r0.37; jerry: 0,-0.26 r0.30).
+      tom:     { hx:  0,    hy: -0.34, r: 0.34 },
+      jerry:   { hx:  0,    hy: -0.28, r: 0.28 }
     };
 
     // Accessories that render behind the pet body

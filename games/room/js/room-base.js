@@ -98,6 +98,8 @@
       { id: 'fox',    emoji: '🦊', name: 'Fox',       cost: 1200 },
       { id: 'panda',  emoji: '🐼', name: 'Panda',     cost: 2000 },
       { id: 'goose',  emoji: '🦢', name: 'Goose',     cost: 1500 },
+      { id: 'tom',    emoji: '🐈', name: 'Tom',       cost: 10000 },
+      { id: 'jerry',  emoji: '🐭', name: 'Jerry',     cost: 10000 },
     ];
 
     const PLANTS = [
@@ -115,7 +117,8 @@
     const PLANT_OFFLINE_MODAL_MS = 60 * 60 * 1000;
 
     const PET_SIZES = {
-      cat: 72, dog: 80, bunny: 64, hamster: 58, fox: 76, panda: 86, goose: 74
+      cat: 72, dog: 80, bunny: 64, hamster: 58, fox: 76, panda: 86, goose: 74,
+      tom: 78, jerry: 64
     };
 
     const PET_COLORS = {
@@ -167,6 +170,18 @@
         { key: 'pink',    name: 'Pink',     body: '#f7a8c4', patch: '#333333' },
         { key: 'blue',    name: 'Sky Blue', body: '#8fb6ef', patch: '#333333' },
         { key: 'mint',    name: 'Mint',     body: '#8ed9b2', patch: '#333333' },
+      ],
+      tom: [
+        { key: 'classic', name: 'Classic', body: '#9099a0', dark: '#5f676e', belly: '#f3ecd9', inner: '#d99faa', muzzle: '#f3ecd9' },
+        { key: 'grey',    name: 'Grey',    body: '#a6abb0', dark: '#787d82', belly: '#eef0ec', inner: '#d99faa', muzzle: '#eef0ec' },
+        { key: 'butch',   name: 'Butch',   body: '#3f444b', dark: '#23262b', belly: '#c9cdd3', inner: '#c98ba0', muzzle: '#c9cdd3' },
+        { key: 'cream',   name: 'Cream',   body: '#d8c7a4', dark: '#a48f6a', belly: '#f7efdd', inner: '#d99faa', muzzle: '#f7efdd' },
+      ],
+      jerry: [
+        { key: 'ochre',   name: 'Ochre',   body: '#c8893f', belly: '#f4e0b8', inner: '#eab595', tail: '#b87c34' },
+        { key: 'brown',   name: 'Brown',   body: '#9c6b42', belly: '#e7cca7', inner: '#e2a887', tail: '#8a5c38' },
+        { key: 'grey',    name: 'Grey',    body: '#9aa0a6', belly: '#e5e7eb', inner: '#e2b0b0', tail: '#8f959b' },
+        { key: 'white',   name: 'White',   body: '#e6e0d4', belly: '#fbf7ee', inner: '#f0c4b2', tail: '#d8d2c6' },
       ],
     };
 
@@ -485,6 +500,8 @@
       { id: 'decor_fox_den',           emoji: '🏕️', name: 'Mystic Fox Den',      cost: 0, category: 'floor', dx: 0.78, dy: 0.80, unlockOnly: true },
       { id: 'decor_panda_garden',      emoji: '🎋', name: 'Bamboo Garden',       cost: 0, category: 'floor', dx: 0.40, dy: 0.80, unlockOnly: true },
       { id: 'decor_goose_pond',        emoji: '⛲', name: 'Goose Pond',          cost: 0, category: 'floor', dx: 0.62, dy: 0.88, unlockOnly: true },
+      { id: 'decor_tom_armchair',      emoji: '🛋️', name: "Tom's Armchair",      cost: 0, category: 'floor', dx: 0.28, dy: 0.82, unlockOnly: true },
+      { id: 'decor_jerry_mousehole',   emoji: '🧀', name: "Jerry's Cheese Wedge", cost: 0, category: 'floor', dx: 0.66, dy: 0.84, unlockOnly: true },
     ];
 
     const WALL_PATTERNS = [

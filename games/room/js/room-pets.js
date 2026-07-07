@@ -237,7 +237,9 @@
       hamster: ['stuff', 'groom', 'spin', 'sleep', 'wash', 'peek', 'dig', 'stretch'],
       fox:     ['pounce', 'yawn', 'crouch', 'sneak', 'sleep', 'tailflick', 'headtilt', 'stretch', 'dig'],
       panda:   ['eat', 'roll', 'wave', 'sit', 'sleep', 'stretch', 'yawn', 'headtilt', 'tumble'],
-      goose:   ['sleep', 'stretch', 'yawn', 'headtilt', 'groom', 'sit']
+      goose:   ['sleep', 'stretch', 'yawn', 'headtilt', 'groom', 'sit'],
+      tom:     ['sit', 'stretch', 'yawn', 'nap', 'sleep', 'headtilt', 'wave', 'dance', 'pounce'],
+      jerry:   ['sit', 'stretch', 'yawn', 'nap', 'sleep', 'headtilt', 'hop', 'spin', 'wave']
     };
 
     let _lastPetAction = {};
@@ -650,7 +652,11 @@
 
           ctx.save();
           ctx.translate(px, py);
-          ctx.scale(st.facingRight ? depthScale : -depthScale, depthScale);
+          // Upright pets (Tom/Jerry) turn to face travel direction; only their side
+          // view mirrors L/R. Quadruped pets mirror by facing as before.
+          const petView = petViewForState(p.type, st, moving);
+          const mirror = (!DIRECTIONAL_PETS[p.type] || petView === 'side') ? (st.facingRight ? 1 : -1) : 1;
+          ctx.scale(mirror * depthScale, depthScale);
 
           let bob = 0;
           let legPhase = 0;
@@ -680,7 +686,7 @@
           // Draw back-layer accessories (cape, wings) behind the pet
           const accId = petInst ? petInst.accessory : null;
           if (accId) drawPetAccessory(ctx, p.type, accId, size, 'back');
-          drawPetCanvas(ctx, p.type, size, legPhase, moving, hunger, t, currentAction, actionProgress, color);
+          drawPetCanvas(ctx, p.type, size, legPhase, moving, hunger, t, currentAction, actionProgress, color, petView);
           // Draw front-layer accessories on top of the pet
           if (accId) drawPetAccessory(ctx, p.type, accId, size, 'front');
           ctx.restore();
@@ -1434,7 +1440,7 @@
     }
 
     /* ── Draw pet by type ── */
-    function drawPetCanvas(ctx, type, size, legPhase, moving, hunger, t, action, ap, colorKey) {
+    function drawPetCanvas(ctx, type, size, legPhase, moving, hunger, t, action, ap, colorKey, view) {
       const pal = getPetPalette(type, colorKey);
       switch (type) {
         case 'cat':    drawCatPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
@@ -1444,8 +1450,25 @@
         case 'fox':    drawFoxPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
         case 'panda':  drawPandaPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
         case 'goose':  drawGoosePet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
+        // Tom & Jerry are upright characters with three views (front/side/back).
+        case 'tom':    drawTomPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
+        case 'jerry':  drawJerryPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
         default:       drawCatPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal);
       }
+    }
+
+    // Upright pets (Tom/Jerry) face their travel direction: across → side (mirrored
+    // by facingRight), toward the viewer → front, away → back. Idle keeps the last view.
+    // Quadruped pets always report 'front' (their draw fns ignore the view arg).
+    const DIRECTIONAL_PETS = { tom: true, jerry: true };
+    function petViewForState(type, st, moving) {
+      if (!DIRECTIONAL_PETS[type]) return 'front';
+      const vx = st.vx || 0, vy = st.vy || 0;
+      if (moving && (Math.abs(vx) > 0.0002 || Math.abs(vy) > 0.0002)) {
+        if (Math.abs(vx) >= Math.abs(vy)) st.viewDir = 'side';
+        else st.viewDir = vy > 0 ? 'front' : 'back';
+      }
+      return st.viewDir || 'front';
     }
 
     /* Pet drawing functions loaded from pets/*.js */

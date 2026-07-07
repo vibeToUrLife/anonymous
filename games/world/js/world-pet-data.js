@@ -14,12 +14,13 @@
    shared games/pets/pet-data.js loaded by both pages.)
    ════════════════════════════════════════════════════════════════ */
 
-// The 7 playable pet types, in picker order.
-const WORLD_PET_TYPES = ['cat', 'dog', 'bunny', 'hamster', 'fox', 'panda', 'goose'];
+// The playable pet types, in picker order.
+const WORLD_PET_TYPES = ['cat', 'dog', 'bunny', 'hamster', 'fox', 'panda', 'goose', 'tom', 'jerry'];
 
 // Base draw size per pet type (mirrors room-base.js PET_SIZES).
 const PET_SIZES = {
-  cat: 72, dog: 80, bunny: 64, hamster: 58, fox: 76, panda: 86, goose: 74
+  cat: 72, dog: 80, bunny: 64, hamster: 58, fox: 76, panda: 86, goose: 74,
+  tom: 78, jerry: 64
 };
 
 // Colour palettes per pet (mirrors room-base.js PET_COLORS).
@@ -71,6 +72,18 @@ const PET_COLORS = {
     { key: 'gray',   name: 'Gray',   body: '#b8bcc2', wing: '#9aa0a8', beak: '#3a3a3a', leg: '#d08a2c' },
     { key: 'brown',  name: 'Brown',  body: '#c8a878', wing: '#a8884e', beak: '#3a3a3a', leg: '#caa040' },
     { key: 'swan',   name: 'Swan',   body: '#ffffff', wing: '#f0f0f0', beak: '#e8682c', leg: '#2a2a2a' },
+  ],
+  tom: [
+    { key: 'classic', name: 'Classic', body: '#9099a0', dark: '#5f676e', belly: '#f3ecd9', inner: '#d99faa', muzzle: '#f3ecd9' },
+    { key: 'grey',    name: 'Grey',    body: '#a6abb0', dark: '#787d82', belly: '#eef0ec', inner: '#d99faa', muzzle: '#eef0ec' },
+    { key: 'butch',   name: 'Butch',   body: '#3f444b', dark: '#23262b', belly: '#c9cdd3', inner: '#c98ba0', muzzle: '#c9cdd3' },
+    { key: 'cream',   name: 'Cream',   body: '#d8c7a4', dark: '#a48f6a', belly: '#f7efdd', inner: '#d99faa', muzzle: '#f7efdd' },
+  ],
+  jerry: [
+    { key: 'ochre',   name: 'Ochre',   body: '#c8893f', belly: '#f4e0b8', inner: '#eab595', tail: '#b87c34' },
+    { key: 'brown',   name: 'Brown',   body: '#9c6b42', belly: '#e7cca7', inner: '#e2a887', tail: '#8a5c38' },
+    { key: 'grey',    name: 'Grey',    body: '#9aa0a6', belly: '#e5e7eb', inner: '#e2b0b0', tail: '#8f959b' },
+    { key: 'white',   name: 'White',   body: '#e6e0d4', belly: '#fbf7ee', inner: '#f0c4b2', tail: '#d8d2c6' },
   ],
 };
 
@@ -128,7 +141,7 @@ function roundRectPath(ctx, x, y, w, h, r) {
    pick the per-pet draw fn (from games/pets/*.js) and call it with the
    resolved palette. The CALLER must already have translated/scaled ctx to
    the pet's on-screen position (same contract as the room). */
-function worldDrawPet(ctx, type, size, legPhase, moving, action, ap, t, colorKey) {
+function worldDrawPet(ctx, type, size, legPhase, moving, action, ap, t, colorKey, view) {
   const pal = getPetPalette(type, colorKey);
   const hunger = 100; // World pets are never hungry — always their happy look.
   switch (type) {
@@ -139,6 +152,9 @@ function worldDrawPet(ctx, type, size, legPhase, moving, action, ap, t, colorKey
     case 'fox':     return drawFoxPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal);
     case 'panda':   return drawPandaPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal);
     case 'goose':   return drawGoosePet(ctx, size, legPhase, moving, hunger, action, ap, t, pal);
+    // Tom & Jerry are upright, three-view characters (view defaults to front).
+    case 'tom':     return drawTomPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view);
+    case 'jerry':   return drawJerryPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view);
     default:        return drawCatPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal);
   }
 }
