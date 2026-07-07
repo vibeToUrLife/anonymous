@@ -1429,6 +1429,22 @@ function updateReplies(bubble, a) {
     const savedImage = oldPreview && oldPreview.style.display !== 'none'
     ? oldPreview.querySelector('img')?.src : null;
 
+    // Detach any OPEN reply-to-reply input boxes and stash the live nodes, keyed
+    // by the id of the reply they're being written under. Moving the existing node
+    // (rather than rebuilding it) keeps its typed text, pending image and focus
+    // intact — otherwise a snapshot re-render triggered by someone else replying
+    // to this bubble would wipe out whatever the user was in the middle of typing.
+    const stashedNested = [];
+    container.querySelectorAll('.reply-item > .reply-children > .nested-reply-input').forEach((w) => {
+    const item = w.closest('.reply-item');
+    const rid = item && item.dataset.replyId;
+    if (!rid) return;   // legacy replies without an id can't be re-matched — leave them
+    stashedNested.push({ rid, node: w });
+    // Pre-mark this reply's thread open so buildReplyItem re-creates it expanded.
+    _openReplyThreads.add(getReplyReactionStorageKey(a.id, [rid]));
+    w.remove();
+    });
+
     // Re-render reply items only, keep input row
     const replyItems = container.querySelectorAll('.reply-item');
     replyItems.forEach(el => el.remove());
@@ -1448,6 +1464,19 @@ function updateReplies(bubble, a) {
         newPreview.style.display = 'flex';
     }
     }
+
+    // Re-attach the stashed reply-to-reply input boxes into their rebuilt items.
+    stashedNested.forEach(({ rid, node }) => {
+    const sel = (window.CSS && CSS.escape) ? CSS.escape(rid) : rid;
+    const item = container.querySelector('.reply-item[data-reply-id="' + sel + '"]');
+    const childrenWrap = item && item.querySelector(':scope > .reply-children');
+    if (!childrenWrap) return;   // reply gone from the latest snapshot — drop the draft
+    childrenWrap.appendChild(node);
+    // The freshly-built "↪ Reply" toggle needs to reflect that a box is open.
+    const toggle = Array.from(item.querySelectorAll(':scope > .reply-actions > .reply-to-reply-toggle'))
+        .find((b) => b.textContent.trim().charAt(0) === '↪');
+    if (toggle) toggle.textContent = '↪ Cancel';
+    });
     // Update button count
     const btn = bubble.querySelector('.reply-toggle');
     if (btn) btn.textContent = '💬 Reply' + (replyCount ? ' (' + replyCount + ')' : '');
