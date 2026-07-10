@@ -1484,6 +1484,11 @@ function updateReplies(bubble, a) {
     const childrenWrap = item && item.querySelector(':scope > .reply-children');
     if (!childrenWrap) return;   // reply gone from the latest snapshot — drop the draft
     childrenWrap.appendChild(node);
+    // Force the thread open. A reply with no child replies of its own is rebuilt
+    // with its .reply-children collapsed (setChildrenOpen only runs when childCount
+    // > 0), and .reply-children is display:none unless .open — so without this the
+    // draft we just re-attached would be hidden and look like it vanished.
+    childrenWrap.classList.add('open');
     // The freshly-built "↪ Reply" toggle needs to reflect that a box is open.
     const toggle = Array.from(item.querySelectorAll(':scope > .reply-actions > .reply-to-reply-toggle'))
         .find((b) => b.textContent.trim().charAt(0) === '↪');
