@@ -157,6 +157,18 @@ const removePreview = document.getElementById('removePreview');
 const lightbox = document.getElementById('lightbox');
 const lightboxImg = document.getElementById('lightboxImg');
 const ansAnonCheckbox = document.getElementById("ansCommentAnon");
+// Restore the saved "post anonymously" choice on page load (default: anonymous)
+// and persist it whenever the user toggles it. This must run at page-init scope
+// so the checkbox reflects the saved choice on every refresh. Previously it was
+// wired up inside buildReplyInput(), which only runs when a reply box is opened —
+// so on load the checkbox always reset to its HTML default (unchecked).
+if (ansAnonCheckbox) {
+    ansAnonCheckbox.checked = localStorage.getItem('ans_anon_pref') !== 'false';
+    ansAnonCheckbox.addEventListener('change', (e) => {
+        e.stopPropagation();
+        localStorage.setItem('ans_anon_pref', ansAnonCheckbox.checked ? 'true' : 'false');
+    });
+}
 let toastTimer = null;
 let pendingImage = null;  // base64 string of compressed image
 let suppressNextNotif = false; // suppress notification for self-sent messages
@@ -1742,13 +1754,6 @@ function buildReplyInput(docId, parentReplyPath, depth) {
     anonCheckbox.addEventListener('change', (e) => {
         e.stopPropagation();
         localStorage.setItem('reply_anon_pref', anonCheckbox.checked ? 'true' : 'false');
-    });
-
-    ansAnonCheckbox.checked = localStorage.getItem('ans_anon_pref') !== 'false';
-    // Persist preference when toggled
-    ansAnonCheckbox.addEventListener('change', (e) => {
-        e.stopPropagation();
-        localStorage.setItem('ans_anon_pref', ansAnonCheckbox.checked ? 'true' : 'false');
     });
 
     if (depth > 0) {
