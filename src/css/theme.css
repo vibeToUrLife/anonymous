@@ -215,6 +215,13 @@
 [data-theme="terminal"] .wall-done{ background:var(--primary) !important; color:#000 !important; border-radius:0; }
 [data-theme="terminal"] .wall-canvas.drawing{ background:rgba(0,0,0,0.35); }
 
+/* 泡泡罐 bubble jar → console panel (flat, monochrome) */
+[data-theme="terminal"] .jar-panel{ background:#0c0c0c !important; border:1px solid #333 !important; color:var(--ink) !important; border-radius:0; box-shadow:none; }
+[data-theme="terminal"] .jar-card{ background:rgba(255,255,255,.03) !important; border-color:#333 !important; border-left-color:var(--primary) !important; border-radius:0; }
+[data-theme="terminal"] .jar-card-who{ background:var(--primary) !important; color:#000 !important; border-radius:0; }
+[data-theme="terminal"] .jar-count, [data-theme="terminal"] .jar-sync, [data-theme="terminal"] .jar-search{ background:rgba(255,255,255,.05) !important; color:var(--ink) !important; border-radius:0; }
+[data-theme="terminal"] .jar-search{ border:1px solid #333 !important; }
+
 /* Strip colourful name cosmetics → plain monochrome log lines */
 [data-theme="terminal"] .cos-badge,
 [data-theme="terminal"] .cos-title{ display:none !important; }

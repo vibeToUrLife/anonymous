@@ -1,13 +1,17 @@
 /**
  * bubble-jar.js — 🫙 泡泡罐: catch a bubble before it expires, re-read it later.
  *
- * Saves a small TEXT snapshot into localStorage — device-local, zero Firestore
- * cost (images become a "🖼️ 图片留言" note, their data is never copied). The
- * pure rules (dedupe / newest-first / cap) live in jar-logic.js.
+ * Saves a small TEXT snapshot (images become a "🖼️ 图片留言" note — their data
+ * is never copied). localStorage is the instant cache; the jar also SYNCS to
+ * the signed-in user's rooms/{uid}.jar field so it follows them across devices
+ * — the same pattern the app already uses for `settings` (server ∪ local wins
+ * on load; no new security rule, since the owner may already write their room).
+ * Reads are lazy (one merge the first time you catch or open the jar) and
+ * writes are debounced, so the sync costs ~nothing. Pure rules live in
+ * jar-logic.js.
  *
  * Entry points:
- *  · the 🫙 收藏 button in every bubble footer (app.js calls window.jarCatch
- *    with the bubble's data — same decoupling as openBoost/openAward);
+ *  · the 🫙 收藏 button in every bubble footer (app.js calls window.jarCatch);
  *  · the 🫙 泡泡罐 toggle in the live bar opens the jar overlay.
  *
  * Feature flag: jar — feature-flags.js hides #jarToggle; this file also hides
@@ -19,14 +23,113 @@
   const Jar = window.JarLogic;
   if (!Jar) return;
 
-  const KEY = 'bubble_jar';
   const toggle = document.getElementById('jarToggle');
+  const canCloud = (typeof db !== 'undefined' && typeof auth !== 'undefined');
+
+  // Soft accent palette — a stable colour per card (via JarLogic.hashId).
+  const ACCENTS = ['#c8b6ff', '#ffb3c7', '#a0e7e5', '#ffd6a5',
+                   '#b5ead7', '#bde0fe', '#f7a8c4', '#caffbf'];
 
   function disabled() { return window.FEATURES && window.FEATURES.jar === false; }
-  function load() { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { return []; } }
-  function save(list) {
-    try { localStorage.setItem(KEY, JSON.stringify(list)); return true; }
+  // The jar is PER-ACCOUNT: namespace the cache by uid so switching Google
+  // accounts in the same browser never shows or writes another user's jar.
+  function keyFor(uid) { return 'bubble_jar_' + (uid || 'anon'); }
+  function loadLocal() {
+    try { return JSON.parse(localStorage.getItem(keyFor(myUid))) || []; } catch (e) { return []; }
+  }
+  function saveLocal(list) {
+    try { localStorage.setItem(keyFor(myUid), JSON.stringify(list)); return true; }
     catch (e) { return false; }                    // quota full / storage blocked
+  }
+  function toast(msg, type) { if (typeof showToast === 'function') showToast(msg, type); }
+
+  /* ── In-memory jar (source of truth) + cloud sync ────────── */
+  let myUid = null;
+  let items = loadLocal();     // anon cache until auth resolves
+  let hydrated = false;        // have we merged THIS user's cloud copy yet?
+  let hydrating = null;        // in-flight hydrate promise
+  let saveTimer = null;
+  let syncState = canCloud ? 'idle' : 'local';   // idle|syncing|synced|error|local
+  // Overlay state — declared here (before the auth observer that closes over it)
+  // so those references can never hit a temporal-dead-zone on an early auth event.
+  let overlay = null, listEl = null, searchQ = '';
+
+  function cloudReady() { return canCloud && !!myUid && hydrated; }
+
+  if (canCloud) auth.onAuthStateChanged((u) => {
+    const next = u ? u.uid : null;
+    if (next === myUid) return;
+    // Flush the OUTGOING user's pending save to THEIR doc before we switch —
+    // flushCloud reads myUid/items synchronously, so do it before reassigning.
+    if (saveTimer && myUid && hydrated) flushCloud();
+    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+    myUid = next;
+    hydrated = false; hydrating = null;            // fresh per-account sync
+    items = loadLocal();                           // this account's own cache
+    if (overlay) {                                 // repaint if the jar is open
+      searchQ = '';
+      const s = overlay.querySelector('.jar-search'); if (s) s.value = '';
+      setSync(canCloud && myUid ? 'idle' : 'local');
+      renderList();
+      ensureHydrated();
+    }
+  });
+
+  function setSync(s) {
+    syncState = s;
+    if (!overlay) return;
+    const pill = overlay.querySelector('.jar-sync');
+    if (!pill) return;
+    pill.dataset.state = s;
+    pill.textContent = s === 'syncing' ? '☁️ 同步中…'
+                     : s === 'synced' ? '☁️ 已同步'
+                     : s === 'error' ? '⚠️ 未同步'
+                     : '';
+    pill.style.display = (s === 'idle' || s === 'local') ? 'none' : '';
+  }
+
+  // One-time reconcile of the cloud copy with the local one. Resolves to TRUE
+  // only when `items` now reflects the cloud (i.e. it is safe to push). On a
+  // failed read it resolves FALSE and leaves hydrated=false so we never write
+  // an un-merged array over the cloud (which would drop cloud-only entries).
+  function ensureHydrated() {
+    if (!canCloud || !myUid) return Promise.resolve(false);   // no cloud → never push
+    if (hydrated) return Promise.resolve(true);
+    if (hydrating) return hydrating;
+    const uid = myUid;                             // pin the account for this read
+    setSync('syncing');
+    hydrating = db.collection('rooms').doc(uid).get()
+      .then((snap) => {
+        if (myUid !== uid) return false;           // account switched mid-read → discard
+        const cloud = (snap.exists && Array.isArray(snap.data().jar)) ? snap.data().jar : [];
+        items = Jar.merge(cloud, items);           // cloud ∪ local, newest-first
+        saveLocal(items);
+        hydrated = true;
+        setSync('synced');
+        if (listEl) renderList();
+        scheduleCloudSave();                       // push the union back up
+        return true;
+      })
+      // Guard the reset like the success path (line ~100): a discarded outgoing
+      // read must not null the NEW account's in-flight `hydrating` promise.
+      .catch(() => { if (myUid === uid) { setSync('error'); hydrating = null; } return false; });
+    return hydrating;
+  }
+
+  function scheduleCloudSave() {
+    if (!cloudReady()) return;                      // only push a hydrated jar
+    setSync('syncing');
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(flushCloud, 1200);
+  }
+  function flushCloud() {
+    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+    if (!cloudReady()) return;                      // never clobber with un-merged data
+    const uid = myUid;                              // pin: this write belongs to THIS account
+    db.collection('rooms').doc(uid)
+      .set({ jar: items, jarUpdatedAt: Date.now() }, { merge: true })
+      .then(() => { if (myUid === uid) setSync('synced'); })   // don't paint a switched-in account's pill
+      .catch(() => { if (myUid === uid) setSync('error'); });
   }
 
   // The flags doc loads async; once it lands, a disabled jar also hides the
@@ -50,21 +153,38 @@
   window.jarCatch = function (a, bubbleEl) {
     if (disabled()) return;
     const entry = Jar.snapshot(a, Date.now());
-    const res = Jar.add(load(), entry);
+    const res = Jar.add(items, entry);
     if (!res.added) {
-      if (typeof showToast === 'function') {
-        showToast(res.reason === 'dup' ? '已经在泡泡罐里啦 🫙' : '无法收藏这条留言');
-      }
+      toast(res.reason === 'dup' ? '已经在泡泡罐里啦 🫙' : '无法收藏这条留言');
       return;
     }
-    if (!save(res.list)) {                         // never celebrate a lost catch
-      if (typeof showToast === 'function') showToast('保存失败 —— 本机存储空间不够了', 'error');
+    items = res.list;
+    const okLocal = saveLocal(items);
+    if (!okLocal && !(canCloud && myUid)) {        // no durable store at all → don't lie
+      items = Jar.remove(items, entry.id);
+      toast('保存失败 —— 存储空间不够了', 'error');
       return;
     }
     flyToJar(bubbleEl);
-    if (typeof showToast === 'function') showToast('🫙 收进泡泡罐了！');
-    if (listEl) renderList();                      // live update if overlay open
+    toast('🫙 收进泡泡罐了！');
+    if (listEl) renderList();
+    ensureHydrated().then(scheduleCloudSave);      // merge cloud first, then push
   };
+
+  function removeEntry(id) {
+    // Hydrate first: removing before the cloud merge would drop cloud-only
+    // entries when we push `items` back up.
+    ensureHydrated().then((ok) => {
+      if (canCloud && myUid && !ok) {              // cloud expected but not merged:
+        toast('同步暂时不可用，稍后再删', 'error');   // deleting now would resurrect on next sync
+        return;
+      }
+      items = Jar.remove(items, id);
+      saveLocal(items);
+      if (listEl) renderList();
+      scheduleCloudSave();                         // no-ops in local-only mode
+    });
+  }
 
   // A ghost of the bubble shrinks and flies toward the jar button.
   function flyToJar(bubbleEl) {
@@ -96,50 +216,88 @@
   }
 
   /* ── Overlay ─────────────────────────────────────────────── */
-  let overlay = null, listEl = null;
+  function card(e, idx, now) {
+    const el = document.createElement('div');
+    el.className = 'jar-card';
+    el.style.setProperty('--accent', ACCENTS[Jar.hashId(e.id) % ACCENTS.length]);
+    el.style.setProperty('--i', Math.min(idx, 12));   // capped stagger
 
-  function fmtWhen(ms) {
-    if (!ms) return '';
-    const d = new Date(ms);
-    return (d.getMonth() + 1) + '/' + d.getDate() + ' ' +
-      String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    const del = document.createElement('button');
+    del.className = 'jar-card-del';
+    del.type = 'button';
+    del.title = '移出泡泡罐';
+    del.textContent = '✕';
+    del.addEventListener('click', () => removeEntry(e.id));
+    el.appendChild(del);
+
+    const body = document.createElement('div');
+    body.className = 'jar-card-body';
+    body.textContent = e.t || '💬';
+    el.appendChild(body);
+
+    const foot = document.createElement('div');
+    foot.className = 'jar-card-foot';
+    const who = document.createElement('span');
+    who.className = 'jar-card-who';
+    who.textContent = e.n ? e.n : '匿名';
+    const when = document.createElement('span');
+    when.className = 'jar-card-when';
+    when.textContent = '收于 ' + Jar.relTime(e.at, now);
+    const copy = document.createElement('button');
+    copy.className = 'jar-card-copy';
+    copy.type = 'button';
+    copy.title = '复制文字';
+    copy.textContent = '⧉';
+    copy.addEventListener('click', () => {
+      const text = e.t || '';
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => toast('已复制 ✓')).catch(() => {});
+      }
+    });
+    foot.appendChild(who);
+    foot.appendChild(when);
+    foot.appendChild(copy);
+    el.appendChild(foot);
+    return el;
   }
 
   function renderList() {
-    if (!listEl) return;
-    const list = load();
+    if (!listEl || !overlay) return;
     const countEl = overlay.querySelector('.jar-count');
-    if (countEl) countEl.textContent = list.length + '/' + Jar.CAP;
-    if (!list.length) {
-      listEl.innerHTML = '<div class="jar-empty">罐子还是空的 —— 在留言下点 🫙 收藏，' +
-        '留言过期消失后也能在这里回味。<br><small>只保存在这台设备上</small></div>';
+    if (countEl) countEl.textContent = items.length + '/' + Jar.CAP;
+    const searchEl = overlay.querySelector('.jar-search');
+    if (searchEl) {
+      const showSearch = items.length > 8;
+      searchEl.style.display = showSearch ? '' : 'none';
+      // Don't leave a hidden filter applied (would hide real entries with no
+      // visible box to clear it).
+      if (!showSearch && searchQ) { searchQ = ''; searchEl.value = ''; }
+    }
+
+    if (!items.length) {
+      listEl.innerHTML =
+        '<div class="jar-empty"><div class="jar-empty-icon">🫙</div>' +
+        '<div class="jar-empty-title">罐子还是空的</div>' +
+        '<div class="jar-empty-text">在任意留言下点 <b>🫙 收藏</b>，' +
+        '留言过期消失后也能在这里回味。</div>' +
+        '<div class="jar-empty-note">☁️ 现在会跟着你的账号跨设备同步</div></div>';
       return;
     }
+    const q = searchQ.trim().toLowerCase();
+    const shown = q
+      ? items.filter(e => e && (((e.t || '').toLowerCase().indexOf(q) >= 0) ||
+                                ((e.n || '').toLowerCase().indexOf(q) >= 0)))
+      : items;
     listEl.innerHTML = '';
-    list.forEach((e) => {
-      if (!e || !e.id) return;
-      const item = document.createElement('div');
-      item.className = 'jar-item';
-      const txt = document.createElement('div');
-      txt.className = 'jar-item-text';
-      txt.textContent = e.t || '💬';
-      const meta = document.createElement('div');
-      meta.className = 'jar-item-meta';
-      meta.textContent = (e.n ? e.n + ' · ' : '') + '发于 ' + fmtWhen(e.ts) + ' · 收于 ' + fmtWhen(e.at);
-      const del = document.createElement('button');
-      del.className = 'jar-item-del';
-      del.type = 'button';
-      del.title = '从罐子里拿出来';
-      del.textContent = '✕';
-      del.addEventListener('click', () => {
-        save(Jar.remove(load(), e.id));
-        renderList();
-      });
-      item.appendChild(del);
-      item.appendChild(txt);
-      item.appendChild(meta);
-      listEl.appendChild(item);
-    });
+    if (!shown.length) {
+      const none = document.createElement('div');
+      none.className = 'jar-empty jar-empty-sm';
+      none.textContent = '没有匹配的收藏';
+      listEl.appendChild(none);
+      return;
+    }
+    const now = Date.now();
+    shown.forEach((e, idx) => { if (e && e.id) listEl.appendChild(card(e, idx, now)); });
   }
 
   function open() {
@@ -148,25 +306,40 @@
     overlay.className = 'jar-overlay';
     overlay.innerHTML =
       '<div class="jar-panel">' +
-        '<div class="jar-head">🫙 泡泡罐 <span class="jar-count"></span>' +
-          '<button class="jar-close" type="button" title="Close (Esc)">✕</button></div>' +
+        '<div class="jar-head">' +
+          '<span class="jar-title">🫙 泡泡罐</span>' +
+          '<span class="jar-count"></span>' +
+          '<span class="jar-sync" data-state="idle"></span>' +
+          '<button class="jar-close" type="button" title="Close (Esc)">✕</button>' +
+        '</div>' +
+        '<div class="jar-sub">收藏过的留言 · 跨设备同步</div>' +
+        '<input class="jar-search" type="text" placeholder="🔍 搜索收藏…" />' +
         '<div class="jar-list"></div>' +
       '</div>';
     document.body.appendChild(overlay);
     listEl = overlay.querySelector('.jar-list');
     overlay.querySelector('.jar-close').addEventListener('click', close);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-    renderList();
+    const searchEl = overlay.querySelector('.jar-search');
+    searchEl.addEventListener('input', () => { searchQ = searchEl.value; renderList(); });
     if (toggle) toggle.classList.add('active');
+
+    renderList();                 // instant local view
+    setSync(syncState);
+    ensureHydrated();             // merge cloud in, then re-render
   }
 
   function close() {
     if (!overlay) return;
+    if (saveTimer) flushCloud();   // don't lose a pending sync on close
     overlay.remove();
-    overlay = null; listEl = null;
+    overlay = null; listEl = null; searchQ = '';
     if (toggle) toggle.classList.remove('active');
   }
 
   if (toggle) toggle.addEventListener('click', () => { overlay ? close() : open(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && overlay) close(); });
+  // Never lose a debounced sync when the tab is hidden or unloads.
+  document.addEventListener('visibilitychange', () => { if (document.hidden && saveTimer) flushCloud(); });
+  window.addEventListener('beforeunload', () => { if (saveTimer) flushCloud(); });
 })();

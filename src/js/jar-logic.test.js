@@ -43,3 +43,39 @@ test('remove filters by id and tolerates junk', () => {
   assert.deepStrictEqual(Jar.remove(list, 'zz').map(e => e.id), ['a', 'b']);
   assert.deepStrictEqual(Jar.remove('junk', 'a'), []);
 });
+
+test('merge unions by id, keeps newest save, sorts newest-first, caps', () => {
+  const cloud = [{ id: 'a', at: 10 }, { id: 'b', at: 20 }];
+  const local = [{ id: 'b', at: 25 }, { id: 'c', at: 30 }];   // b saved later locally
+  const m = Jar.merge(cloud, local);
+  assert.deepStrictEqual(m.map(e => e.id), ['c', 'b', 'a']);  // by at desc
+  assert.strictEqual(m.find(e => e.id === 'b').at, 25);        // newer copy wins
+  // cap keeps the newest
+  const many = [];
+  for (let i = 0; i < 80; i++) many.push({ id: 'n' + i, at: i });
+  const capped = Jar.merge(many, [], 60);
+  assert.strictEqual(capped.length, 60);
+  assert.strictEqual(capped[0].id, 'n79');
+  assert.ok(!capped.some(e => e.id === 'n0'));
+  // junk-safe
+  assert.deepStrictEqual(Jar.merge(null, null), []);
+  assert.deepStrictEqual(Jar.merge([{ noId: 1 }], 'x').length, 0);
+});
+
+test('relTime buckets from 刚刚 to a M/D date', () => {
+  const now = 1_000_000_000_000;
+  assert.strictEqual(Jar.relTime(now - 5_000, now), '刚刚');
+  assert.strictEqual(Jar.relTime(now - 3 * 60000, now), '3分钟前');
+  assert.strictEqual(Jar.relTime(now - 5 * 3600000, now), '5小时前');
+  assert.strictEqual(Jar.relTime(now - 30 * 3600000, now), '昨天');
+  assert.strictEqual(Jar.relTime(now - 4 * 86400000, now), '4天前');
+  assert.strictEqual(Jar.relTime(now + 999, now), '刚刚');       // clock skew → clamp
+  assert.match(Jar.relTime(now - 40 * 86400000, now), /^\d+\/\d+$/);
+});
+
+test('hashId is stable and non-negative', () => {
+  assert.strictEqual(Jar.hashId('abc'), Jar.hashId('abc'));
+  assert.notStrictEqual(Jar.hashId('abc'), Jar.hashId('abd'));
+  assert.ok(Jar.hashId('') >= 0 && Number.isInteger(Jar.hashId('')));
+  assert.ok(Jar.hashId(null) >= 0);
+});
