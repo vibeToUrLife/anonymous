@@ -209,6 +209,23 @@
     scheduleFlush();
   }
 
+  // Shared outgoing lane for other live-layer features (bubble-knock.js):
+  // builds the event, marks it seen (no self-echo) and rides the same
+  // coalesced write. Accepts {k: bubbleId} or {rp: [xPct, yPct]}.
+  window.LiveFx = {
+    send: function (fields) {
+      if (!fields) return;
+      const rnd = Math.floor(Math.random() * 1e6);
+      let ev = null;
+      if (fields.k != null)            ev = L.makeKnockEvent(myUid, seq++, rnd, fields.k);
+      else if (Array.isArray(fields.rp)) ev = L.makeRippleEvent(myUid, seq++, rnd, fields.rp[0], fields.rp[1]);
+      if (!ev) return;
+      seen.add(ev.id);
+      pending.push(ev);
+      scheduleFlush();
+    }
+  };
+
   function buildBar() {
     if (!bar || bar._built) return;
     bar._built = true;
@@ -243,13 +260,25 @@
       fresh.forEach(e => seen.add(e.id));
       // The first snapshot only seeds ids so a freshly opened board doesn't
       // replay a backlog of old reactions.
-      if (primed) fresh.forEach(e => { if (e.sx) spawnSuper(e.sx); else spawnFloat(e.i); });
-      primed = true;
+      if (primed) fresh.forEach(e => {
+        const kind = L.classifyLiveEvent(e);
+        if (kind === 'super') spawnSuper(e.sx);
+        else if (kind === 'knock' || kind === 'ripple') { if (window.BubbleKnock) BubbleKnock.play(e); }
+        else if (kind === 'float') spawnFloat(e.i);
+      });
+      // Firestore persistence serves a CACHED doc first, so events that
+      // arrived while we were away would look "fresh" on the first server
+      // snapshot and replay as a burst — stay in seed-only mode until a
+      // snapshot actually from the server.
+      primed = primed || !(doc.metadata && doc.metadata.fromCache);
       maybeTrim(events);
       // Bound the seen set; rebuild from current doc so nothing replays.
       if (seen.size > 400) {
         seen.clear();
         events.forEach(e => { if (e && e.id) seen.add(e.id); });
+        // Our own queued/in-flight events aren't in the doc yet — keep their
+        // ids or they'd self-echo when the flush lands.
+        pending.forEach(e => { if (e && e.id) seen.add(e.id); });
       }
     }, () => {});
   }

@@ -580,6 +580,14 @@ removePreview.addEventListener('click', () => {
     imgPreviewStrip.classList.remove('show');
 });
 
+// Hook for doodle.js (and future tools): drop a ready dataURL into the same
+// pending-image slot the 📷 attach flow uses, so Send posts it normally.
+window.setPendingImage = function (dataUrl) {
+    pendingImage = dataUrl;
+    imgPreviewThumb.src = dataUrl;
+    imgPreviewStrip.classList.add('show');
+};
+
 /* ── Paste image from clipboard ── */
 input.addEventListener('paste', async (e) => {
     const items = e.clipboardData?.items;
@@ -1321,6 +1329,18 @@ function render(items) {
         if (typeof window.openAward === 'function') window.openAward(a.id);
     });
     footer.appendChild(awardBtn);
+
+    // Catch-to-jar: keep a snapshot of this bubble before it expires (free,
+    // device-local — bubble-jar.js owns the logic).
+    const jarBtn = document.createElement('button');
+    jarBtn.className = 'boost-toggle jar-btn';
+    jarBtn.textContent = '🫙 收藏';
+    jarBtn.title = '收进泡泡罐（只保存在这台设备）';
+    jarBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (typeof window.jarCatch === 'function') window.jarCatch(bubble._replyData || a, bubble);
+    });
+    footer.appendChild(jarBtn);
 
     bubble.appendChild(footer);
 

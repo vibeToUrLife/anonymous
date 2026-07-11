@@ -18,6 +18,67 @@
       }
     },
 
+    "pg": {
+      "$day": {
+        ".read": "auth != null",
+
+        "players": {
+          "$pid": {
+            ".write": "auth != null && $pid.beginsWith(auth.uid + '_') && (!newData.exists() || (newData.hasChildren(['j','n']) && newData.child('n').isString() && newData.child('n').val().length <= 40))"
+          }
+        },
+
+        "host": {
+          ".write": "auth != null && (!newData.exists() || (newData.hasChildren(['u','s']) && newData.child('u').isString() && newData.child('s').isString()))"
+        },
+
+        "meta": {
+          ".write": "auth != null",
+          "$ballId": {
+            ".validate": "newData.hasChildren(['t','c','s']) && newData.child('t').isString() && newData.child('t').val().length <= 60 && newData.child('c').isNumber() && newData.child('s').isNumber() && newData.child('s').val() >= 20 && newData.child('s').val() <= 300"
+          }
+        },
+
+        "pos": {
+          ".write": "auth != null"
+        },
+
+        "claims": {
+          "$ballId": {
+            ".write": "auth != null && !data.exists() && newData.val() == auth.uid"
+          }
+        },
+
+        "chains": {
+          "$ballId": {
+            ".write": "auth != null && !data.exists() && newData.hasChildren(['by','w'])"
+          }
+        },
+
+        "events": {
+          "$eventId": {
+            ".write": "auth != null && !data.exists() && newData.child('by').val() == auth.uid && newData.child('b').isString() && newData.child('ts').isNumber()"
+          }
+        },
+
+        "coop": {
+          ".write": "auth != null && newData.isNumber() && newData.val() >= 0"
+        }
+      }
+    },
+
+    "wall": {
+      "$day": {
+        ".read": "auth != null",
+
+        "strokes": {
+          "$strokeId": {
+            ".write": "auth != null && ((!data.exists() && newData.child('by').val() == auth.uid && newData.child('p').isString() && newData.child('p').val().length <= 3200 && newData.child('c').isNumber() && newData.child('c').val() >= 0 && newData.child('c').val() <= 16777215 && newData.child('w').isNumber() && newData.child('w').val() >= 0 && newData.child('w').val() <= 2 && newData.child('ts').isNumber()) || (data.exists() && !newData.exists() && data.child('by').val() == auth.uid))"
+          }
+        }
+      }
+    },
+
     "world": {
       "scenes": {
         "$scene": {

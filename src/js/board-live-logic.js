@@ -46,6 +46,13 @@
   /** Emoji palette shown in the floating-reaction bar. */
   BoardLive.REACTIONS = ['❤️', '😂', '🔥', '😮', '👍', '🎉'];
 
+  /** Hold a bubble this long (ms) to "knock" on it. */
+  BoardLive.KNOCK_LONG_PRESS_MS = 450;
+  /** A finger drifting further than this (px) cancels the long-press. */
+  BoardLive.KNOCK_MOVE_TOL_PX = 12;
+  /** Minimum gap (ms) between ambient ripple broadcasts from one user. */
+  BoardLive.RIPPLE_MIN_GAP_MS = 1000;
+
   /** Pastel ball colours for the playground (matches the board's soft theme). */
   BoardLive.PG_COLORS = [
     '#c8b6ff', '#ffd6e7', '#a0e7e5', '#ffeaa7',
@@ -130,6 +137,42 @@
   BoardLive.unseenEvents = function (events, seen) {
     if (!Array.isArray(events)) return [];
     return events.filter(e => e && e.id && !(seen && seen.has(e.id)));
+  };
+
+  /**
+   * Build a "knock" event: a long-press on a bubble that wobbles it on every
+   * online screen. Same id scheme as reactions so each knock plays once.
+   * @param {string} uid  @param {number} seq  @param {number|string} rnd
+   * @param {string} bubbleId  the answers-doc id carried in data-id
+   * @returns {{id:string, k:string}}
+   */
+  BoardLive.makeKnockEvent = function (uid, seq, rnd, bubbleId) {
+    return { id: (uid || 'anon') + ':' + seq + ':' + rnd, k: String(bubbleId) };
+  };
+
+  /**
+   * Build an ambient-ripple event from a tap on empty board space. The point
+   * travels as viewport percentages so it lands in roughly the same spot on
+   * any screen size. Values are clamped and rounded to keep the doc tiny.
+   * @returns {{id:string, rp:[number,number]}}
+   */
+  BoardLive.makeRippleEvent = function (uid, seq, rnd, xPct, yPct) {
+    const clamp = (n) => Math.max(0, Math.min(100, Math.round(n) || 0));
+    return { id: (uid || 'anon') + ':' + seq + ':' + rnd, rp: [clamp(xPct), clamp(yPct)] };
+  };
+
+  /**
+   * What kind of live event is this? Lets the receiver dispatch without
+   * guessing at field combinations.
+   * @returns {'super'|'knock'|'ripple'|'float'|'unknown'}
+   */
+  BoardLive.classifyLiveEvent = function (e) {
+    if (!e || typeof e !== 'object') return 'unknown';
+    if (e.sx) return 'super';
+    if (typeof e.k === 'string') return 'knock';
+    if (Array.isArray(e.rp)) return 'ripple';
+    if (typeof e.i === 'number') return 'float';
+    return 'unknown';
   };
 
   /* ─────────────────────────────────────────────────────────────

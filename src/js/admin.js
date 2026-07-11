@@ -291,9 +291,14 @@
   const FEATURES = [
     { key: 'coin_rush', label: 'Coin Rush' },
     { key: 'playground', label: 'Bubble Playground' },
+    { key: 'pg_shared', label: 'Playground 多人共享 (off = solo)' },
+    { key: 'knock', label: 'Bubble Knock & Ripples' },
     { key: 'riddle', label: 'Daily Riddle' },
     { key: 'chengyu', label: '成语接龙 Chain' },
-    { key: 'quote_comments', label: 'Quote Comments' }
+    { key: 'quote_comments', label: 'Quote Comments' },
+    { key: 'jar', label: '泡泡罐 Bubble Jar' },
+    { key: 'doodle', label: '涂鸦 Doodle' },
+    { key: 'wall', label: '涂鸦墙 Graffiti Wall' }
   ];
   function loadFeatures() {
     const featRef = db.doc('app_state/features');

@@ -202,12 +202,18 @@
 [data-theme="terminal"] .boost-toggle:hover{ background:var(--primary) !important; color:var(--on-primary) !important; }
 [data-theme="terminal"] .reaction-btn.reacted{ border-color:var(--primary) !important; color:var(--primary) !important; background:var(--primary-tint) !important; }
 
-/* Footer actions → plain bracketed commands: [reply] [pin] [tip] (hide emoji labels) */
+/* Footer actions → plain bracketed commands: [reply] [pin] [tip] [jar] (hide emoji labels) */
 [data-theme="terminal"] .reply-toggle,
 [data-theme="terminal"] .boost-toggle{ font-size:0 !important; }
 [data-theme="terminal"] .reply-toggle::before{ content:'[reply]'; font-size:12px; color:var(--ink-soft); }
-[data-theme="terminal"] .boost-toggle:not(.award-toggle)::before{ content:'[pin]'; font-size:12px; color:var(--ink-soft); }
+[data-theme="terminal"] .boost-toggle:not(.award-toggle):not(.jar-btn)::before{ content:'[pin]'; font-size:12px; color:var(--ink-soft); }
 [data-theme="terminal"] .award-toggle::before{ content:'[tip]'; font-size:12px; color:var(--ink-soft); }
+[data-theme="terminal"] .jar-btn::before{ content:'[jar]'; font-size:12px; color:var(--ink-soft); }
+
+/* Graffiti-wall draw mode → monochrome console panel */
+[data-theme="terminal"] .wall-toolbar{ background:#111 !important; border-color:#333 !important; color:var(--ink) !important; border-radius:0; }
+[data-theme="terminal"] .wall-done{ background:var(--primary) !important; color:#000 !important; border-radius:0; }
+[data-theme="terminal"] .wall-canvas.drawing{ background:rgba(0,0,0,0.35); }
 
 /* Strip colourful name cosmetics → plain monochrome log lines */
 [data-theme="terminal"] .cos-badge,

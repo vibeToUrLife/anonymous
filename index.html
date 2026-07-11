@@ -7,13 +7,13 @@
   <title>Anonymous Bubble Answers</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
   <link rel="stylesheet" href="./src/css/style.css?v=9">
-  <link rel="stylesheet" href="./src/css/interactive.css?v=2">
+  <link rel="stylesheet" href="./src/css/interactive.css?v=6">
   <!-- Clay "Bubble Pop" design system: tokens + component library (load last so they govern) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <!-- Press Start 2P — pixel font for the Stardew-style event reminder -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
-  <link rel="stylesheet" href="./src/css/theme.css?v=14">
+  <link rel="stylesheet" href="./src/css/theme.css?v=15">
   <link rel="stylesheet" href="./src/css/components.css?v=1">
   <style>
     /* Poll rows (creator + shared) → tokens, both themes.
@@ -1263,6 +1263,8 @@
     </span>
     <span class="reaction-bar" id="reactionBar" aria-label="Send a live reaction"></span>
     <button class="pg-toggle" id="pgToggle" type="button" title="Bubble Playground — fling &amp; pop the bubbles">🫧 Playground</button>
+    <button class="pg-toggle" id="jarToggle" type="button" title="泡泡罐 — 收藏过的留言">🫙 泡泡罐</button>
+    <button class="pg-toggle" id="wallToggle" type="button" title="涂鸦墙 — 在留言板背景上画画，大家都看得到">✏️ 涂鸦墙</button>
     <button class="pg-toggle" id="coinCenterBtn" type="button" title="金币乐园 — 商店 / 扭蛋 / 老虎机">🎰 金币乐园</button>
     <button class="pg-toggle" id="coinRankBtn" type="button" title="富豪榜 — 按当前金币排名">🏆 富豪榜</button>
     <button class="pg-toggle" id="stayRankBtn" type="button" title="摸鱼榜 — 按总摸鱼时长排名">🐟 摸鱼榜</button>
@@ -1322,6 +1324,7 @@
     <button class="attach-btn" id="attachBtn" title="Attach image">📷</button>
     <button class="gif-btn" id="gifBtn" title="Search GIFs">GIF</button>
     <button class="poll-btn" id="pollBtn" title="Create a poll">📊</button>
+    <button class="poll-btn" id="doodleBtn" title="画个涂鸦">🎨</button>
     <input type="file" id="imageInput" accept="image/*" style="display:none">
     <textarea id="answerInput" placeholder="Type your anonymous answer…" maxlength="500"></textarea>
     <button id="sendBtn">Send</button>
@@ -1540,15 +1543,23 @@
   <script src="./src/js/theme.js?v=2"></script>
   <!-- Shared-space link helper (defines window.ShareToBoard for the board render). -->
   <script src="./src/js/share-to-board.js?v=1"></script>
-  <script src="./src/js/app.js?v=17"></script>
+  <script src="./src/js/app.js?v=18"></script>
   <!-- Access code gate — must load after app.js (uses its shared auth/db). Shows after Google login. -->
   <script src="./src/js/access-code-gate.js?v=1"></script>
   <script src="./src/js/feature-flags.js"></script>
   <!-- Live, interactive board features (load after app.js for shared db/auth) -->
-  <script src="./src/js/board-live-logic.js"></script>
+  <script src="./src/js/board-live-logic.js?v=2"></script>
   <script src="./src/js/presence.js"></script>
-  <script src="./src/js/live-reactions.js"></script>
-  <script src="./src/js/bubble-playground.js"></script>
+  <script src="./src/js/bubble-knock.js?v=1"></script>
+  <script src="./src/js/live-reactions.js?v=2"></script>
+  <script src="./src/js/playground-shared-logic.js?v=1"></script>
+  <script src="./src/js/bubble-playground.js?v=2"></script>
+  <!-- 泡泡罐 · 涂鸦 · 涂鸦墙 (jar/doodle are client-side; the wall shares strokes via RTDB) -->
+  <script src="./src/js/jar-logic.js?v=1"></script>
+  <script src="./src/js/bubble-jar.js?v=1"></script>
+  <script src="./src/js/doodle.js?v=1"></script>
+  <script src="./src/js/wall-logic.js?v=4"></script>
+  <script src="./src/js/graffiti-wall.js?v=5"></script>
   <script src="./src/js/coin-rush-logic.js"></script>
   <script src="./src/js/coin-rush.js"></script>
   <!-- Daily brain-teaser (脑筋急转弯) -->

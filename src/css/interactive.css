@@ -190,6 +190,69 @@
 }
 .pg-ball.grabbed { cursor: grabbing; box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4); }
 
+/* ── Shared-playground additions (multiplayer) ── */
+
+/* "N playing right now" chip in the overlay header. */
+.pg-live {
+  font-size: 13px;
+  font-weight: 600;
+  background: rgba(94, 231, 146, 0.16);
+  color: #7dffb0;
+  padding: 5px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+/* Shared co-op daily counter under the hint. */
+.pg-coop {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 13px;
+  padding: 2px 0 4px;
+}
+.pg-coop b { color: #ffeaa7; }
+.pg-coop.celebrate { animation: coopPulse 0.9s ease; }
+@keyframes coopPulse {
+  0%   { scale: 1; }
+  30%  { scale: 1.16; }
+  100% { scale: 1; }
+}
+
+/* Tap feedback while a pop claim is in flight (first tap wins). */
+.pg-ball.claiming { scale: 0.88; transition: scale 0.1s; }
+
+/* Chain-pop combo celebration (visual only — coins stay 1/pop, capped). */
+.pg-combo {
+  position: absolute;
+  left: 50%; top: 38%;
+  transform: translate(-50%, -50%);
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5), 0 0 24px rgba(255, 220, 120, 0.8);
+  pointer-events: none;
+  z-index: 5;
+  white-space: nowrap;
+  animation: comboPop 0.9s ease-out forwards;
+}
+.pg-combo-small { font-size: 34px; }
+.pg-combo-big   { font-size: 46px; color: #ffeaa7; }
+.pg-combo-mega  { font-size: 60px; color: #ffd166; }
+@keyframes comboPop {
+  0%   { opacity: 0; scale: 0.4; }
+  20%  { opacity: 1; scale: 1.15; }
+  35%  { scale: 1; }
+  80%  { opacity: 1; }
+  100% { opacity: 0; scale: 1.1; translate: 0 -30px; }
+}
+.pg-shake { animation: pgShake 0.4s ease; }
+@keyframes pgShake {
+  0%, 100% { translate: 0 0; }
+  20% { translate: -6px 2px; }
+  40% { translate: 5px -3px; }
+  60% { translate: -4px 3px; }
+  80% { translate: 3px -2px; }
+}
+
 /* Pop confetti particles. */
 .pg-pop {
   position: absolute;
@@ -204,7 +267,365 @@
   100% { opacity: 0; transform: translate(-50%, -50%) translate(var(--px), var(--py))       scale(0.3); }
 }
 
+/* ── Knock on a bubble & ambient ripples ── */
+
+/* A bubble being long-pressed: the OS text-selection / iOS callout must not
+   bury the knock under system UI. Applied only for the duration of the hold. */
+.bubble.knock-hold,
+.bubble.knock-hold * {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Empty-space taps send ripples; without this, quick double taps zoom on iOS. */
+#bubbleWrap { touch-action: manipulation; }
+
+/* Reduced-motion preference: the new effects are pure decoration. */
+body.no-animations .knock-ring,
+body.no-animations .ambient-ripple,
+body.no-animations .pg-combo { display: none; }
+body.no-animations .pg-shake { animation: none; }
+
+/* Ring that flares around a knocked bubble (the wobble itself runs via the
+   Web Animations API in bubble-knock.js so it composes with the bobbing). */
+.knock-ring {
+  position: absolute;
+  inset: -5px;
+  border-radius: inherit;
+  border: 2.5px solid rgba(255, 255, 255, 0.75);
+  pointer-events: none;
+  z-index: 4;
+  animation: knockRing 0.7s ease-out forwards;
+}
+@keyframes knockRing {
+  0%   { opacity: 0.9; scale: 0.96; }
+  100% { opacity: 0;   scale: 1.18; }
+}
+
+/* Faint expanding ring where someone (here or elsewhere) tapped empty space. */
+.ambient-ripple {
+  position: fixed;
+  width: 14px; height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  border: 2px solid rgba(200, 182, 255, 0.55);
+  pointer-events: none;
+  z-index: 350;
+  animation: ambientRipple 1s ease-out forwards;
+}
+@keyframes ambientRipple {
+  0%   { opacity: 0.8; scale: 1; }
+  100% { opacity: 0;   scale: 7; }
+}
+
+/* ── 🫙 泡泡罐 bubble jar ── */
+.jar-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 390;
+  background: rgba(10, 8, 25, 0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  overscroll-behavior: contain;   /* don't scroll the board behind the overlay */
+}
+
+/* Four footer actions now — wrap instead of squeezing on narrow bubbles. */
+.bubble-footer { flex-wrap: wrap; row-gap: 4px; }
+.jar-panel {
+  width: 100%;
+  max-width: 430px;
+  max-height: 78vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  background: rgba(42, 32, 84, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff;
+  overflow: hidden;
+}
+.jar-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  font-weight: 700;
+}
+.jar-count { font-size: 12px; opacity: 0.65; font-weight: 400; }
+.jar-close {
+  margin-left: auto;
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.jar-close:hover { background: rgba(255, 80, 80, 0.5); }
+.jar-list { overflow-y: auto; padding: 0 14px 14px; overscroll-behavior: contain; }
+.jar-item {
+  position: relative;
+  padding: 12px 34px 10px 14px;
+  margin-bottom: 10px;
+  border-radius: 16px 16px 16px 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.jar-item:nth-child(4n+1) { background: rgba(200, 182, 255, 0.16); }
+.jar-item:nth-child(4n+2) { background: rgba(160, 231, 229, 0.13); }
+.jar-item:nth-child(4n+3) { background: rgba(255, 214, 231, 0.13); }
+.jar-item:nth-child(4n)   { background: rgba(255, 234, 167, 0.12); }
+.jar-item-text { font-size: 14px; line-height: 1.55; word-break: break-word; }
+.jar-item-meta { font-size: 11px; opacity: 0.55; margin-top: 6px; }
+.jar-item-del {
+  position: absolute;
+  top: 8px; right: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  font-size: 11px;
+  cursor: pointer;
+}
+.jar-item-del:hover { background: rgba(255, 80, 80, 0.5); }
+.jar-empty { text-align: center; opacity: 0.7; font-size: 13.5px; line-height: 1.8; padding: 26px 10px; }
+.jar-ghost { animation: none !important; }
+
+/* ── 🎨 涂鸦 doodle pad ── */
+.doodle-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 410;
+  background: rgba(10, 8, 25, 0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+}
+.doodle-panel {
+  border-radius: 20px;
+  background: rgba(42, 32, 84, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff;
+  padding: 14px;
+  max-width: 92vw;
+  /* Landscape phones: the panel is taller than the viewport — the action row
+     must stay reachable by scrolling (the canvas keeps its fixed CSS size, so
+     pointer→canvas mapping stays correct). */
+  max-height: calc(100vh - 20px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.doodle-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.doodle-close {
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.doodle-canvas {
+  display: block;
+  width: min(320px, 84vw);
+  height: min(320px, 84vw);
+  border-radius: 12px;
+  background: #fff;
+  touch-action: none;           /* pointer events draw; the page must not scroll */
+  cursor: crosshair;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+.doodle-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.doodle-swatch {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  color: #555;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+.doodle-swatch.sel { border-color: #fff; transform: scale(1.12); }
+.doodle-brushes { display: flex; gap: 6px; }
+.doodle-brush {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.doodle-brush i { display: block; border-radius: 50%; background: #fff; }
+.doodle-brush.sel { border-color: var(--accent, #c8b6ff); }
+.doodle-tool {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  font-size: 15px;
+}
+.doodle-actions { justify-content: flex-end; }
+.doodle-cancel {
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 18px;
+  cursor: pointer;
+}
+.doodle-ok {
+  border: none;
+  background: var(--accent, #c8b6ff);
+  color: #2a1f4a;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 18px;
+  cursor: pointer;
+}
+
+/* ── ✏️ 涂鸦墙 graffiti wall ── */
+
+/* One canvas, two lives: faded wallpaper behind the board, or the active
+   drawing surface above it while draw mode is on. */
+.wall-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: -1;               /* above the body background, below all content */
+  opacity: 0.5;
+  pointer-events: none;
+}
+.wall-canvas.drawing {
+  z-index: 350;
+  opacity: 1;
+  pointer-events: auto;
+  touch-action: none;        /* the finger draws; the page must not scroll */
+  cursor: crosshair;
+  background: rgba(10, 8, 25, 0.18);   /* subtle veil = "draw mode is on" */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+/* Ghost the bubbles while drawing so the wall is readable but the board
+   stays visible for placing doodles around it. */
+body.wall-drawing .bubble { opacity: 0.4 !important; }
+
+.wall-toolbar {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 351;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  background: rgba(42, 32, 84, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #fff;
+  max-width: 94vw;
+  touch-action: manipulation;   /* no double-tap zoom while switching colors */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.wall-hint { font-size: 11.5px; opacity: 0.7; text-align: center; }
+.wall-row { display: flex; align-items: center; justify-content: center; gap: 7px; flex-wrap: wrap; }
+.wall-swatch {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+  padding: 0;
+}
+.wall-swatch.sel { border-color: #fff; transform: scale(1.15); }
+/* Custom RGB picker — a rainbow chip hiding a native colour input. */
+.wall-custom {
+  position: relative;
+  overflow: hidden;
+  background: conic-gradient(from 0deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.wall-custom::after {
+  content: '🎨';
+  font-size: 13px;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.6));
+}
+.wall-custom input[type="color"] {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  opacity: 0;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.wall-eraser.sel { border-color: var(--accent, #c8b6ff); background: rgba(200, 182, 255, 0.28); }
+.wall-canvas.erasing { cursor: cell; }
+.wall-brush {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.wall-brush i { display: block; border-radius: 50%; background: #fff; }
+.wall-brush.sel { border-color: var(--accent, #c8b6ff); }
+.wall-tool {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  font-size: 14px;
+}
+.wall-done {
+  border: none;
+  background: var(--accent, #c8b6ff);
+  color: #2a1f4a;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 16px;
+  cursor: pointer;
+}
+
 /* ── Light-theme overrides ── */
+body.light-theme .wall-canvas.drawing { background: rgba(255, 255, 255, 0.25); }
+body.light-theme .wall-toolbar { background: rgba(252, 250, 255, 0.98); color: #3a2b5f; border-color: rgba(120, 90, 200, 0.25); }
+body.light-theme .wall-swatch.sel { border-color: #3a2b5f; }
+body.light-theme .wall-brush, body.light-theme .wall-tool { background: rgba(0, 0, 0, 0.07); }
+body.light-theme .wall-brush i { background: #3a2b5f; }
+body.light-theme .jar-panel,
+body.light-theme .doodle-panel { background: rgba(252, 250, 255, 0.98); color: #3a2b5f; border-color: rgba(120, 90, 200, 0.25); }
+body.light-theme .jar-close, body.light-theme .doodle-close,
+body.light-theme .jar-item-del, body.light-theme .doodle-cancel,
+body.light-theme .doodle-tool, body.light-theme .doodle-brush { background: rgba(0, 0, 0, 0.07); color: #3a2b5f; }
+body.light-theme .doodle-brush i { background: #3a2b5f; }
+body.light-theme .doodle-swatch.sel { border-color: #3a2b5f; }
+body.light-theme .jar-item { border-color: rgba(0, 0, 0, 0.06); }
+body.light-theme .knock-ring { border-color: rgba(120, 90, 200, 0.55); }
+body.light-theme .ambient-ripple { border-color: rgba(120, 90, 200, 0.4); }
 body.light-theme .live-presence { background: rgba(0, 0, 0, 0.05); color: #555; }
 body.light-theme .live-presence b { color: var(--primary-deep); }
 body.light-theme .live-typing { color: rgba(0, 0, 0, 0.5); }
