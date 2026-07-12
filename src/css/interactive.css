@@ -1104,61 +1104,137 @@ body.light-theme .riddle-solvers-empty { color: rgba(0, 0, 0, 0.45); }
 .cc-overlay.show { display: flex; animation: pgFadeIn 0.2s ease; }
 .cc-card {
   position: relative;
-  width: 100%; max-width: 460px;
-  max-height: 84vh;
+  width: 100%; max-width: 900px;
+  height: min(86vh, 640px);          /* fixed height so it doesn't jump between tabs */
   display: flex; flex-direction: column;
-  background: linear-gradient(160deg, #2a2150 0%, #1a1340 100%);
+  background: linear-gradient(162deg, #2a2150 0%, #191138 100%);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 18px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  border-radius: 22px;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255,255,255,0.06);
   overflow: hidden;
 }
+.cc-card::before {                                   /* warm top glow */
+  content: ''; position: absolute; top: -120px; left: 50%; transform: translateX(-50%);
+  width: 140%; height: 220px; pointer-events: none; z-index: 0;
+  background: radial-gradient(60% 100% at 50% 0, rgba(245,158,11,0.16), transparent 70%);
+}
+.cc-header, .cc-tabs, .cc-body { position: relative; z-index: 1; }
+/* Lock the header + tab row: `.cc-tabs { overflow-x:auto }` makes its flex min-height 0,
+   so without this the fixed-height column squishes the tabs when the body is tall. */
+.cc-header, .cc-tabs { flex-shrink: 0; }
 .cc-close {
   position: absolute; top: 12px; right: 12px; z-index: 2;
   width: 30px; height: 30px; border: none; border-radius: 50%;
   background: rgba(255, 255, 255, 0.1); color: #fff; font-size: 14px; cursor: pointer;
 }
 .cc-close:hover { background: rgba(255, 80, 80, 0.5); }
-.cc-header { display: flex; align-items: center; gap: 10px; padding: 16px 18px 10px; }
-.cc-title { font-size: 17px; font-weight: 700; color: #fff; }
-.cc-coins { margin-left: auto; margin-right: 34px; font-size: 14px; font-weight: 700; color: #fde68a; background: rgba(245, 158, 11, 0.15); padding: 4px 12px; border-radius: 20px; }
-.cc-tabs { display: flex; gap: 6px; padding: 0 14px 10px; }
-.cc-tab {
-  flex: 1; border: none; border-radius: 10px; padding: 9px 4px;
-  background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.7);
-  font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s, color 0.15s;
+.cc-header { display: flex; align-items: center; gap: 12px; padding: 18px 20px 14px; }
+.cc-title { font-size: 17px; font-weight: 700; color: #fff; }   /* still used by the popups */
+.cc-brand { display: flex; align-items: center; gap: 9px; }
+.cc-mark {
+  width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center;
+  font-size: 19px; background: linear-gradient(135deg, #fcd34d, #f59e0b);
+  box-shadow: 0 4px 14px rgba(245,158,11,0.4);
 }
-.cc-tab.active { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #2a1f4a; }
-.cc-body { padding: 6px 16px 18px; overflow-y: auto; }
+.cc-brand-name { font-size: 18px; font-weight: 800; color: #fff; line-height: 1.1; }
+.cc-brand-sub { font-size: 11px; color: #7b74a6; margin-top: 1px; }
+.cc-wallet {
+  margin-left: auto; margin-right: 34px; display: flex; align-items: center; gap: 7px;
+  padding: 8px 14px 8px 11px; border-radius: 14px;
+  background: linear-gradient(135deg, rgba(252,211,77,0.16), rgba(245,158,11,0.10));
+  border: 1px solid rgba(252,211,77,0.34); box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+}
+.cc-wallet .coin { font-size: 16px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4)); }
+.cc-wallet b { font-size: 16px; font-weight: 800; color: #ffe9a8; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.cc-wallet-flash { animation: ccWalletFlash 0.5s ease; }
+@keyframes ccWalletFlash { 40% { transform: scale(1.08); } }
+.cc-tabs { display: flex; gap: 7px; padding: 2px 16px 14px; overflow-x: auto; scrollbar-width: none; }
+.cc-tabs::-webkit-scrollbar { display: none; }
+.cc-tab {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  width: 58px; height: 58px;         /* equal squares → uniform square highlight when selected */
+  border: 1px solid transparent; border-radius: 15px; padding: 6px 4px;
+  background: rgba(255, 255, 255, 0.05); color: rgba(255, 255, 255, 0.72);
+  font-size: 11.5px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  transition: background 0.16s, color 0.16s, transform 0.1s;
+}
+.cc-tab .ic { font-size: 16px; }
+.cc-tab:hover { background: rgba(255,255,255,0.09); }
+.cc-tab:active { transform: scale(0.95); }
+.cc-tab.active { background: linear-gradient(135deg, #fcd34d, #f59e0b); color: #2a1a02; box-shadow: 0 5px 16px rgba(245,158,11,0.4); }
+.cc-body { flex: 1 1 auto; min-height: 0; padding: 4px 16px 20px; overflow-y: auto; }
+.cc-body::-webkit-scrollbar { width: 8px; }
+.cc-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 8px; }
 .cc-hint { font-size: 12px; color: rgba(255, 255, 255, 0.5); text-align: center; margin-bottom: 10px; }
 .cc-note { font-size: 11px; color: rgba(255, 255, 255, 0.4); text-align: center; margin-top: 10px; }
-.cc-sec { font-size: 13px; font-weight: 700; color: #a5b4fc; margin: 14px 0 8px; }
+.cc-sec { display: flex; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 800; color: #cdc3ff; margin: 16px 2px 9px; }
+.cc-sec-t { flex: 0 0 auto; }
+.cc-sec-rule { flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.12), transparent); }
+.cc-sec-n { flex: 0 0 auto; font-size: 11px; font-weight: 700; color: #7b74a6; font-variant-numeric: tabular-nums; }
 
-/* Shop / pull grid */
-.cc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.cc-item, .cc-pull {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1.5px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px; padding: 10px 6px; text-align: center;
+/* Shop grid — responsive: fills as many ~150px columns as the width allows
+   (2 on a phone, ~5 on a wide desktop card). */
+.cc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 11px; }
+.cc-item {
+  position: relative; display: flex; flex-direction: column;
+  background: rgba(255,255,255,0.045); border: 1.5px solid rgba(255,255,255,0.10);
+  border-radius: 15px; padding: 12px 11px 11px; overflow: hidden;
+  transition: transform 0.14s, border-color 0.14s, box-shadow 0.14s;
 }
-.cc-prev { height: 30px; display: flex; align-items: center; justify-content: center; margin-bottom: 6px; }
+.cc-item:hover { transform: translateY(-2px); }
+.cc-pull {
+  background: rgba(255, 255, 255, 0.05); border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px; padding: 8px 4px; text-align: center;
+}
+.cc-prev { height: 40px; display: flex; align-items: center; justify-content: center; margin-bottom: 6px; }
+.cc-item .cc-prev {
+  height: 54px; margin: 2px 0 9px; border-radius: 11px;
+  background: radial-gradient(80% 90% at 50% 30%, rgba(255,255,255,0.05), rgba(0,0,0,0.14));
+}
 .cc-name { font-size: 11px; color: #fff; margin-bottom: 3px; line-height: 1.2; }
+.cc-item .cc-name { font-size: 12.5px; font-weight: 700; color: #f4f1ff; margin-bottom: 9px; line-height: 1.25; text-align: left; }
 .cc-rar { font-size: 10px; font-weight: 700; }
-.r-N { color: #9ca3af; } .r-R { color: #3b82f6; } .r-SR { color: var(--primary); } .r-SSR { color: #f5b301; }
-.rarity-N { border-color: rgba(156,163,175,0.5); }
-.rarity-R { border-color: rgba(59,130,246,0.6); }
-.rarity-SR { border-color: rgba(168,85,247,0.7); box-shadow: 0 0 10px rgba(168,85,247,0.25); }
-.rarity-SSR { border-color: rgba(245,179,1,0.85); box-shadow: 0 0 14px rgba(245,179,1,0.4); }
+.r-N { color: #9ca3af; } .r-R { color: #60a5fa; } .r-SR { color: #c084fc; } .r-SSR { color: #fcd34d; }
+.rarity-N  { border-color: rgba(156,163,175,0.4); }
+.rarity-R  { border-color: rgba(96,165,250,0.5); }
+.rarity-SR { border-color: rgba(192,132,252,0.6); box-shadow: 0 0 16px rgba(192,132,252,0.16); }
+.rarity-SSR{ border-color: rgba(252,211,77,0.72); box-shadow: 0 0 20px rgba(252,211,77,0.22); }
+.cc-item[data-r="SSR"]::after {                      /* premium sheen (fades before the button) */
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(135deg, rgba(252,211,77,0.10), transparent 45%);
+}
+.cc-rib {                                            /* rarity corner ribbon */
+  position: absolute; top: 9px; right: 9px; z-index: 2;
+  font-size: 9.5px; font-weight: 800; letter-spacing: .04em;
+  padding: 2px 7px; border-radius: 999px; color: #10101c;
+}
+.cc-rib[data-r="N"]   { background: #9aa3b2; }
+.cc-rib[data-r="R"]   { background: #60a5fa; color: #04122e; }
+.cc-rib[data-r="SR"]  { background: #c084fc; color: #1e0a34; }
+.cc-rib[data-r="SSR"] { background: linear-gradient(135deg, #fde68a, #fcd34d); }
+.cc-own {                                            /* "已拥有" tag */
+  position: absolute; top: 9px; left: 9px; z-index: 2;
+  font-size: 9px; font-weight: 800; color: #34d399;
+  background: rgba(52,211,153,0.16); border: 1px solid rgba(52,211,153,0.4);
+  padding: 1px 6px; border-radius: 999px;
+}
+.cc-item.cant .cc-prev, .cc-item.cant .cc-name { opacity: 0.5; }
+.cc-item.cant .cc-rib { opacity: 0.7; }
+.cc-item.cant .cc-btn.buy { background: rgba(255,255,255,0.07); color: #7b74a6; }
 .cc-btn {
   margin-top: 6px; width: 100%;
-  border: none; border-radius: 8px; padding: 6px 4px;
-  font-size: 11px; font-weight: 700; cursor: pointer; transition: transform 0.12s, opacity 0.15s;
+  border: none; border-radius: 9px; padding: 7px 4px;
+  font-size: 12px; font-weight: 800; cursor: pointer;
+  transition: transform 0.12s, filter 0.15s, opacity 0.15s;
+  font-variant-numeric: tabular-nums;
 }
-.cc-btn:hover { transform: translateY(-1px); }
+.cc-item .cc-btn { margin-top: auto; padding: 9px 6px; border-radius: 10px; font-size: 12.5px; }
+.cc-btn:hover { filter: brightness(1.06); }
+.cc-btn:active { transform: scale(0.97); }
 .cc-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.cc-btn.buy { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #2a1f4a; }
+.cc-btn.buy { background: linear-gradient(135deg, #fcd34d, #f59e0b); color: #2a1a02; }
 .cc-btn.own { background: rgba(255,255,255,0.12); color: #fff; }
-.cc-btn.eq { background: #34d399; color: #06302a; }
+.cc-btn.eq  { background: linear-gradient(135deg, #34d399, #10b981); color: #04231a; }
 .cc-frame-prev { padding: 2px 8px; font-size: 11px; color: #fff; border-radius: 8px; }
 
 /* Gacha */
@@ -1211,6 +1287,184 @@ body.light-theme .riddle-solvers-empty { color: rgba(0, 0, 0, 0.45); }
 .bubble.cos-frame-neon   { border: 2px solid #22d3ee; box-shadow: 0 0 14px rgba(34,211,238,0.5); }
 .bubble.cos-frame-star   { border: 2px solid #c084fc; box-shadow: 0 0 16px rgba(192,132,252,0.55); }
 
+/* ── 登场动画 Entrance signatures ──────────────────────────────
+   Swapped in for floatIn by app.js (see ENTRANCE_ANIMS). Each keyframe ends at the
+   bubble's rest transform so the delayed idle bob takes over without a jump. */
+@keyframes entBounce {
+  0%   { opacity: 0; transform: translateY(-140px) scale(0.9); }
+  55%  { opacity: 1; transform: translateY(0) scale(1); }
+  70%  { transform: translateY(-22px) scale(1.03); }
+  84%  { transform: translateY(0) scale(1); }
+  92%  { transform: translateY(-8px); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes entSlide {
+  0%   { opacity: 0; transform: translateX(-110px) scale(0.98); }
+  70%  { opacity: 1; transform: translateX(10px); }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes entSpiral {
+  0%   { opacity: 0; transform: scale(0.15) rotate(-220deg); }
+  70%  { opacity: 1; transform: scale(1.05) rotate(12deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+@keyframes entZoom {
+  0%   { opacity: 0; transform: scale(0); }
+  65%  { opacity: 1; transform: scale(1.18); }
+  82%  { transform: scale(0.94); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes entFirework {
+  0%   { opacity: 0; transform: scale(0.3); }
+  45%  { opacity: 1; transform: scale(1.14); }
+  70%  { transform: scale(0.97); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes entFireworkBurst {
+  0%   { opacity: 0.95; box-shadow: 0 0 0 0 rgba(255,214,120,0.9), 0 0 0 0 rgba(255,150,80,0.7); }
+  60%  { opacity: 0.5; }
+  100% { opacity: 0; box-shadow: 0 0 0 46px rgba(255,214,120,0), 0 0 0 72px rgba(255,150,80,0); }
+}
+@keyframes entGlitch {
+  0%   { opacity: 0; filter: blur(6px); transform: translateX(0) scale(1.04); }
+  10%  { opacity: .6;  transform: translateX(-8px) scale(1.03);
+         filter: blur(3px) drop-shadow(3px 0 0 rgba(255,0,90,.85)) drop-shadow(-3px 0 0 rgba(0,225,255,.85)); }
+  18%  { opacity: .12; transform: translateX(7px); }
+  28%  { opacity: .85; transform: translateX(-5px) scale(1.02);
+         filter: blur(2px) drop-shadow(4px 0 0 rgba(255,0,90,.9)) drop-shadow(-4px 0 0 rgba(0,225,255,.9)); }
+  38%  { opacity: .28; transform: translateX(5px); }
+  50%  { opacity: .95; transform: translateX(-3px) scale(1.01);
+         filter: blur(1px) drop-shadow(2px 0 0 rgba(255,0,90,.7)) drop-shadow(-2px 0 0 rgba(0,225,255,.7)); }
+  62%  { opacity: .5;  transform: translateX(3px); }
+  74%  { opacity: 1;   transform: translateX(-1px);
+         filter: blur(.4px) drop-shadow(1px 0 0 rgba(255,0,90,.5)) drop-shadow(-1px 0 0 rgba(0,225,255,.5)); }
+  86%  { opacity: .9;  transform: translateX(1px); }
+  100% { opacity: 1;   transform: translateX(0) scale(1); filter: blur(0); }
+}
+/* Holographic shine-sweep that punctuates the glitch as it resolves. */
+@keyframes entGlitchShine {
+  0%   { opacity: 0; background-position: 150% 0; }
+  25%  { opacity: 1; }
+  100% { opacity: 0; background-position: -60% 0; }
+}
+/* Glitch shine-sweep. Same story as firework: dedicated `.glitch-shine` child on a
+   real bubble (shape tails own ::after), ::after only on the preview <span>. */
+.glitch-shine {
+  position: absolute; inset: 0; border-radius: inherit;
+  pointer-events: none; z-index: 2;
+  background: linear-gradient(105deg, transparent 38%, rgba(255,255,255,.7) 50%, transparent 62%);
+  background-size: 220% 100%;
+  animation: entGlitchShine .55s ease-out .62s both;
+}
+.cc-anim-prev.cos-anim-glitch::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit;
+  pointer-events: none; z-index: 2;
+  background: linear-gradient(105deg, transparent 38%, rgba(255,255,255,.7) 50%, transparent 62%);
+  background-size: 220% 100%;
+  animation: entGlitchShineLoop 2.6s ease-out infinite;   /* loops with the preview */
+}
+/* Respect the app's 关闭动画 setting for the entrance overlays + shop previews. */
+body.no-animations .cc-anim-prev { animation: none !important; opacity: 1 !important; }
+body.no-animations .firework-burst,
+body.no-animations .glitch-shine,
+body.no-animations .cc-anim-prev.cos-anim-firework::after,
+body.no-animations .cc-anim-prev.cos-anim-glitch::after { display: none !important; }
+/* Firework spark ring. On a real bubble it paints on a dedicated `.firework-burst`
+   child, because the bubble shape tails (shape0/1/3) already own the ::after pseudo.
+   The shop-preview <span> has no tail, so it can use ::after directly. */
+.firework-burst {
+  position: absolute; inset: 0; border-radius: inherit;
+  pointer-events: none; z-index: -1;
+  animation: entFireworkBurst 0.75s ease-out forwards;
+}
+.cc-anim-prev.cos-anim-firework::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit;
+  pointer-events: none; z-index: -1;
+  animation: entFireworkBurstLoop 2.6s ease-out infinite;   /* loops with the preview */
+}
+
+/* Shop live preview — a mini bubble that plays the effect on render; tap to replay. */
+.cc-anim-prev {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 42px; height: 36px; border-radius: 14px 14px 14px 5px;
+  background: linear-gradient(135deg, #6d4ba0, #8b6fc0);
+  color: #fff; font-size: 13px; font-weight: 700;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.25);
+  position: relative; cursor: pointer; user-select: none;
+}
+/* In the shop these previews LOOP forever (enter → hold → fade out invisibly →
+   re-enter) so you can watch each effect while browsing. The invisible reset hides
+   the teleport-back. Real bubbles still play their entrance ONCE (rules above). */
+.cc-anim-prev.cos-anim-bounce   { animation: entBounceLoop   2.6s ease-out infinite; }
+.cc-anim-prev.cos-anim-slide    { animation: entSlideLoop    2.6s ease-out infinite; }
+.cc-anim-prev.cos-anim-spiral   { animation: entSpiralLoop   2.6s ease-out infinite; }
+.cc-anim-prev.cos-anim-zoom     { animation: entZoomLoop     2.6s ease-out infinite; }
+.cc-anim-prev.cos-anim-firework { animation: entFireworkLoop 2.6s ease-out infinite; }
+.cc-anim-prev.cos-anim-glitch   { animation: entGlitchLoop   2.6s ease-out infinite; }
+@keyframes entBounceLoop {
+  0%   { opacity: 0; transform: translateY(-60px) scale(.9); }
+  12%  { opacity: 1; transform: translateY(0) scale(1); }
+  17%  { transform: translateY(-12px) scale(1.02); }
+  23%  { transform: translateY(0) scale(1); }
+  82%  { opacity: 1; transform: translateY(0) scale(1); }
+  92%  { opacity: 0; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-60px) scale(.9); }
+}
+@keyframes entSlideLoop {
+  0%   { opacity: 0; transform: translateX(-80px); }
+  16%  { opacity: 1; transform: translateX(0); }
+  82%  { opacity: 1; transform: translateX(0); }
+  92%  { opacity: 0; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(-80px); }
+}
+@keyframes entSpiralLoop {
+  0%   { opacity: 0; transform: scale(.15) rotate(-220deg); }
+  20%  { opacity: 1; transform: scale(1) rotate(0); }
+  82%  { opacity: 1; transform: scale(1) rotate(0); }
+  92%  { opacity: 0; transform: scale(1) rotate(0); }
+  100% { opacity: 0; transform: scale(.15) rotate(-220deg); }
+}
+@keyframes entZoomLoop {
+  0%   { opacity: 0; transform: scale(0); }
+  14%  { opacity: 1; transform: scale(1.18); }
+  20%  { transform: scale(1); }
+  82%  { opacity: 1; transform: scale(1); }
+  92%  { opacity: 0; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0); }
+}
+@keyframes entFireworkLoop {
+  0%   { opacity: 0; transform: scale(.3); }
+  12%  { opacity: 1; transform: scale(1.14); }
+  20%  { transform: scale(.98); }
+  26%  { transform: scale(1); }
+  82%  { opacity: 1; transform: scale(1); }
+  92%  { opacity: 0; transform: scale(1); }
+  100% { opacity: 0; transform: scale(.3); }
+}
+@keyframes entFireworkBurstLoop {
+  0%   { opacity: .95; box-shadow: 0 0 0 0 rgba(255,214,120,.9), 0 0 0 0 rgba(255,150,80,.7); }
+  8%   { opacity: .5; }
+  14%  { opacity: 0; box-shadow: 0 0 0 30px rgba(255,214,120,0), 0 0 0 46px rgba(255,150,80,0); }
+  100% { opacity: 0; box-shadow: 0 0 0 30px rgba(255,214,120,0), 0 0 0 46px rgba(255,150,80,0); }
+}
+@keyframes entGlitchLoop {
+  0%   { opacity: 0; filter: blur(6px); transform: translateX(0); }
+  3%   { opacity: .6;  transform: translateX(-7px); filter: blur(3px) drop-shadow(3px 0 0 rgba(255,0,90,.85)) drop-shadow(-3px 0 0 rgba(0,225,255,.85)); }
+  8%   { opacity: .85; transform: translateX(-5px); filter: blur(2px) drop-shadow(4px 0 0 rgba(255,0,90,.9)) drop-shadow(-4px 0 0 rgba(0,225,255,.9)); }
+  14%  { opacity: .95; transform: translateX(-3px); filter: blur(1px); }
+  20%  { opacity: 1;   transform: translateX(0); filter: blur(0); }
+  82%  { opacity: 1;   transform: translateX(0); filter: blur(0); }
+  92%  { opacity: 0; }
+  100% { opacity: 0; filter: blur(6px); }
+}
+@keyframes entGlitchShineLoop {
+  0%   { opacity: 0; background-position: 150% 0; }
+  14%  { opacity: 0; background-position: 150% 0; }
+  18%  { opacity: 1; }
+  27%  { opacity: 0; background-position: -60% 0; }
+  100% { opacity: 0; background-position: -60% 0; }
+}
+
 /* ── Boosted (pinned) bubble ── */
 .bubble.boosted {
   border: 2px solid #f5b301 !important;
@@ -1240,6 +1494,22 @@ body.light-theme .cc-name { color: #333; }
 body.light-theme .cc-hint, body.light-theme .cc-note, body.light-theme .cc-odds { color: rgba(0,0,0,0.5); }
 body.light-theme .cc-btn.own { background: rgba(0,0,0,0.1); color: #333; }
 body.light-theme .cc-bet { background: rgba(0,0,0,0.05); color: #333; border-color: rgba(0,0,0,0.12); }
+/* Light-theme fixes for the redesigned header / shop (card goes white) */
+body.light-theme .cc-brand-name { color: #2a2150; }
+body.light-theme .cc-brand-sub { color: rgba(0,0,0,0.45); }
+body.light-theme .cc-wallet { background: linear-gradient(135deg, rgba(245,158,11,0.14), rgba(245,158,11,0.08)); border-color: rgba(245,158,11,0.4); }
+body.light-theme .cc-wallet b { color: #b45309; }
+body.light-theme .cc-sec { color: #4a3f8a; }
+body.light-theme .cc-sec-n { color: rgba(0,0,0,0.4); }
+
+/* Keep single-column tabs tidy inside the now-wide card. `.cc-body` descendant
+   selectors out-specify the base rules, so this holds regardless of source order. */
+.cc-body .cc-gacha, .cc-body .cc-slot, .cc-body .cc-fortune, .cc-body .cc-super-btns {
+  max-width: 480px; margin-left: auto; margin-right: auto;
+}
+.cc-body .cc-lb, .cc-body .cc-burn-btns, .cc-body .cc-board-note {
+  max-width: 640px; margin-left: auto; margin-right: auto;
+}
 
 /* Gacha prize-pool popup */
 .cc-pool-btn { width: auto !important; padding: 7px 16px !important; margin: 0 auto 12px; display: block; }
@@ -1256,9 +1526,8 @@ body.light-theme .cc-pool-pct { color: #b45309; }
 /* ════════════════════════════════════════════════════════════
    6. More coin sinks: 土豪榜 / 全屏特效 / 求签 / Bubble Awards
    ════════════════════════════════════════════════════════════ */
-/* Tab bar now holds 6 tabs — let it wrap to 2 rows. */
-.cc-tabs { flex-wrap: wrap; }
-.cc-tab { flex: 1 1 28%; }
+/* Tab bar styling lives in the redesigned .cc-tabs / .cc-tab rules above
+   (a single horizontally-scrollable pill row). */
 
 /* 土豪榜 leaderboard */
 .cc-lb { margin: 4px 0 10px; }

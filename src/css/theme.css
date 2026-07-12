@@ -76,6 +76,9 @@
 [data-theme="terminal"] .bubble-deco{ display:none !important; }
 [data-theme="terminal"] .bubble::before,
 [data-theme="terminal"] .bubble::after{ content:none !important; display:none !important; box-shadow:none !important; background:none !important; }
+/* Entrance-animation overlays (firework burst / glitch shine) don't belong in the terminal either */
+[data-theme="terminal"] .firework-burst,
+[data-theme="terminal"] .glitch-shine{ display:none !important; }
 /* Each message → a flat monospace log line with a left gutter bar */
 [data-theme="terminal"] .bubble{
   display:block; width:100% !important; max-width:100% !important; min-width:0;

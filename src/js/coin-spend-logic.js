@@ -54,12 +54,20 @@
     { id: 't_yuan',    type: 'title', name: '称号·大怨种', val: '大怨种', price: 60000, rarity: 'SR' },
     { id: 't_legend',  type: 'title', name: '称号·传奇', val: '传奇',     price: 90000,  rarity: 'SSR' },
     { id: 't_deadline',type: 'title', name: '称号·Deadline之子', val: 'Deadline之子', price: 100000, rarity: 'SSR' },
-    { id: 't_hidden',  type: 'title', name: '称号·隐藏BOSS', val: '隐藏BOSS', price: 150000, rarity: 'SSR' }
+    { id: 't_hidden',  type: 'title', name: '称号·隐藏BOSS', val: '隐藏BOSS', price: 150000, rarity: 'SSR' },
+    // Entrance animations (登场动画) — how your bubble flies onto everyone's screen.
+    // val = animation id; app.js swaps the default floatIn entrance for this one.
+    { id: 'a_bounce',   type: 'anim', name: '登场·弹跳',   val: 'bounce',   price: 8000,   rarity: 'N'   },
+    { id: 'a_slide',    type: 'anim', name: '登场·滑入',   val: 'slide',    price: 8000,   rarity: 'N'   },
+    { id: 'a_spiral',   type: 'anim', name: '登场·旋入',   val: 'spiral',   price: 18000,  rarity: 'R'   },
+    { id: 'a_zoom',     type: 'anim', name: '登场·缩放',   val: 'zoom',     price: 18000,  rarity: 'R'   },
+    { id: 'a_firework', type: 'anim', name: '登场·烟花',   val: 'firework', price: 45000,  rarity: 'SR'  },
+    { id: 'a_glitch',   type: 'anim', name: '登场·闪现',   val: 'glitch',   price: 100000, rarity: 'SSR' }
   ];
 
   CoinSpend.RARITY_NAMES = { N: '普通', R: '稀有', SR: '史诗', SSR: '传说' };
-  CoinSpend.COS_TYPES = ['color', 'frame', 'badge', 'title'];
-  CoinSpend.COS_TYPE_NAMES = { color: '名字颜色', frame: '气泡边框', badge: '徽章', title: '称号' };
+  CoinSpend.COS_TYPES = ['color', 'frame', 'badge', 'title', 'anim'];
+  CoinSpend.COS_TYPE_NAMES = { color: '名字颜色', frame: '气泡边框', badge: '徽章', title: '称号', anim: '登场动画' };
 
   CoinSpend.getCosmetic = function (id) {
     return CoinSpend.COSMETICS.find(function (c) { return c.id === id; }) || null;
@@ -78,6 +86,7 @@
     const fr  = CoinSpend.getCosmetic(equip.frame);  if (fr)  out.f = fr.val;
     const bd  = CoinSpend.getCosmetic(equip.badge);  if (bd)  out.b = bd.val;
     const ti  = CoinSpend.getCosmetic(equip.title);  if (ti)  { out.t = ti.val; out.ty = 1; out.tr = ti.rarity; }  // ty = needs time prefix; tr = rarity (styles the chip)
+    const an  = CoinSpend.getCosmetic(equip.anim);   if (an)  out.a = an.val;   // a = entrance-animation id
     return out;
   };
 

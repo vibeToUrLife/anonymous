@@ -34,7 +34,7 @@
   // ── State ──
   let coins = 0;
   let owned = [];
-  let equip = { color: null, frame: null, badge: null, title: null };
+  let equip = { color: null, frame: null, badge: null, title: null, anim: null };
   let overlay = null, body = null, coinsEl = null, built = false, curTab = 'shop';
   let curBet = C.SLOT_BETS[0];
   let spinning = false;
@@ -78,7 +78,7 @@
       const d = doc.exists ? doc.data() : {};
       coins = d.coins || 0;
       owned = Array.isArray(d.boardCosOwned) ? d.boardCosOwned : [];
-      equip = Object.assign({ color: null, frame: null, badge: null, title: null }, d.boardCosEquip || {});
+      equip = Object.assign({ color: null, frame: null, badge: null, title: null, anim: null }, d.boardCosEquip || {});
       const today = todayKey();
       fortuneToday = (d.fortuneDay === today && d.fortuneResult) ? d.fortuneResult : null;
       saveEquipLocal();
@@ -391,7 +391,12 @@
   };
 
   /* ── Rendering ────────────────────────────────────────────── */
-  function updateCoins() { if (coinsEl) coinsEl.textContent = coins; }
+  function updateCoins() {
+    if (!coinsEl) return;
+    coinsEl.textContent = (typeof coins === 'number' ? coins : 0).toLocaleString('en-US');
+    const w = coinsEl.closest('.cc-wallet');           // flash the wallet when the balance changes
+    if (w) { w.classList.remove('cc-wallet-flash'); void w.offsetWidth; w.classList.add('cc-wallet-flash'); }
+  }
 
   // Current user's "N年 / N个月" prefix from account-creation time (empty if unknown).
   function myTitlePrefix() {
@@ -405,23 +410,33 @@
     if (it.type === 'frame') return '<span class="cos-frame-' + it.val + ' cc-frame-prev">气泡</span>';
     if (it.type === 'badge') return '<span style="font-size:24px">' + it.val + '</span>';
     if (it.type === 'title') return '<span class="cos-title cos-title-' + it.rarity + '">' + esc(myTitlePrefix() + it.val) + '</span>';
+    // Entrance animation — a mini bubble that plays the effect; tap to replay.
+    if (it.type === 'anim') return '<span class="cc-anim-prev cos-anim-' + it.val + '" data-act="animprev" data-val="' + it.val + '" title="点一下预览">泡</span>';
     return '';
   }
 
   function renderShop() {
+    const bal = (typeof coins === 'number') ? coins : 0;
+    const free = isDev();
     let html = '<div class="cc-hint">购买装扮，装备后会显示在你的留言上 ✨</div>';
     C.COS_TYPES.forEach(function (type) {
-      html += '<div class="cc-sec">' + C.COS_TYPE_NAMES[type] + '</div><div class="cc-grid">';
-      C.byType(type).forEach(function (it) {
+      const list = C.byType(type);
+      const ownedN = list.filter(function (it) { return owned.indexOf(it.id) !== -1; }).length;
+      html += '<div class="cc-sec"><span class="cc-sec-t">' + C.COS_TYPE_NAMES[type] + '</span>'
+        + '<span class="cc-sec-rule"></span><span class="cc-sec-n">' + ownedN + '/' + list.length + '</span></div>'
+        + '<div class="cc-grid">';
+      list.forEach(function (it) {
         const own = owned.indexOf(it.id) !== -1;
         const eq = equip[type] === it.id;
-        html += '<div class="cc-item rarity-' + it.rarity + '">'
+        const cant = !own && !free && bal < it.price;   // can't afford → dim + grey the price
+        html += '<div class="cc-item rarity-' + it.rarity + (cant ? ' cant' : '') + '" data-r="' + it.rarity + '">'
+          + '<span class="cc-rib" data-r="' + it.rarity + '">' + it.rarity + '</span>'
+          + (own ? '<span class="cc-own">已拥有</span>' : '')
           + '<div class="cc-prev">' + previewHtml(it) + '</div>'
           + '<div class="cc-name">' + esc(it.name) + '</div>'
-          + '<div class="cc-rar r-' + it.rarity + '">' + C.RARITY_NAMES[it.rarity] + '</div>'
           + (own
               ? '<button class="cc-btn ' + (eq ? 'eq' : 'own') + '" data-act="equip" data-id="' + it.id + '">' + (eq ? '已装备 ✓' : '装备') + '</button>'
-              : '<button class="cc-btn buy" data-act="buy" data-id="' + it.id + '">🪙 ' + it.price + '</button>')
+              : '<button class="cc-btn buy" data-act="buy" data-id="' + it.id + '">🪙 ' + it.price.toLocaleString('en-US') + '</button>')
           + '</div>';
       });
       html += '</div>';
@@ -533,15 +548,18 @@
     overlay.innerHTML =
       '<div class="cc-card">'
       + '<button class="cc-close" id="ccClose" title="关闭">✕</button>'
-      + '<div class="cc-header"><span class="cc-title">🎰 金币乐园</span>'
-      + '<span class="cc-coins">🪙 <b id="ccCoins">0</b></span></div>'
+      + '<div class="cc-header">'
+      +   '<div class="cc-brand"><span class="cc-mark">🎰</span>'
+      +     '<div><div class="cc-brand-name">金币乐园</div><div class="cc-brand-sub">用金币换装扮</div></div></div>'
+      +   '<span class="cc-wallet"><span class="coin">🪙</span> <b id="ccCoins">0</b></span>'
+      + '</div>'
       + '<div class="cc-tabs">'
-      + '<button class="cc-tab active" data-tab="shop">🛍️ 商店</button>'
-      + '<button class="cc-tab" data-tab="gacha">🎁 扭蛋</button>'
-      + '<button class="cc-tab" data-tab="slot">🎰 老虎机</button>'
-      + '<button class="cc-tab" data-tab="board">💰 土豪榜</button>'
-      + '<button class="cc-tab" data-tab="super">🎆 特效</button>'
-      + '<button class="cc-tab" data-tab="fortune">🎋 求签</button>'
+      + '<button class="cc-tab active" data-tab="shop"><span class="ic">🛍️</span>商店</button>'
+      + '<button class="cc-tab" data-tab="gacha"><span class="ic">🎁</span>扭蛋</button>'
+      + '<button class="cc-tab" data-tab="slot"><span class="ic">🎰</span>老虎机</button>'
+      + '<button class="cc-tab" data-tab="board"><span class="ic">💰</span>土豪榜</button>'
+      + '<button class="cc-tab" data-tab="super"><span class="ic">🎆</span>特效</button>'
+      + '<button class="cc-tab" data-tab="fortune"><span class="ic">🎋</span>求签</button>'
       + '</div><div class="cc-body" id="ccBody"></div>'
       + '</div>';
     document.body.appendChild(overlay);
@@ -562,6 +580,10 @@
       const btn = e.target.closest('[data-act], [data-bet]'); if (!btn) return;
       const act = btn.getAttribute('data-act');
       if (act === 'buy') onBuy(btn.getAttribute('data-id'));
+      else if (act === 'animprev') {                       // replay the entrance preview
+        const cls = 'cos-anim-' + btn.getAttribute('data-val');
+        btn.classList.remove(cls); void btn.offsetWidth; btn.classList.add(cls);
+      }
       else if (act === 'equip') onEquip(btn.getAttribute('data-id'));
       else if (act === 'pull') onPull(parseInt(btn.getAttribute('data-n'), 10));
       else if (act === 'pool') buildPoolPopup();
@@ -614,7 +636,11 @@
     pop.innerHTML = html;
     document.body.appendChild(pop);
     function destroy() { pop.remove(); }
-    pop.addEventListener('click', function (e) { if (e.target === pop) destroy(); });
+    pop.addEventListener('click', function (e) {
+      if (e.target === pop) { destroy(); return; }
+      const pv = e.target.closest('[data-act="animprev"]');   // replay an entrance preview here too
+      if (pv) { const cls = 'cos-anim-' + pv.getAttribute('data-val'); pv.classList.remove(cls); void pv.offsetWidth; pv.classList.add(cls); }
+    });
     pop.querySelector('.cc-close').addEventListener('click', destroy);
   }
 

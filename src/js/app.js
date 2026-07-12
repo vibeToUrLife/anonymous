@@ -1102,6 +1102,18 @@ function collapseOtherReplies(except) {
     });
 }
 
+// 登场动画 (entrance signatures) — maps a poster's equipped entrance id (cos.a)
+// to its keyframe + duration. Used to swap the default floatIn entrance; the idle
+// bob is delayed by `dur` so it can't override the entrance's own transform.
+const ENTRANCE_ANIMS = {
+    bounce:   { kf: 'entBounce',   dur: 0.75 },
+    slide:    { kf: 'entSlide',    dur: 0.55 },
+    spiral:   { kf: 'entSpiral',   dur: 0.70 },
+    zoom:     { kf: 'entZoom',     dur: 0.60 },
+    firework: { kf: 'entFirework', dur: 0.60 },
+    glitch:   { kf: 'entGlitch',   dur: 1.0 }
+};
+
 function render(items) {
     if (!items.length) {
     wrap.innerHTML =
@@ -1166,9 +1178,28 @@ function render(items) {
     bubble.dataset.id = a.id;
     if (unseenNewBubbles.has(a.id)) bubble.classList.add('is-new');   // new-arrival glow + NEW tag
     bubble.addEventListener('click', () => markBubbleSeen(a.id));      // engaging clears the glow
-    bubble.style.animationDelay = '0s, 0s';
-    bubble.style.animationName = 'floatIn, ' + bobNames[bobIdx];
-    bubble.style.animationDuration = '0.5s, ' + bobSpeeds[bobIdx] + 's';
+    // Entrance signature (登场动画): swap floatIn for the poster's equipped entrance
+    // and delay the idle bob until it finishes — the bob is listed second and would
+    // otherwise override the entrance's own transform.
+    const ent = (a.cos && a.cos.a) ? ENTRANCE_ANIMS[a.cos.a] : null;
+    if (ent) {
+        bubble.classList.add('cos-anim-' + a.cos.a);
+        // Firework/glitch overlays paint on a DEDICATED child, never ::after —
+        // the bubble shape tails (shape0/1/3) already own the ::after pseudo.
+        if (a.cos.a === 'firework' || a.cos.a === 'glitch') {
+            const fx = document.createElement('i');
+            fx.className = (a.cos.a === 'firework') ? 'firework-burst' : 'glitch-shine';
+            fx.setAttribute('aria-hidden', 'true');
+            bubble.appendChild(fx);
+        }
+        bubble.style.animationName = ent.kf + ', ' + bobNames[bobIdx];
+        bubble.style.animationDuration = ent.dur + 's, ' + bobSpeeds[bobIdx] + 's';
+        bubble.style.animationDelay = '0s, ' + ent.dur + 's';
+    } else {
+        bubble.style.animationName = 'floatIn, ' + bobNames[bobIdx];
+        bubble.style.animationDuration = '0.5s, ' + bobSpeeds[bobIdx] + 's';
+        bubble.style.animationDelay = '0s, 0s';
+    }
 
     // Blink-ring overlay: the "new / new-reply / jumped-to" border blink animates on
     // its OWN element, so it can never leak `infinite` onto the bubble's floatIn
@@ -1816,11 +1847,16 @@ async function submit() {
     if (pendingImage) doc.image = pendingImage;
     if (!ansAnonCheckbox.checked) {
         doc.name = localStorage.getItem('flappy_name') || auth.currentUser?.displayName || 'User';
-        // Stamp the poster's equipped bubble cosmetics so everyone can render them
-        // (the board is anonymous, so we can't look them up from the viewer side).
-        if (typeof getEquippedCos === 'function') {
-            const cos = getEquippedCos();
-            if (cos) doc.cos = cos;
+    }
+    // Stamp the poster's equipped cosmetics so everyone can render them (the board is
+    // anonymous, so viewers can't look them up). Name decorations (colour/frame/badge/
+    // title) only make sense on a NAMED post; the entrance animation is identity-neutral
+    // bubble motion, so it plays on anonymous posts too.
+    if (typeof getEquippedCos === 'function') {
+        const cos = getEquippedCos();
+        if (cos) {
+            if (!ansAnonCheckbox.checked) doc.cos = cos;
+            else if (cos.a) doc.cos = { a: cos.a };
         }
     }
     suppressNextNotif = true;
