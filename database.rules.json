@@ -18,6 +18,25 @@
       }
     },
 
+    "campfire": {
+      "$day": {
+        ".read": "auth != null",
+
+        "players": {
+          "$uid": {
+            ".write": "auth != null && auth.uid == $uid && (!newData.exists() || (newData.hasChildren(['x','y']) && newData.child('x').isNumber() && newData.child('x').val() >= 0 && newData.child('x').val() <= 1 && newData.child('y').isNumber() && newData.child('y').val() >= 0 && newData.child('y').val() <= 1))",
+            "$field": { ".validate": "$field == 'x' || $field == 'y' || $field == 'ts'" }
+          }
+        },
+
+        "fireworks": {
+          "$id": {
+            ".write": "auth != null && (newData.exists() ? (newData.hasChildren(['x','y','by']) && newData.child('by').val() == auth.uid && newData.child('x').isNumber() && newData.child('x').val() >= 0 && newData.child('x').val() <= 1 && newData.child('y').isNumber() && newData.child('y').val() >= 0 && newData.child('y').val() <= 1) : data.child('by').val() == auth.uid)"
+          }
+        }
+      }
+    },
+
     "wall": {
       "$day": {
         ".read": "auth != null",
