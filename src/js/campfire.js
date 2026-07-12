@@ -31,8 +31,9 @@
   document.body.appendChild(wrap);
   const ctx = canvas.getContext('2d'); if (ctx) ctx.imageSmoothingEnabled = false;
 
-  /* collapse / expand — default collapsed on phones, expanded on desktop; remembered */
-  let collapsed = (function () { const v = localStorage.getItem('cf_collapsed'); if (v === '1') return true; if (v === '0') return false; return !!(window.matchMedia && window.matchMedia('(max-width: 480px)').matches); })();
+  /* collapse / expand — default OPEN everywhere; only stays collapsed if the user
+     collapsed it themselves (remembered). */
+  let collapsed = (localStorage.getItem('cf_collapsed') === '1');
   wrap.classList.toggle('collapsed', collapsed);
   function applyCollapsed(c) { collapsed = c; wrap.classList.toggle('collapsed', c); try { localStorage.setItem('cf_collapsed', c ? '1' : '0'); } catch (e) {} if (!c) startLoop(); }
   collapseBtn.addEventListener('click', function (e) { e.stopPropagation(); applyCollapsed(true); });

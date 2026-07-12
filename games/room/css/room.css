@@ -956,6 +956,7 @@
     .farm-herd-bar{height:7px;background:rgba(0,0,0,.32);border-radius:999px;overflow:hidden;margin-top:4px;box-shadow:inset 0 1px 2px rgba(0,0,0,.45)}
     .farm-herd-bar span{display:block;height:100%;border-radius:999px;transition:width .35s ease}
     .farm-herd-drops{font-size:10px;color:var(--g-accent-2);white-space:nowrap;font-weight:700;font-variant-numeric:tabular-nums}
+    .farm-herd-meat{font-size:10px;color:#f0857a;white-space:nowrap;font-weight:700;font-variant-numeric:tabular-nums}
 
     .farm-panel-hint{font-size:10px;color:var(--g-ink-faint);margin-top:4px;padding:9px 4px 0;border-top:1px dotted var(--g-border);line-height:1.55}
     .farm-panel-empty{font-size:11px;color:var(--g-ink-faint);padding:4px 0}

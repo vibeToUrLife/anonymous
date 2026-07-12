@@ -528,10 +528,12 @@
               const color = h > 60 ? '#6dd56d' : h > 30 ? '#f2c94c' : '#eb5757';
               const lvl = animalLevel(a.collected, FARM_LEVELS);
               const waiting = dropCounts[a.id] || 0;
+              const meat = _meatYield(a);   // 🥩 yield if butchered now (tier base + level bonus)
               const mark = a.variant === 'rgb' ? ' 🌈' : ((FARM_VARIANTS[a.type] || []).some(v => v.id === a.variant && v.rare) ? ' ✨' : '');
               const butcherCtl = _farmButcherConfirmId === a.id
-                ? '<span class="farm-butcher-confirm"><button class="farm-mini-btn danger" onclick="butcherAnimal(\'' + a.id + '\')">✓ Butcher</button><button class="farm-mini-btn" onclick="cancelButcher()">✗</button></span>'
-                : '<button class="farm-mini-btn" title="Butcher for meat" onclick="askButcher(\'' + a.id + '\')">🔪</button>';
+                ? '<span class="farm-butcher-confirm"><button class="farm-mini-btn danger" onclick="butcherAnimal(\'' + a.id + '\')">✓ 🥩×' + meat + '</button><button class="farm-mini-btn" onclick="cancelButcher()">✗</button></span>'
+                : '<span class="farm-herd-meat" title="Butcher → this much meat">🥩×' + meat + '</span>' +
+                  '<button class="farm-mini-btn" title="Butcher for meat" onclick="askButcher(\'' + a.id + '\')">🔪</button>';
               return '<div class="farm-herd-row">' +
                 '<span class="farm-herd-emoji">' + def.emoji + '</span>' +
                 '<span class="farm-herd-info">' +
