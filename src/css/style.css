@@ -191,6 +191,28 @@ body {
     display: block;
 }
 .gif-grid img:hover { transform: scale(1.03); }
+/* Favorite GIFs: a ⭐ overlay on each thumb + the header toggle. */
+.gif-thumb { position: relative; display: block; }
+.gif-fav-star {
+    position: absolute; top: 5px; right: 5px;
+    width: 26px; height: 26px; padding: 0;
+    border: none; border-radius: 50%;
+    background: rgba(0,0,0,0.5); color: #ffd24a;
+    font-size: 15px; line-height: 26px; text-align: center;
+    cursor: pointer; opacity: 0.9;
+    transition: transform 0.12s, opacity 0.12s, background 0.12s;
+}
+.gif-fav-star:hover { opacity: 1; transform: scale(1.14); background: rgba(0,0,0,0.68); }
+.gif-fav-star.on { color: #ffcf33; }
+.gif-fav-btn {
+    flex: none; width: 34px; height: 34px; padding: 0;
+    border: none; border-radius: 50%;
+    background: rgba(255,255,255,0.08); color: #ffd24a;
+    font-size: 15px; cursor: pointer;
+    transition: background 0.12s;
+}
+.gif-fav-btn:hover { background: rgba(255,255,255,0.16); }
+.gif-fav-btn.on { background: rgba(255,210,74,0.24); }
 .gif-grid .gif-loading {
     grid-column: span 2;
     text-align: center;
@@ -1306,6 +1328,9 @@ body.light-theme .gif-picker { background: rgba(245,243,250,0.97); border-color:
 body.light-theme .gif-picker-header input { background: rgba(0,0,0,0.04); color: #333; border-color: rgba(0,0,0,0.1); }
 body.light-theme .gif-picker-header input::placeholder { color: rgba(0,0,0,0.35); }
 body.light-theme .gif-picker-close { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.5); }
+body.light-theme .gif-fav-btn { background: rgba(0,0,0,0.05); }
+body.light-theme .gif-fav-btn:hover { background: rgba(0,0,0,0.1); }
+body.light-theme .gif-fav-btn.on { background: rgba(255,180,40,0.28); }
 body.light-theme .reaction-btn { color: rgba(0,0,0,0.65); border-color: rgba(0,0,0,0.1); background: rgba(0,0,0,0.04); }
 body.light-theme .reaction-btn:hover { background: rgba(0,0,0,0.08); border-color: rgba(0,0,0,0.2); }
 body.light-theme .reaction-add { color: rgba(0,0,0,0.3); border-color: rgba(0,0,0,0.15); }

@@ -33,25 +33,98 @@
     });
   }
 
-  /* ── Live personal "停留" pill in the live bar ─────────────── */
+  /* ── Live personal 摸鱼 clock in the live bar (retro scoreboard, HH:MM:SS,
+     ticks up every second while you're active). It mirrors stay-time.js's
+     "visible AND interacted within 5 min" rule so it stays in step with the
+     real accrued total, and re-syncs to each Firestore snapshot — but only ever
+     forward, so a slacking counter never visibly jumps backward. ── */
   var valEl  = document.getElementById('myStayTimeVal');
   var wrapEl = document.getElementById('myStayTime');
   var unsubMe = null;
+  var shownSec = -1;                 // -1 = no data yet
+  var lastAct = Date.now();
+  var clockTimer = null;
+  // Extra scoreboard segments: 摸鱼榜 rank (#N) + today's board messages.
+  var rankVal  = document.getElementById('myRankVal');
+  var rankSeg  = document.getElementById('myRankSeg');
+  var todayVal = document.getElementById('todayVal');
+  var myTotalSec = -1;               // authoritative total from the last snapshot
+  var lastRankAt = 0;                // throttle rank recomputes
+
+  function hms(s) {
+    s = Math.max(0, Math.floor(s));
+    var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), c = s % 60;
+    var p = function (n) { return n < 10 ? '0' + n : '' + n; };
+    return p(h) + ':' + p(m) + ':' + p(c);
+  }
+  ['pointerdown', 'keydown', 'scroll', 'touchstart', 'mousemove'].forEach(function (ev) {
+    window.addEventListener(ev, function () { lastAct = Date.now(); }, { passive: true });
+  });
+  function counting() { return !document.hidden && (Date.now() - lastAct) < 300000; }
+  function paint() { if (valEl && shownSec >= 0) valEl.textContent = hms(shownSec); }
+  function startClock() {
+    if (clockTimer) return;
+    clockTimer = setInterval(function () {
+      if (shownSec >= 0 && counting()) { shownSec++; paint(); }
+    }, 1000);
+  }
+  function stopClock() { if (clockTimer) { clearInterval(clockTimer); clockTimer = null; } }
+
+  // ── 摸鱼榜 rank (#N): count players ahead of me via a cheap count() aggregation. ──
+  function refreshRank() {
+    if (!rankVal || myTotalSec < 0 || !(auth.currentUser && auth.currentUser.uid)) return;
+    try {
+      var q = db.collection('rooms').where('totalStaySec', '>', myTotalSec);
+      if (typeof q.count !== 'function') return;          // SDK without aggregation → stay hidden
+      q.count().get().then(function (snap) {
+        var above = (snap.data && snap.data().count) || 0;
+        rankVal.textContent = '#' + (above + 1);
+        if (rankSeg) rankSeg.hidden = false;
+      }).catch(function () {});
+    } catch (e) {}
+  }
+
+  // ── 今日泡泡: count of board messages posted since local midnight. ──
+  function _startOfToday() { var d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
+  function refreshToday() {
+    if (!todayVal) return;
+    try {
+      var q = db.collection('answers').where('ts', '>=', _startOfToday());
+      if (typeof q.count !== 'function') { todayVal.textContent = '—'; return; }
+      q.count().get().then(function (snap) {
+        todayVal.textContent = String((snap.data && snap.data().count) || 0);
+      }).catch(function () { todayVal.textContent = '—'; });
+    } catch (e) { todayVal.textContent = '—'; }
+  }
 
   function watchMine(uid) {
     if (unsubMe) { unsubMe(); unsubMe = null; }
     if (!uid || !valEl) return;
     unsubMe = db.collection('rooms').doc(uid).onSnapshot(function (doc) {
       var sec = (doc.exists && doc.data().totalStaySec) || 0;
-      valEl.textContent = fmt(sec);
+      shownSec = Math.max(shownSec, sec);   // authoritative, but never tick backward
+      paint();
       if (wrapEl) wrapEl.hidden = false;
+      startClock();
+      myTotalSec = sec;                                   // refresh my rank (throttled)
+      if (Date.now() - lastRankAt > 90000) { lastRankAt = Date.now(); refreshRank(); }
     }, function () {});
   }
 
   auth.onAuthStateChanged(function (u) {
     if (u) watchMine(u.uid);
-    else { if (unsubMe) { unsubMe(); unsubMe = null; } if (wrapEl) wrapEl.hidden = true; }
+    else {
+      if (unsubMe) { unsubMe(); unsubMe = null; }
+      stopClock(); shownSec = -1; myTotalSec = -1; lastRankAt = 0;
+      if (wrapEl) wrapEl.hidden = true;
+      if (rankSeg) rankSeg.hidden = true;
+      if (rankVal) rankVal.textContent = '#—';
+    }
   });
+
+  // 今日泡泡 is board-wide: load once now, then refresh a few times an hour while visible.
+  refreshToday();
+  setInterval(function () { if (!document.hidden) refreshToday(); }, 150000);
 
   /* ── 停留榜 popup ──────────────────────────────────────────── */
   function build() {

@@ -6,8 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Anonymous Bubble Answers</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
-  <link rel="stylesheet" href="./src/css/style.css?v=10">
-  <link rel="stylesheet" href="./src/css/interactive.css?v=24">
+  <link rel="stylesheet" href="./src/css/style.css?v=11">
+  <link rel="stylesheet" href="./src/css/interactive.css?v=29">
   <!-- Clay "Bubble Pop" design system: tokens + component library (load last so they govern) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -461,9 +461,8 @@
     #liveBar .live-presence b { color:var(--primary-deep) !important; }
     #liveBar .live-typing { color:var(--ink-faint) !important; }
     /* (Old #pgToggle/#coinCenterBtn live-bar pill rules removed — those buttons are
-       now token-styled .feat-tile in the feature launcher.) */
-    #reactionBar .reaction-btn { background:var(--bg) !important; border:1px solid var(--border) !important; color:var(--ink-soft) !important; }
-    #reactionBar .reaction-btn:hover { background:var(--primary-tint) !important; }
+       now token-styled .feat-tile in the feature launcher. The #reactionBar live
+       emoji bar was removed too.) */
     #answerInput {
       background:var(--sunken) !important; color:var(--ink) !important;
       border:none !important; box-shadow:var(--clay-in) !important; border-radius:16px !important;
@@ -1252,19 +1251,31 @@
     <div class="ue-notes" id="ueNotes"></div>
   </div>
 
-  <!-- Live, interactive board bar: presence + typing + reactions + playground.
-       Buttons are injected by live-reactions.js; counts driven by presence.js. -->
+  <!-- Live board bar: retro-LED scoreboard (online + 摸鱼) + typing indicator.
+       Count driven by presence.js; the 摸鱼 clock ticks in stay-ranking.js. -->
   <div class="live-bar" id="liveBar">
-    <span class="live-presence" id="livePresence" title="People viewing the board right now">
-      👀 <b id="liveOnlineCount">1</b> online
-    </span>
-    <span class="live-presence" id="myStayTime" title="你在本站的总摸鱼时长（聊天板 + 游戏 + 房间 + 农场 + 水族馆 + Pet World）" hidden>
-      🐟 摸鱼 <b id="myStayTimeVal">…</b>
+    <span class="live-score" id="liveScore">
+      <span class="live-score-seg" id="livePresence" title="现在在线人数">
+        <span class="live-score-blink" aria-hidden="true"></span>
+        <span class="live-score-lb">在线</span>
+        <b class="live-score-val" id="liveOnlineCount">1</b>
+      </span>
+      <span class="live-score-seg fish" id="myStayTime" title="你在本站的总摸鱼时长（聊天板 + 游戏 + 房间 + 农场 + 水族馆 + Pet World）" hidden>
+        <span class="live-score-lb">摸鱼</span>
+        <span class="live-score-val" id="myStayTimeVal">…</span>
+      </span>
+      <span class="live-score-seg rank" id="myRankSeg" title="你在摸鱼榜的名次" hidden>
+        <span class="live-score-lb">排名</span>
+        <span class="live-score-val" id="myRankVal">#—</span>
+      </span>
+      <span class="live-score-seg today" id="todaySeg" title="全站今天新发的泡泡数">
+        <span class="live-score-lb">今日</span>
+        <span class="live-score-val" id="todayVal">…</span>
+      </span>
     </span>
     <span class="live-typing" id="liveTyping" hidden>
       <span class="live-typing-dots"><i></i><i></i><i></i></span> someone is typing…
     </span>
-    <span class="reaction-bar" id="reactionBar" aria-label="Send a live reaction"></span>
   </div>
 
   <!-- Feature launcher: surfaces the mini-features as labelled tiles so users can see they
@@ -1392,6 +1403,7 @@
   <div class="gif-picker" id="gifPicker">
     <div class="gif-picker-header">
       <input type="text" id="gifSearchInput" placeholder="Search GIFs…">
+      <button class="gif-fav-btn" id="gifFavBtn" type="button" title="收藏的 GIF">⭐</button>
       <button class="gif-picker-close" id="gifPickerClose">✕</button>
     </div>
     <div class="gif-grid" id="gifGrid">
@@ -1564,7 +1576,7 @@
   <script src="./src/js/theme.js?v=2"></script>
   <!-- Shared-space link helper (defines window.ShareToBoard for the board render). -->
   <script src="./src/js/share-to-board.js?v=1"></script>
-  <script src="./src/js/app.js?v=23"></script>
+  <script src="./src/js/app.js?v=24"></script>
   <!-- Access code gate — must load after app.js (uses its shared auth/db). Shows after Google login. -->
   <script src="./src/js/access-code-gate.js?v=1"></script>
   <script src="./src/js/feature-flags.js"></script>
@@ -1572,11 +1584,11 @@
   <script src="./src/js/board-live-logic.js?v=2"></script>
   <script src="./src/js/presence.js"></script>
   <script src="./src/js/bubble-knock.js?v=1"></script>
-  <script src="./src/js/live-reactions.js?v=2"></script>
+  <script src="./src/js/live-reactions.js?v=3"></script>
   <script src="./src/js/campfire.js?v=9"></script>
   <!-- 泡泡罐 · 涂鸦 · 涂鸦墙 (jar/doodle are client-side; the wall shares strokes via RTDB) -->
-  <script src="./src/js/jar-logic.js?v=2"></script>
-  <script src="./src/js/bubble-jar.js?v=4"></script>
+  <script src="./src/js/jar-logic.js?v=3"></script>
+  <script src="./src/js/bubble-jar.js?v=6"></script>
   <script src="./src/js/doodle.js?v=1"></script>
   <script src="./src/js/wall-logic.js?v=4"></script>
   <script src="./src/js/graffiti-wall.js?v=5"></script>
@@ -1596,7 +1608,7 @@
   <script src="./src/js/coin-ranking.js?v=1"></script>
   <!-- 摸鱼时长: site-wide active-time tracker + 摸鱼榜 leaderboard (formerly 停留榜) -->
   <script src="./src/js/stay-time.js?v=2"></script>
-  <script src="./src/js/stay-ranking.js?v=2"></script>
+  <script src="./src/js/stay-ranking.js?v=4"></script>
 
   <!-- Walking-pet animal art (shared with the room pets) -->
   <script src="./games/pets/shared.js"></script>

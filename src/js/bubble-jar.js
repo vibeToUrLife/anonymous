@@ -41,11 +41,30 @@
     try { localStorage.setItem(keyFor(myUid), JSON.stringify(list)); return true; }
     catch (e) { return false; }                    // quota full / storage blocked
   }
+  // Uploaded photos are base64 — too big to sync in the shared rooms/{uid} doc,
+  // so they live in a SEPARATE per-account localStorage key and show only on the
+  // device that saved them. (Hosted image/GIF URLs ride on the entry itself via
+  // JarLogic.snapshot and DO sync across devices.)
+  const LOCAL_IMG_MAX = 720 * 1024;                // covers uploaded GIF files (~670KB base64) too
+  function imgKeyFor(uid) { return 'bubble_jar_img_' + (uid || 'anon'); }
+  function loadLocalImgs() {
+    try { return JSON.parse(localStorage.getItem(imgKeyFor(myUid))) || {}; } catch (e) { return {}; }
+  }
+  function saveLocalImgs(map) {
+    try { localStorage.setItem(imgKeyFor(myUid), JSON.stringify(map)); return true; } catch (e) { return false; }
+  }
+  function pruneLocalImgs() {                       // forget images whose entry left the jar
+    const ids = {}; for (const e of items) if (e && e.id) ids[e.id] = 1;
+    let changed = false;
+    for (const k in localImgs) if (!ids[k]) { delete localImgs[k]; changed = true; }
+    if (changed) saveLocalImgs(localImgs);
+  }
   function toast(msg, type) { if (typeof showToast === 'function') showToast(msg, type); }
 
   /* ── In-memory jar (source of truth) + cloud sync ────────── */
   let myUid = null;
   let items = loadLocal();     // anon cache until auth resolves
+  let localImgs = loadLocalImgs();   // base64 photos, this device only (id → dataURL)
   let hydrated = false;        // have we merged THIS user's cloud copy yet?
   let hydrating = null;        // in-flight hydrate promise
   let saveTimer = null;
@@ -66,6 +85,7 @@
     myUid = next;
     hydrated = false; hydrating = null;            // fresh per-account sync
     items = loadLocal();                           // this account's own cache
+    localImgs = loadLocalImgs();                   // and its own device-local photos
     if (overlay) {                                 // repaint if the jar is open
       searchQ = '';
       const s = overlay.querySelector('.jar-search'); if (s) s.value = '';
@@ -104,6 +124,7 @@
         const cloud = (snap.exists && Array.isArray(snap.data().jar)) ? snap.data().jar : [];
         items = Jar.merge(cloud, items);           // cloud ∪ local, newest-first
         saveLocal(items);
+        pruneLocalImgs();                          // forget photos for dropped entries
         hydrated = true;
         setSync('synced');
         if (listEl) renderList();
@@ -165,6 +186,15 @@
       toast('保存失败 —— 存储空间不够了', 'error');
       return;
     }
+    // A base64 photo → keep it on THIS device so the card can show it (hosted
+    // image/GIF URLs already ride on the entry via snapshot()).
+    if (!entry.img && a && typeof a.image === 'string' &&
+        a.image.lastIndexOf('data:', 0) === 0 && a.image.length <= LOCAL_IMG_MAX) {
+      localImgs[entry.id] = a.image;
+      saveLocalImgs(localImgs);
+    }
+    pruneLocalImgs();   // a full jar just evicted its oldest entry — reclaim its photo now
+                        // (runs every catch, so anon/local-only users don't leak either)
     flyToJar(bubbleEl);
     toast('🫙 收进泡泡罐了！');
     if (listEl) renderList();
@@ -181,6 +211,7 @@
       }
       items = Jar.remove(items, id);
       saveLocal(items);
+      if (localImgs[id]) { delete localImgs[id]; saveLocalImgs(localImgs); }
       if (listEl) renderList();
       scheduleCloudSave();                         // no-ops in local-only mode
     });
@@ -216,6 +247,15 @@
   }
 
   /* ── Overlay ─────────────────────────────────────────────── */
+  // Tap a jar photo/GIF → open the board's shared pan-&-zoom lightbox (z-index
+  // 500, above the jar's 390), the same #lightbox app.js already wires up.
+  function openJarImage(src) {
+    if (!src) return;
+    const lb = document.getElementById('lightbox');
+    const lbImg = document.getElementById('lightboxImg');
+    if (lb && lbImg) { lbImg.src = src; lb.classList.add('show'); }
+  }
+
   function card(e, idx, now) {
     const el = document.createElement('div');
     el.className = 'jar-card';
@@ -230,9 +270,24 @@
     del.addEventListener('click', () => removeEntry(e.id));
     el.appendChild(del);
 
+    // Image / GIF: a synced hosted URL (e.img) or a device-local base64 photo.
+    const src = e.img || localImgs[e.id] || null;
+    if (src) {
+      const media = document.createElement('img');
+      media.className = 'jar-card-img';
+      media.src = src;
+      media.loading = 'lazy';
+      media.alt = '';
+      media.title = '点击放大';
+      media.addEventListener('click', (ev) => { ev.stopPropagation(); openJarImage(src); });
+      el.appendChild(media);
+    }
+
     const body = document.createElement('div');
     body.className = 'jar-card-body';
-    body.textContent = e.t || '💬';
+    // With the image shown, drop the redundant "🖼️ 图片留言" placeholder caption.
+    if (src && e.t === '🖼️ 图片留言') body.style.display = 'none';
+    else body.textContent = e.t || '💬';
     el.appendChild(body);
 
     const foot = document.createElement('div');

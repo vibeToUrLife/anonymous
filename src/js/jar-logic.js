@@ -27,13 +27,22 @@
     let t = String(a.text || '').trim().replace(/\s+/g, ' ');
     if (a.type === 'poll' && t) t = '📊 ' + t;
     if (!t) t = a.image ? '🖼️ 图片留言' : '💬';
-    return {
+    const e = {
       id: String(a.id),
       t: t.slice(0, 200),
       n: String(a.name || '').slice(0, 40),
       ts: (typeof a.ts === 'number') ? a.ts : 0,
       at: now || 0
     };
+    // A hosted image/GIF URL (e.g. a Giphy GIF) is a tiny string, so store it on
+    // the entry — it syncs across devices and renders live (animated GIFs keep
+    // moving). base64 photos are NOT stored here; bubble-jar.js keeps those on
+    // the saving device only, so the synced jar (which shares the rooms/{uid}
+    // doc + its 1MB cap with the room/farm save) can never bloat.
+    if (a.image && typeof a.image === 'string' && /^https?:\/\//i.test(a.image)) {
+      e.img = a.image;
+    }
+    return e;
   };
 
   /**

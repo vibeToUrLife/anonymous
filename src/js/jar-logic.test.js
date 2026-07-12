@@ -18,6 +18,14 @@ test('snapshot handles polls, images and empties', () => {
   assert.strictEqual(Jar.snapshot({ text: 'no id' }, 0), null);
 });
 
+test('snapshot stores a hosted image/GIF URL, but never base64', () => {
+  const gif = Jar.snapshot({ id: 'g', image: 'https://media.giphy.com/x.gif' }, 0);
+  assert.strictEqual(gif.img, 'https://media.giphy.com/x.gif');
+  // base64 photos stay device-local → no img field on the synced entry
+  assert.strictEqual('img' in Jar.snapshot({ id: 'd', image: 'data:image/png;base64,AAAA' }, 0), false);
+  assert.strictEqual('img' in Jar.snapshot({ id: 'n', text: 'hi' }, 0), false);
+});
+
 test('add: newest first, dedupes by id, caps the jar', () => {
   let r = Jar.add([], { id: 'a', t: '1' });
   r = Jar.add(r.list, { id: 'b', t: '2' });

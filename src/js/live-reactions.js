@@ -1,17 +1,15 @@
 /**
- * live-reactions.js — Floating live emoji reactions for the bubble board.
+ * live-reactions.js — Shared live-effects hub for the bubble board.
  *
- * Tap an emoji in the reaction bar and it floats up the screen. The tap is also
- * broadcast to everyone currently online, so you see each other's reactions in
- * real time. Everything rides on ONE tiny shared Firestore doc
- * (board_reactions/live) holding a short rolling list of recent events.
- *
- * Firestore optimisation:
- *  - Taps are coalesced (BoardLive.REACTION_THROTTLE_MS) into a single write,
- *    appended with arrayUnion so concurrent senders never clobber each other.
- *  - The list is trimmed to BoardLive.REACTION_CAP opportunistically, and only
- *    when it has grown well past the cap, so trims are rare.
- *  - One document listener for the whole feature; the doc stays tiny.
+ * The tap-to-float emoji bar was removed; this module now only powers:
+ *  - window.fireSuperReaction(type) — full-screen hearts / rain / fireworks,
+ *    fired from the coin center after payment and seen by everyone online.
+ *  - window.LiveFx.send(fields) — the shared outgoing lane bubble-knock.js uses
+ *    to broadcast knock / ripple events.
+ * Incoming events (super / knock / ripple) are received here and dispatched.
+ * Everything rides on ONE tiny shared Firestore doc (board_reactions/live)
+ * holding a short rolling list of recent events, coalesced with arrayUnion and
+ * trimmed opportunistically so the doc stays tiny.
  *
  * Depends on globals from app.js (db, auth, firebase) and board-live-logic.js
  * (BoardLive). Loaded after both.
@@ -25,7 +23,6 @@
 
   const FieldValue   = firebase.firestore.FieldValue;
   const reactionDoc  = db.collection('board_reactions').doc('live');
-  const bar          = document.getElementById('reactionBar');
 
   let layer   = null;        // full-screen float layer (created lazily)
   let myUid   = null;
@@ -44,24 +41,6 @@
     layer.setAttribute('aria-hidden', 'true');
     document.body.appendChild(layer);
     return layer;
-  }
-
-  function spawnFloat(emojiIdx) {
-    const el = document.createElement('div');
-    el.className = 'reaction-float';
-    el.textContent = L.REACTIONS[emojiIdx] || L.REACTIONS[0];
-    // Random lane, drift, size and speed for an organic confetti feel.
-    const x     = 8 + Math.random() * 84;        // vw
-    const drift = (Math.random() * 60 - 30);     // px sideways
-    const size  = 22 + Math.random() * 16;       // px
-    const dur   = 2.6 + Math.random() * 1.2;     // s
-    el.style.left = x + 'vw';
-    el.style.fontSize = size + 'px';
-    el.style.setProperty('--drift', drift + 'px');
-    el.style.setProperty('--dur', dur + 's');
-    ensureLayer().appendChild(el);
-    el.addEventListener('animationend', () => el.remove());
-    setTimeout(() => el.remove(), dur * 1000 + 400); // safety net
   }
 
   /* ── Full-screen Super Reaction effects (paid, seen by everyone) ── */
@@ -201,14 +180,6 @@
       .catch(() => {});
   }
 
-  function onTap(emojiIdx) {
-    spawnFloat(emojiIdx);                         // instant local feedback
-    const ev = L.makeReactionEvent(myUid, seq++, Math.floor(Math.random() * 1e6), emojiIdx);
-    seen.add(ev.id);                              // don't double-spawn our own echo
-    pending.push(ev);
-    scheduleFlush();
-  }
-
   // Shared outgoing lane for other live-layer features (bubble-knock.js):
   // builds the event, marks it seen (no self-echo) and rides the same
   // coalesced write. Accepts {k: bubbleId} or {rp: [xPct, yPct]}.
@@ -225,20 +196,6 @@
       scheduleFlush();
     }
   };
-
-  function buildBar() {
-    if (!bar || bar._built) return;
-    bar._built = true;
-    L.REACTIONS.forEach((emoji, idx) => {
-      const b = document.createElement('button');
-      b.className = 'reaction-btn';
-      b.type = 'button';
-      b.textContent = emoji;
-      b.title = 'Send ' + emoji;
-      b.addEventListener('click', () => onTap(idx));
-      bar.appendChild(b);
-    });
-  }
 
   /* ── Receive ─────────────────────────────────────────────── */
   function maybeTrim(events) {
@@ -264,7 +221,6 @@
         const kind = L.classifyLiveEvent(e);
         if (kind === 'super') spawnSuper(e.sx);
         else if (kind === 'knock' || kind === 'ripple') { if (window.BubbleKnock) BubbleKnock.play(e); }
-        else if (kind === 'float') spawnFloat(e.i);
       });
       // Firestore persistence serves a CACHED doc first, so events that
       // arrived while we were away would look "fresh" on the first server
@@ -287,7 +243,6 @@
   auth.onAuthStateChanged((user) => {
     if (!user) return;
     myUid = user.uid;
-    buildBar();
     if (!unsub) subscribe();
   });
 })();

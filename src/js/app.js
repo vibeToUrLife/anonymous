@@ -619,23 +619,38 @@ const gifGridEl = document.getElementById('gifGrid');
 const gifSearchInput = document.getElementById('gifSearchInput');
 const gifBtnEl = document.getElementById('gifBtn');
 const gifCloseBtn = document.getElementById('gifPickerClose');
+const gifFavBtn = document.getElementById('gifFavBtn');
+/* Favorite GIFs — saved locally (just URLs, tiny) so you can reuse them by
+   clicking, instead of searching again. */
+const GIF_FAV_CAP = 60;
+let gifFavs = (function () { try { return JSON.parse(localStorage.getItem('gif_favs')) || []; } catch (e) { return []; } })();
+let showingFavs = false;
 
 gifBtnEl.addEventListener('click', () => {
     gifPickerEl.classList.toggle('show');
     if (gifPickerEl.classList.contains('show')) {
     gifSearchInput.focus();
-    if (!gifGridEl.querySelector('img')) loadTrendingGifs();
+    if (showingFavs) { showingFavs = false; if (gifFavBtn) gifFavBtn.classList.remove('on'); loadTrendingGifs(); }
+    else if (!gifGridEl.querySelector('.gif-thumb')) loadTrendingGifs();
     }
 });
 gifCloseBtn.addEventListener('click', () => {
     gifPickerEl.classList.remove('show');
     _gifSelectCallback = null; // Clear reply context when picker is closed
 });
+// ⭐ toggle: flip between search/trending and the saved-GIF view.
+if (gifFavBtn) gifFavBtn.addEventListener('click', () => {
+    showingFavs = !showingFavs;
+    gifFavBtn.classList.toggle('on', showingFavs);
+    if (showingFavs) renderFavGifs();
+    else { const q = gifSearchInput.value.trim(); q ? searchGifs(q) : loadTrendingGifs(); }
+});
 
 let gifSearchTimer = null;
 gifSearchInput.addEventListener('input', () => {
     clearTimeout(gifSearchTimer);
     gifSearchTimer = setTimeout(() => {
+    if (showingFavs) { showingFavs = false; if (gifFavBtn) gifFavBtn.classList.remove('on'); }
     const q = gifSearchInput.value.trim();
     if (q) searchGifs(q);
     else loadTrendingGifs();
@@ -674,6 +689,49 @@ async function searchGifs(query) {
     }
 }
 
+/* ── Favorite GIFs ── */
+function saveGifFavs() { try { localStorage.setItem('gif_favs', JSON.stringify(gifFavs)); } catch (e) {} }
+function isGifFav(u) { return gifFavs.some(f => f && f.u === u); }
+function updateGifFavBtn() { if (gifFavBtn) gifFavBtn.title = '收藏的 GIF' + (gifFavs.length ? '（' + gifFavs.length + '）' : ''); }
+function toggleGifFav(postUrl, thumb, starEl) {
+    if (isGifFav(postUrl)) {
+        gifFavs = gifFavs.filter(f => f && f.u !== postUrl);
+        if (starEl) { starEl.classList.remove('on'); starEl.textContent = '☆'; }
+    } else {
+        gifFavs.unshift({ u: postUrl, th: thumb || postUrl });
+        if (gifFavs.length > GIF_FAV_CAP) gifFavs.length = GIF_FAV_CAP;
+        if (starEl) { starEl.classList.add('on'); starEl.textContent = '★'; }
+    }
+    saveGifFavs();
+    updateGifFavBtn();
+    if (showingFavs) renderFavGifs();   // reflect a removal in the favorites view
+}
+// One grid cell: the GIF thumb (click → use it) + a ⭐ toggle (click → save).
+function makeGifThumb(postUrl, thumb, title) {
+    const wrap = document.createElement('div');
+    wrap.className = 'gif-thumb';
+    const img = document.createElement('img');
+    img.src = thumb; img.alt = title || 'GIF'; img.loading = 'lazy';
+    img.addEventListener('click', () => selectGif(postUrl));
+    wrap.appendChild(img);
+    const star = document.createElement('button');
+    star.type = 'button';
+    star.className = 'gif-fav-star' + (isGifFav(postUrl) ? ' on' : '');
+    star.textContent = isGifFav(postUrl) ? '★' : '☆';
+    star.title = '收藏这个 GIF，下次直接用';
+    star.addEventListener('click', (e) => { e.stopPropagation(); toggleGifFav(postUrl, thumb, star); });
+    wrap.appendChild(star);
+    return wrap;
+}
+function renderFavGifs() {
+    gifGridEl.innerHTML = '';
+    if (!gifFavs.length) {
+        gifGridEl.innerHTML = '<div class="gif-loading">还没有收藏的 GIF —— 点任意 GIF 右上角的 ☆，下次点这里直接用</div>';
+        return;
+    }
+    gifFavs.forEach(f => { if (f && f.u) gifGridEl.appendChild(makeGifThumb(f.u, f.th || f.u, 'GIF')); });
+}
+
 function renderGifs(results) {
     gifGridEl.innerHTML = '';
     if (!results.length) {
@@ -685,14 +743,10 @@ function renderGifs(results) {
     const thumb = (imgs.fixed_height_small && imgs.fixed_height_small.url) || (imgs.fixed_height && imgs.fixed_height.url);
     if (!thumb) return;
     const postUrl = (imgs.fixed_height && imgs.fixed_height.url) || thumb;
-    const img = document.createElement('img');
-    img.src = thumb;
-    img.alt = r.title || 'GIF';
-    img.loading = 'lazy';
-    img.addEventListener('click', () => selectGif(postUrl));
-    gifGridEl.appendChild(img);
+    gifGridEl.appendChild(makeGifThumb(postUrl, thumb, r.title));
     });
 }
+updateGifFavBtn();
 
 // Callback for context-aware GIF selection (reply vs main input)
 let _gifSelectCallback = null;

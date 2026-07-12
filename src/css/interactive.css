@@ -6,11 +6,11 @@
    Loaded after style.css; includes light-theme overrides.
    ════════════════════════════════════════════════════════════ */
 
-/* ── 1. Live bar (presence + typing + reactions + playground) ── */
+/* ── 1. Live bar (LED scoreboard + typing) — left-aligned ── */
 .live-bar {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 10px;
   margin: -8px auto 16px;
@@ -28,6 +28,40 @@
   border-radius: 20px;
 }
 .live-presence b { color: var(--accent); font-weight: 700; }
+
+/* ── Live scoreboard: retro-LED "在线 / 摸鱼" panel (replaces the old pills).
+   Intentionally a single dark arcade look in every theme, to match the pixel
+   campfire diorama. Reuses #liveOnlineCount (presence.js) + #myStayTimeVal
+   (stay-ranking.js, ticks HH:MM:SS). ── */
+.live-score {
+  display: inline-flex; align-items: stretch;
+  border: 2px solid #4a3826; border-radius: 8px; overflow: hidden;
+  background: #160f08;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+.live-score-seg { display: inline-flex; align-items: center; gap: 7px; padding: 6px 13px; }
+.live-score-seg[hidden] { display: none !important; }   /* attr must win over inline-flex */
+.live-score-seg + .live-score-seg { border-left: 2px solid #4a3826; }   /* divider before every seg but the first */
+.live-score-lb { color: #8a9c6a; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; }
+.live-score-val {
+  color: #ffe9a8; font-size: 14px; font-weight: 800; letter-spacing: 1px;
+  font-variant-numeric: tabular-nums; text-shadow: 0 0 6px rgba(255, 200, 90, 0.35);
+}
+.live-score-seg.fish  .live-score-val { color: #7fe0ff; text-shadow: 0 0 6px rgba(90, 190, 255, 0.35); }
+.live-score-seg.rank  .live-score-val { color: #ffc04a; text-shadow: 0 0 6px rgba(255, 180, 60, 0.35); }
+.live-score-seg.today .live-score-val { color: #8fe08a; text-shadow: 0 0 6px rgba(120, 220, 120, 0.30); }
+@media (max-width: 480px) {
+  .live-score-seg { padding: 5px 9px; gap: 5px; }
+  .live-score-lb { font-size: 9px; letter-spacing: 1px; }
+  .live-score-val { font-size: 12.5px; letter-spacing: 0.5px; }
+}
+.live-score-blink {
+  width: 9px; height: 9px; border-radius: 2px; background: #4ade80;
+  box-shadow: 0 0 7px #4ade80; animation: liveScoreBlink 1.1s steps(1) infinite;
+}
+@keyframes liveScoreBlink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .live-score-blink { animation: none; } }
 
 .live-typing {
   display: inline-flex;
@@ -54,8 +88,9 @@
   30%           { opacity: 1; }
 }
 
-/* ── 2. Reaction bar (buttons in the live bar) ── */
-.reaction-bar { display: inline-flex; gap: 4px; }
+/* ── 2. Reaction buttons — per-bubble / per-reply emoji reactions (built in
+   app.js). The live-bar broadcast emoji bar was removed; this base style stays
+   because it's shared by the reactions shown on individual bubbles/replies. ── */
 .reaction-btn {
   border: none;
   background: rgba(255, 255, 255, 0.07);
@@ -109,26 +144,14 @@
   .campfire canvas { width: 192px; height: 120px; }
 }
 
-/* Floating emojis rise in a full-screen, click-through layer. */
+/* Full-screen, click-through layer for the paid super-effects (hearts / rain /
+   fireworks fired from the coin center — see live-reactions.js). */
 #reactionLayer {
   position: fixed;
   inset: 0;
   z-index: 350;   /* above the FABs so super effects are fully visible */
   pointer-events: none;
   overflow: hidden;
-}
-.reaction-float {
-  position: absolute;
-  bottom: 72px;
-  pointer-events: none;
-  will-change: transform, opacity;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-  animation: reactionRise var(--dur, 3s) ease-out forwards;
-}
-@keyframes reactionRise {
-  0%   { opacity: 0;  transform: translateY(0)     translateX(0)            scale(0.6); }
-  12%  { opacity: 1;  transform: translateY(-8vh)  translateX(0)            scale(1); }
-  100% { opacity: 0;  transform: translateY(-92vh) translateX(var(--drift)) scale(1); }
 }
 
 /* (Playground toggle button removed — feature deleted. The .pg-* overlay/ball
@@ -492,6 +515,11 @@ body.no-animations .pg-shake { animation: none; }
 }
 @keyframes jarCardIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .jar-card-body { font-size: 14.5px; line-height: 1.55; word-break: break-word; white-space: pre-wrap; }
+.jar-card-img {
+  display: block; width: 100%; max-height: 170px; object-fit: cover;
+  border-radius: 10px; margin: 2px 0 8px; background: rgba(0, 0, 0, 0.12);
+  cursor: zoom-in;
+}
 .jar-card-foot {
   display: flex;
   align-items: center;
