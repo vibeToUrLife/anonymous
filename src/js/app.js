@@ -609,8 +609,11 @@ input.addEventListener('paste', async (e) => {
     }
 });
 
-/* ── GIF Picker (Tenor API v2) ── */
-const TENOR_KEY = 'AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ'; // Free Tenor/Google API key
+/* ── GIF Picker (Giphy API) ──
+   Google discontinued the Tenor API, so this uses Giphy instead.
+   👉 Get a FREE key at https://developers.giphy.com/dashboard/ (Create App → API Key)
+      and paste it below (replace PASTE_YOUR_GIPHY_API_KEY_HERE). */
+const GIPHY_KEY = '3NN1Wc4d0Ew8qyVLWCuYj2vvkJKI5ggL';
 const gifPickerEl = document.getElementById('gifPicker');
 const gifGridEl = document.getElementById('gifGrid');
 const gifSearchInput = document.getElementById('gifSearchInput');
@@ -639,23 +642,33 @@ gifSearchInput.addEventListener('input', () => {
     }, 400);
 });
 
+function gifKeyMissing() {
+    if (!GIPHY_KEY || GIPHY_KEY === 'PASTE_YOUR_GIPHY_API_KEY_HERE') {
+        gifGridEl.innerHTML = '<div class="gif-loading">请先填入免费的 Giphy API key<br>（developers.giphy.com → Create App）</div>';
+        return true;
+    }
+    return false;
+}
+
 async function loadTrendingGifs() {
+    if (gifKeyMissing()) return;
     gifGridEl.innerHTML = '<div class="gif-loading">Loading…</div>';
     try {
-    const res = await fetch('https://tenor.googleapis.com/v2/featured?key=' + TENOR_KEY + '&limit=20&media_filter=tinygif');
+    const res = await fetch('https://api.giphy.com/v1/gifs/trending?api_key=' + GIPHY_KEY + '&limit=24&rating=pg-13');
     const data = await res.json();
-    renderGifs(data.results || []);
+    renderGifs(data.data || []);
     } catch {
     gifGridEl.innerHTML = '<div class="gif-loading">Failed to load GIFs</div>';
     }
 }
 
 async function searchGifs(query) {
+    if (gifKeyMissing()) return;
     gifGridEl.innerHTML = '<div class="gif-loading">Searching…</div>';
     try {
-    const res = await fetch('https://tenor.googleapis.com/v2/search?key=' + TENOR_KEY + '&q=' + encodeURIComponent(query) + '&limit=20&media_filter=tinygif');
+    const res = await fetch('https://api.giphy.com/v1/gifs/search?api_key=' + GIPHY_KEY + '&q=' + encodeURIComponent(query) + '&limit=24&rating=pg-13');
     const data = await res.json();
-    renderGifs(data.results || []);
+    renderGifs(data.data || []);
     } catch {
     gifGridEl.innerHTML = '<div class="gif-loading">Search failed</div>';
     }
@@ -668,13 +681,15 @@ function renderGifs(results) {
     return;
     }
     results.forEach(r => {
-    const url = r.media_formats?.tinygif?.url;
-    if (!url) return;
+    const imgs = r.images || {};
+    const thumb = (imgs.fixed_height_small && imgs.fixed_height_small.url) || (imgs.fixed_height && imgs.fixed_height.url);
+    if (!thumb) return;
+    const postUrl = (imgs.fixed_height && imgs.fixed_height.url) || thumb;
     const img = document.createElement('img');
-    img.src = url;
-    img.alt = r.content_description || 'GIF';
+    img.src = thumb;
+    img.alt = r.title || 'GIF';
     img.loading = 'lazy';
-    img.addEventListener('click', () => selectGif(url));
+    img.addEventListener('click', () => selectGif(postUrl));
     gifGridEl.appendChild(img);
     });
 }

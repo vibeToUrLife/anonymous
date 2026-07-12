@@ -290,8 +290,6 @@
 
   const FEATURES = [
     { key: 'coin_rush', label: 'Coin Rush' },
-    { key: 'playground', label: 'Bubble Playground' },
-    { key: 'pg_shared', label: 'Playground 多人共享 (off = solo)' },
     { key: 'knock', label: 'Bubble Knock & Ripples' },
     { key: 'riddle', label: 'Daily Riddle' },
     { key: 'chengyu', label: '成语接龙 Chain' },

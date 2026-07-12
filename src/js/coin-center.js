@@ -38,6 +38,7 @@
   let overlay = null, body = null, coinsEl = null, built = false, curTab = 'shop';
   let curBet = C.SLOT_BETS[0];
   let spinning = false;
+  let slotLast = ['❓', '❓', '❓'];   // last symbol shown on each reel (for seamless re-spins)
   let fortuneToday = null;   // today's drawn fortune (locked once drawn)
 
   function toast(msg, type) { if (typeof showToast === 'function') showToast(msg, type || ''); }
@@ -477,9 +478,13 @@
 
   function renderSlot() {
     curBet = C.SLOT_BETS[0];
+    slotLast = ['❓', '❓', '❓'];
+    const reel = function (id) {
+      return '<div class="cc-reel"><div class="cc-reel-strip" id="' + id + '"><div class="cc-cell">❓</div></div></div>';
+    };
     body.innerHTML =
       '<div class="cc-slot">'
-      + '<div class="cc-reels"><span id="ccR0">❓</span><span id="ccR1">❓</span><span id="ccR2">❓</span></div>'
+      + '<div class="cc-reels">' + reel('ccR0') + reel('ccR1') + reel('ccR2') + '</div>'
       + '<div class="cc-bets">' + C.SLOT_BETS.map(function (b, i) { return '<button class="cc-bet' + (i === 0 ? ' active' : '') + '" data-bet="' + b + '">🪙' + b + '</button>'; }).join('') + '</div>'
       + '<button class="cc-btn buy" data-act="spin">🎰 拉一把</button>'
       + '<div class="cc-slot-result" id="ccSlotResult"></div>'
@@ -517,25 +522,43 @@
     spinning = true;
     const res = await slotTx(curBet);
     if (!res.ok) { spinning = false; toast(res.reason === 'insufficient' ? '金币不足' : '出错了', 'error'); return; }
-    const reels = [document.getElementById('ccR0'), document.getElementById('ccR1'), document.getElementById('ccR2')];
-    const syms = C.SLOT_SYMBOLS.map(function (x) { return x.s; });
     const rEl = document.getElementById('ccSlotResult');
     if (rEl) { rEl.textContent = ''; rEl.className = 'cc-slot-result'; }
-    let t = 0;
-    const iv = setInterval(function () {
-      reels.forEach(function (r) { if (r) r.textContent = syms[Math.floor(Math.random() * syms.length)]; });
-      t += 80;
-      if (t >= 700) {
-        clearInterval(iv);
-        reels.forEach(function (r, i) { if (r) r.textContent = res.symbols[i]; });
-        coins = res.coins; updateCoins();
-        if (rEl) {
-          if (res.payout > 0) { rEl.textContent = '🎉 中奖 +' + res.payout + ' 金币！'; rEl.className = 'cc-slot-result win'; toast('🎰 中奖 +' + res.payout + ' 金币！', 'success'); }
-          else { rEl.textContent = '差一点，再来一把～'; rEl.className = 'cc-slot-result lose'; }
-        }
-        spinning = false;
+
+    const CELL = 62;                                   // must match .cc-cell height
+    const syms = C.SLOT_SYMBOLS.map(function (x) { return x.s; });
+    const rand = function () { return syms[Math.floor(Math.random() * syms.length)]; };
+    const durs = [1.3, 1.75, 2.2];                     // reels stop left → right, like a real slot
+    let maxEnd = 0;
+
+    for (let i = 0; i < 3; i++) {
+      const strip = document.getElementById('ccR' + i);
+      if (!strip) continue;
+      const spins = 18 + i * 6;                          // later reels travel further at ~same speed
+      const cells = [slotLast[i]];                       // start from the currently-shown symbol
+      for (let k = 0; k < spins; k++) cells.push(rand());
+      cells.push(res.symbols[i]);                         // the target lands last (dead-centre)
+      strip.innerHTML = cells.map(function (s) { return '<div class="cc-cell">' + s + '</div>'; }).join('');
+      strip.style.transition = 'none';
+      strip.style.transform = 'translateY(0)';
+      void strip.offsetHeight;                            // reflow so the reset isn't animated
+      strip.classList.add('spinning');
+      strip.style.transition = 'transform ' + durs[i] + 's cubic-bezier(0.1, 0.72, 0.2, 1)';
+      strip.style.transform = 'translateY(' + (-((spins + 1) * CELL)) + 'px)';
+      slotLast[i] = res.symbols[i];
+      const endMs = durs[i] * 1000;
+      maxEnd = Math.max(maxEnd, endMs);
+      (function (st, dur) { setTimeout(function () { st.classList.remove('spinning'); }, dur - 220); })(strip, endMs);
+    }
+
+    setTimeout(function () {
+      coins = res.coins; updateCoins();
+      if (rEl) {
+        if (res.payout > 0) { rEl.textContent = '🎉 中奖 +' + res.payout + ' 金币！'; rEl.className = 'cc-slot-result win'; toast('🎰 中奖 +' + res.payout + ' 金币！', 'success'); }
+        else { rEl.textContent = '差一点，再来一把～'; rEl.className = 'cc-slot-result lose'; }
       }
-    }, 80);
+      spinning = false;
+    }, maxEnd + 260);
   }
 
   /* ── Overlay build / open / close ─────────────────────────── */

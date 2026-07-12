@@ -74,6 +74,7 @@
 }
 /* No floaty decorations or bubble tails/puffs in the terminal */
 [data-theme="terminal"] .bubble-deco{ display:none !important; }
+[data-theme="terminal"] .campfire{ display:none !important; }   /* pixel campfire clashes with the flat terminal look */
 [data-theme="terminal"] .bubble::before,
 [data-theme="terminal"] .bubble::after{ content:none !important; display:none !important; box-shadow:none !important; background:none !important; }
 /* Entrance-animation overlays (firework burst / glitch shine) don't belong in the terminal either */
@@ -176,6 +177,30 @@
 [data-theme="terminal"] .pg-toggle::before{ content:'[ '; }
 [data-theme="terminal"] #sendBtn::after,
 [data-theme="terminal"] .pg-toggle::after{ content:' ]'; }
+
+/* Feature launcher → a flat terminal list of bracket-less chips */
+[data-theme="terminal"] .feature-launcher{
+  max-width:none !important; margin:8px 16px 0 !important; padding:8px 10px !important;
+  border:1px solid var(--border) !important; border-radius:3px !important;
+  background:rgba(255,255,255,.03) !important; box-shadow:none !important;
+}
+[data-theme="terminal"] .feature-launcher-hd{ color:var(--ink-soft) !important; font-family:var(--font-body) !important; }
+[data-theme="terminal"] .feature-launcher-hd .rule{ display:none !important; }
+[data-theme="terminal"] .feat-grid{ display:flex !important; flex-wrap:wrap !important; gap:6px !important; }
+[data-theme="terminal"] .feat-tile{
+  flex-direction:row !important; gap:5px !important; padding:4px 9px !important;
+  background:transparent !important; color:var(--ink) !important;
+  border:1px solid var(--border) !important; border-radius:3px !important;
+  box-shadow:none !important; font-family:var(--font-body) !important; font-weight:700 !important;
+}
+[data-theme="terminal"] .feat-tile:hover{ background:var(--primary) !important; color:var(--on-primary) !important; transform:none !important; }
+[data-theme="terminal"] .feat-tile.active{ background:var(--primary) !important; color:var(--on-primary) !important; border-color:var(--primary) !important; }
+/* the label has its own color, so recolor it explicitly on the solid-blue hover/active fill */
+[data-theme="terminal"] .feat-tile:hover .feat-lb,
+[data-theme="terminal"] .feat-tile.active .feat-lb{ color:var(--on-primary) !important; -webkit-text-fill-color:var(--on-primary) !important; }
+[data-theme="terminal"] .feat-ic{ width:auto !important; height:auto !important; background:none !important; box-shadow:none !important; font-size:14px !important; }
+[data-theme="terminal"] .feat-tile:hover .feat-ic{ box-shadow:none !important; }
+[data-theme="terminal"] .feat-sub, [data-theme="terminal"] .feat-new{ display:none !important; }
 
 /* HP bar → ASCII meter "[████████----] 64%": hide the graphical bar, show text */
 .bubble-hp-ascii{ display:none; }

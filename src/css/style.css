@@ -198,6 +198,15 @@ body {
     font-size: 12px;
     padding: 20px;
 }
+.gif-attribution {
+    text-align: center;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: rgba(255,255,255,0.35);
+    padding: 6px 0 2px;
+    text-transform: uppercase;
+}
+body.light-theme .gif-attribution { color: rgba(0,0,0,0.35); }
 
 /* ── Image preview strip ── */
 .img-preview-strip {

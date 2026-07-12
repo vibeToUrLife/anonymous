@@ -12,11 +12,9 @@
   // feature key → the element id(s) that are its entry point on this page.
   // Some flags have no entry-point element and are instead checked in code
   // via window.FEATURES at event time:
-  //   pg_shared — bubble-playground.js (false = playground runs solo/local)
   //   knock     — bubble-knock.js (false = no knocks or ambient ripples)
   var MAP = {
     coin_rush:      ['crBanner'],
-    playground:     ['pgToggle'],
     riddle:         ['riddleFab'],
     chengyu:        ['cjFab'],
     quote_comments: ['quoteCommentSection', 'quoteCommentToggle'],

@@ -6,14 +6,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Anonymous Bubble Answers</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
-  <link rel="stylesheet" href="./src/css/style.css?v=9">
-  <link rel="stylesheet" href="./src/css/interactive.css?v=16">
+  <link rel="stylesheet" href="./src/css/style.css?v=10">
+  <link rel="stylesheet" href="./src/css/interactive.css?v=20">
   <!-- Clay "Bubble Pop" design system: tokens + component library (load last so they govern) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <!-- Press Start 2P — pixel font for the Stardew-style event reminder -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
-  <link rel="stylesheet" href="./src/css/theme.css?v=17">
+  <link rel="stylesheet" href="./src/css/theme.css?v=21">
   <link rel="stylesheet" href="./src/css/components.css?v=1">
   <style>
     /* Poll rows (creator + shared) → tokens, both themes.
@@ -460,12 +460,8 @@
     #liveBar .live-presence { background:var(--bg) !important; color:var(--ink-soft) !important; }
     #liveBar .live-presence b { color:var(--primary-deep) !important; }
     #liveBar .live-typing { color:var(--ink-faint) !important; }
-    #pgToggle, #coinCenterBtn {
-      background:var(--bg) !important; color:var(--primary-deep) !important;
-      border:1px solid var(--border) !important; box-shadow:var(--clay-up-sm) !important;
-      -webkit-text-fill-color:var(--primary-deep) !important;
-    }
-    #pgToggle:hover, #coinCenterBtn:hover { background:var(--primary-tint) !important; }
+    /* (Old #pgToggle/#coinCenterBtn live-bar pill rules removed — those buttons are
+       now token-styled .feat-tile in the feature launcher.) */
     #reactionBar .reaction-btn { background:var(--bg) !important; border:1px solid var(--border) !important; color:var(--ink-soft) !important; }
     #reactionBar .reaction-btn:hover { background:var(--primary-tint) !important; }
     #answerInput {
@@ -997,6 +993,13 @@
             <span class="slider"></span>
           </label>
         </div>
+        <div class="settings-row" style="margin-top:8px">
+          <span class="settings-row-label">🔥 营火 Campfire</span>
+          <label class="settings-toggle">
+            <input type="checkbox" id="campfireToggle" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
       </div>
       <hr class="settings-divider">
       <div class="settings-section">
@@ -1262,12 +1265,29 @@
       <span class="live-typing-dots"><i></i><i></i><i></i></span> someone is typing…
     </span>
     <span class="reaction-bar" id="reactionBar" aria-label="Send a live reaction"></span>
-    <button class="pg-toggle" id="pgToggle" type="button" title="Bubble Playground — fling &amp; pop the bubbles">🫧 Playground</button>
-    <button class="pg-toggle" id="jarToggle" type="button" title="泡泡罐 — 收藏过的留言">🫙 泡泡罐</button>
-    <button class="pg-toggle" id="wallToggle" type="button" title="涂鸦墙 — 在留言板背景上画画，大家都看得到">✏️ 涂鸦墙</button>
-    <button class="pg-toggle" id="coinCenterBtn" type="button" title="金币乐园 — 商店 / 扭蛋 / 老虎机">🎰 金币乐园</button>
-    <button class="pg-toggle" id="coinRankBtn" type="button" title="富豪榜 — 按当前金币排名">🏆 富豪榜</button>
-    <button class="pg-toggle" id="stayRankBtn" type="button" title="摸鱼榜 — 按总摸鱼时长排名">🐟 摸鱼榜</button>
+  </div>
+
+  <!-- Feature launcher: surfaces the mini-features as labelled tiles so users can see they
+       exist. Buttons keep their original ids/handlers; feature-flags.js still hides by id. -->
+  <div class="feature-launcher" id="featureLauncher">
+    <div class="feature-launcher-hd">✨ 更多玩法 <span class="rule"></span><span class="hint">点开试试</span></div>
+    <div class="feat-grid">
+      <button class="feat-tile" id="jarToggle" type="button" title="泡泡罐 — 收藏过的留言" style="--tint: rgba(94,234,212,.18)">
+        <span class="feat-ic">🫙</span><span class="feat-lb">泡泡罐</span><span class="feat-sub">收藏的留言</span>
+      </button>
+      <button class="feat-tile" id="wallToggle" type="button" title="涂鸦墙 — 在留言板背景上画画，大家都看得到" style="--tint: rgba(249,168,212,.20)">
+        <span class="feat-new">NEW</span><span class="feat-ic">✏️</span><span class="feat-lb">涂鸦墙</span><span class="feat-sub">一起画画</span>
+      </button>
+      <button class="feat-tile" id="coinCenterBtn" type="button" title="金币乐园 — 商店 / 扭蛋 / 老虎机" style="--tint: rgba(252,211,77,.20)">
+        <span class="feat-ic">🎰</span><span class="feat-lb">金币乐园</span><span class="feat-sub">商店/扭蛋</span>
+      </button>
+      <button class="feat-tile" id="coinRankBtn" type="button" title="富豪榜 — 按当前金币排名" style="--tint: rgba(251,191,36,.20)">
+        <span class="feat-ic">🏆</span><span class="feat-lb">富豪榜</span><span class="feat-sub">金币排名</span>
+      </button>
+      <button class="feat-tile" id="stayRankBtn" type="button" title="摸鱼榜 — 按总摸鱼时长排名" style="--tint: rgba(125,211,252,.20)">
+        <span class="feat-ic">🐟</span><span class="feat-lb">摸鱼榜</span><span class="feat-sub">时长排名</span>
+      </button>
+    </div>
   </div>
 
   <!-- Daily 正能量 (motivational) quote banner -->
@@ -1377,6 +1397,7 @@
     <div class="gif-grid" id="gifGrid">
       <div class="gif-loading">Search for a GIF above</div>
     </div>
+    <div class="gif-attribution">Powered by GIPHY</div>
   </div>
 
   <div class="lightbox" id="lightbox">
@@ -1543,7 +1564,7 @@
   <script src="./src/js/theme.js?v=2"></script>
   <!-- Shared-space link helper (defines window.ShareToBoard for the board render). -->
   <script src="./src/js/share-to-board.js?v=1"></script>
-  <script src="./src/js/app.js?v=22"></script>
+  <script src="./src/js/app.js?v=23"></script>
   <!-- Access code gate — must load after app.js (uses its shared auth/db). Shows after Google login. -->
   <script src="./src/js/access-code-gate.js?v=1"></script>
   <script src="./src/js/feature-flags.js"></script>
@@ -1552,8 +1573,7 @@
   <script src="./src/js/presence.js"></script>
   <script src="./src/js/bubble-knock.js?v=1"></script>
   <script src="./src/js/live-reactions.js?v=2"></script>
-  <script src="./src/js/playground-shared-logic.js?v=1"></script>
-  <script src="./src/js/bubble-playground.js?v=2"></script>
+  <script src="./src/js/campfire.js?v=2"></script>
   <!-- 泡泡罐 · 涂鸦 · 涂鸦墙 (jar/doodle are client-side; the wall shares strokes via RTDB) -->
   <script src="./src/js/jar-logic.js?v=2"></script>
   <script src="./src/js/bubble-jar.js?v=4"></script>
@@ -1571,7 +1591,7 @@
   <!-- Coin sinks: cosmetics shop / gacha / slot / boost (金币乐园) -->
   <script src="./src/js/coin-spend-logic.js?v=4"></script>
   <script src="./src/js/economy-config.js"></script>
-  <script src="./src/js/coin-center.js?v=6"></script>
+  <script src="./src/js/coin-center.js?v=7"></script>
   <!-- 富豪榜: rank players by current coin balance -->
   <script src="./src/js/coin-ranking.js?v=1"></script>
   <!-- 摸鱼时长: site-wide active-time tracker + 摸鱼榜 leaderboard (formerly 停留榜) -->

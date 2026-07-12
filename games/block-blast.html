@@ -82,21 +82,30 @@
       box-shadow: var(--g-shadow);
     }
     .cell {
+      position: relative;
       width: var(--cell); height: var(--cell);
-      border-radius: 4px;
+      border-radius: 5px;
       background: var(--g-slot);
       transition: background 0.12s, transform 0.12s;
     }
-    .cell.filled { box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 2px 6px rgba(0,0,0,0.3); }
+    .cell.filled { box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 2px 7px rgba(0,0,0,0.32); }
+    /* Glossy candy look — a diagonal highlight + soft inner shade layered over the
+       inline colour via a pseudo (so it isn't overridden by el.style.background). */
+    .cell.filled::after {
+      content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      background: linear-gradient(150deg, rgba(255,255,255,0.42), rgba(255,255,255,0) 46%, rgba(0,0,0,0.20));
+    }
     .cell.preview { outline: 2px solid rgba(255,255,255,0.35); outline-offset: -1px; }
     .cell.preview-invalid { outline: 2px solid rgba(255,80,80,0.4); outline-offset: -1px; }
     .cell.clearing {
-      animation: cellClear 0.35s ease-out forwards;
+      z-index: 2;
+      animation: cellClear 0.26s ease-out forwards;
     }
+    /* Quick bright crack, then the block collapses as its shards fly off. */
     @keyframes cellClear {
-      0% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.2); opacity: 0.6; }
-      100% { transform: scale(0); opacity: 0; }
+      0%   { transform: scale(1);    opacity: 1; filter: brightness(1.9) saturate(1.4); }
+      35%  { transform: scale(1.06); opacity: 1; filter: brightness(1.5); }
+      100% { transform: scale(0.4);  opacity: 0; filter: brightness(1.3); }
     }
 
     /* Piece placement pop-in */
@@ -108,6 +117,20 @@
       60% { transform: scale(1.15); }
       100% { transform: scale(1); opacity: 1; }
     }
+
+    /* ── Juice: line-clear particles, floating score, board pulse ── */
+    .bb-particle { position: fixed; z-index: 80; pointer-events: none; border-radius: 2px; will-change: transform, opacity; }
+    .bb-shard {
+      position: fixed; z-index: 80; pointer-events: none; border-radius: 2px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 3px rgba(0,0,0,0.3);
+      will-change: transform, opacity;
+    }
+    .bb-float {
+      position: fixed; z-index: 85; pointer-events: none; font-weight: 800; white-space: nowrap;
+      font-family: var(--g-display); text-shadow: 0 2px 10px rgba(0,0,0,0.45); will-change: transform, opacity;
+    }
+    .board-wrap.pulse { animation: boardPulse 0.45s ease-out; }
+    @keyframes boardPulse { 0%, 100% { transform: scale(1); } 35% { transform: scale(1.035); } }
 
     /* Score bump */
     .score-val.bump {
@@ -205,7 +228,11 @@
       border-radius: 3px;
       pointer-events: none; touch-action: none;
     }
-    .piece-cell.on { box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 1px 4px rgba(0,0,0,0.3); }
+    .piece-cell.on { position: relative; box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 1px 4px rgba(0,0,0,0.3); }
+    .piece-cell.on::after {
+      content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      background: linear-gradient(150deg, rgba(255,255,255,0.4), rgba(255,255,255,0) 48%, rgba(0,0,0,0.16));
+    }
     .piece-cell.off { background: transparent; }
 
     /* ── Drag ghost ── */
@@ -579,20 +606,7 @@
       }
     }
 
-    function showPreview(piece, startR, startC) {
-      clearPreview();
-      if (!piece) return;
-      const valid = canPlace(piece, startR, startC);
-      piece.shape.cells.forEach(([dc, dr]) => {
-        const r = startR + dr, c = startC + dc;
-        if (r >= 0 && r < GRID && c >= 0 && c < GRID) {
-          const el = boardEl.children[r * GRID + c];
-          el.classList.add(valid ? 'preview' : 'preview-invalid');
-          if (valid) el.style.background = piece.color + '66';
-        }
-      });
-    }
-
+    // (showPreview removed — the board no longer shows a valid/invalid placement preview.)
     function clearPreview() {
       for (const el of boardEl.children) {
         el.classList.remove('preview', 'preview-invalid');
@@ -743,27 +757,9 @@
 
     function moveDragGhost(cx, cy) {
       if (!dragGhost) return;
-
-      const boardRect = boardEl.getBoundingClientRect();
-      // Ghost top-left in board-content coordinates
-      const ghostBx = cx - dragOffX - boardRect.left - 4;
-      const ghostBy = cy - dragOffY - boardRect.top  - 4;
-      // Grid cell nearest to the ghost's first-cell center
-      const pitch = CELL + 2;
-      const gc = Math.floor((ghostBx + CELL / 2) / pitch);
-      const gr = Math.floor((ghostBy + CELL / 2) / pitch);
-
-      // Snap ghost to the board grid when piece overlaps the board
-      const overBoard = gc >= -dragPieceCols && gc < GRID && gr >= -dragPieceRows && gr < GRID;
-      if (overBoard) {
-        dragGhost.style.left = (boardRect.left + 4 + gc * pitch) + 'px';
-        dragGhost.style.top  = (boardRect.top  + 4 + gr * pitch) + 'px';
-      } else {
-        dragGhost.style.left = (cx - dragOffX) + 'px';
-        dragGhost.style.top  = (cy - dragOffY) + 'px';
-      }
-
-      showPreview(pieces[dragPieceIdx], gr, gc);
+      // Glide 1:1 with the finger — no grid snapping, no valid/invalid board preview.
+      dragGhost.style.left = (cx - dragOffX) + 'px';
+      dragGhost.style.top  = (cy - dragOffY) + 'px';
     }
 
     function endDrag(cx, cy) {
@@ -855,14 +851,7 @@
       }
     });
 
-    // Hover preview on board
-    boardEl.addEventListener('mouseover', (e) => {
-      if (selectedPiece === null || !gameActive || dragActive) return;
-      const cell = e.target.closest('.cell');
-      if (!cell) return;
-      showPreview(pieces[selectedPiece], +cell.dataset.r, +cell.dataset.c);
-    });
-    boardEl.addEventListener('mouseleave', () => { if (!dragActive) clearPreview(); });
+    // (Board hover preview removed — no valid/invalid highlight; placement is direct.)
 
     /* ═══════════════════════════════
        Game Logic
@@ -885,6 +874,75 @@
       return false;
     }
 
+    /* ═══ Juice: shatter a cleared block into shards + dust ═══ */
+    function shatterCell(cx, cy, color, cellSize, chipCount) {
+      const half = cellSize / 2;
+      // Irregular triangular chunks so it reads as a broken block, not confetti.
+      const clips = [
+        'polygon(0 0, 100% 0, 0 100%)',
+        'polygon(100% 0, 100% 100%, 0 0)',
+        'polygon(0 100%, 100% 100%, 100% 0)',
+        'polygon(0 0, 100% 100%, 0 100%)'
+      ];
+      const quads = [[-1, -1], [1, -1], [-1, 1], [1, 1]];   // 4 quadrant chunks
+      quads.forEach((q, i) => {
+        const s = document.createElement('div');
+        s.className = 'bb-shard';
+        const sz = half * (0.72 + Math.random() * 0.4);
+        s.style.width = sz + 'px'; s.style.height = sz + 'px';
+        s.style.left = (cx + q[0] * half * 0.45 - sz / 2) + 'px';
+        s.style.top  = (cy + q[1] * half * 0.45 - sz / 2) + 'px';
+        s.style.background = color;
+        s.style.clipPath = clips[i];
+        document.body.appendChild(s);
+        const vx = q[0] * (28 + Math.random() * 55);          // fly out sideways
+        const vyUp = -(16 + Math.random() * 40);              // pop up first
+        const fall = 95 + Math.random() * 105;                // then fall (gravity)
+        const rot = Math.random() * 640 - 320;
+        const dur = 380 + Math.random() * 180;                // quick — no ~1s lingering
+        const a = s.animate([
+          { transform: 'translate(0,0) rotate(0deg) scale(1)', opacity: 1 },
+          { transform: 'translate(' + (vx * 0.6) + 'px,' + vyUp + 'px) rotate(' + (rot * 0.4) + 'deg) scale(1)', opacity: 1, offset: 0.3 },
+          { transform: 'translate(' + vx + 'px,' + fall + 'px) rotate(' + rot + 'deg) scale(0.55)', opacity: 0 }
+        ], { duration: dur, easing: 'cubic-bezier(0.3,0.55,0.55,1)' });
+        a.onfinish = () => s.remove();
+      });
+      // small dust chips scattering off the break
+      for (let i = 0; i < (chipCount || 0); i++) {
+        const d = document.createElement('div');
+        d.className = 'bb-particle';
+        const sz = 3 + Math.random() * 4;
+        d.style.width = sz + 'px'; d.style.height = sz + 'px';
+        d.style.left = (cx - sz / 2) + 'px'; d.style.top = (cy - sz / 2) + 'px';
+        d.style.background = color;
+        document.body.appendChild(d);
+        const ang = Math.random() * Math.PI * 2;
+        const spd = 28 + Math.random() * 60;
+        const vx = Math.cos(ang) * spd;
+        const fall = 75 + Math.random() * 90;
+        const a = d.animate([
+          { transform: 'translate(0,0) scale(1)', opacity: 1 },
+          { transform: 'translate(' + vx + 'px,' + fall + 'px) scale(0.3)', opacity: 0 }
+        ], { duration: 340 + Math.random() * 160, easing: 'cubic-bezier(0.3,0.5,0.6,1)' });
+        a.onfinish = () => d.remove();
+      }
+    }
+
+    function floatText(cx, cy, text, color, size) {
+      const el = document.createElement('div');
+      el.className = 'bb-float';
+      el.textContent = text;
+      el.style.left = cx + 'px'; el.style.top = cy + 'px';
+      el.style.color = color; el.style.fontSize = (size || 22) + 'px';
+      document.body.appendChild(el);
+      const anim = el.animate([
+        { transform: 'translate(-50%,-50%) scale(0.5)', opacity: 0 },
+        { transform: 'translate(-50%,-110%) scale(1.1)', opacity: 1, offset: 0.35 },
+        { transform: 'translate(-50%,-210%) scale(1)', opacity: 0 }
+      ], { duration: 950, easing: 'cubic-bezier(0.2,0.7,0.3,1)' });
+      anim.onfinish = () => el.remove();
+    }
+
     function placePiece(piece, startR, startC) {
       // Place cells with pop-in animation
       piece.shape.cells.forEach(([dc, dr], i) => {
@@ -894,7 +952,7 @@
         el.classList.add('filled', 'placed');
         el.style.background = piece.color;
         el.style.animationDelay = (i * 30) + 'ms';
-        setTimeout(() => { el.classList.remove('placed'); el.style.animationDelay = ''; }, 300 + i * 30);
+        setTimeout(() => { el.classList.remove('placed'); if (!el.classList.contains('clearing')) el.style.animationDelay = ''; }, 300 + i * 30);
       });
       piece.used = true;
       score += piece.shape.cells.length;
@@ -926,23 +984,30 @@
         rowsToClear.forEach(r => { for (let c = 0; c < GRID; c++) clearSet.add(r + ',' + c); });
         colsToClear.forEach(c => { for (let r = 0; r < GRID; r++) clearSet.add(r + ',' + c); });
 
-        let clearIdx = 0;
+        const chips = clearSet.size > 12 ? 1 : 3;
+        // Shatter each cleared cell into flying shards AND empty the grid cell at once.
+        // The shards ARE the break; the line vanishes immediately so it never lingers
+        // (no delayed renderBoard, no held-visible window). Only the cleared cells are
+        // touched, so the just-placed non-cleared cells keep their pop-in.
         clearSet.forEach(key => {
           const [r, c] = key.split(',').map(Number);
           const el = boardEl.children[r * GRID + c];
-          el.style.animationDelay = (clearIdx * 15) + 'ms';
-          el.classList.add('clearing');
-          clearIdx++;
+          const col = board[r][c] || piece.color;
+          const rect = el.getBoundingClientRect();
+          shatterCell(rect.left + rect.width / 2, rect.top + rect.height / 2, col, rect.width, chips);
+          board[r][c] = null;
+          el.classList.remove('filled', 'placed', 'clearing');
+          el.style.animationDelay = '';
+          el.style.background = 'var(--g-slot)';
         });
-        const clearDuration = 350 + clearSet.size * 15;
 
-        setTimeout(() => {
-          clearSet.forEach(key => {
-            const [r, c] = key.split(',').map(Number);
-            board[r][c] = null;
-          });
-          renderBoard();
-        }, clearDuration);
+        // Board pulse + floating score (pink on a combo, gold otherwise)
+        const bw = document.querySelector('.board-wrap');
+        bw.classList.remove('pulse'); void bw.offsetWidth; bw.classList.add('pulse');
+        setTimeout(() => bw.classList.remove('pulse'), 460);
+        const brect = boardEl.getBoundingClientRect();
+        floatText(brect.left + brect.width / 2, brect.top + brect.height / 2,
+                  '+' + lineScore, combo > 1 ? '#f472b6' : '#fde68a', combo > 1 ? 30 : 26);
 
         playSound('clear');
         if (combo > 1) showCombo(combo);
@@ -950,9 +1015,10 @@
         combo = 0;
       }
 
-      const afterClearDelay = totalLines > 0 ? (350 + totalLines * 8 * 15 + 50) : 0;
+      const afterClearDelay = totalLines > 0 ? 260 : 0;   // board already cleared; brief beat to enjoy the shatter
       updateUI();
-      renderBoard();
+      // NOTE: no renderBoard() here — it would strip the .placed pop-in animation.
+      // Placed cells already show inline; cleared cells were emptied immediately above.
 
       // Check if all 3 used → spawn new set
       if (pieces.every(p => p.used)) {

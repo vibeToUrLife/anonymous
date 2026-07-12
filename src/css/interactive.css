@@ -69,6 +69,26 @@
 .reaction-btn:hover { background: rgba(255, 255, 255, 0.16); transform: translateY(-2px) scale(1.12); }
 .reaction-btn:active { transform: scale(0.9); }
 
+/* ── 营火 Campfire (pixel presence — a villager per online person, fixed bottom-left) ── */
+.campfire {
+  position: fixed; left: 8px; bottom: 84px; z-index: 98;
+  pointer-events: none;                       /* only the small fire hotspot is tappable */
+  filter: drop-shadow(0 3px 5px rgba(0,0,0,0.45));
+}
+.campfire canvas {
+  width: 208px; height: 128px;                /* 2× the 104×64 logical pixels */
+  image-rendering: pixelated; image-rendering: crisp-edges;
+  display: block; pointer-events: none;
+}
+.cf-hit {                                      /* tap target over the fire only; rest passes through */
+  position: absolute; left: 32%; top: 38%; width: 38%; height: 52%;
+  pointer-events: auto; cursor: pointer;
+}
+@media (max-width: 480px) {
+  .campfire { left: 4px; bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
+  .campfire canvas { width: 176px; height: 108px; }
+}
+
 /* Floating emojis rise in a full-screen, click-through layer. */
 #reactionLayer {
   position: fixed;
@@ -91,20 +111,51 @@
   100% { opacity: 0;  transform: translateY(-92vh) translateX(var(--drift)) scale(1); }
 }
 
-/* ── 3. Playground toggle button ── */
-.pg-toggle {
-  border: 1px solid rgba(200, 182, 255, 0.4);
-  background: rgba(200, 182, 255, 0.12);
-  color: #d8ccff;
-  border-radius: 20px;
-  padding: 6px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s, transform 0.12s;
+/* (Playground toggle button removed — feature deleted. The .pg-* overlay/ball
+   visuals below are kept because Coin Rush reuses them.) */
+
+/* ── Feature launcher (discoverable entry points) — token-based so it matches
+   every theme (light-clay default / dark / terminal) with no per-theme overrides. ── */
+.feature-launcher {
+  margin: -4px auto 16px;
+  max-width: min(620px, calc(100% - 28px));
+  padding: 11px 12px 13px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--clay-up-sm);
 }
-.pg-toggle:hover { background: rgba(200, 182, 255, 0.22); transform: translateY(-1px); }
-.pg-toggle.active { background: var(--accent); color: #2a1f4a; }
+.feature-launcher-hd {
+  display: flex; align-items: center; gap: 7px; margin: 0 2px 10px;
+  font-size: 12px; font-weight: 800; color: var(--primary-deep); letter-spacing: 0.02em;
+}
+.feature-launcher-hd .rule { flex: 1; height: 1px; background: var(--border); }
+.feature-launcher-hd .hint { color: var(--ink-faint); font-weight: 600; }
+.feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 9px; }
+.feat-tile {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 12px 6px 10px; border-radius: 14px;
+  background: var(--bg); border: 1px solid var(--border); box-shadow: var(--clay-up-sm);
+  color: var(--ink); -webkit-text-fill-color: currentColor;
+  cursor: pointer; text-align: center; font-family: inherit;
+  transition: transform 0.13s, border-color 0.13s, background 0.13s;
+}
+.feat-tile:hover { transform: translateY(-3px); background: var(--primary-tint); }
+.feat-tile:active { transform: scale(0.96); }
+.feat-tile.active { border-color: var(--primary); background: var(--primary-tint); }
+.feat-tile:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.feat-ic {
+  width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center;
+  font-size: 22px; background: var(--tint, var(--primary-tint));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+.feat-tile:hover .feat-ic { box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 0 0 2px var(--tint, var(--primary-tint)); }
+.feat-lb { font-size: 12.5px; font-weight: 700; line-height: 1.15; color: var(--ink); -webkit-text-fill-color: currentColor; }
+.feat-sub { font-size: 10px; color: var(--ink-faint); line-height: 1.1; -webkit-text-fill-color: currentColor; }
+.feat-new {
+  position: absolute; top: 7px; right: 7px; font-size: 8px; font-weight: 800; letter-spacing: 0.04em;
+  color: #2a1a02; -webkit-text-fill-color: #2a1a02; background: linear-gradient(135deg, #fde68a, #fcd34d); padding: 1px 5px; border-radius: 999px;
+}
 
 /* ── 3. Playground overlay ── */
 #pgOverlay {
@@ -720,12 +771,8 @@ body.light-theme .live-presence b { color: var(--primary-deep); }
 body.light-theme .live-typing { color: rgba(0, 0, 0, 0.5); }
 body.light-theme .reaction-btn { background: rgba(0, 0, 0, 0.05); }
 body.light-theme .reaction-btn:hover { background: rgba(0, 0, 0, 0.1); }
-body.light-theme .pg-toggle {
-  color: var(--primary-deep);
-  border-color: rgba(120, 90, 200, 0.4);
-  background: rgba(120, 90, 200, 0.1);
-}
-body.light-theme .pg-toggle.active { background: var(--accent); color: #2a1f4a; }
+/* .feat-tile is token-based (uses --bg/--ink/--border/etc.), so it needs no
+   per-theme override — the tokens already carry the light-clay values. */
 
 /* ════════════════════════════════════════════════════════════
    4. Daily 脑筋急转弯 (brain teaser) — FAB + overlay
@@ -1252,11 +1299,29 @@ body.light-theme .riddle-solvers-empty { color: rgba(0, 0, 0, 0.45); }
 /* Slot */
 .cc-slot { text-align: center; }
 .cc-reels {
-  display: flex; gap: 10px; justify-content: center; margin: 10px 0 16px;
-  font-size: 46px; background: rgba(0,0,0,0.3); border-radius: 14px; padding: 14px;
-  border: 2px solid rgba(245,179,1,0.5);
+  display: flex; gap: 8px; justify-content: center; margin: 12px 0 16px;
+  background: linear-gradient(#241a12, #120d1f);
+  border-radius: 16px; padding: 14px;
+  border: 3px solid #f5b301;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.4), 0 0 22px rgba(245,179,1,0.35), inset 0 2px 8px rgba(0,0,0,0.6);
 }
-.cc-reels span { width: 56px; }
+.cc-reel {
+  position: relative; width: 62px; height: 62px; overflow: hidden; border-radius: 9px;
+  background: linear-gradient(#0d0a1e, #1c1638);
+  box-shadow: inset 0 10px 12px -8px rgba(0,0,0,0.9), inset 0 -10px 12px -8px rgba(0,0,0,0.9);
+}
+/* payline across the middle of the reels */
+.cc-reel::after {
+  content: ''; position: absolute; left: 3px; right: 3px; top: 50%;
+  height: 2px; transform: translateY(-1px);
+  background: rgba(245,179,1,0.55); box-shadow: 0 0 6px rgba(245,179,1,0.6); pointer-events: none;
+}
+.cc-reel-strip { display: flex; flex-direction: column; will-change: transform; }
+.cc-reel-strip.spinning { filter: blur(0.7px); }
+.cc-cell {
+  height: 62px; display: flex; align-items: center; justify-content: center;
+  font-size: 40px; line-height: 1;
+}
 .cc-bets { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; }
 .cc-bet { border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.06); color: #fff; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; cursor: pointer; }
 .cc-bet.active { background: linear-gradient(135deg,#fbbf24,#f59e0b); color: #2a1f4a; border-color: transparent; }
