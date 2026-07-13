@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>有什么更新了 · What's New</title>
+<style>
+  :root{
+    --bg:#faf3ea; --card:#fffdf9; --ink:#34271c; --soft:#6b5847; --faint:#9b8a78;
+    --primary:#f97316; --border:rgba(154,52,18,.14);
+    --a1:#f0857a; --a2:#5aa0e0; --a3:#f5b301; --a4:#a06bff; --a5:#e07a2a;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#1b140e; --card:#241b14; --ink:#f1e8dd; --soft:#c3b3a2; --faint:#8c7c6c;
+      --primary:#fb923c; --border:rgba(255,228,194,.14); }
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--ink); overflow:hidden;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;
+    display:flex; flex-direction:column; height:100vh;
+  }
+  .dots{display:flex; gap:7px; justify-content:center; padding:16px 0 4px}
+  .dot{width:7px; height:7px; border-radius:999px; background:var(--border); transition:all .3s}
+  .dot.on{width:22px; background:var(--primary)}
+  .track{flex:1; position:relative; overflow:hidden}
+  .slide{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; text-align:center; padding:12px 26px 8px; gap:6px;
+    opacity:0; transform:translateX(40px); pointer-events:none; transition:opacity .4s, transform .4s;
+  }
+  .slide.on{opacity:1; transform:none; pointer-events:auto}
+  .slide.left{transform:translateX(-40px)}
+  .stage{
+    width:210px; height:210px; border-radius:24px; position:relative; overflow:hidden;
+    display:flex; align-items:center; justify-content:center; margin-bottom:10px;
+    box-shadow:0 12px 30px rgba(120,72,30,.14); flex:none;
+  }
+  .kick{font-size:12px; font-weight:800; letter-spacing:1px; text-transform:uppercase}
+  h2{font-size:22px; font-weight:900; line-height:1.2}
+  p.desc{font-size:14px; color:var(--soft); line-height:1.6; max-width:300px}
+  .nav{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 22px calc(18px + env(safe-area-inset-bottom,0px))}
+  .skip{background:none; border:none; color:var(--faint); font-size:13px; cursor:pointer; padding:8px}
+  .next{
+    flex:1; max-width:230px; margin-left:auto; border:none; cursor:pointer;
+    padding:13px 20px; border-radius:999px; font-size:15px; font-weight:800; color:#fff;
+    background:linear-gradient(135deg,#fca34a,#f97316); box-shadow:0 8px 20px rgba(249,115,22,.35);
+    transition:transform .1s, filter .15s;
+  }
+  .next:active{transform:translateY(1px)} .next:hover{filter:brightness(1.04)}
+
+  /* ── Slide 1: 泡泡罐 ── */
+  .s1{background:radial-gradient(120% 120% at 50% 0%,#ffe3de,#ffd0c8)}
+  .s1 .jar{position:absolute; bottom:24px; font-size:56px; filter:drop-shadow(0 4px 6px rgba(0,0,0,.15)); animation:jarBob 3s ease-in-out infinite}
+  @keyframes jarBob{0%,72%,100%{transform:none}80%{transform:scale(1.14)}88%{transform:scale(.96)}}
+  .s1 .msg{position:absolute; left:50%; top:34px; width:78px; height:44px; margin-left:-39px; border-radius:12px;
+    background:#fff; box-shadow:0 4px 10px rgba(0,0,0,.14); display:flex; align-items:center; justify-content:center;
+    font-size:20px; animation:msgToJar 3s ease-in infinite}
+  @keyframes msgToJar{
+    0%{transform:translateY(-16px) scale(1); opacity:0}
+    12%{opacity:1}
+    55%{transform:translateY(0) scale(1); opacity:1}
+    80%{transform:translateY(96px) scale(.08); opacity:.5}
+    82%,100%{opacity:0}
+  }
+
+  /* ── Slide 2: 涂鸦墙 ── */
+  .s2{background:radial-gradient(120% 120% at 50% 0%,#dbeeff,#c3e0fb)}
+  .s2 .board{width:150px; height:150px; border-radius:16px; background:#fff; box-shadow:inset 0 0 0 3px rgba(90,134,224,.25); position:relative; overflow:hidden}
+  .s2 svg{position:absolute; inset:0}
+  .s2 path{fill:none; stroke:#5aa0e0; stroke-width:6; stroke-linecap:round; stroke-linejoin:round;
+    stroke-dasharray:340; stroke-dashoffset:340; animation:draw 3s ease-in-out infinite}
+  .s2 .heart{stroke:#f0857a; animation-delay:.4s}
+  @keyframes draw{0%{stroke-dashoffset:340}55%{stroke-dashoffset:0}88%{stroke-dashoffset:0; opacity:1}100%{stroke-dashoffset:0; opacity:0}}
+  .s2 .peer{position:absolute; width:12px; height:12px; border-radius:999px; background:#f5b301; opacity:0; animation:peerPop 3s ease-in-out infinite}
+  .s2 .peer.b{background:#a06bff; animation-delay:1.2s}
+
+  /* ── Slide 3: 金币乐园登场动画 ── */
+  .s3{background:radial-gradient(120% 120% at 50% 0%,#fff0c8,#ffe39a)}
+  .s3 .cards{display:flex; gap:10px}
+  .s3 .c{width:44px; height:60px; border-radius:10px; background:#fff; box-shadow:0 6px 14px rgba(0,0,0,.14);
+    display:flex; align-items:center; justify-content:center; font-size:24px; opacity:0; animation:enter 2.6s ease-in-out infinite}
+  .s3 .c:nth-child(1){animation-delay:0s} .s3 .c:nth-child(2){animation-delay:.22s} .s3 .c:nth-child(3){animation-delay:.44s}
+  @keyframes enter{
+    0%{opacity:0; transform:translateY(40px) rotate(-16deg) scale(.6)}
+    22%{opacity:1; transform:translateY(-6px) rotate(4deg) scale(1.06)}
+    32%{transform:translateY(0) rotate(0) scale(1)}
+    78%{opacity:1; transform:none}
+    92%,100%{opacity:0; transform:translateY(-12px) scale(.9)}
+  }
+
+  /* ── Slide 4: GIF 收藏 ── */
+  .s4{background:radial-gradient(120% 120% at 50% 0%,#ece0ff,#dcc8ff)}
+  .s4 .wrap{position:relative; width:150px; height:150px}
+  .s4 .gif{position:absolute; left:0; top:20px; width:92px; height:66px; border-radius:10px;
+    background:linear-gradient(135deg,#a06bff,#7a4ee0); color:#fff; font-weight:900; font-size:20px;
+    display:flex; align-items:center; justify-content:center; box-shadow:0 6px 14px rgba(0,0,0,.18)}
+  .s4 .star{position:absolute; left:74px; top:14px; font-size:22px; animation:starPop 3s ease-in-out infinite}
+  @keyframes starPop{0%,20%{transform:scale(.6); opacity:.4}30%{transform:scale(1.4); opacity:1}40%,100%{transform:scale(1); opacity:1}}
+  .s4 .shelf{position:absolute; left:0; bottom:6px; width:150px; height:40px; border-radius:10px;
+    border:2px dashed rgba(160,107,255,.5); display:flex; align-items:center; gap:6px; padding:0 8px}
+  .s4 .mini{width:30px; height:24px; border-radius:6px; background:linear-gradient(135deg,#a06bff,#7a4ee0); opacity:0; animation:toShelf 3s ease-in-out infinite}
+  @keyframes toShelf{0%,42%{opacity:0; transform:translate(30px,-70px) scale(1.6)}56%{opacity:1; transform:none}100%{opacity:1}}
+
+  /* ── Slide 5: 像素小窗口 ── */
+  .s5{background:linear-gradient(#20123a,#3a2560)}
+  .s5 canvas{image-rendering:pixelated; width:180px; height:150px; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,.4)}
+
+  @media (prefers-reduced-motion: reduce){ *{animation:none !important} .slide{transition:opacity .2s} }
+</style>
+</head>
+<body>
+  <div class="dots" id="dots"></div>
+  <div class="track" id="track">
+
+    <section class="slide on">
+      <div class="stage s1"><div class="msg">💬</div><div class="jar">🫙</div></div>
+      <div class="kick" style="color:var(--a1)">收藏 · 泡泡罐</div>
+      <h2>把喜欢的留言收进罐子</h2>
+      <p class="desc">在任意留言下点 <b>🫙 收藏</b>，就算它过期消失了，也能在泡泡罐里回味 —— 还能跨设备同步，图片/GIF 也收得进、点开还能放大看。</p>
+    </section>
+
+    <section class="slide">
+      <div class="stage s2">
+        <div class="board">
+          <svg viewBox="0 0 150 150"><path d="M45 95 Q75 40 105 95" /><path class="heart" d="M75 62 q-14 -18 -26 -2 q-8 12 26 34 q34 -22 26 -34 q-12 -16 -26 2 z"/></svg>
+          <span class="peer" style="left:24px; top:30px"></span>
+          <span class="peer b" style="right:22px; bottom:34px"></span>
+        </div>
+      </div>
+      <div class="kick" style="color:var(--a2)">一起画 · 涂鸦墙</div>
+      <h2>大家一起涂鸦的墙</h2>
+      <p class="desc">在共享涂鸦墙上随手画几笔，别人的笔触会<b>实时</b>出现，你也能看到大家一起创作 —— 每天一面新墙。</p>
+    </section>
+
+    <section class="slide">
+      <div class="stage s3"><div class="cards"><div class="c">🪙</div><div class="c">🎁</div><div class="c">🏆</div></div></div>
+      <div class="kick" style="color:var(--a3)">更好看 · 金币乐园</div>
+      <h2>金币乐园的登场动画</h2>
+      <p class="desc">进入金币乐园时，商品与卡片会带着<b>弹跳、翻转、缩放</b>的登场动画一个个亮相，逛起来更有活力。</p>
+    </section>
+
+    <section class="slide">
+      <div class="stage s4"><div class="wrap">
+        <div class="gif">GIF</div><div class="star">⭐</div>
+        <div class="shelf"><div class="mini"></div></div>
+      </div></div>
+      <div class="kick" style="color:var(--a4)">更方便 · GIF 收藏</div>
+      <h2>收藏 GIF，下次一键发</h2>
+      <p class="desc">在 GIF 面板点 GIF 右上角的 <b>☆</b> 收藏，之后点顶部的 <b>⭐</b> 就能看到你收藏的 GIF —— 点一下直接发出去，不用再搜。</p>
+    </section>
+
+    <section class="slide">
+      <div class="stage s5"><canvas id="px" width="72" height="60"></canvas></div>
+      <div class="kick" style="color:var(--a5)">新装饰 · 像素小景</div>
+      <h2>左下角的像素小窗口</h2>
+      <p class="desc">左下角多了一个<b>像素营火小景</b>：天空跟着时间日夜变化、按当天天气飘雨落雪，在线的人会化作围着火堆的小人，还能走动、放烟花。手机上可一键收起。</p>
+    </section>
+
+  </div>
+
+  <div class="nav">
+    <button class="skip" id="skip">跳过</button>
+    <button class="next" id="next">下一个 →</button>
+  </div>
+
+<script>
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var dotsBox = document.getElementById('dots');
+  var next = document.getElementById('next');
+  var skip = document.getElementById('skip');
+  var i = 0;
+  slides.forEach(function(_, k){ var d=document.createElement('span'); d.className='dot'+(k===0?' on':''); d.addEventListener('click',function(){go(k)}); dotsBox.appendChild(d); });
+  var dots = Array.prototype.slice.call(dotsBox.children);
+
+  function go(n){
+    if(n<0) n=0; if(n>slides.length-1) n=slides.length-1;
+    slides.forEach(function(s,k){
+      s.classList.toggle('on', k===n);
+      s.classList.toggle('left', k<n);
+    });
+    dots.forEach(function(d,k){ d.classList.toggle('on', k===n); });
+    i=n;
+    next.textContent = (i===slides.length-1) ? '开始体验 🎉' : '下一个 →';
+    if(i===slides.length-1) drawPixel();
+  }
+  next.addEventListener('click', function(){ (i>=slides.length-1) ? done() : go(i+1); });
+  skip.addEventListener('click', done);
+  function done(){ try{ parent.postMessage('wn-close','*'); }catch(e){} }
+
+  /* Slide 5 — tiny animated pixel campfire */
+  var cv=document.getElementById('px'), ctx=cv&&cv.getContext('2d'), t=0, raf=0;
+  function px(x,y,c){ ctx.fillStyle=c; ctx.fillRect(x|0,y|0,1,1); }
+  function drawPixel(){ if(!ctx||raf) return;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    loop(reduce); }        // reduced-motion → render a single static frame
+  function loop(once){
+    t++;
+    // sky
+    for(var y=0;y<40;y++){ var f=y/40; ctx.fillStyle='rgb('+(32+f*30|0)+','+(18+f*20|0)+','+(58+f*40|0)+')'; ctx.fillRect(0,y,72,1); }
+    // stars
+    var st=[[8,6],[20,12],[54,8],[64,16],[38,5],[46,20]];
+    for(var s=0;s<st.length;s++){ if((t+ s*7)%40<24) px(st[s][0],st[s][1],'rgba(255,255,240,.9)'); }
+    // ground
+    ctx.fillStyle='#3a6a2e'; ctx.fillRect(0,40,72,20);
+    // logs
+    ctx.fillStyle='#5a3a1e'; ctx.fillRect(30,50,14,3);
+    // fire
+    for(var g=-5;g<=5;g++){ var d=Math.abs(g), h=12-d*2+(Math.random()*3-1); for(var k=0;k<h;k++){ var ff=k/(h||1); var c=ff<.25?'#ff5a1a':ff<.55?'#ff8c2a':ff<.8?'#ffd24a':'#fff2b0'; px(37+g,50-k,c); } }
+    // two villagers
+    px(20,48,'#e05a5a'); px(20,47,'#e8b48c'); px(52,48,'#5a86e0'); px(52,47,'#e8b48c');
+    if(once) return;
+    raf=requestAnimationFrame(function(){ setTimeout(loop, 90); });
+  }
+</script>
+</body>
+</html>

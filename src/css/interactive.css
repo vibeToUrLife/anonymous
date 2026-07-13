@@ -34,12 +34,18 @@
    campfire diorama. Reuses #liveOnlineCount (presence.js) + #myStayTimeVal
    (stay-ranking.js, ticks HH:MM:SS). ── */
 .live-score {
-  display: inline-flex; align-items: stretch;
+  display: inline-flex; align-items: stretch; flex-wrap: wrap; max-width: 100%;
   border: 2px solid #4a3826; border-radius: 8px; overflow: hidden;
   background: #160f08;
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
 }
+@keyframes liveScoreFlash {
+  0%, 100% { box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.04); }
+  50% { box-shadow: 0 0 0 2px #ffd24a, 0 0 20px rgba(255, 210, 74, 0.75); }
+}
+.live-score.flash { animation: liveScoreFlash 0.9s ease-out; }
+@media (prefers-reduced-motion: reduce) { .live-score.flash { animation: none; } }
 .live-score-seg { display: inline-flex; align-items: center; gap: 7px; padding: 6px 13px; }
 .live-score-seg[hidden] { display: none !important; }   /* attr must win over inline-flex */
 .live-score-seg + .live-score-seg { border-left: 2px solid #4a3826; }   /* divider before every seg but the first */

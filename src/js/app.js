@@ -627,6 +627,7 @@ let gifFavs = (function () { try { return JSON.parse(localStorage.getItem('gif_f
 let showingFavs = false;
 
 gifBtnEl.addEventListener('click', () => {
+    _gifSelectCallback = null;   // main GIF button → main-input context (never a stale reply)
     gifPickerEl.classList.toggle('show');
     if (gifPickerEl.classList.contains('show')) {
     gifSearchInput.focus();
@@ -1799,7 +1800,8 @@ function buildReplyInput(docId, parentReplyPath, depth) {
         };
         gifPickerEl.classList.add('show');
         gifSearchInput.focus();
-        if (!gifGridEl.querySelector('img')) loadTrendingGifs();
+        if (showingFavs) { showingFavs = false; if (gifFavBtn) gifFavBtn.classList.remove('on'); loadTrendingGifs(); }
+        else if (!gifGridEl.querySelector('.gif-thumb')) loadTrendingGifs();
     });
 
     const inp = document.createElement('input');

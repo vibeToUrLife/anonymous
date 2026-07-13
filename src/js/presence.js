@@ -30,6 +30,22 @@
   const presenceWrap = document.getElementById('livePresence');
   const typingEl     = document.getElementById('liveTyping');
   const input        = document.getElementById('answerInput');
+  const peakEl       = document.getElementById('peakVal');
+
+  // 今日峰值在线 — highest online count seen today (this device; resets at local midnight).
+  function _peakDay() { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+  let _peak = (function () { try { return JSON.parse(localStorage.getItem('board_peak')) || {}; } catch (e) { return {}; } })();
+  if (_peak.day !== _peakDay()) _peak = { day: _peakDay(), val: 0 };
+  if (peakEl && _peak.val) peakEl.textContent = _peak.val;
+  function bumpPeak(online) {
+    const t = _peakDay();
+    if (_peak.day !== t) _peak = { day: t, val: 0 };
+    if (online > _peak.val) {
+      _peak.val = online;
+      try { localStorage.setItem('board_peak', JSON.stringify(_peak)); } catch (e) {}
+    }
+    if (peakEl) peakEl.textContent = _peak.val || online;
+  }
 
   let myUid = null;
   let heartbeatTimer = null;
@@ -88,6 +104,7 @@
     const now = Date.now();
     const online = Math.max(1, L.countOnline(docs, now)); // I'm always ≥ 1
     if (countEl) countEl.textContent = online;
+    bumpPeak(online);
     if (presenceWrap) presenceWrap.title = online + ' viewing the board right now';
     if (typingEl) typingEl.hidden = !L.someoneElseTyping(docs, now, myUid);
   }

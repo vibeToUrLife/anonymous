@@ -222,6 +222,7 @@
       $('wnVersion').value = d.version || '';
       $('wnBadge').value   = d.badge || '';
       $('wnItems').value   = Array.isArray(d.items) ? d.items.join('\n') : '';
+      if ($('wnUrl')) $('wnUrl').value = d.url || '';
     }).catch(e => setStatus($('wnStatus'), e.message, 'err'));
     $('wnSave').addEventListener('click', () => {
       const version = $('wnVersion').value.trim();
@@ -229,7 +230,7 @@
       const items = $('wnItems').value.split('\n').map(s => s.trim()).filter(Boolean);
       $('wnSave').disabled = true;
       setStatus($('wnStatus'), 'Publishing…');
-      wnRef.set({ version, badge: $('wnBadge').value.trim(), items })
+      wnRef.set({ version, badge: $('wnBadge').value.trim(), items, url: ($('wnUrl') ? $('wnUrl').value.trim() : '') })
         .then(() => { setStatus($('wnStatus'), '✅ Published — users see it on next visit.', 'ok'); writeLog('announcement', null, null, version); })
         .catch(e => setStatus($('wnStatus'), e.message, 'err'))
         .finally(() => { $('wnSave').disabled = false; });

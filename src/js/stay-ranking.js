@@ -48,8 +48,11 @@
   var rankVal  = document.getElementById('myRankVal');
   var rankSeg  = document.getElementById('myRankSeg');
   var todayVal = document.getElementById('todayVal');
+  var stayLbl  = document.getElementById('myStayLbl');   // 摸鱼 label → slacker title
+  var scoreEl  = document.getElementById('liveScore');   // whole LED panel (for overtake flash)
   var myTotalSec = -1;               // authoritative total from the last snapshot
   var lastRankAt = 0;                // throttle rank recomputes
+  var lastRank = null;               // previous rank → overtake alerts
 
   function hms(s) {
     s = Math.max(0, Math.floor(s));
@@ -61,7 +64,25 @@
     window.addEventListener(ev, function () { lastAct = Date.now(); }, { passive: true });
   });
   function counting() { return !document.hidden && (Date.now() - lastAct) < 300000; }
-  function paint() { if (valEl && shownSec >= 0) valEl.textContent = hms(shownSec); }
+  // Slacker title by total hours: 新手→学徒→达人→大师→宗师→仙人.
+  function slackTitle(sec) {
+    var h = sec / 3600;
+    if (h < 1) return '新手'; if (h < 5) return '学徒'; if (h < 20) return '达人';
+    if (h < 60) return '大师'; if (h < 150) return '宗师'; return '仙人';
+  }
+  function paint() {
+    if (shownSec < 0) return;
+    if (valEl) valEl.textContent = hms(shownSec);
+    if (stayLbl) stayLbl.textContent = slackTitle(shownSec);   // the 摸鱼 label shows your title
+  }
+  // Brief glow on the whole scoreboard (rank overtake).
+  function flashScore() {
+    if (!scoreEl) return;
+    scoreEl.classList.remove('flash');
+    void scoreEl.offsetWidth;                 // reflow so the animation can retrigger
+    scoreEl.classList.add('flash');
+    setTimeout(function () { scoreEl.classList.remove('flash'); }, 950);
+  }
   function startClock() {
     if (clockTimer) return;
     clockTimer = setInterval(function () {
@@ -77,9 +98,17 @@
       var q = db.collection('rooms').where('totalStaySec', '>', myTotalSec);
       if (typeof q.count !== 'function') return;          // SDK without aggregation → stay hidden
       q.count().get().then(function (snap) {
-        var above = (snap.data && snap.data().count) || 0;
-        rankVal.textContent = '#' + (above + 1);
+        var newRank = ((snap.data && snap.data().count) || 0) + 1;
+        rankVal.textContent = '#' + newRank;
         if (rankSeg) rankSeg.hidden = false;
+        if (lastRank !== null && newRank !== lastRank) {     // overtake / reclaim
+          flashScore();
+          if (typeof showToast === 'function') {
+            if (newRank > lastRank) showToast('🐟 有人摸鱼反超你了！摸鱼榜 #' + lastRank + ' → #' + newRank, '');
+            else showToast('🎉 你反超啦！摸鱼榜 #' + lastRank + ' → #' + newRank, 'success');
+          }
+        }
+        lastRank = newRank;
       }).catch(function () {});
     } catch (e) {}
   }
@@ -115,7 +144,7 @@
     if (u) watchMine(u.uid);
     else {
       if (unsubMe) { unsubMe(); unsubMe = null; }
-      stopClock(); shownSec = -1; myTotalSec = -1; lastRankAt = 0;
+      stopClock(); shownSec = -1; myTotalSec = -1; lastRankAt = 0; lastRank = null;
       if (wrapEl) wrapEl.hidden = true;
       if (rankSeg) rankSeg.hidden = true;
       if (rankVal) rankVal.textContent = '#—';

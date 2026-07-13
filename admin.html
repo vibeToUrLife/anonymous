@@ -333,6 +333,8 @@
           </div>
           <label class="fld" for="wnItems">Items (one per line)</label>
           <textarea id="wnItems" placeholder="Added a new game&#10;Coin rewards rebalanced"></textarea>
+          <label class="fld" for="wnUrl">Intro page URL (optional)</label>
+          <input type="text" id="wnUrl" placeholder="e.g. ./whats-new/2026-07.html — shows this HTML once, instead of the items" />
           <div class="row" style="margin-top:12px"><button class="btn primary" id="wnSave">Publish announcement</button></div>
           <div class="status" id="wnStatus"></div>
         </div>
@@ -613,6 +615,6 @@
   <!-- Realtime Database — for moderating Pet World notice-board notes (RTDB, not Firestore). -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <script src="./src/js/firebase-config.js"></script>
-  <script src="./src/js/admin.js?v=3"></script>
+  <script src="./src/js/admin.js?v=4"></script>
 </body>
 </html>
