@@ -936,7 +936,6 @@ pollSubmitBtn.addEventListener('click', async () => {
             pollOptions: options,
             pollVotes: {}
         });
-        if (window.bumpTodayBubbles) window.bumpTodayBubbles();   // 今日泡泡 +1
         pollQuestionInput.value = '';
         inputs.forEach(inp => inp.value = '');
         // Reset to 2 inputs
@@ -1934,7 +1933,6 @@ async function submit() {
     suppressNextNotif = true;
     shouldScrollToBottom = true;
     const docRef = await answersRef.add(doc);
-    if (window.bumpTodayBubbles) window.bumpTodayBubbles();   // 今日泡泡 +1
     input.value = '';
     pendingImage = null;
     imgPreviewStrip.classList.remove('show');
@@ -2986,6 +2984,24 @@ function fireNotification(count, bodyText, title, tag) {
     ═══════════════════════════════════════════ */
 let _unsubAnswers = null;
 let _unsubFood = null;
+let _lastAnswerItems = [];   // newest board snapshot, kept for the 今日泡泡 recompute
+
+// Recompute the live-bar 今日泡泡 from the last answers snapshot — driven by
+// each snapshot AND a slow local timer, so it also rolls over at local midnight
+// and on passive 6h expiry WITHOUT any extra Firestore read (a snapshot only
+// fires on an actual doc change). It counts the currently-displayed bubbles
+// whose ts is today, so the number always agrees with the board. capped ⇒ the
+// whole 50-doc window is today's bubbles (true total may be higher → show "N+").
+// Guarded, so it's a harmless no-op on pages without the live bar.
+function _pushTodayCount() {
+    if (typeof window.setTodayBubbles !== 'function') return;
+    const mid = new Date(); mid.setHours(0, 0, 0, 0);
+    const midMs = mid.getTime();
+    let n = 0;
+    for (const a of _lastAnswerItems) { if (typeof a.ts === 'number' && a.ts >= midMs) n++; }
+    window.setTodayBubbles(n, n >= 50);
+}
+setInterval(function () { if (!document.hidden) _pushTodayCount(); }, 60000);
 
 function _subscribeAnswers() {
     if (_unsubAnswers) return; // already subscribed
@@ -3003,6 +3019,8 @@ function _subscribeAnswers() {
     });
     // Reverse to chronological order (query fetched desc for limit efficiency)
     items.reverse();
+    _lastAnswerItems = items;   // live-bar 今日泡泡 (recomputed here + on the timer)
+    _pushTodayCount();
     // Cache to localStorage (strip large images from replies to save space)
     try {
     const lite = items.map(a => ({

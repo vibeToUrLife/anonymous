@@ -113,25 +113,22 @@
     } catch (e) {}
   }
 
-  // ── 今日泡泡: count of board messages posted since local midnight. ──
-  function _startOfToday() { var d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
-  function refreshToday() {
+  // ── 今日泡泡: how many still-alive board bubbles are from today. The board's
+  // live snapshot (app.js _subscribeAnswers) owns the number and pushes it here
+  // on every change, so this stays in realtime lock-step with what's actually on
+  // the board — no polling, no count() aggregate, no 150s lag. Messages live
+  // only 6h, so this reads as "today's posts that haven't expired" ≈ the current
+  // board; `capped` is true when the 50-doc window was full (true total higher). ──
+  window.setTodayBubbles = function (n, capped) {
     if (!todayVal) return;
-    try {
-      var q = db.collection('answers').where('ts', '>=', _startOfToday());
-      if (typeof q.count !== 'function') { todayVal.textContent = '—'; return; }
-      q.count().get().then(function (snap) {
-        todayVal.textContent = String((snap.data && snap.data().count) || 0);
-      }).catch(function () { todayVal.textContent = '—'; });
-    } catch (e) { todayVal.textContent = '—'; }
-  }
-  // Let the composer update 今日 the moment you post: an optimistic +1 for instant
-  // feedback, then a real count() to reconcile (in case others posted too).
-  window.refreshTodayBubbles = refreshToday;
-  window.bumpTodayBubbles = function () {
-    if (todayVal) { var n = parseInt(todayVal.textContent, 10); if (isFinite(n)) todayVal.textContent = String(n + 1); }
-    setTimeout(refreshToday, 1500);
+    n = Math.max(0, n | 0);
+    todayVal.textContent = capped ? (n + '+') : String(n);
   };
+  // Back-compat no-ops: the composer used to optimistically bump / re-count 今日.
+  // The live snapshot now reflects your own post instantly (Firestore fires the
+  // local write right away), so these are kept only so old call sites are safe.
+  window.bumpTodayBubbles = function () {};
+  window.refreshTodayBubbles = function () {};
 
   function watchMine(uid) {
     if (unsubMe) { unsubMe(); unsubMe = null; }
@@ -158,9 +155,7 @@
     }
   });
 
-  // 今日泡泡 is board-wide: load once now, then refresh a few times an hour while visible.
-  refreshToday();
-  setInterval(function () { if (!document.hidden) refreshToday(); }, 150000);
+  // 今日泡泡 needs no polling here — app.js pushes it live via setTodayBubbles.
 
   /* ── 停留榜 popup ──────────────────────────────────────────── */
   function build() {
