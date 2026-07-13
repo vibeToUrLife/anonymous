@@ -936,6 +936,7 @@ pollSubmitBtn.addEventListener('click', async () => {
             pollOptions: options,
             pollVotes: {}
         });
+        if (window.bumpTodayBubbles) window.bumpTodayBubbles();   // 今日泡泡 +1
         pollQuestionInput.value = '';
         inputs.forEach(inp => inp.value = '');
         // Reset to 2 inputs
@@ -1933,6 +1934,7 @@ async function submit() {
     suppressNextNotif = true;
     shouldScrollToBottom = true;
     const docRef = await answersRef.add(doc);
+    if (window.bumpTodayBubbles) window.bumpTodayBubbles();   // 今日泡泡 +1
     input.value = '';
     pendingImage = null;
     imgPreviewStrip.classList.remove('show');

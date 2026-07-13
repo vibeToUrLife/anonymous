@@ -125,6 +125,13 @@
       }).catch(function () { todayVal.textContent = '—'; });
     } catch (e) { todayVal.textContent = '—'; }
   }
+  // Let the composer update 今日 the moment you post: an optimistic +1 for instant
+  // feedback, then a real count() to reconcile (in case others posted too).
+  window.refreshTodayBubbles = refreshToday;
+  window.bumpTodayBubbles = function () {
+    if (todayVal) { var n = parseInt(todayVal.textContent, 10); if (isFinite(n)) todayVal.textContent = String(n + 1); }
+    setTimeout(refreshToday, 1500);
+  };
 
   function watchMine(uid) {
     if (unsubMe) { unsubMe(); unsubMe = null; }
