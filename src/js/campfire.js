@@ -182,6 +182,7 @@
     if (hbTimer) clearInterval(hbTimer);
     hbTimer = setInterval(function () {
       if (dayKey() !== joinedDay) { leave(); join(); return; }   // re-bind to the new day at local midnight
+      if (document.hidden) return;                                // backgrounded tab isn't "at the fire" (mirrors presence)
       if (meRef) meRef.update({ ts: Date.now() }).catch(function () {});
     }, 15000);
     // fireworks broadcast channel
@@ -265,8 +266,9 @@
     const list = [];
     if (joined) {
       list.push({ x: me.x, y: me.y, sh: SHIRTS[hashUid(myUid) % SHIRTS.length], moving: me.moving, me: true });
-      const others = Object.keys(players);
-      for (let i = 0; i < others.length && list.length < MAX_PEOPLE; i++) { const p = players[others[i]]; list.push({ x: p.x, y: p.y, sh: SHIRTS[hashUid(others[i]) % SHIRTS.length], moving: (Math.abs(p.x - p.tx) > 0.004 || Math.abs(p.y - p.ty) > 0.004), me: false }); }
+      const cap = Math.max(1, Math.min(MAX_PEOPLE, readCount()));   // never show more villagers than are online
+      const others = Object.keys(players).sort(function (a, b) { return (players[b].ts || 0) - (players[a].ts || 0); });  // freshest first
+      for (let i = 0; i < others.length && list.length < cap; i++) { const p = players[others[i]]; list.push({ x: p.x, y: p.y, sh: SHIRTS[hashUid(others[i]) % SHIRTS.length], moving: (Math.abs(p.x - p.tx) > 0.004 || Math.abs(p.y - p.ty) > 0.004), me: false }); }
     } else {                                                          // fallback: villagers = online count, sitting in a ring
       const n = Math.min(fallbackCount, MAX_PEOPLE);
       for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + (i + 0.5) / n * 6.283; list.push({ x: clamp01(((fx + Math.cos(a) * 20) - GX0) / GXW), y: clamp01(((fy - 2 + Math.sin(a) * 8) - GY0) / GYH), sh: SHIRTS[i % SHIRTS.length], moving: false, me: false }); }
@@ -299,7 +301,7 @@
     drawWeather(w);
     drawFireworks();
     const na = nightAmt(hours); if (na > 0) rect(0, HORIZON, W, H - HORIZON, 'rgba(10,10,30,' + (na * 0.28).toFixed(2) + ')');
-    const total = joined ? (1 + Object.keys(players).length) : fallbackCount;
+    const total = joined ? Math.min(1 + Object.keys(players).length, Math.max(1, readCount())) : fallbackCount;
     if (total > MAX_PEOPLE) { ctx.fillStyle = '#ffe6a0'; ctx.font = '8px monospace'; ctx.textBaseline = 'top'; ctx.fillText('+' + (total - MAX_PEOPLE), W - 16, HORIZON + 2); }
   }
 
