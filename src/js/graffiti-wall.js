@@ -9,11 +9,12 @@
  * happens in draw mode.
  *
  * The wall is anchored to the DOCUMENT, not the screen: a stroke's Y is stored
- * as viewport-heights from the top of the page, so scrolling moves through the
- * drawing like real wallpaper (it does NOT stick to the viewport). The bitmap
- * stays viewport-sized and fixed for memory's sake; every stroke is rendered
- * offset by the current scroll position and the layer repaints (throttled) as
- * you scroll.
+ * as absolute CSS pixels from the top of the page (NOT viewport-heights, so a
+ * drawing keeps the same page position whatever the viewer's window height),
+ * so scrolling moves through the drawing like real wallpaper (it does NOT stick
+ * to the viewport). The bitmap stays viewport-sized and fixed for memory's
+ * sake; every stroke is rendered offset by the current scroll position and the
+ * layer repaints (throttled) as you scroll.
  *
  * Sync: each finished stroke is ONE tiny RTDB write under
  * wall/{localDay}/strokes (compact string format from wall-logic.js); clients
@@ -73,12 +74,12 @@
   const order = [];               // pushKey[] in arrival order
   const myKeys = [];              // my strokes this session (undo stack)
 
-  // Document → screen: x is a width fraction; y is viewport-heights from the
+  // Document → screen: x is a width fraction; y is absolute CSS px from the
   // top of the page, so subtracting the scroll makes it scroll with content.
   function scrX(nx) { return nx * window.innerWidth; }
-  function scrY(ny) { return ny * window.innerHeight - window.scrollY; }
+  function scrY(ny) { return ny - window.scrollY; }
 
-  // Build the render record for a wire stroke, caching its Y bounds (in vh)
+  // Build the render record for a wire stroke, caching its Y bounds (in px)
   // so redraw() can skip strokes that aren't on screen. `by` is kept so the
   // eraser can hit-test only the current user's own strokes.
   function makeStroke(v) {
@@ -95,9 +96,10 @@
     if (!pts.length) return;
     // Cull: skip strokes whose vertical span isn't in the viewport right now.
     // Pad by half the max brush width so a thick stroke's halo (or a dot's
-    // radius) still paints when its centre sits just off the edge.
-    const H = window.innerHeight, top = window.scrollY, bottom = top + H;
-    if (s.maxY * H < top - CULL_PAD || s.minY * H > bottom + CULL_PAD) return;
+    // radius) still paints when its centre sits just off the edge. minY/maxY
+    // are absolute document px, matching top/bottom below.
+    const top = window.scrollY, bottom = top + window.innerHeight;
+    if (s.maxY < top - CULL_PAD || s.minY > bottom + CULL_PAD) return;
     // c is a packed RGB int now; intToHex clamps any crafted value safely.
     const wi = Math.abs(Math.floor(s.w) || 0) % WL.WIDTHS.length;
     ctx.strokeStyle = ctx.fillStyle = WL.intToHex(s.c);
@@ -339,11 +341,11 @@
     rtdb.ref('wall/' + m.day + '/strokes/' + m.key).remove().catch(() => {});
   }
 
-  // Screen point → stored document point ({x: width fraction, y: vh-from-top}).
+  // Screen point → stored document point ({x: width fraction, y: px-from-top}).
   function docPoint(e) {
     return {
       x: e.clientX / window.innerWidth,
-      y: (e.clientY + window.scrollY) / window.innerHeight
+      y: e.clientY + window.scrollY
     };
   }
 

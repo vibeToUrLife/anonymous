@@ -2,9 +2,11 @@
  * wall-logic.js — Pure logic for the 涂鸦墙 (graffiti wall): a shared drawing
  * layer behind the bubble board.
  *
- * Strokes travel over RTDB as one compact string per stroke ("512,340;520,345"
- * — coordinates quantized to a 0..1000 grid of the viewport), so a whole
- * stroke is a single tiny write and replays identically on any screen size.
+ * Strokes travel over RTDB as one compact string per stroke ("512,340;520,900"
+ * — x quantized to a 0..1000 fraction of the viewport width, y stored as
+ * absolute CSS pixels from the document top), so a whole stroke is a single
+ * tiny write. Anchoring y to real document pixels (not viewport-heights) keeps
+ * a stroke at the SAME page position for everyone, whatever their window height.
  * Browser global: WallLogic. CommonJS export for the Node unit tests.
  */
 (function (global) {
@@ -41,17 +43,16 @@
 
   /* Coordinate model — the wall is anchored to the DOCUMENT, not the screen,
      so drawings scroll with the page like a real background.
-       x = fraction of viewport width           (0..1; the board never scrolls
-                                                  horizontally)
-       y = viewport-heights from the document top (>= 0, may exceed 1). The
-           reference (one screen height) is fixed, so a drawing keeps its page
-           position even as bubbles are added/removed and the page grows. */
+       x = fraction of viewport width          (0..1; the board never scrolls
+                                                 horizontally)
+       y = CSS pixels from the document top     (>= 0). Absolute pixels — NOT
+           viewport-heights — so the same stroke lands at the same page spot no
+           matter how tall the viewer's window is (a window-height-relative unit
+           made drawings slide up/down as the window was resized). */
   /** X quantizes to a 0..XGRID grid (thousandths of viewport width). */
   WL.XGRID = 1000;
-  /** Y quantizes to 1/YSCALE of a screen height. */
-  WL.YSCALE = 1000;
-  /** Cap Y (in screens) so one crafted stroke can't inflate the payload. */
-  WL.Y_MAX_VH = 200;
+  /** Cap Y (document CSS px) so one crafted stroke can't inflate the payload. */
+  WL.Y_MAX_PX = 200000;
   /** Points per stroke — hit it and the client seamlessly starts a new one. */
   WL.MAX_POINTS = 240;
   /** Wire-format guard for a packed stroke (also enforced by RTDB rules).
@@ -70,17 +71,17 @@
     return Math.max(0, Math.min(WL.XGRID, Math.round(v * WL.XGRID)));
   };
 
-  /** Clamp+quantize a Y value in viewport-heights (>= 0) to the wire grid. */
+  /** Clamp+quantize a Y value in document CSS px (>= 0) to a whole pixel. */
   WL.quantY = function (v) {
     v = +v;
     if (!isFinite(v)) v = 0;
-    return Math.max(0, Math.min(WL.Y_MAX_VH * WL.YSCALE, Math.round(v * WL.YSCALE)));
+    return Math.max(0, Math.min(WL.Y_MAX_PX, Math.round(v)));
   };
 
   /**
    * Pack points into the wire string.
-   * @param {Array<{x:number,y:number}>} points  x = width fraction, y = vh-from-top
-   * @returns {string} "x1,y1;x2,y2;…" (grid units)
+   * @param {Array<{x:number,y:number}>} points  x = width fraction, y = px-from-top
+   * @returns {string} "x1,y1;x2,y2;…" (x in grid units, y in whole px)
    */
   WL.packPoints = function (points) {
     if (!Array.isArray(points)) return '';
@@ -91,7 +92,7 @@
   };
 
   /**
-   * Unpack a wire string back to points ({x: width fraction, y: vh-from-top}).
+   * Unpack a wire string back to points ({x: width fraction, y: px-from-top}).
    * Malformed pairs are skipped, never thrown on.
    * @returns {Array<{x:number,y:number}>}
    */
@@ -105,7 +106,7 @@
       if (!isFinite(x) || !isFinite(y)) continue;
       out.push({
         x: Math.max(0, Math.min(1, x / WL.XGRID)),
-        y: Math.max(0, Math.min(WL.Y_MAX_VH, y / WL.YSCALE))
+        y: Math.max(0, Math.min(WL.Y_MAX_PX, y))
       });
     }
     return out;

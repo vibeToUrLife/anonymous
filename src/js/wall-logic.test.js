@@ -13,33 +13,33 @@ test('quantX clamps a 0..1 fraction onto the grid', () => {
   assert.strictEqual(WL.quantX(NaN), 0);
 });
 
-test('quantY keeps values past one screen and caps at Y_MAX_VH', () => {
+test('quantY rounds document px to a whole pixel and caps at Y_MAX_PX', () => {
   assert.strictEqual(WL.quantY(0), 0);
-  assert.strictEqual(WL.quantY(1), WL.YSCALE);          // exactly one screen down
-  assert.strictEqual(WL.quantY(3.5), 3500);             // 3.5 screens — NOT clamped to 1
-  assert.strictEqual(WL.quantY(WL.Y_MAX_VH + 50), WL.Y_MAX_VH * WL.YSCALE);
+  assert.strictEqual(WL.quantY(1234.6), 1235);          // rounds to whole px
+  assert.strictEqual(WL.quantY(1234.4), 1234);
+  assert.strictEqual(WL.quantY(WL.Y_MAX_PX + 500), WL.Y_MAX_PX);   // capped
   assert.strictEqual(WL.quantY(-2), 0);
   assert.strictEqual(WL.quantY(NaN), 0);
 });
 
-test('packPoints/unpackPoints round-trip, y can exceed one screen', () => {
-  const pts = [{ x: 0.1234, y: 0.9876 }, { x: 0, y: 4.25 }, { x: 1, y: 0 }];
+test('packPoints/unpackPoints round-trip: x fraction, y in document px', () => {
+  const pts = [{ x: 0.1234, y: 987 }, { x: 0, y: 4250 }, { x: 1, y: 0 }];
   const back = WL.unpackPoints(WL.packPoints(pts));
   assert.strictEqual(back.length, 3);
   back.forEach((p, i) => {
     assert.ok(Math.abs(p.x - pts[i].x) <= 0.5 / WL.XGRID + 1e-9);
-    assert.ok(Math.abs(p.y - pts[i].y) <= 0.5 / WL.YSCALE + 1e-9);
+    assert.ok(Math.abs(p.y - pts[i].y) <= 0.5 + 1e-9);   // ±half a pixel
   });
-  assert.ok(back[1].y > 1, 'a point 4.25 screens down must survive the round-trip');
+  assert.ok(back[1].y > 1000, 'a point far down the document must survive the round-trip');
 });
 
 test('pack/unpack tolerate junk without throwing', () => {
   assert.strictEqual(WL.packPoints('junk'), '');
-  assert.strictEqual(WL.packPoints([null, { x: 'a', y: 0 }, { x: 0.2, y: 0.2 }]), '200,200');
+  assert.strictEqual(WL.packPoints([null, { x: 'a', y: 0 }, { x: 0.2, y: 200 }]), '200,200');
   assert.deepStrictEqual(WL.unpackPoints(null), []);
   assert.deepStrictEqual(WL.unpackPoints(';;;'), []);
   assert.strictEqual(WL.unpackPoints('10,20;bad;30,40').length, 2);
-  // out-of-range wire values clamp: x into 0..1, y into 0..Y_MAX_VH
+  // out-of-range wire values clamp: x into 0..1, y into 0..Y_MAX_PX
   const p = WL.unpackPoints('99999,-50')[0];
   assert.strictEqual(p.x, 1);
   assert.strictEqual(p.y, 0);
@@ -47,7 +47,7 @@ test('pack/unpack tolerate junk without throwing', () => {
 
 test('a worst-case max-length stroke fits inside the wire guard', () => {
   const pts = [];
-  for (let i = 0; i < WL.MAX_POINTS; i++) pts.push({ x: 1, y: WL.Y_MAX_VH }); // widest digits
+  for (let i = 0; i < WL.MAX_POINTS; i++) pts.push({ x: 1, y: WL.Y_MAX_PX }); // widest digits
   const packed = WL.packPoints(pts);
   assert.ok(packed.length <= WL.MAX_PACKED_LEN,
     'packed length ' + packed.length + ' > ' + WL.MAX_PACKED_LEN);
