@@ -81,6 +81,7 @@ auth.onAuthStateChanged(async (user) => {
         const roomDoc = await db.collection('rooms').doc(user.uid).get();
         fetchOk = true;
         if (roomDoc.exists && roomDoc.data().displayName) serverName = roomDoc.data().displayName;
+        hydrateGifFavsFromRoom(roomDoc, user.uid);   // load saved GIFs from the DB (migrate local ones once)
     } catch (e) {}
     // Server value wins over the local cache; fall back to cache/auth/email only when unset.
     const displayName = serverName || cachedName || user.displayName || user.email?.split('@')[0] || 'Anonymous';
@@ -114,6 +115,12 @@ auth.onAuthStateChanged(async (user) => {
     if (_lastSeenInterval) { clearInterval(_lastSeenInterval); _lastSeenInterval = null; }
     if (_notifReadUnsub) { _notifReadUnsub(); _notifReadUnsub = null; }
     notifReadTs = 0;
+    // Clear the previous account's saved-GIF state so it can't leak into — or be
+    // written onto — the next account on a shared device (SPA, no page reload).
+    gifFavs = []; showingFavs = false;
+    if (gifFavBtn) gifFavBtn.classList.remove('on');
+    if (gifGridEl) gifGridEl.innerHTML = '';
+    if (typeof updateGifFavBtn === 'function') updateGifFavBtn();
     }
 });
 window.addEventListener('beforeunload', () => {
@@ -620,10 +627,12 @@ const gifSearchInput = document.getElementById('gifSearchInput');
 const gifBtnEl = document.getElementById('gifBtn');
 const gifCloseBtn = document.getElementById('gifPickerClose');
 const gifFavBtn = document.getElementById('gifFavBtn');
-/* Favorite GIFs — saved locally (just URLs, tiny) so you can reuse them by
-   clicking, instead of searching again. */
+/* Favorite GIFs — saved to the ACCOUNT (rooms/{uid}.gifFavs, just URLs, tiny) so
+   you can reuse them by clicking AND they follow you across devices / survive a
+   cache clear. Loaded from the DB on sign-in (hydrateGifFavsFromRoom); any
+   pre-existing device-local list is migrated into the DB there, once. */
 const GIF_FAV_CAP = 60;
-let gifFavs = (function () { try { return JSON.parse(localStorage.getItem('gif_favs')) || []; } catch (e) { return []; } })();
+let gifFavs = [];   // hydrated from the account's rooms doc on sign-in (never trusted from localStorage)
 let showingFavs = false;
 
 gifBtnEl.addEventListener('click', () => {
@@ -690,8 +699,48 @@ async function searchGifs(query) {
     }
 }
 
-/* ── Favorite GIFs ── */
-function saveGifFavs() { try { localStorage.setItem('gif_favs', JSON.stringify(gifFavs)); } catch (e) {} }
+/* ── Favorite GIFs (persisted to rooms/{uid}.gifFavs, not localStorage) ── */
+// Write the current list up to the account's rooms doc (debounced; owners may
+// write their own doc, so no Firestore-rule change is needed).
+let _gifFavsTimer = null;
+function persistGifFavs() {
+    const u = auth.currentUser;
+    if (!u) return;
+    clearTimeout(_gifFavsTimer);
+    _gifFavsTimer = setTimeout(() => {
+        db.collection('rooms').doc(u.uid).set({ gifFavs: gifFavs }, { merge: true }).catch(() => {});
+    }, 700);
+}
+// Load the account's saved GIFs from its rooms doc on sign-in. If the DB has none
+// yet, migrate any legacy device-local favorites ONCE, then drop the local copy —
+// so a different account signing in on the same device never inherits them.
+function hydrateGifFavsFromRoom(roomDoc, uid) {
+    // Ignore a superseded fetch: if the user signed out or switched accounts while
+    // rooms.get() was in flight, don't touch gifFavs or the legacy key (that would
+    // either leak favorites across accounts or delete them without persisting).
+    if (!uid || !auth.currentUser || auth.currentUser.uid !== uid) return;
+    const d = (roomDoc && roomDoc.exists) ? roomDoc.data() : null;
+    const dbFavs = (d && Array.isArray(d.gifFavs)) ? d.gifFavs.filter(f => f && f.u).slice(0, GIF_FAV_CAP) : null;
+    if (dbFavs) {
+        gifFavs = dbFavs;                                   // DB is the source of truth
+        try { localStorage.removeItem('gif_favs'); } catch (e) {}
+    } else {
+        // No DB favs yet → migrate any legacy device-local list ONCE, dropping the
+        // local copy only AFTER the write is acked so a migration can't lose favs.
+        let legacy = [];
+        try { legacy = JSON.parse(localStorage.getItem('gif_favs')) || []; } catch (e) {}
+        gifFavs = legacy.filter(f => f && f.u).slice(0, GIF_FAV_CAP);
+        if (gifFavs.length) {
+            db.collection('rooms').doc(uid).set({ gifFavs: gifFavs }, { merge: true })
+                .then(() => { try { localStorage.removeItem('gif_favs'); } catch (e) {} })
+                .catch(() => {});
+        } else {
+            try { localStorage.removeItem('gif_favs'); } catch (e) {}
+        }
+    }
+    updateGifFavBtn();
+    if (showingFavs) renderFavGifs();
+}
 function isGifFav(u) { return gifFavs.some(f => f && f.u === u); }
 function updateGifFavBtn() { if (gifFavBtn) gifFavBtn.title = '收藏的 GIF' + (gifFavs.length ? '（' + gifFavs.length + '）' : ''); }
 function toggleGifFav(postUrl, thumb, starEl) {
@@ -703,7 +752,7 @@ function toggleGifFav(postUrl, thumb, starEl) {
         if (gifFavs.length > GIF_FAV_CAP) gifFavs.length = GIF_FAV_CAP;
         if (starEl) { starEl.classList.add('on'); starEl.textContent = '★'; }
     }
-    saveGifFavs();
+    persistGifFavs();
     updateGifFavBtn();
     if (showingFavs) renderFavGifs();   // reflect a removal in the favorites view
 }
