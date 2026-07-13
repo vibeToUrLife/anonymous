@@ -191,6 +191,21 @@ service cloud.firestore {
     // Shared game state that any signed-in user legitimately writes.
     match /app_state/spin_result { allow read: if isAuth(); allow write: if isAuth(); }
     match /app_state/countdown   { allow read: if isAuth(); allow write: if isAuth(); }
+    // Today's GLOBAL peak online — one shared counter every signed-in client reads
+    // and may RAISE (client-computed from board_presence, written via a max
+    // transaction). Shape/range-validated so it can't be turned into junk; without
+    // this explicit match the catch-all below would make it developer-only.
+    match /app_state/presence_peak {
+      allow read: if isAuth();
+      allow write: if isAuth()
+                   && request.resource.data.keys().hasOnly(['day','val','ts'])
+                   && request.resource.data.day is number
+                   && request.resource.data.day >= 0
+                   && request.resource.data.val is number
+                   && request.resource.data.val >= 0
+                   && request.resource.data.val <= 100000
+                   && request.resource.data.ts is number;
+    }
     // Everything else under app_state is developer-only. This closes the old
     // blanket-write hole where this wildcard let ANY signed-in user overwrite
     // access_code / whats_new / maintenance through the OR-match semantics.
