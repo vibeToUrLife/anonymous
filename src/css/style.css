@@ -701,7 +701,7 @@ body.light-theme .gif-attribution { color: rgba(0,0,0,0.35); }
     50%      { transform: translateY(-4px) scale(1.15); }
 }
 
-/* ── Bubble HP bar (game-style) ── */
+/* ── Bubble HP bar (pixel / 8-bit game style) ── */
 .bubble-hp-wrapper {
     margin-bottom: 8px;
 }
@@ -709,33 +709,44 @@ body.light-theme .gif-attribution { color: rgba(0,0,0,0.35); }
     display: block;
     font-size: 10px;
     font-weight: 700;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
     text-transform: uppercase;
-    opacity: 0.7;
+    opacity: 0.75;
     margin-bottom: 3px;
     font-family: 'Courier New', Courier, monospace;
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.45);   /* hard pixel drop-shadow */
 }
 .bubble-hp {
     position: relative;
     width: 100%;
-    height: 10px;
-    border-radius: 3px;
-    background: rgba(0,0,0,0.35);
-    border: 1px solid rgba(255,255,255,0.15);
+    height: 12px;
+    background: #140f24;                        /* dark empty-cell track */
+    border: 2px solid #0a0713;                  /* chunky pixel frame — no radius */
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
     overflow: hidden;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.4);
 }
 .bubble-hp-fill {
     height: 100%;
-    border-radius: 2px;
-    transition: width 1s linear, background 0.5s;
-    box-shadow: 0 0 6px rgba(255,255,255,0.15);
+    /* Ticks down in discrete blocks instead of sliding — reads as 8-bit. */
+    transition: width 0.8s steps(10), background 0.4s;
+    /* Chunky top highlight + bottom shade = a shaded pixel bar, not a glow. */
+    box-shadow:
+        inset 0 2px 0 rgba(255,255,255,0.28),
+        inset 0 -3px 0 rgba(0,0,0,0.28);
+}
+/* Segment gutters — opaque vertical cuts drawn OVER the JS-coloured fill, so
+   the bar reads as discrete pixel cells whatever colour the fill is. */
+.bubble-hp::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
     background-image: repeating-linear-gradient(
-    90deg,
-    transparent,
-    transparent 8px,
-    rgba(0,0,0,0.12) 8px,
-    rgba(0,0,0,0.12) 9px
+        90deg,
+        transparent 0,
+        transparent 14px,
+        rgba(0,0,0,0.55) 14px,
+        rgba(0,0,0,0.55) 16px
     );
 }
 
@@ -1352,6 +1363,12 @@ body.light-theme .reply-input-row .reply-send-btn:hover { background: rgba(0,0,0
 body.light-theme .reply-attach { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.5); }
 body.light-theme .reply-attach:hover { background: rgba(0,0,0,0.12); }
 body.light-theme .bubble-hp { background: rgba(0,0,0,0.1); border-color: rgba(0,0,0,0.15); }
+/* lighter pixel gutters so the cells read on a pale track */
+body.light-theme .bubble-hp::after {
+    background-image: repeating-linear-gradient(
+        90deg, transparent 0, transparent 14px,
+        rgba(58,43,95,0.28) 14px, rgba(58,43,95,0.28) 16px);
+}
 body.light-theme .bubble-hp-label { color: rgba(0,0,0,0.5); }
 body.light-theme .empty-state { color: rgba(0,0,0,0.3); }
 body.light-theme .bubble-footer { color: rgba(0,0,0,0.4); }
