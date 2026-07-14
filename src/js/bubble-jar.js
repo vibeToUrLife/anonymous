@@ -1,5 +1,5 @@
 /**
- * bubble-jar.js — 🫙 泡泡罐: catch a bubble before it expires, re-read it later.
+ * bubble-jar.js — 🏺 泡泡罐: catch a bubble before it expires, re-read it later.
  *
  * Saves a small TEXT snapshot (images become a "🖼️ 图片留言" note — their data
  * is never copied). localStorage is the instant cache; the jar also SYNCS to
@@ -11,8 +11,8 @@
  * jar-logic.js.
  *
  * Entry points:
- *  · the 🫙 收藏 button in every bubble footer (app.js calls window.jarCatch);
- *  · the 🫙 泡泡罐 toggle in the live bar opens the jar overlay.
+ *  · the 🏺 收藏 button in every bubble footer (app.js calls window.jarCatch);
+ *  · the 🏺 泡泡罐 toggle in the live bar opens the jar overlay.
  *
  * Feature flag: jar — feature-flags.js hides #jarToggle; this file also hides
  * the per-bubble buttons with an injected rule and no-ops jarCatch.
@@ -176,7 +176,7 @@
     const entry = Jar.snapshot(a, Date.now());
     const res = Jar.add(items, entry);
     if (!res.added) {
-      toast(res.reason === 'dup' ? '已经在泡泡罐里啦 🫙' : '无法收藏这条留言');
+      toast(res.reason === 'dup' ? '已经在泡泡罐里啦 🏺' : '无法收藏这条留言');
       return;
     }
     items = res.list;
@@ -196,7 +196,7 @@
     pruneLocalImgs();   // a full jar just evicted its oldest entry — reclaim its photo now
                         // (runs every catch, so anon/local-only users don't leak either)
     flyToJar(bubbleEl);
-    toast('🫙 收进泡泡罐了！');
+    toast('🏺 收进泡泡罐了！');
     if (listEl) renderList();
     ensureHydrated().then(scheduleCloudSave);      // merge cloud first, then push
   };
@@ -331,9 +331,9 @@
 
     if (!items.length) {
       listEl.innerHTML =
-        '<div class="jar-empty"><div class="jar-empty-icon">🫙</div>' +
+        '<div class="jar-empty"><div class="jar-empty-icon">🏺</div>' +
         '<div class="jar-empty-title">罐子还是空的</div>' +
-        '<div class="jar-empty-text">在任意留言下点 <b>🫙 收藏</b>，' +
+        '<div class="jar-empty-text">在任意留言下点 <b>🏺 收藏</b>，' +
         '留言过期消失后也能在这里回味。</div>' +
         '<div class="jar-empty-note">☁️ 现在会跟着你的账号跨设备同步</div></div>';
       return;
@@ -362,7 +362,7 @@
     overlay.innerHTML =
       '<div class="jar-panel">' +
         '<div class="jar-head">' +
-          '<span class="jar-title">🫙 泡泡罐</span>' +
+          '<span class="jar-title">🏺 泡泡罐</span>' +
           '<span class="jar-count"></span>' +
           '<span class="jar-sync" data-state="idle"></span>' +
           '<button class="jar-close" type="button" title="Close (Esc)">✕</button>' +

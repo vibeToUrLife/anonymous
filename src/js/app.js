@@ -1484,7 +1484,7 @@ function render(items) {
     // device-local — bubble-jar.js owns the logic).
     const jarBtn = document.createElement('button');
     jarBtn.className = 'boost-toggle jar-btn';
-    jarBtn.textContent = '🫙 收藏';
+    jarBtn.textContent = '🏺 收藏';
     jarBtn.title = '收进泡泡罐（只保存在这台设备）';
     jarBtn.addEventListener('click', (e) => {
         e.stopPropagation();

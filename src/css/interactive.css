@@ -419,7 +419,7 @@ body.no-animations .pg-shake { animation: none; }
   100% { opacity: 0;   scale: 7; }
 }
 
-/* ── 🫙 泡泡罐 bubble jar ── */
+/* ── 🏺 泡泡罐 bubble jar ── */
 .jar-overlay {
   position: fixed;
   inset: 0;
