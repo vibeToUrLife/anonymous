@@ -25,6 +25,9 @@
   WL.MAX_COLOR = 0xFFFFFF;
   /** Eraser hit radius in screen px — a comfortable touch target. */
   WL.ERASER_R = 16;
+  /** Segments approximating a circle/ellipse outline. A placed shape is just a
+   *  polyline, so a smoother curve only costs a handful more points. */
+  WL.CIRCLE_SEGS = 40;
 
   /** "#rrggbb" (or "rrggbb") → 0..0xFFFFFF. Junk / short forms → 0 (black). */
   WL.hexToInt = function (hex) {
@@ -117,6 +120,45 @@
     return !!(s && typeof s.p === 'string' && s.p.length > 0 &&
       s.p.length <= WL.MAX_PACKED_LEN &&
       typeof s.c === 'number' && typeof s.w === 'number');
+  };
+
+  /**
+   * Outline of a simple shape as a polyline, so a placed shape rides the exact
+   * same wire format / renderer / eraser / undo as a free-hand stroke. Works in
+   * whatever 2D space the two corner points are given in — the wall passes
+   * SCREEN px so circles stay circular and squares square on screen, then maps
+   * the returned vertices into stored doc coords itself. `a`=(ax,ay) is the
+   * first click, `b`=(bx,by) the second; closed shapes repeat the first vertex.
+   * @param {string} kind  'line' | 'rect' | 'circle' | 'triangle'
+   * @returns {Array<{x:number,y:number}>}  empty on junk input / unknown kind
+   */
+  WL.shapePoints = function (kind, ax, ay, bx, by) {
+    ax = +ax; ay = +ay; bx = +bx; by = +by;
+    if (![ax, ay, bx, by].every(isFinite)) return [];
+    switch (kind) {
+      case 'line':
+        return [{ x: ax, y: ay }, { x: bx, y: by }];
+      case 'rect':
+        return [{ x: ax, y: ay }, { x: bx, y: ay },
+                { x: bx, y: by }, { x: ax, y: by }, { x: ax, y: ay }];
+      case 'triangle': {
+        const mx = (ax + bx) / 2;                 // apex centred over the base
+        return [{ x: mx, y: ay }, { x: bx, y: by },
+                { x: ax, y: by }, { x: mx, y: ay }];
+      }
+      case 'circle': {
+        const cx = (ax + bx) / 2, cy = (ay + by) / 2;
+        const rx = (bx - ax) / 2, ry = (by - ay) / 2;   // ellipse fills the box
+        const out = [];
+        for (let i = 0; i <= WL.CIRCLE_SEGS; i++) {
+          const t = (i / WL.CIRCLE_SEGS) * Math.PI * 2;
+          out.push({ x: cx + rx * Math.cos(t), y: cy + ry * Math.sin(t) });
+        }
+        return out;
+      }
+      default:
+        return [];
+    }
   };
 
   /** Squared distance between two screen points (decimation test). */

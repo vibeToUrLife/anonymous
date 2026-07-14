@@ -93,3 +93,36 @@ test('hexToInt / intToHex round-trip and clamp arbitrary RGB colours', () => {
   // every preset survives the hex→int→hex round-trip (they're lowercase 6-digit)
   WL.COLORS.forEach(c => assert.strictEqual(WL.intToHex(WL.hexToInt(c)), c.toLowerCase()));
 });
+
+test('shapePoints builds each outline as a closed polyline in the input space', () => {
+  // line — just the two endpoints
+  assert.deepStrictEqual(WL.shapePoints('line', 10, 20, 30, 40),
+    [{ x: 10, y: 20 }, { x: 30, y: 40 }]);
+  // rectangle — 4 box corners, closed back to the first
+  const r = WL.shapePoints('rect', 0, 0, 100, 60);
+  assert.strictEqual(r.length, 5);
+  assert.deepStrictEqual(r[0], r[4]);                        // closed
+  assert.deepStrictEqual(r[2], { x: 100, y: 60 });          // opposite corner
+  // triangle — apex centred over the base, closed
+  const t = WL.shapePoints('triangle', 0, 0, 100, 60);
+  assert.strictEqual(t.length, 4);
+  assert.deepStrictEqual(t[0], { x: 50, y: 0 });            // apex
+  assert.deepStrictEqual(t[0], t[3]);                        // closed
+  // circle — CIRCLE_SEGS+1 points on the ellipse filling the box, closed
+  const c = WL.shapePoints('circle', 0, 0, 100, 100);
+  assert.strictEqual(c.length, WL.CIRCLE_SEGS + 1);
+  c.forEach(p => {                                            // every point on the rim
+    const dx = p.x - 50, dy = p.y - 50;
+    assert.ok(Math.abs(Math.hypot(dx, dy) - 50) < 1e-9);
+  });
+  assert.ok(Math.abs(c[0].x - c[c.length - 1].x) < 1e-9);    // closed
+});
+
+test('shapePoints tolerates junk / unknown kinds without throwing', () => {
+  assert.deepStrictEqual(WL.shapePoints('rect', NaN, 0, 1, 1), []);
+  assert.deepStrictEqual(WL.shapePoints('star', 0, 0, 1, 1), []);
+  // a degenerate (zero-size) shape still returns a valid, packable polyline
+  const packed = WL.packPoints(WL.shapePoints('rect', 5, 5, 5, 5)
+    .map(p => ({ x: p.x / 1000, y: p.y })));
+  assert.strictEqual(typeof packed, 'string');
+});

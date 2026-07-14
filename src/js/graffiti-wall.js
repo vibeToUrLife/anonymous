@@ -127,7 +127,10 @@
   let scrollRaf = 0;
   function onScroll() {
     if (scrollRaf) return;
-    scrollRaf = requestAnimationFrame(() => { scrollRaf = 0; redraw(); });
+    scrollRaf = requestAnimationFrame(() => {
+      scrollRaf = 0;
+      (shapeKind && shapeAnchor) ? drawShapePreview() : redraw();
+    });
   }
 
   /* ── RTDB subscription (per local day; re-attached at rollover) ── */
@@ -204,12 +207,52 @@
   let lastPx = null;                       // last sampled point in screen px
   let activePid = null;                    // the one pointer that owns the gesture
   let unavailableToasted = false;          // "rules not deployed" — say it once
+  let shapeKind = null;                    // null = free-hand pen; else 'line'|'rect'|'circle'|'triangle'
+  let shapeAnchor = null;                  // 1st click of a shape, in DOC coords (scroll-safe)
+  let shapePreviewPx = null;               // last pointer pos (screen px) for the rubber-band
+  let shapeRow = null;                     // toolbar shapes row (highlight toggle)
+  let hintEl = null;                       // toolbar hint line (retargets per tool)
+  let shapePreviewRaf = 0;                 // rAF handle throttling the preview repaint
+  const SHAPE_MIN_PX = 6;                  // 2nd click nearer than this = too small → cancel
+
+  const HINT_PEN   = '✏️ 画在留言板背景上 · 大家都看得到 · 每天自动清空';
+  const HINT_SHAPE = '⬡ 点一下定起点，再点一下完成 · Esc / 右键取消';
+  const HINT_ERASE = '🧽 拖动擦掉我自己画的';
+  function updateHint() {
+    if (hintEl) hintEl.textContent = erasing ? HINT_ERASE : (shapeKind ? HINT_SHAPE : HINT_PEN);
+  }
+
+  // Highlight the active shape button ('pen' == free-hand). Safe before the row exists.
+  function highlightShapes(kind) {
+    if (!shapeRow) return;
+    shapeRow.querySelectorAll('.wall-shape').forEach((b) =>
+      b.classList.toggle('sel', b.dataset.shape === (kind || 'pen')));
+  }
+
+  // Drop a half-drawn shape (anchor placed, waiting for the 2nd click).
+  function cancelShape() {
+    if (!shapeAnchor) return;
+    shapeAnchor = null; shapePreviewPx = null;
+    redraw();
+  }
 
   function setErasing(on) {
     erasing = on;
-    if (on) stroke = null;                  // discard any in-progress draw
+    if (on) { stroke = null; shapeKind = null; cancelShape(); highlightShapes(null); }
     canvas.classList.toggle('erasing', on);
+    canvas.classList.toggle('shaping', !!shapeKind);
     if (eraserBtn) eraserBtn.classList.toggle('sel', on);
+    updateHint();
+  }
+
+  // Pick a drawing tool: null = free-hand pen, else a shape kind.
+  function setShape(kind) {
+    if (erasing) setErasing(false);         // leaving the eraser
+    shapeKind = kind;
+    cancelShape();
+    highlightShapes(kind);
+    canvas.classList.toggle('shaping', !!kind);
+    updateHint();
   }
 
   // Delete every one of MY strokes whose ink passes under the eraser at this
@@ -239,7 +282,7 @@
     toolbar.className = 'wall-toolbar';
     const hint = document.createElement('div');
     hint.className = 'wall-hint';
-    hint.textContent = '✏️ 画在留言板背景上 · 大家都看得到 · 每天自动清空';
+    hintEl = hint;                          // updateHint() retargets it per tool
     toolbar.appendChild(hint);
 
     const row = document.createElement('div');
@@ -269,6 +312,26 @@
     custom.appendChild(picker);
     row.appendChild(custom);
     toolbar.appendChild(row);
+
+    // Shape tools: ✏️ free-hand pen + the four outline shapes. A shape draws
+    // with the current colour + brush width, then commits as a normal stroke.
+    shapeRow = document.createElement('div');
+    shapeRow.className = 'wall-row wall-shape-row';
+    [['pen', '✏️', '画笔（自由涂鸦）'],
+     ['line', '╱', '直线'],
+     ['rect', '▭', '矩形'],
+     ['circle', '◯', '圆形'],
+     ['triangle', '△', '三角形']].forEach(([k, glyph, title]) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'wall-shape' + ((shapeKind || 'pen') === k ? ' sel' : '');
+      b.dataset.shape = k;
+      b.title = title;
+      b.textContent = glyph;
+      b.addEventListener('click', () => setShape(k === 'pen' ? null : k));
+      shapeRow.appendChild(b);
+    });
+    toolbar.appendChild(shapeRow);
 
     const row2 = document.createElement('div');
     row2.className = 'wall-row';
@@ -306,6 +369,7 @@
     row2.appendChild(doneBt);
     toolbar.appendChild(row2);
     document.body.appendChild(toolbar);
+    updateHint();                          // sync the hint with the current tool
   }
 
   function enterDraw() {
@@ -322,10 +386,12 @@
     drawMode = false;
     endStroke();                            // commit anything mid-flight
     setErasing(false);
+    shapeKind = null; shapeAnchor = null; shapePreviewPx = null;
+    if (shapePreviewRaf) { cancelAnimationFrame(shapePreviewRaf); shapePreviewRaf = 0; }
     activePid = null; lastPx = null;
-    eraserBtn = null;
+    eraserBtn = null; shapeRow = null; hintEl = null;
     document.body.classList.remove('wall-drawing');
-    canvas.classList.remove('drawing');
+    canvas.classList.remove('drawing', 'shaping');
     toggle.classList.remove('active');
     if (toolbar) { toolbar.remove(); toolbar = null; }
   }
@@ -348,11 +414,75 @@
       y: e.clientY + window.scrollY
     };
   }
+  // Same mapping for a synthetic (shape) point already in screen px.
+  function screenToDoc(px, py) {
+    return { x: px / window.innerWidth, y: py + window.scrollY };
+  }
+
+  /* ── Shape placement (two-click) ─────────────────────────── */
+  // 1st click drops the anchor; 2nd builds the outline between the two points
+  // (in screen px, so it stays true to shape), maps it to doc coords, commits.
+  function handleShapeClick(e) {
+    if (!shapeAnchor) {                       // first click — remember the start
+      shapeAnchor = docPoint(e);
+      shapePreviewPx = { x: e.clientX, y: e.clientY };
+      drawShapePreview();                     // leave a start marker right away
+      return;
+    }
+    const ax = scrX(shapeAnchor.x), ay = scrY(shapeAnchor.y);
+    shapeAnchor = null; shapePreviewPx = null;
+    // Too tiny → treat as a mis-click, not a speck of a shape.
+    if (WL.dist2(ax, ay, e.clientX, e.clientY) < SHAPE_MIN_PX * SHAPE_MIN_PX) { redraw(); return; }
+    const scr = WL.shapePoints(shapeKind, ax, ay, e.clientX, e.clientY);
+    redraw();                                 // wipe the dashed preview
+    if (scr.length > 1) {                     // instant local ink; the RTDB echo overdraws it
+      ctx.strokeStyle = colorHex;
+      ctx.lineWidth = WL.WIDTHS[widthIdx];
+      ctx.beginPath();
+      ctx.moveTo(scr[0].x, scr[0].y);
+      for (let i = 1; i < scr.length; i++) ctx.lineTo(scr[i].x, scr[i].y);
+      ctx.stroke();
+    }
+    commitPoints(scr.map((p) => screenToDoc(p.x, p.y)));
+  }
+
+  function scheduleShapePreview() {
+    if (!shapePreviewRaf) shapePreviewRaf = requestAnimationFrame(drawShapePreview);
+  }
+
+  // Repaint the wall, then the shape-in-progress on top: a dashed rubber-band
+  // once the pointer has moved, or a solid start-dot before it has (which is
+  // all a touch tap ever shows, since there's no hover between the two taps).
+  function drawShapePreview() {
+    shapePreviewRaf = 0;
+    redraw();
+    if (!shapeKind || !shapeAnchor) return;
+    const ax = scrX(shapeAnchor.x), ay = scrY(shapeAnchor.y);
+    const b = shapePreviewPx || { x: ax, y: ay };
+    ctx.save();
+    ctx.strokeStyle = ctx.fillStyle = colorHex;
+    if (WL.dist2(ax, ay, b.x, b.y) < SHAPE_MIN_PX * SHAPE_MIN_PX) {
+      ctx.beginPath();
+      ctx.arc(ax, ay, Math.max(3, WL.WIDTHS[widthIdx] / 2), 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      const pts = WL.shapePoints(shapeKind, ax, ay, b.x, b.y);
+      ctx.globalAlpha = 0.85;
+      ctx.setLineDash([6, 5]);
+      ctx.lineWidth = WL.WIDTHS[widthIdx];
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
 
   /* pen input (only reaches the canvas in draw mode — pointer-events CSS) */
   canvas.addEventListener('pointerdown', (e) => {
     if (!drawMode || !e.isPrimary || activePid !== null) return;  // one gesture at a time
     e.preventDefault();
+    if (shapeKind) { handleShapeClick(e); return; }               // two-click shape, no drag
     activePid = e.pointerId;
     lastPx = { x: e.clientX, y: e.clientY };
     try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
@@ -366,7 +496,13 @@
   });
 
   canvas.addEventListener('pointermove', (e) => {
-    if (!drawMode || e.pointerId !== activePid || !lastPx) return;
+    if (!drawMode) return;
+    if (shapeKind && shapeAnchor) {           // live rubber-band (mouse hover between clicks)
+      shapePreviewPx = { x: e.clientX, y: e.clientY };
+      scheduleShapePreview();
+      return;
+    }
+    if (e.pointerId !== activePid || !lastPx) return;
     if (WL.dist2(lastPx.x, lastPx.y, e.clientX, e.clientY) < WL.MIN_MOVE_PX * WL.MIN_MOVE_PX) return;
     if (erasing) { eraseAt(e.clientX, e.clientY); lastPx = { x: e.clientX, y: e.clientY }; return; }
     if (!stroke) return;
@@ -396,13 +532,26 @@
   }
   canvas.addEventListener('pointerup', release);
   canvas.addEventListener('pointercancel', release);
-  // The OS long-press menu has no business on a drawing surface.
-  canvas.addEventListener('contextmenu', (e) => { if (drawMode) e.preventDefault(); });
+  // The OS long-press menu has no business on a drawing surface; a right-click
+  // there instead aborts a shape waiting for its second click.
+  canvas.addEventListener('contextmenu', (e) => {
+    if (!drawMode) return;
+    e.preventDefault();
+    cancelShape();
+  });
 
   function endStroke() {
     if (!stroke) return;
-    const packed = WL.packPoints(stroke);
+    const pts = stroke;
     stroke = null; lastPx = null;
+    commitPoints(pts);
+  }
+
+  // Push one finished polyline (free-hand OR a shape outline) to RTDB. Points
+  // are DOC coords; a shape is indistinguishable from a stroke on the wire, so
+  // it inherits sync, the eraser, undo and the daily reset for free.
+  function commitPoints(docPts) {
+    const packed = WL.packPoints(docPts);
     if (!packed || !myUid) return;
     // Past-midnight strokes belong to the NEW day's wall — roll the
     // subscription now instead of waiting for the 60s timer.
@@ -419,7 +568,11 @@
 
   /* wiring */
   toggle.addEventListener('click', () => { drawMode ? exitDraw() : enterDraw(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drawMode) exitDraw(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !drawMode) return;
+    if (shapeAnchor) cancelShape();           // 1st Esc drops a pending shape…
+    else exitDraw();                          // …a 2nd (or Esc with none) leaves draw mode
+  });
   window.addEventListener('resize', fitCanvas);
   window.addEventListener('scroll', onScroll, { passive: true });
   fitCanvas();

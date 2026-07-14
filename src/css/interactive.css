@@ -766,6 +766,21 @@ body.wall-drawing .bubble { opacity: 0.4 !important; }
 }
 .wall-eraser.sel { border-color: var(--accent, #c8b6ff); background: rgba(200, 182, 255, 0.28); }
 .wall-canvas.erasing { cursor: cell; }
+.wall-canvas.shaping { cursor: crosshair; }
+.wall-shape {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wall-shape.sel { border-color: var(--accent, #c8b6ff); background: rgba(200, 182, 255, 0.28); }
 .wall-brush {
   width: 30px; height: 30px;
   border-radius: 8px;
@@ -802,6 +817,7 @@ body.light-theme .wall-toolbar { background: rgba(252, 250, 255, 0.98); color: #
 body.light-theme .wall-swatch.sel { border-color: #3a2b5f; }
 body.light-theme .wall-brush, body.light-theme .wall-tool { background: rgba(0, 0, 0, 0.07); }
 body.light-theme .wall-brush i { background: #3a2b5f; }
+body.light-theme .wall-shape { background: rgba(0, 0, 0, 0.07); color: #3a2b5f; }
 body.light-theme .jar-panel { background: linear-gradient(180deg, #fdfbff, #f5f0ff); color: #3a2b5f; border-color: rgba(120, 90, 200, 0.2); }
 body.light-theme .doodle-panel { background: rgba(252, 250, 255, 0.98); color: #3a2b5f; border-color: rgba(120, 90, 200, 0.25); }
 body.light-theme .jar-close, body.light-theme .doodle-close,
