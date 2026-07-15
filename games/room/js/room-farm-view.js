@@ -15,8 +15,8 @@
     let _farmAnimStates = {};   // ephemeral wander state per animal id (not saved)
     let _farmParticles = [];    // floating hearts / +coins effects
     let _farmDropSeq = 0;
-    let _selectedCrop = 'wheat'; // crop planted when you tap an empty plot
-    let _plantQty = 1;           // how many plots the "Plant N" button fills at once
+    let _plantRow = 0;           // grid row the crop picker is planting into
+    let _pendingPlant = null;    // { row, cropId, count } awaiting partial-plant confirm
     let _farmHerdCollapsed = null; // null = auto; true/false once the user toggles
     const FARM_HERD_COLLAPSE_AT = 4; // herd longer than this auto-collapses the list
     let _farmProduceCollapsed = null; // null = auto; true/false once the user toggles
@@ -99,12 +99,17 @@
       return FARM_MAX_ANIMALS + 10 * (roomData.farmCapLevel || 0);
     }
 
-    // Screen-normalized position of garden plot index i (a row near the bottom).
-    // Plots laid out in rows of 10 across the soil strip (fits up to FARM_PLOT_MAX).
+    // Screen-normalized position of garden plot index i. Plots sit in rows of 7
+    // across the soil strip, shifted right to leave room for the row signboard.
     function _farmPlotPos(i) {
-      const perRow = 10;
+      const perRow = 7;
       const col = i % perRow, row = Math.floor(i / perRow);
-      return { x: 0.09 + col * 0.087, y: 0.82 + row * 0.075 };
+      return { x: 0.20 + col * 0.088, y: 0.72 + row * 0.066 };
+    }
+
+    // Normalized position of the signboard sitting to the LEFT of grid row `row`.
+    function _farmSignPos(row) {
+      return { x: 0.085, y: 0.72 + row * 0.066 };
     }
 
     // Local YYYY-MM-DD for the daily orders seed.
@@ -571,9 +576,8 @@
         '</div>' +
         '<div class="farm-panel-empty" style="padding-bottom:2px">' + usedPlots + '/' + plots.length + ' planted · ' + ripePlots + ' ripe</div>' +
         '<div class="farm-howto">' +
-          '👆 Tap a plot to pick a seed.<br>' +
-          '✋ <b>Hold and drag</b> across plots to plant a whole row at once.<br>' +
-          '⏳ Tap any ripe crop to harvest <b>everything that\'s ready</b>.' +
+          '🪧 Tap a row\'s <b>signboard</b> to plant that whole row.<br>' +
+          '⏳ Tap a ripe row to harvest <b>everything that\'s ready</b>.' +
         '</div>';
 
       // Build Machines: buy here; built ones appear on the farm where you operate them.
@@ -944,8 +948,6 @@
     }
 
     /* ── Garden ── */
-    function selectFarmCrop(id) { _selectedCrop = id; renderFarmPanel(); }
-
     async function addFarmPlot() {
       if (viewingUid !== currentUid) return;
       roomData.farmPlots = roomData.farmPlots || [];
@@ -1007,27 +1009,20 @@
       showToast('🧺 Harvested ' + n + ' plot' + (n > 1 ? 's' : ''), 'success');
     }
 
-    // Tap a plot: plant the selected seed if empty, harvest if ripe, else show time.
-    function _plantOrHarvestPlot(plot, pos) {
-      const now = Date.now();
-      if (!plot.crop) {
-        const crop = FARM_CROPS.find(c => c.id === _selectedCrop);
-        if (!crop) return;
-        if (roomData.coins < crop.seedCost) return showToast('Not enough coins for ' + crop.name + ' seed!', 'error');
-        roomData.coins -= crop.seedCost;
-        plot.crop = crop.id; plot.plantedAt = now;
-        _farmParticles.push({ text: crop.emoji, x: pos.x, y: pos.y - 0.05, vy: -0.0008, life: 900, born: performance.now() });
-        saveRoom(); renderFarmPanel(); renderAll();
-        return;
+    // Tap anywhere in a garden row → act on the whole row: ripe harvests all
+    // ready crops, growing shows time left, empty opens the crop picker.
+    function _farmRowClick(row) {
+      if (viewingUid !== currentUid) return;
+      const plots = roomData.farmPlots || [];
+      const idxs = farmRowIndices(plots.length, row, 7);
+      if (!idxs.length) return;
+      const st = farmRowState(idxs.map(i => plots[i]), FARM_CROPS, Date.now());
+      if (st.state === 'ripe') return harvestAllFarm();
+      if (st.state === 'growing') {
+        const crop = FARM_CROPS.find(c => c.id === st.cropId);
+        return showToast((crop ? crop.emoji + ' ' + crop.name : 'Crop') + ' growing — ' + _fmtFarmTime(st.msLeft) + ' left', '');
       }
-      const crop = FARM_CROPS.find(c => c.id === plot.crop);
-      if (!crop) { plot.crop = null; plot.plantedAt = 0; saveRoom(); return; }
-      if (cropProgress(plot.plantedAt, now, crop.growMs) < 1) {
-        const left = Math.ceil((crop.growMs - (now - plot.plantedAt)) / 60000);
-        return showToast(crop.emoji + ' ' + crop.name + ' growing — ' + left + 'm left', '');
-      }
-      // Ripe → one tap collects EVERY ready crop, not just this one.
-      harvestAllFarm();
+      openCropPicker(row);
     }
 
     /* ── Crop picker (tap an empty plot) + plant helpers ── */
@@ -1037,106 +1032,97 @@
       return Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
     }
 
-    // Plant the currently-armed seed (_selectedCrop) into plot i. Silent on
-    // failure so drag-planting just stops when you run out of coins.
-    function _plantArmed(i) {
-      const plot = (roomData.farmPlots || [])[i];
-      if (!plot || plot.crop) return false;
-      const crop = FARM_CROPS.find(c => c.id === _selectedCrop);
-      if (!crop || roomData.coins < crop.seedCost) return false;
-      roomData.coins -= crop.seedCost;
-      plot.crop = crop.id; plot.plantedAt = Date.now();
-      const pos = _farmPlotPos(i);
-      _farmParticles.push({ text: crop.emoji, x: pos.x, y: pos.y - 0.05, vy: -0.0008, life: 900, born: performance.now() });
-      return true;
-    }
-
-    // Empty plot indices (lowest-first) — bulk plant fills these in order.
-    function _emptyPlotIdxs() {
-      const plots = roomData.farmPlots || [], out = [];
-      for (let i = 0; i < plots.length; i++) if (!plots[i].crop) out.push(i);
-      return out;
-    }
-    // Most seeds of the selected crop you can plant right now: capped by empty
-    // plots AND by what your coins can afford.
-    function _plantMaxQty() {
-      const crop = FARM_CROPS.find(c => c.id === _selectedCrop);
-      if (!crop) return 0;
-      const empties = _emptyPlotIdxs().length;
-      const byCoins = crop.seedCost > 0 ? Math.floor(roomData.coins / crop.seedCost) : empties;
-      return Math.min(empties, byCoins);
-    }
-
-    function openCropPicker() {
-      _plantQty = 1;
+    function openCropPicker(row) {
+      _plantRow = row || 0;
+      _pendingPlant = null;
       _renderCropPicker();
       const picker = document.getElementById('cropPicker');
       if (picker) picker.style.display = 'block';
     }
     function closeCropPicker() {
+      _pendingPlant = null;
       const p = document.getElementById('cropPicker');
       if (p) p.style.display = 'none';
     }
-    // Pick a seed: just select it (don't plant yet) and re-render, so the player
-    // can then choose how many to plant in one go.
-    function pickCrop(cropId) {
-      _selectedCrop = cropId;
-      _renderCropPicker();
+    // Simple crop chooser for the target row: pick a crop → plant the row.
+    function _renderCropPicker() {
+      const picker = document.getElementById('cropPicker');
+      if (!picker) return;
+      const plots = roomData.farmPlots || [];
+      const empties = farmRowIndices(plots.length, _plantRow, 7).filter(i => !plots[i].crop).length;
+      picker.innerHTML =
+        '<div class="cp-head">🌱 Plant this row</div>' +
+        '<div class="cp-bulk-info">Empty plots in row: <b>' + empties + '</b> · Coins: <b>' + roomData.coins + '</b></div>' +
+        FARM_CROPS.map(c => {
+          const afford = roomData.coins >= c.seedCost;
+          return '<button class="cp-crop"' + (afford ? '' : ' disabled') + ' onclick="plantRow(\'' + c.id + '\')">' +
+            '<span class="cp-emoji">' + c.emoji + '</span>' +
+            '<span class="cp-info"><b>' + c.name + '</b><small>grows in ' + _fmtFarmTime(c.growMs) + ' · ' + c.seedCost + '🪙/plot</small></span>' +
+            '<span class="cp-cost">' + (c.seedCost * empties) + '🪙</span>' +
+            '</button>';
+        }).join('') +
+        '<button class="cp-close" onclick="closeCropPicker()">Close</button>';
     }
-    // Quantity stepper. d is -1, +1, or 'max'. Clamped to [1, _plantMaxQty()].
-    function setPlantQty(d) {
-      const max = _plantMaxQty();
-      _plantQty = d === 'max' ? max : Math.min(max, Math.max(1, _plantQty + d));
-      _renderCropPicker();
-    }
-    // Plant the selected crop into the first N empty plots (N = chosen qty).
-    function plantSelected() {
+
+    // Chose a crop in the picker → plant the target row. Full-row when affordable,
+    // else a confirmation to plant as many as coins allow.
+    function plantRow(cropId) {
       if (viewingUid !== currentUid) return;
-      const crop = FARM_CROPS.find(c => c.id === _selectedCrop);
-      if (!crop) return;
-      const empties = _emptyPlotIdxs();
-      if (!empties.length) return showToast('No empty plots to plant!', '');
-      const n = Math.min(_plantQty, _plantMaxQty());
-      if (n <= 0) return showToast('Not enough coins for ' + crop.name + ' seed!', 'error');
+      const plots = roomData.farmPlots || [];
+      const emptyIdxs = farmRowIndices(plots.length, _plantRow, 7).filter(i => !plots[i].crop);
+      const crop = FARM_CROPS.find(c => c.id === cropId);
+      if (!crop || !emptyIdxs.length) { closeCropPicker(); return; }
+      const affordable = farmAffordableCount(roomData.coins, crop.seedCost, emptyIdxs.length);
+      if (affordable <= 0) { closeCropPicker(); return showToast('Not enough coins for ' + crop.name + ' seed!', 'error'); }
+      if (affordable >= emptyIdxs.length) return _doPlant(cropId, emptyIdxs);
+      _pendingPlant = { row: _plantRow, cropId: cropId, count: affordable, total: emptyIdxs.length };
+      _renderPlantConfirm(crop, emptyIdxs.length, affordable);
+    }
+
+    // Plant `crop` into the given plot indices (stops early if coins run out).
+    function _doPlant(cropId, idxs) {
+      const plots = roomData.farmPlots || [];
+      const crop = FARM_CROPS.find(c => c.id === cropId);
+      if (!crop) { closeCropPicker(); return; }
+      const now = Date.now();
       let planted = 0;
-      for (let k = 0; k < n; k++) if (_plantArmed(empties[k])) planted++;
+      for (const i of idxs) {
+        if (roomData.coins < crop.seedCost) break;
+        roomData.coins -= crop.seedCost;
+        plots[i].crop = crop.id; plots[i].plantedAt = now;
+        const pos = _farmPlotPos(i);
+        _farmParticles.push({ text: crop.emoji, x: pos.x, y: pos.y - 0.05, vy: -0.0008, life: 900, born: performance.now() });
+        planted++;
+      }
       closeCropPicker();
-      _plantQty = 1;
       if (planted) {
         saveRoom(); renderFarmPanel(); renderAll();
         showToast('🌱 Planted ' + planted + ' ' + crop.name + (planted > 1 ? 's' : ''), 'success');
       }
     }
-    function _renderCropPicker() {
+
+    // Not-enough-coins confirmation (detailed wording), reusing #cropPicker.
+    function _renderPlantConfirm(crop, total, affordable) {
       const picker = document.getElementById('cropPicker');
       if (!picker) return;
-      const empties = _emptyPlotIdxs().length;
-      const max = _plantMaxQty();
-      _plantQty = Math.min(Math.max(1, _plantQty), Math.max(1, max));
-      const crop = FARM_CROPS.find(c => c.id === _selectedCrop) || FARM_CROPS[0];
-      const qty = max > 0 ? _plantQty : 0;
-      const dis = max <= 0 ? ' disabled' : '';
       picker.innerHTML =
-        '<div class="cp-head">🌱 Plant what?</div>' +
-        FARM_CROPS.map(c => {
-          const afford = roomData.coins >= c.seedCost;
-          const sel = c.id === _selectedCrop ? ' selected' : '';
-          return '<button class="cp-crop' + sel + '"' + (afford ? '' : ' disabled') + ' onclick="pickCrop(\'' + c.id + '\')">' +
-            '<span class="cp-emoji">' + c.emoji + '</span>' +
-            '<span class="cp-info"><b>' + c.name + '</b><small>grows in ' + _fmtFarmTime(c.growMs) + '</small></span>' +
-            '<span class="cp-cost">' + c.seedCost + '🪙</span>' +
-            '</button>';
-        }).join('') +
-        '<div class="cp-bulk-info">Empty plots: <b>' + empties + '</b> · Coins: <b>' + roomData.coins + '</b></div>' +
-        '<div class="cp-stepper">' +
-          '<button class="cp-step" onclick="setPlantQty(-1)"' + dis + '>−</button>' +
-          '<span class="cp-qty">' + qty + '</span>' +
-          '<button class="cp-step" onclick="setPlantQty(1)"' + dis + '>+</button>' +
-          '<button class="cp-step cp-max" onclick="setPlantQty(\'max\')"' + dis + '>Max</button>' +
-        '</div>' +
-        '<button class="cp-plant"' + dis + ' onclick="plantSelected()">🌱 Plant ' + qty + ' · ' + (qty * crop.seedCost) + '🪙</button>' +
-        '<div class="farm-panel-empty" style="padding:2px 2px 0">✋ Or hold &amp; drag across plots to plant a row.</div>' +
-        '<button class="cp-close" onclick="closeCropPicker()">Close</button>';
+        '<div class="cp-head">🪙 Not enough coins</div>' +
+        '<div class="cp-bulk-info" style="line-height:1.5">A full row of <b>' + crop.emoji + ' ' + crop.name + '</b> costs <b>' + (crop.seedCost * total) + '🪙</b> (' + total + ' plots).<br>' +
+          'You have <b>' + roomData.coins + '🪙</b> — enough for <b>' + affordable + ' plots</b>.</div>' +
+        '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="confirmPlantPartial()">🌱 Plant ' + affordable + ' · ' + (affordable * crop.seedCost) + '🪙</button>' +
+        '<button class="cp-close" onclick="closeCropPicker()">Cancel</button>';
+      picker.style.display = 'block';
+    }
+
+    // Confirmed the partial plant → fill the affordable empty plots in the row.
+    function confirmPlantPartial() {
+      if (!_pendingPlant) return closeCropPicker();
+      const plots = roomData.farmPlots || [];
+      const idxs = farmRowIndices(plots.length, _pendingPlant.row, 7)
+        .filter(i => !plots[i].crop).slice(0, _pendingPlant.count);
+      const cropId = _pendingPlant.cropId;
+      _pendingPlant = null;
+      _doPlant(cropId, idxs);
     }
 
     function _showFarmTip(text, e) {
@@ -2072,6 +2058,41 @@
       }
     }
 
+    // A wooden signboard on a post, drawn to the left of a garden row. `st` is a
+    // farmRowState() result: blank when empty, crop emoji + name (+ % or ✨) else.
+    function _drawFarmSign(ctx, W, H, row, st) {
+      const pos = _farmSignPos(row);
+      const cx = pos.x * W, cy = pos.y * H;
+      const w = Math.max(36, Math.min(W, H) * 0.095), h = w * 0.72;
+      const x0 = cx - w / 2, y0 = cy - h / 2;
+      ctx.fillStyle = '#5a3c22';                                   // post
+      ctx.fillRect(cx - 2, y0 + h - 3, 4, h * 0.5);
+      ctx.fillStyle = '#8a5a2b';                                   // board
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x0, y0, w, h, 5); ctx.fill(); }
+      else ctx.fillRect(x0, y0, w, h);
+      ctx.strokeStyle = '#6b431f'; ctx.lineWidth = 2;
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x0, y0, w, h, 5); ctx.stroke(); }
+      else ctx.strokeRect(x0, y0, w, h);
+      ctx.textAlign = 'center';
+      if (st.state === 'empty') {
+        ctx.fillStyle = 'rgba(255,243,214,.5)';
+        ctx.font = '600 9px system-ui,sans-serif';
+        ctx.fillText('tap to', cx, cy - 1);
+        ctx.fillText('plant', cx, cy + 9);
+        return;
+      }
+      const crop = FARM_CROPS.find(c => c.id === st.cropId);
+      ctx.fillStyle = '#fff3d6';
+      ctx.font = Math.round(h * 0.34) + 'px system-ui,sans-serif';
+      ctx.fillText(crop ? crop.emoji : '🌱', cx, cy - h * 0.08);
+      ctx.font = '800 9px system-ui,sans-serif';
+      ctx.fillText(st.state === 'ripe' ? '✨ Ready' : (crop ? crop.name : ''), cx, cy + h * 0.24);
+      if (st.state === 'growing') {
+        ctx.fillStyle = '#ffe08a';
+        ctx.fillText(Math.round(st.progress * 100) + '%', cx, cy + h * 0.42);
+      }
+    }
+
     // Garden plots: brown soil tiles; growing crops show a progress bar, ripe
     // crops bob with a ✨ to invite a harvest tap.
     function _drawFarmPlots(ctx, W, H, t) {
@@ -2079,6 +2100,12 @@
       const now = Date.now();
       const tile = Math.max(22, Math.min(W, H) * 0.05);
       ctx.textAlign = 'center';
+      // Row signboards (left of each row that owns ≥1 plot).
+      const _rows = farmRowCount(plots.length, 7);
+      for (let _r = 0; _r < _rows; _r++) {
+        const _st = farmRowState(farmRowIndices(plots.length, _r, 7).map(k => plots[k]), FARM_CROPS, now);
+        _drawFarmSign(ctx, W, H, _r, _st);
+      }
       plots.forEach((plot, i) => {
         const pos = _farmPlotPos(i);
         const px = pos.x * W, py = pos.y * H;
@@ -2394,10 +2421,6 @@
     let _farmDragSuppressClick = false;
     let _farmDragStartX = 0, _farmDragStartY = 0;
     const FARM_DRAG_THRESHOLD = 0.03; // dead-zone: finger jitter stays a tap
-    const FARM_PLOT_HIT = 0.06;       // tap radius around a plot (bigger = easier on mobile)
-    let _farmPlantStartIdx = null;    // empty plot a plant-drag started on
-    let _farmPlantDrag = false;       // dragging across plots to plant the armed seed
-    let _farmPlantedSet = null;       // plot indices already planted this drag
 
     function _attachFarmPointerHandlers(cvs) {
       function pos(e) {
@@ -2422,36 +2445,9 @@
           if (e.type === 'mousedown') e.preventDefault();
           return;
         }
-        // Press anywhere in the crop field (bottom strip) → arm a sow-drag, so a
-        // swipe across plots plants them. A plain tap still opens the picker /
-        // harvests via onclick. (Plots live at y≈0.82 & 0.90, well below animals.)
-        if (p.y > 0.75) {
-          _farmPlantStartIdx = 1; _farmPlantDrag = false; _farmPlantedSet = new Set();
-          _farmDragStartX = p.x; _farmDragStartY = p.y;
-        }
       }
 
       function onMove(e) {
-        // Plant-drag: paint the armed seed across empty plots.
-        if (_farmPlantStartIdx != null) {
-          const p = pos(e);
-          if (!_farmPlantDrag) {
-            const dx = p.x - _farmDragStartX, dy = p.y - _farmDragStartY;
-            if (dx * dx + dy * dy < FARM_DRAG_THRESHOLD * FARM_DRAG_THRESHOLD) return;
-            _farmPlantDrag = true;
-            _hideFarmTip();
-          }
-          if (e.cancelable) e.preventDefault();
-          e.stopPropagation();
-          const plots = roomData.farmPlots || [];
-          for (let i = 0; i < plots.length; i++) {
-            if (_farmPlantedSet.has(i)) continue;
-            const pp = _farmPlotPos(i);
-            if (Math.hypot(pp.x - p.x, pp.y - p.y) < FARM_PLOT_HIT && _plantArmed(i)) _farmPlantedSet.add(i);
-          }
-          return;
-        }
-
         // Hover tooltip (mouse only, when not dragging): crop time / trough food.
         if (e.type === 'mousemove' && !_farmDragDecorId) {
           const p = pos(e);
@@ -2496,17 +2492,6 @@
       }
 
       function onUp(e) {
-        // End a plant-drag (a non-moving press falls through to the click → picker).
-        if (_farmPlantStartIdx != null) {
-          if (_farmPlantDrag) {
-            _farmDragSuppressClick = true;
-            saveRoom(); renderFarmPanel(); renderAll();
-            if (e && e.cancelable) e.preventDefault();
-            e.stopPropagation();
-          }
-          _farmPlantStartIdx = null; _farmPlantDrag = false; _farmPlantedSet = null;
-          return;
-        }
         if (!_farmDragDecorId) return;
         if (_farmDragMoved) {
           _farmDragSuppressClick = true;
@@ -2557,19 +2542,23 @@
         if (Math.hypot(FARM_CART_X - cx, FARM_CART_Y - cy) < 0.18) { openCartSheet(); return; }
         closeCartSheet();   // tapping elsewhere on the farm dismisses the sheet
 
-        // Garden plots: any tap in the crop strip (y>0.75) picks the NEAREST plot —
-        // no precision needed on phones (the strip is plots only).
+        // Garden strip: any tap picks the nearest plot OR signboard, then acts on
+        // that whole row (plant / harvest / status). No precision needed on phones.
         const plots = roomData.farmPlots || [];
-        if (plots.length && cy > 0.75) {
-          let plotIdx = 0, plotDist = Infinity;
+        if (plots.length && cy > 0.65) {
+          let rowIdx = 0, best = Infinity;
           for (let i = 0; i < plots.length; i++) {
             const pp = _farmPlotPos(i);
             const d = Math.hypot(pp.x - cx, pp.y - cy);
-            if (d < plotDist) { plotDist = d; plotIdx = i; }
+            if (d < best) { best = d; rowIdx = Math.floor(i / 7); }
           }
-          const pos = _farmPlotPos(plotIdx);
-          if (!plots[plotIdx].crop) openCropPicker();
-          else _plantOrHarvestPlot(plots[plotIdx], pos);
+          const _rows = farmRowCount(plots.length, 7);
+          for (let r = 0; r < _rows; r++) {
+            const sp = _farmSignPos(r);
+            const d = Math.hypot(sp.x - cx, sp.y - cy);
+            if (d < best) { best = d; rowIdx = r; }
+          }
+          _farmRowClick(rowIdx);
           return;
         }
 

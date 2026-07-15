@@ -189,3 +189,65 @@ test('farmRefillUnits returns whole units even when foodStock is fractional', ()
   assert.equal(u, 26);                            // floor(100 - 73.456) = 26
   assert.equal(Number.isInteger(u * 5), true);    // whole-coin charge
 });
+
+/* ── farmRowCount / farmRowIndices ── */
+
+test('farmRowCount = ceil(plotCount / perRow)', () => {
+  assert.equal(F.farmRowCount(0, 7), 0);
+  assert.equal(F.farmRowCount(7, 7), 1);
+  assert.equal(F.farmRowCount(8, 7), 2);
+  assert.equal(F.farmRowCount(21, 7), 3);
+  assert.equal(F.farmRowCount(undefined, 7), 0);
+});
+
+test('farmRowIndices returns the owned plot indices in a row, bounded by count', () => {
+  assert.deepEqual(F.farmRowIndices(21, 0, 7), [0, 1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(F.farmRowIndices(21, 2, 7), [14, 15, 16, 17, 18, 19, 20]);
+  assert.deepEqual(F.farmRowIndices(10, 1, 7), [7, 8, 9]); // partial row
+  assert.deepEqual(F.farmRowIndices(10, 2, 7), []);        // no plots owned here
+});
+
+/* ── farmRowState ── */
+
+const CROPS = [
+  { id: 'wheat', growMs: 60 * 60 * 1000 },
+  { id: 'corn', growMs: 120 * 60 * 1000 },
+];
+
+test('farmRowState: empty when no plot has a crop', () => {
+  const s = F.farmRowState([{ crop: null }, {}], CROPS, 5 * HOUR);
+  assert.equal(s.state, 'empty');
+  assert.equal(s.cropId, null);
+});
+
+test('farmRowState: growing reports the row crop, min progress and max time left', () => {
+  const now = 30 * 60 * 1000; // 30m after planting at 0
+  const s = F.farmRowState([{ crop: 'wheat', plantedAt: 0 }, { crop: 'wheat', plantedAt: 0 }], CROPS, now);
+  assert.equal(s.state, 'growing');
+  assert.equal(s.cropId, 'wheat');
+  assert.equal(s.progress, 0.5);          // 30m of a 60m crop
+  assert.equal(s.msLeft, 30 * 60 * 1000); // 30m remaining
+});
+
+test('farmRowState: ripe when any planted plot is fully grown', () => {
+  const s = F.farmRowState([{ crop: 'wheat', plantedAt: 0 }], CROPS, 2 * HOUR);
+  assert.equal(s.state, 'ripe');
+  assert.equal(s.cropId, 'wheat');
+});
+
+test('farmRowState: mixed (one ripe, one growing) counts as ripe', () => {
+  const s = F.farmRowState([
+    { crop: 'wheat', plantedAt: 0 },             // ripe at 2h
+    { crop: 'corn', plantedAt: 90 * 60 * 1000 }, // planted late → still growing
+  ], CROPS, 2 * HOUR);
+  assert.equal(s.state, 'ripe');
+});
+
+/* ── farmAffordableCount ── */
+
+test('farmAffordableCount = min(empty plots, coins / seedCost), floored, >= 0', () => {
+  assert.equal(F.farmAffordableCount(45, 10, 7), 4); // floor(45/10)=4
+  assert.equal(F.farmAffordableCount(1000, 10, 7), 7); // capped by empties
+  assert.equal(F.farmAffordableCount(5, 10, 7), 0);   // too broke for 1
+  assert.equal(F.farmAffordableCount(50, 0, 7), 7);   // free seed → all empties
+});

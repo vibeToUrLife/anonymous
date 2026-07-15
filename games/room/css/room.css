@@ -996,21 +996,9 @@
     .cp-close{display:block;width:100%;min-height:46px;margin-top:6px;padding:13px;border:1px solid var(--g-border);border-radius:12px;background:rgba(255,255,255,.06);color:var(--g-ink);font-size:14px;font-weight:700;cursor:pointer}
     .cp-close:hover{background:rgba(255,255,255,.12)}
     .cp-close:active{transform:scale(.98)}
-    /* Selected seed + "plant many" quantity stepper */
-    .cp-crop.selected{border-color:var(--g-accent);background:rgba(255,122,92,.12);box-shadow:inset 0 0 0 1px var(--g-accent)}
+    /* Crop-picker / plant-confirmation info line */
     .cp-bulk-info{font-size:11px;color:var(--g-ink-soft);text-align:center;margin:2px 0 8px}
     .cp-bulk-info b{color:var(--g-ink)}
-    .cp-stepper{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px}
-    .cp-step{min-width:42px;min-height:42px;border:1px solid var(--g-border);border-radius:10px;background:rgba(255,255,255,.06);color:var(--g-ink);font-size:18px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center}
-    .cp-step:hover{background:rgba(255,255,255,.12);border-color:var(--g-accent)}
-    .cp-step:active{transform:scale(.96)}
-    .cp-step:disabled{opacity:.4;cursor:not-allowed}
-    .cp-max{min-width:auto;padding:0 14px;font-size:13px}
-    .cp-qty{font-family:var(--farm-display);font-weight:800;font-size:18px;color:var(--g-ink);min-width:38px;text-align:center}
-    .cp-plant{display:block;width:100%;min-height:46px;margin-bottom:8px;padding:12px;border:none;border-radius:12px;background:var(--g-accent-grad);color:#2a1c08;font-family:var(--farm-display);font-size:14px;font-weight:800;letter-spacing:.3px;cursor:pointer}
-    .cp-plant:hover{filter:brightness(1.05)}
-    .cp-plant:active{transform:scale(.98)}
-    .cp-plant:disabled{opacity:.4;cursor:not-allowed;filter:none}
 
     /* ============================================================
        Mobile tap-target compliance (Apple HIG 44px / Material 48dp).
@@ -1031,7 +1019,7 @@
       .gacha-close, .lb-close, .swap-close, .gift-close, .gift-amt,
       .gb-send-btn, .gb-reply-btn, .gb-reply-send,
       .farm-shop-buy, .farm-produce-btn, .farm-visit-home, .farm-collapse-head,
-      .farm-visit-row, .ws-recipe, .jukebox-track, .cp-max {
+      .farm-visit-row, .ws-recipe, .jukebox-track {
         min-height: 44px;
       }
       /* Full-width text buttons: vertically center the label now they're taller. */
@@ -1039,7 +1027,7 @@
         display: flex; align-items: center; justify-content: center;
       }
       /* Square / icon-disc buttons → at least 44×44 in both dimensions. */
-      .achieve-x-btn, .jukebox-btn, .cp-step, .ws-cell, .farm-mini-btn,
+      .achieve-x-btn, .jukebox-btn, .ws-cell, .farm-mini-btn,
       .food-btn, .gb-sticker-btn {
         min-width: 44px; min-height: 44px;
       }
