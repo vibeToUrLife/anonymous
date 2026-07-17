@@ -1789,8 +1789,13 @@ body.light-theme .spin-result-food { color: #b8860b; }
 }
 .countdown-done {
     font-size: 28px;
-    -webkit-text-fill-color: #fff;
-    color: #fff;
+    /* Theme-aware fill: the done-state span sits on the .countdown-display
+       background (var(--sunken)), so a hardcoded white would vanish on the
+       light theme's pale-cream surface. Match the ticking digits' accent and
+       set BOTH color + -webkit-text-fill-color (the latter wins in WebKit and
+       would otherwise inherit `transparent` from .countdown-digits). */
+    -webkit-text-fill-color: var(--primary-deep);
+    color: var(--primary-deep);
     background: none;
     -webkit-background-clip: initial;
     animation: cdPulse 0.6s ease-in-out infinite alternate;

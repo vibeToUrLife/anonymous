@@ -93,12 +93,28 @@
   const solversEl  = document.getElementById('riddleSolvers');
   const rankEl     = document.getElementById('riddleRank');
 
-  const today    = L.dateKey();
-  const DONE_KEY = 'riddle_done_' + today;   // localStorage: 'solved' | 'revealed'
+  let today    = L.dateKey();
+  let DONE_KEY = 'riddle_done_' + today;   // localStorage: 'solved' | 'revealed'
   let riddle     = RIDDLES[L.dailyIndex(RIDDLES.length)];
   let _revealArmed = false;   // 查看答案 needs two taps (first arms the forfeit warning)
   let _solversUnsub = null;   // live "今日答对" subscription
   let _rankUnsub = null;      // live "答对排行榜" (all-time count) subscription
+  let _dayWatch = null;       // interval that catches midnight rolling over while open
+
+  // Re-key to the current calendar day. `today`/`DONE_KEY` are captured at load,
+  // so if the page/modal is left open past midnight they'd still point at
+  // yesterday — and yesterday's "solved/revealed" state would make render()
+  // reveal the NEW day's answer (and block the reward). Everything that reads
+  // the day (doneState, fetchAccountDone, claimReward, recordSolver,
+  // subscribeSolvers…) reads these module vars at call time, so refreshing them
+  // here fixes all of it. Returns true only when the day actually changed.
+  function refreshDay() {
+    const d = L.dateKey();
+    if (d === today) return false;
+    today = d;
+    DONE_KEY = 'riddle_done_' + today;
+    return true;
+  }
 
   function doneState() { try { return localStorage.getItem(DONE_KEY); } catch (e) { return null; } }
   function setDone(v) { try { localStorage.setItem(DONE_KEY, v); } catch (e) {} }
@@ -121,6 +137,7 @@
   }
 
   function render() {
+    refreshDay();                                     // re-key to the current day BEFORE reading doneState
     riddle = RIDDLES[L.dailyIndex(RIDDLES.length)];   // recompute (in case the day rolled over)
     qEl.textContent = riddle.q;
     // Length clue based on the canonical answer a[0] (code-point safe for Chinese).
@@ -170,6 +187,7 @@
     fab.classList.remove('has-new');
     subscribeSolvers();   // live "今日答对" list (names only)
     subscribeRank();      // live "答对排行榜" (all-time correct count)
+    startDayWatch();      // if it's left open at midnight, roll over to the new day
     setTimeout(function () { if (!inputEl.disabled) inputEl.focus(); }, 60);
     // …then reconcile with the account: if THIS account already finished today
     // on another device, mirror that here and re-lock the UI.
@@ -177,7 +195,26 @@
     if (acct === 'solved' && doneState() !== 'solved') { setDone('solved'); render(); }
     else if (acct === 'revealed' && !doneState()) { setDone('revealed'); render(); }
   }
-  function close() { overlay.classList.remove('show'); unsubscribeSolvers(); unsubscribeRank(); }
+  function close() { overlay.classList.remove('show'); unsubscribeSolvers(); unsubscribeRank(); stopDayWatch(); }
+
+  // While the overlay is open, watch for midnight rolling the calendar day over.
+  // When it does, re-key to the new day and rebuild the panel so the widget
+  // shows the fresh (playable) riddle instead of leaking yesterday's answer, and
+  // re-point the "今日答对" list at the new day's doc.
+  function startDayWatch() {
+    stopDayWatch();
+    _dayWatch = setInterval(function () {
+      if (!overlay.classList.contains('show')) return;
+      if (!refreshDay()) return;   // still the same day → nothing to do
+      render();
+      subscribeSolvers();
+      subscribeRank();
+      updateFabPulse();
+    }, 30000);
+  }
+  function stopDayWatch() {
+    if (_dayWatch) { clearInterval(_dayWatch); _dayWatch = null; }
+  }
 
   // Award 100 coins, once per day. The transaction re-checks the day server-side
   // so the same day can't pay out twice (even from another device).
@@ -381,5 +418,9 @@
   });
 
   // Gently pulse the FAB if today's teaser hasn't been attempted yet.
-  if (!doneState()) fab.classList.add('has-new');
+  function updateFabPulse() {
+    if (!doneState()) fab.classList.add('has-new');
+    else fab.classList.remove('has-new');
+  }
+  updateFabPulse();
 })();
