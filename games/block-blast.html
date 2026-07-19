@@ -690,7 +690,7 @@
           if (p.used) return;
           e.preventDefault();
           const t = e.touches[0];
-          startDrag(i, t.clientX, t.clientY);
+          startDrag(i, t.clientX, t.clientY, true);
         }, { passive: false });
 
         trayEl.appendChild(slot);
@@ -707,7 +707,7 @@
     let dragPieceCols = 0, dragPieceRows = 0;
     let dragJustEnded = false;
 
-    function startDrag(idx, cx, cy) {
+    function startDrag(idx, cx, cy, isTouch) {
       // Clean up any stale ghost from a cancelled drag
       if (dragGhost) { dragGhost.remove(); dragGhost = null; }
       dragActive = true;
@@ -740,11 +740,13 @@
       }
       document.body.appendChild(dragGhost);
 
-      // Center ghost under finger directly for intuitive drag-and-drop
+      // Center ghost under finger directly for intuitive drag-and-drop.
+      // On touch, lift the ghost above the finger so it isn't hidden under it.
       const gw = cols * (CELL + 2);
       const gh2 = rows * (CELL + 2);
+      const TOUCH_LIFT = isTouch ? (gh2 / 2 + 50) : 0;
       dragOffX = gw / 2;
-      dragOffY = gh2 / 2;
+      dragOffY = gh2 / 2 + TOUCH_LIFT;
       dragPieceCols = cols;
       dragPieceRows = rows;
       moveDragGhost(cx, cy);
