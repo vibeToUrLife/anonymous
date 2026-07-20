@@ -7,12 +7,14 @@
  *
  * Behaviour:
  *   - A holiday drops off the list the day it arrives (once the countdown hits
- *     0). Past user-added holidays are pruned from storage.
+ *     0). Past user-added holidays are best-effort pruned by their owner.
  *   - On each of the 3 days before a holiday, a full-page 8-bit pixel reminder
  *     pops ONCE — only on the user's first page load that day (guarded per
  *     holiday per day in localStorage). It never fires silently on a timer.
- *   - Add / remove holidays. Custom ones live in localStorage (per device);
- *     statutory ones can be hidden and restored.
+ *   - Add / remove holidays. User-added holidays are SHARED across everyone via
+ *     the Firestore `holidays` collection, synced live — so all users see the
+ *     same list. Only the person who added a holiday (or a developer) may remove
+ *     it. Statutory holidays are hard-coded and identical for everyone.
  *
  * Built-in data (法定节假日):
  *   - 2026 = the official State Council arrangement (放假 spans + 调休 workdays):
@@ -20,17 +22,25 @@
  *   - 2027 = festival dates only; the official arrangement is published near the
  *     end of the prior year, so those are flagged "待公布" (not an invented span).
  *
- * Fully self-contained: injects its own CSS, no backend, no auth. Uses the
- * global showToast() when available. The 'Press Start 2P' pixel font is loaded
- * site-wide in index.html.
+ * Injects its own CSS. Shared holidays use the global `db` / `auth` (Firebase,
+ * set up in firebase-config.js + app.js). Uses global showToast() when
+ * available. The 'Press Start 2P' pixel font is loaded site-wide in index.html.
+ *
+ * NOTE: requires the Firestore security rule for the `holidays` collection
+ * (see firestore.rules) to be deployed, or reads/writes are denied.
  */
 (function () {
   'use strict';
   if (typeof document === 'undefined') return;
 
-  var LS_CUSTOM = 'hol_custom_v1';
-  var LS_HIDDEN = 'hol_hidden_v1';
-  var LS_SEEN = 'hol_seen_';           // + id + '_' + YYYY-MM-DD
+  var LS_SEEN = 'hol_seen_';           // + id + '_' + YYYY-MM-DD (personal reminder guard)
+  var COL = 'holidays';                // shared Firestore collection — everyone sees the same
+  var DEV_UIDS = ['HClZmAeuEaUVjHqUaFLFFMTMQnd2', 'eUs3isAgsaRT9VLKEFI4HEFbCnk1'];
+  var MAX_NAME = 16;
+  var _shared = [];                    // shared user-added holidays (live from Firestore)
+  var _loaded = false;                 // first Firestore snapshot arrived
+  var _remindChecked = false;          // reminder fires at most once per load
+  var _unsub = null;
   var MS_DAY = 86400000;
   var REMIND_WITHIN = 3;               // pixel reminder on the last 3 days
   var WEEK = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
@@ -65,13 +75,16 @@
   }
   function toast(msg) { if (typeof window.showToast === 'function') window.showToast(msg); }
 
-  function readJSON(k, def) {
-    try { var v = localStorage.getItem(k); var a = v ? JSON.parse(v) : def; return a; }
-    catch (e) { return def; }
+  function hasDB() { return typeof db !== 'undefined' && !!db; }
+  function myUid() { return (typeof auth !== 'undefined' && auth.currentUser) ? auth.currentUser.uid : null; }
+  function isDev() { var u = myUid(); return !!u && DEV_UIDS.indexOf(u) !== -1; }
+  function canRemove(h) { return !h.builtin && (h.uid === myUid() || isDev()); }
+  function myName() {
+    var u = (typeof auth !== 'undefined') ? auth.currentUser : null;
+    if (!u) return 'Someone';
+    return localStorage.getItem('flappy_custom_name_' + u.uid) ||
+      localStorage.getItem('flappy_name') || u.displayName || 'Someone';
   }
-  function writeJSON(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
-  function getCustom() { var a = readJSON(LS_CUSTOM, []); return Array.isArray(a) ? a : []; }
-  function getHidden() { var a = readJSON(LS_HIDDEN, []); return Array.isArray(a) ? a : []; }
 
   /* Parse 'YYYY-MM-DD' as LOCAL midnight (new Date('YYYY-MM-DD') would be UTC). */
   function parseDate(s) { var p = String(s).split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
@@ -89,7 +102,7 @@
   function detailLine(h) {
     var line = fmtRange(h);
     if (h.official && h.days) line += ' · 放假 ' + h.days + ' 天';
-    else if (!h.builtin) line += ' · 我的假期';
+    else if (!h.builtin) line += ' · 大家添加的假期';
     return line;
   }
   function makeupText(h) {
@@ -97,31 +110,24 @@
     return '调休上班：' + h.makeups.map(function (m) { return fmtMD(parseDate(m)); }).join('、');
   }
 
-  /** Normalise a stored custom entry {id,name,date} to a holiday shape. */
-  function customToHoliday(c) {
-    return { id: c.id, name: c.name, emoji: c.emoji || '📌', start: c.date, end: c.date, builtin: false, official: true };
+  /** Normalise a shared Firestore holiday doc to the holiday shape. */
+  function sharedToHoliday(c) {
+    return {
+      id: c.id, name: c.name || '', emoji: '📌', start: c.date, end: c.date,
+      builtin: false, official: true, uid: c.uid || '', by: c.displayName || ''
+    };
   }
 
   /**
-   * All holidays that are still ahead (countdown ≥ 1 day), merged from built-ins
-   * (minus hidden) + custom, sorted chronologically. Also prunes past custom
-   * holidays from storage. Each built-in gets builtin:true.
+   * All holidays still ahead (countdown ≥ 1 day): the hard-coded statutory ones
+   * (identical for everyone) + the shared user-added ones from Firestore, merged
+   * and sorted chronologically. A holiday is dropped the day it arrives.
    */
   function activeHolidays() {
     var t = todayMidnight();
-    var hidden = getHidden();
-
-    // prune expired custom holidays (date already passed) from storage
-    var custom = getCustom();
-    var kept = custom.filter(function (c) { return c && c.date && parseDate(c.date) >= t; });
-    if (kept.length !== custom.length) writeJSON(LS_CUSTOM, kept);
-
     var all = [];
-    BUILTIN.forEach(function (h) {
-      if (hidden.indexOf(h.id) === -1) { var c = {}; for (var k in h) c[k] = h[k]; c.builtin = true; all.push(c); }
-    });
-    kept.forEach(function (c) { all.push(customToHoliday(c)); });
-
+    BUILTIN.forEach(function (h) { var c = {}; for (var k in h) c[k] = h[k]; c.builtin = true; all.push(c); });
+    _shared.forEach(function (c) { if (c && c.date) all.push(sharedToHoliday(c)); });
     return all
       .filter(function (h) { return daysBetween(t, parseDate(h.start)) >= 1; })   // gone the day it arrives
       .sort(function (a, b) { return parseDate(a.start) - parseDate(b.start); });
@@ -250,60 +256,61 @@
       var a = act.getAttribute('data-act');
       if (a === 'close') hide();
       else if (a === 'add') onAdd();
-      else if (a === 'del') onDelete(act.getAttribute('data-id'), act.getAttribute('data-builtin') === '1');
-      else if (a === 'restore') { writeJSON(LS_HIDDEN, []); render(); }
+      else if (a === 'del') onDelete(act.getAttribute('data-id'));
     });
   }
 
   function heroHTML(h, d) {
     var mk = makeupText(h);
+    var by = (!h.builtin && h.by) ? '<div class="hol-hero-mk">🙋 ' + esc(h.by) + ' 添加</div>' : '';
     return '<div class="hol-hero">' +
-      '<button class="hol-hero-x" data-act="del" data-id="' + esc(h.id) + '" data-builtin="' + (h.builtin ? '1' : '0') +
-        '" title="移除" aria-label="移除">✕</button>' +
+      (canRemove(h) ? '<button class="hol-hero-x" data-act="del" data-id="' + esc(h.id) + '" title="移除" aria-label="移除">✕</button>' : '') +
       '<span class="hol-hero-lb">下一个假期</span>' +
       '<div class="hol-hero-nm"><span class="em">' + h.emoji + '</span>' + esc(h.name) + '</div>' +
       '<div class="hol-hero-dt">' + detailLine(h) + '</div>' +
       '<div class="hol-hero-cd"><span class="lead">距离放假</span>' +
         '<span class="num hol-pix">' + d + '</span><span class="unit">天</span></div>' +
       (mk ? '<div class="hol-badge mk">↩️ ' + mk + '</div>' : '') +
+      by +
       (h.official === false ? '<div class="hol-badge wait">放假安排待公布</div>' : '') +
       '</div>';
   }
 
   function rowHTML(h, d) {
     var mk = makeupText(h);
-    var tag = !h.builtin ? '<span class="hol-tag mine">我的</span>'
+    var tag = !h.builtin ? '<span class="hol-tag mine">自定义</span>'
       : (h.official === false ? '<span class="hol-tag wait">待公布</span>' : '');
+    var by = (!h.builtin && h.by) ? '<span class="hol-mk">🙋 ' + esc(h.by) + '</span>' : '';
     return '<div class="hol-row">' +
       '<span class="hol-chip">' + h.emoji + '</span>' +
       '<span class="hol-main">' +
         '<span class="hol-nm">' + esc(h.name) + tag + '</span>' +
         '<span class="hol-dt">' + detailLine(h) + '</span>' +
-        (mk ? '<span class="hol-mk">↩️ ' + mk + '</span>' : '') +
+        (mk ? '<span class="hol-mk">↩️ ' + mk + '</span>' : '') + by +
       '</span>' +
       '<span class="hol-num"><span class="n hol-pix">' + d + '</span><span class="u">天后</span></span>' +
-      '<button class="hol-del" data-act="del" data-id="' + esc(h.id) + '" data-builtin="' + (h.builtin ? '1' : '0') +
-        '" title="移除" aria-label="移除">✕</button>' +
+      (canRemove(h) ? '<button class="hol-del" data-act="del" data-id="' + esc(h.id) + '" title="移除" aria-label="移除">✕</button>' : '') +
       '</div>';
   }
 
   function addFormHTML() {
     var min = ymd(new Date(todayMidnight().getTime() + MS_DAY));   // earliest = tomorrow
     return '<div class="hol-add">' +
-      '<div class="hol-add-hd">➕ 添加我的假期</div>' +
-      '<input class="hol-inp" id="holName" type="text" maxlength="16" placeholder="假期名字（如：请年假去玩）" autocomplete="off">' +
+      '<div class="hol-add-hd">➕ 添加假期（大家都看得到）</div>' +
+      '<input class="hol-inp" id="holName" type="text" maxlength="16" placeholder="假期名字（如：公司团建）" autocomplete="off">' +
       '<input class="hol-inp" id="holDate" type="date" min="' + min + '">' +
       '<button class="hol-add-btn" data-act="add">加进倒数表</button>' +
       '</div>';
   }
 
   function render() {
+    if (!scrollEl) return;
     var t = todayMidnight();
     var list = activeHolidays();
-    var html = '<div class="hol-tip">🏝️ 数着日子等放假 · 也可以把自己的假期加进来一起倒数</div>';
+    var html = '<div class="hol-tip">🏝️ 数着日子等放假 · 大家添加的假期所有人都看得到</div>';
 
     if (!list.length) {
-      html += '<div class="hol-empty">暂时没有假期在倒数了 🏖️<br>加一个自己的假期吧！</div>';
+      html += '<div class="hol-empty">暂时没有假期在倒数了 🏖️<br>加一个假期，大家一起等放假吧！</div>';
     } else {
       var next = list[0];
       html += heroHTML(next, daysBetween(t, parseDate(next.start)));
@@ -315,10 +322,7 @@
     }
 
     html += addFormHTML();
-    if (getHidden().length) {
-      html += '<div class="hol-restore"><button data-act="restore">↺ 恢复隐藏的法定假期</button></div>';
-    }
-    html += '<div class="hol-foot">法定节假日依据国务院公布安排；2027 年具体放假/调休以官方通知为准。<br>自己添加的假期只保存在这台设备上。</div>';
+    html += '<div class="hol-foot">法定节假日依据国务院公布安排；2027 年具体放假/调休以官方通知为准。<br>大家添加的假期实时同步、所有人共享。</div>';
     scrollEl.innerHTML = html;
   }
 
@@ -331,27 +335,73 @@
     if (!name) { toast('给假期起个名字吧'); nameEl.focus(); return; }
     if (!date) { toast('选一个日期'); dateEl.focus(); return; }
     if (daysBetween(todayMidnight(), parseDate(date)) < 1) { toast('请选择明天或以后的日期'); dateEl.focus(); return; }
+    if (!hasDB() || !myUid()) { toast('请先登录再添加假期'); return; }
 
-    var custom = getCustom();
-    custom.push({ id: 'c' + Date.now() + Math.floor(Math.random() * 1000), name: name.slice(0, 16), date: date, emoji: '📌' });
-    writeJSON(LS_CUSTOM, custom);
-    toast('📌 已加入假期倒数');
-    render();
+    var btn = document.querySelector('.hol-add-btn');
+    if (btn) btn.disabled = true;
+    db.collection(COL).add({
+      uid: myUid(),
+      displayName: myName(),
+      name: name.slice(0, MAX_NAME),
+      date: date,
+      createdAt: Date.now()
+    }).then(function () {
+      toast('📌 已加入假期倒数，大家都看得到啦');
+      // The onSnapshot listener re-renders (the local write reflects instantly),
+      // which also rebuilds the form with empty inputs.
+    }).catch(function (e) {
+      console.error('add holiday failed:', e);
+      toast('添加失败，稍后再试');
+      if (btn) btn.disabled = false;
+    });
   }
 
-  function onDelete(id, isBuiltin) {
-    if (isBuiltin) {
-      var hidden = getHidden();
-      if (hidden.indexOf(id) === -1) { hidden.push(id); writeJSON(LS_HIDDEN, hidden); }
-    } else {
-      writeJSON(LS_CUSTOM, getCustom().filter(function (c) { return c.id !== id; }));
-    }
-    render();
+  function onDelete(id) {
+    if (!hasDB() || !id) return;
+    db.collection(COL).doc(id).delete().catch(function (e) {
+      console.error('delete holiday failed:', e);
+      toast('移除失败（只能移除自己添加的假期）');
+    });
+    // onSnapshot re-renders once the delete lands.
   }
 
   function hide() { if (overlay) overlay.classList.remove('show'); }
-  function open() { build(); render(); overlay.classList.add('show'); }
+  function open() { build(); _subscribe(); render(); overlay.classList.add('show'); }
   window.openHolidayList = open;
+
+  /* ── Shared holidays: live Firestore sync ───────────────────── */
+  function _applySnapshot(snap) {
+    var arr = [];
+    snap.forEach(function (doc) {
+      var x = doc.data() || {};
+      arr.push({ id: doc.id, uid: x.uid, displayName: x.displayName, name: x.name, date: x.date, createdAt: x.createdAt });
+    });
+    _shared = arr;
+    _loaded = true;
+    _prunePast();
+    if (overlay && overlay.classList.contains('show')) render();
+    maybeRemindOnce();
+  }
+  function _subscribe() {
+    if (_unsub || !hasDB() || !myUid()) return;   // reads require auth — wait for sign-in
+    try {
+      _unsub = db.collection(COL).onSnapshot(_applySnapshot, function (e) {
+        console.error('holidays snapshot error:', e);
+        maybeRemindOnce();   // still fire built-in reminders if the read is denied/offline
+      });
+    } catch (e) { console.error('holidays subscribe failed:', e); }
+  }
+  // Best-effort tidy: delete the current user's OWN holidays once they're past.
+  function _prunePast() {
+    if (!hasDB()) return;
+    var t = todayMidnight(), me = myUid();
+    if (!me) return;
+    _shared.forEach(function (c) {
+      if (c.uid === me && c.date && parseDate(c.date) < t) {
+        db.collection(COL).doc(c.id).delete().catch(function () {});
+      }
+    });
+  }
 
   /* ── Full-page 8-bit reminder (last 3 days, first load of the day) ── */
   var remOv = null, remTimer = null;
@@ -396,6 +446,8 @@
     remOv.classList.remove('show');
   }
 
+  function maybeRemindOnce() { if (_remindChecked) return; _remindChecked = true; maybeRemind(); }
+
   /** Fire once, on first entry: nearest holiday within 3 days, not seen today. */
   function maybeRemind() {
     var t = todayMidnight();
@@ -420,6 +472,11 @@
     else hide();
   });
 
-  // First entry: maybe pop the pixel reminder (guarded once-per-day, no timers).
-  maybeRemind();
+  // Subscribe to the shared holidays once signed in (reads require auth). The
+  // pixel reminder fires after the first snapshot; a fallback timer covers the
+  // built-in reminders if Firebase/auth never becomes available (guarded once).
+  if (typeof auth !== 'undefined' && auth.onAuthStateChanged) {
+    auth.onAuthStateChanged(function (u) { if (u) _subscribe(); });
+  }
+  setTimeout(maybeRemindOnce, 4000);
 })();

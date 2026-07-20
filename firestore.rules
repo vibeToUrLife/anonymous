@@ -557,6 +557,30 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════
+    // 19. HOLIDAYS — shared 假期列表 (everyone sees the same countdown list)
+    //     Path: holidays/{autoId}
+    //     Fields: uid, displayName, name (1–16 chars), date (YYYY-MM-DD string),
+    //             createdAt (ms)
+    //     Any signed-in user may add a holiday (as themselves); only the creator
+    //     (or a developer) may delete it. Notes are immutable once created.
+    // ═══════════════════════════════════════
+    match /holidays/{holidayId} {
+      allow read: if isAuth();
+      allow create: if isAuth()
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() >= 1
+                    && request.resource.data.name.size() <= 16
+                    && request.resource.data.date is string
+                    && request.resource.data.date.size() <= 10
+                    && request.resource.data.createdAt is number;
+      allow update: if false;
+      allow delete: if isAuth()
+                    && (resource.data.uid == request.auth.uid
+                        || isDeveloper(request.auth.uid));
+    }
+
+    // ═══════════════════════════════════════
     // DEFAULT — deny everything else
     // ═══════════════════════════════════════
     match /{document=**} {
