@@ -40,6 +40,7 @@
   var _remindChecked = false;          // reminder fires at most once per load
   var _unsub = null, _unsubMine = null;
   var _visPrivate = false;             // add-form visibility choice (default: public)
+  var _editId = null, _editPriv = false;   // when set, the form edits this holiday (creator only)
   var MS_DAY = 86400000;
   var REMIND_WITHIN = 3;               // pixel reminder on the last 3 days
   var WEEK = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
@@ -141,6 +142,12 @@
 '.hol-hero{position:relative;background:var(--hero);border:3px solid var(--ink);border-radius:6px;padding:14px 14px 16px;text-align:center;box-shadow:4px 4px 0 var(--edge);overflow:hidden;}' +
 '.hol-hero-x{position:absolute;top:8px;right:8px;width:24px;height:24px;border:2px solid var(--ink);background:var(--herox);color:var(--ink);border-radius:5px;cursor:pointer;font-size:11px;font-weight:800;line-height:1;box-shadow:0 2px 0 var(--ink);z-index:1;}' +
 '.hol-hero-x:active{transform:translateY(2px);box-shadow:none;}' +
+'.hol-hero-e{position:absolute;top:8px;right:38px;width:24px;height:24px;border:2px solid var(--ink);background:var(--herox);color:var(--ink);border-radius:5px;cursor:pointer;font-size:11px;line-height:1;box-shadow:0 2px 0 var(--ink);z-index:1;}' +
+'.hol-hero-e:active{transform:translateY(2px);box-shadow:none;}' +
+'.hol-acts{display:flex;gap:6px;flex-shrink:0;}' +
+'.hol-edit{width:24px;height:24px;border:2px solid var(--ink);background:var(--delface);color:var(--ink);border-radius:5px;cursor:pointer;font-size:11px;line-height:1;box-shadow:0 2px 0 var(--ink);}' +
+'.hol-edit:active{transform:translateY(2px);box-shadow:none;}' +
+'.hol-cancel-btn{width:100%;margin-top:8px;font-family:inherit;font-size:12px;font-weight:800;color:var(--mute);background:none;border:2px solid var(--ink);border-radius:5px;padding:8px;cursor:pointer;}' +
 '.hol-hero-lb{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.12em;color:var(--herosub);background:var(--heropill);border:2px solid var(--ink);border-radius:4px;padding:2px 9px;}' +
 '.hol-hero-nm{font-size:26px;font-weight:900;color:var(--text);margin:10px 0 3px;line-height:1.12;}' +
 '.hol-hero-nm .em{margin-right:7px;}' +
@@ -250,6 +257,8 @@
       if (a === 'close') hide();
       else if (a === 'add') onAdd();
       else if (a === 'del') onDelete(act.getAttribute('data-id'), act.getAttribute('data-priv') === '1');
+      else if (a === 'edit') onEdit(act.getAttribute('data-id'), act.getAttribute('data-priv') === '1');
+      else if (a === 'cancel-edit') { _resetFormAndRender(); }
       else if (a === 'vis-pub') { _visPrivate = false; refreshVis(); }
       else if (a === 'vis-priv') { _visPrivate = true; refreshVis(); }
       else if (a === 'dp-toggle') { _dpOpen = !_dpOpen; refreshDP(); }
@@ -267,9 +276,17 @@
     });
   }
 
+  // Anyone signed in may remove any holiday; only the CREATOR may edit theirs
+  // (private holidays are always your own).
+  function canEdit(h) { return !!myUid() && h.uid === myUid(); }
+
   function delBtnHTML(h, cls) {
     return '<button class="' + cls + '" data-act="del" data-id="' + esc(h.id) +
       '" data-priv="' + (h.priv ? '1' : '0') + '" title="移除" aria-label="移除">✕</button>';
+  }
+  function editBtnHTML(h, cls) {
+    return '<button class="' + cls + '" data-act="edit" data-id="' + esc(h.id) +
+      '" data-priv="' + (h.priv ? '1' : '0') + '" title="编辑" aria-label="编辑">✎</button>';
   }
 
   function heroHTML(h, d) {
@@ -277,6 +294,7 @@
       ? '<div class="hol-hero-mk">🔒 私密假期 · 只有你看得到</div>'
       : (h.by ? '<div class="hol-hero-mk">🙋 ' + esc(h.by) + ' 添加</div>' : '');
     return '<div class="hol-hero">' +
+      (canEdit(h) ? editBtnHTML(h, 'hol-hero-e') : '') +
       (canRemove() ? delBtnHTML(h, 'hol-hero-x') : '') +
       '<span class="hol-hero-lb">下一个假期</span>' +
       '<div class="hol-hero-nm"><span class="em">' + h.emoji + '</span>' + esc(h.name) + '</div>' +
@@ -298,7 +316,9 @@
         '<span class="hol-dt">' + detailLine(h) + '</span>' + by +
       '</span>' +
       '<span class="hol-num"><span class="n hol-pix">' + d + '</span><span class="u">天后</span></span>' +
-      (canRemove() ? delBtnHTML(h, 'hol-del') : '') +
+      ((canEdit(h) || canRemove()) ? '<span class="hol-acts">' +
+        (canEdit(h) ? editBtnHTML(h, 'hol-edit') : '') +
+        (canRemove() ? delBtnHTML(h, 'hol-del') : '') + '</span>' : '') +
       '</div>';
   }
 
@@ -385,12 +405,14 @@
   }
 
   function addFormHTML() {
+    var editing = !!_editId;
     return '<div class="hol-add">' +
-      '<div class="hol-add-hd">➕ 添加假期</div>' +
+      '<div class="hol-add-hd">' + (editing ? '✏️ 编辑假期' : '➕ 添加假期') + '</div>' +
       '<input class="hol-inp" id="holName" type="text" maxlength="16" placeholder="假期名字（如：请年假去玩）" autocomplete="off">' +
       '<div class="hol-dp" id="holDatePick">' + dpInnerHTML() + '</div>' +
-      '<div class="hol-vis" id="holVis">' + visInnerHTML() + '</div>' +
-      '<button class="hol-add-btn" data-act="add">加进倒数表</button>' +
+      (editing ? '' : '<div class="hol-vis" id="holVis">' + visInnerHTML() + '</div>') +
+      '<button class="hol-add-btn" data-act="add">' + (editing ? '💾 保存修改' : '加进倒数表') + '</button>' +
+      (editing ? '<button class="hol-cancel-btn" data-act="cancel-edit">取消</button>' : '') +
       '</div>';
   }
 
@@ -424,6 +446,33 @@
     if (keepName) { var el = document.getElementById('holName'); if (el) el.value = keepName; }
   }
 
+  function _clearEdit() {
+    _editId = null; _editPriv = false;
+    _selStart = null; _selEnd = null; _dpOpen = false; _dpY = null; _dpM = null; _visPrivate = false;
+  }
+  // Back to a blank add form: clear edit/pick state AND the name field, then
+  // re-render (a live snapshot alone can't reset the name — keepName preserves it).
+  function _resetFormAndRender() {
+    _clearEdit();
+    var n = document.getElementById('holName'); if (n) n.value = '';
+    render();
+  }
+
+  /** Load an existing holiday (creator only) into the form for editing. */
+  function onEdit(id, priv) {
+    var arr = priv ? _mine : _shared, doc = null;
+    for (var i = 0; i < arr.length; i++) { if (arr[i].id === id) { doc = arr[i]; break; } }
+    if (!doc || !doc.date) return;
+    _editId = id; _editPriv = priv;
+    _selStart = doc.date; _selEnd = _endOf(doc);   // === start for a single-day holiday
+    _dpOpen = false; _dpY = null; _dpM = null;
+    render();
+    var el = document.getElementById('holName');
+    if (el) { el.value = doc.name || ''; el.focus(); }
+    var box = scrollEl.querySelector('.hol-add');
+    if (box && box.scrollIntoView) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
   function onAdd() {
     var nameEl = document.getElementById('holName');
     if (!nameEl) return;
@@ -435,27 +484,27 @@
     if (daysBetween(todayMidnight(), parseDate(date)) < 1) { toast('请选择明天或以后的日期'); return; }
     if (!hasDB() || !myUid()) { toast('请先登录再添加假期'); return; }
 
+    var editing = !!_editId;
+    var priv = editing ? _editPriv : _visPrivate;
+    var ref = priv ? _mineRef() : db.collection(COL);
+    if (!ref) { toast('请先登录再操作'); return; }
+
     var btn = document.querySelector('.hol-add-btn');
     if (btn) btn.disabled = true;
-    var priv = _visPrivate;
-    var write = priv
-      ? _mineRef().add({ name: name.slice(0, MAX_NAME), date: date, endDate: endDate, createdAt: Date.now() })
-      : db.collection(COL).add({
-          uid: myUid(),
-          displayName: myName(),
-          name: name.slice(0, MAX_NAME),
-          date: date,
-          endDate: endDate,
-          createdAt: Date.now()
-        });
+    var write;
+    if (editing) {
+      write = ref.doc(_editId).update({ name: name.slice(0, MAX_NAME), date: date, endDate: endDate });
+    } else if (priv) {
+      write = ref.add({ name: name.slice(0, MAX_NAME), date: date, endDate: endDate, createdAt: Date.now() });
+    } else {
+      write = ref.add({ uid: myUid(), displayName: myName(), name: name.slice(0, MAX_NAME), date: date, endDate: endDate, createdAt: Date.now() });
+    }
     write.then(function () {
-      toast(priv ? '🔒 已加入你的私密假期倒数' : '📌 已加入假期倒数，大家都看得到啦');
-      // Reset the form state; the onSnapshot re-render rebuilds it fresh
-      // (the local write reflects instantly).
-      _selStart = null; _selEnd = null; _dpOpen = false; _dpY = null; _dpM = null; _visPrivate = false;
+      toast(editing ? '✏️ 已保存修改' : (priv ? '🔒 已加入你的私密假期倒数' : '📌 已加入假期倒数，大家都看得到啦'));
+      _resetFormAndRender();
     }).catch(function (e) {
-      console.error('add holiday failed:', e);
-      toast('添加失败，稍后再试');
+      console.error('save holiday failed:', e);
+      toast(editing ? '保存失败，稍后再试' : '添加失败，稍后再试');
       if (btn) btn.disabled = false;
     });
   }

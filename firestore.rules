@@ -578,7 +578,18 @@ service cloud.firestore {
                         || (request.resource.data.endDate is string
                             && request.resource.data.endDate.size() <= 10))
                     && request.resource.data.createdAt is number;
-      allow update: if false;
+      // Only the creator may edit their own holiday (uid can't be reassigned).
+      allow update: if isAuth()
+                    && resource.data.uid == request.auth.uid
+                    && request.resource.data.uid == resource.data.uid
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() >= 1
+                    && request.resource.data.name.size() <= 16
+                    && request.resource.data.date is string
+                    && request.resource.data.date.size() <= 10
+                    && (!('endDate' in request.resource.data)
+                        || (request.resource.data.endDate is string
+                            && request.resource.data.endDate.size() <= 10));
       allow delete: if isAuth();
     }
 
@@ -602,7 +613,15 @@ service cloud.firestore {
                         || (request.resource.data.endDate is string
                             && request.resource.data.endDate.size() <= 10))
                     && request.resource.data.createdAt is number;
-      allow update: if false;
+      allow update: if isOwner(uid)
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() >= 1
+                    && request.resource.data.name.size() <= 16
+                    && request.resource.data.date is string
+                    && request.resource.data.date.size() <= 10
+                    && (!('endDate' in request.resource.data)
+                        || (request.resource.data.endDate is string
+                            && request.resource.data.endDate.size() <= 10));
       allow delete: if isOwner(uid);
     }
 
