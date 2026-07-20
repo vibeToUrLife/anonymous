@@ -69,19 +69,28 @@
   function daysBetween(a, b) { return Math.round((b - a) / MS_DAY); }
   function fmtMD(d) { return (d.getMonth() + 1) + '月' + d.getDate() + '日'; }
 
-  /** "8月15日（周六）" */
+  /** "8月15日（周六）" or "8月15日（周六）–8月20日（周四）· 共6天". */
   function detailLine(h) {
     var s = parseDate(h.start);
-    return fmtMD(s) + '（' + WEEK[s.getDay()] + '）';
+    var line = fmtMD(s) + '（' + WEEK[s.getDay()] + '）';
+    if (h.end && h.end !== h.start) {
+      var e = parseDate(h.end);
+      line += '–' + fmtMD(e) + '（' + WEEK[e.getDay()] + '）· 共' + (daysBetween(s, e) + 1) + '天';
+    }
+    return line;
   }
 
+  /** endDate from a doc, clamped so it's never before the start. */
+  function _endOf(c) {
+    return (c.endDate && parseDate(c.endDate) > parseDate(c.date)) ? c.endDate : c.date;
+  }
   /** Normalise a public shared holiday doc to the holiday shape. */
   function sharedToHoliday(c) {
-    return { id: c.id, name: c.name || '', emoji: '📌', start: c.date, uid: c.uid || '', by: c.displayName || '', priv: false };
+    return { id: c.id, name: c.name || '', emoji: '📌', start: c.date, end: _endOf(c), uid: c.uid || '', by: c.displayName || '', priv: false };
   }
   /** Normalise one of MY private holiday docs (only I can see these). */
   function mineToHoliday(c) {
-    return { id: c.id, name: c.name || '', emoji: '🔒', start: c.date, uid: myUid() || '', by: '', priv: true };
+    return { id: c.id, name: c.name || '', emoji: '🔒', start: c.date, end: _endOf(c), uid: myUid() || '', by: '', priv: true };
   }
 
   /**
@@ -181,6 +190,8 @@
 '.hol-dp-day:not(:disabled):not(.sel):hover{border-color:var(--mute);}' +
 '.hol-dp-day.today{border-color:var(--coral);}' +
 '.hol-dp-day.sel{background:var(--teal);color:var(--tealtx);border-color:var(--ink);box-shadow:0 2px 0 var(--ink);}' +
+'.hol-dp-day.inr{background:var(--teal);color:var(--tealtx);opacity:.45;}' +
+'.hol-dp-hint{font-size:10px;font-weight:700;color:var(--mute);text-align:center;margin:-2px 0 8px;}' +
 '.hol-add-btn{width:100%;font-family:inherit;font-size:13px;font-weight:900;color:var(--tealtx);background:var(--teal);border:3px solid var(--ink);border-radius:5px;padding:10px;cursor:pointer;box-shadow:0 4px 0 var(--tealsh);letter-spacing:.06em;}' +
 '.hol-add-btn:active{transform:translateY(4px);box-shadow:none;}' +
 '.hol-foot{margin-top:13px;font-size:10px;line-height:1.6;color:var(--mute);text-align:center;font-weight:600;}' +
@@ -244,7 +255,15 @@
       else if (a === 'dp-toggle') { _dpOpen = !_dpOpen; refreshDP(); }
       else if (a === 'dp-prev') { if (--_dpM < 0) { _dpM = 11; _dpY--; } refreshDP(); }
       else if (a === 'dp-next') { if (++_dpM > 11) { _dpM = 0; _dpY++; } refreshDP(); }
-      else if (a === 'dp-day') { _selDate = act.getAttribute('data-date'); _dpOpen = false; refreshDP(); }
+      else if (a === 'dp-day') {
+        var picked = act.getAttribute('data-date');
+        if (!_selStart || _selEnd || parseDate(picked) < parseDate(_selStart)) {
+          _selStart = picked; _selEnd = null;    // (re)start the range — panel stays open
+        } else {
+          _selEnd = picked; _dpOpen = false;     // range complete (same day = 1-day holiday)
+        }
+        refreshDP();
+      }
     });
   }
 
@@ -283,24 +302,36 @@
       '</div>';
   }
 
-  /* ── Retro pixel date picker (Monday-first; selectable from tomorrow) ── */
-  var _dpOpen = false, _dpY = null, _dpM = null, _selDate = null;
+  /* ── Retro pixel date picker (Monday-first; selectable from tomorrow).
+     RANGE mode: first tap picks the start, second tap the end (same day =
+     single-day holiday; tapping before the start restarts the range). ── */
+  var _dpOpen = false, _dpY = null, _dpM = null, _selStart = null, _selEnd = null;
 
   function _dpInit() {
     if (_dpY !== null) return;
-    var base = _selDate ? parseDate(_selDate) : new Date(todayMidnight().getTime() + MS_DAY);
+    var base = _selStart ? parseDate(_selStart) : new Date(todayMidnight().getTime() + MS_DAY);
     _dpY = base.getFullYear(); _dpM = base.getMonth();
+  }
+
+  /** Short field label: "8月15日（周六）" or "8月15日 – 8月20日 · 6天". */
+  function rangeLabel() {
+    if (!_selStart) return '';
+    if (!_selEnd || _selEnd === _selStart) {
+      var s = parseDate(_selStart);
+      var lb = fmtMD(s) + '（' + WEEK[s.getDay()] + '）';
+      return _selEnd ? lb : lb + ' → 点结束日期';
+    }
+    var n = daysBetween(parseDate(_selStart), parseDate(_selEnd)) + 1;
+    return fmtMD(parseDate(_selStart)) + ' – ' + fmtMD(parseDate(_selEnd)) + ' · ' + n + '天';
   }
 
   function dpInnerHTML() {
     _dpInit();
     var t = todayMidnight();
     var tm = new Date(t.getTime() + MS_DAY);                    // earliest pickable = tomorrow
-    var label = _selDate
-      ? fmtMD(parseDate(_selDate)) + '（' + WEEK[parseDate(_selDate).getDay()] + '）'
-      : '';
+    var label = rangeLabel();
     var html = '<button type="button" class="hol-dp-field" data-act="dp-toggle">📅 ' +
-      (label ? '<span>' + label + '</span>' : '<span class="ph">选一个日期</span>') +
+      (label ? '<span>' + label + '</span>' : '<span class="ph">选日期（可以选连续几天）</span>') +
       '<span class="arw">' + (_dpOpen ? '▲' : '▼') + '</span></button>';
     if (_dpOpen) {
       var days = new Date(_dpY, _dpM + 1, 0).getDate();
@@ -308,18 +339,26 @@
       var canPrev = (_dpY > tm.getFullYear()) || (_dpY === tm.getFullYear() && _dpM > tm.getMonth());
       var maxY = tm.getFullYear() + 2;                          // browse up to 2 years ahead
       var canNext = (_dpY < maxY) || (_dpY === maxY && _dpM < tm.getMonth());
+      var hint = !_selStart || _selEnd
+        ? '点选放假第一天'
+        : '再点最后一天（点同一天＝只放一天）';
       html += '<div class="hol-dp-panel"><div class="hol-dp-nav">' +
         '<button type="button" class="hol-dp-btn" data-act="dp-prev"' + (canPrev ? '' : ' disabled') + '>◀</button>' +
         '<b>' + _dpY + '年' + (_dpM + 1) + '月</b>' +
         '<button type="button" class="hol-dp-btn" data-act="dp-next"' + (canNext ? '' : ' disabled') + '>▶</button>' +
-        '</div><div class="hol-dp-grid">';
+        '</div><div class="hol-dp-hint">' + hint + '</div><div class="hol-dp-grid">';
       var wd = ['一', '二', '三', '四', '五', '六', '日'];
       for (var i = 0; i < 7; i++) html += '<span class="hol-dp-wd' + (i >= 5 ? ' we' : '') + '">' + wd[i] + '</span>';
       for (i = 0; i < lead; i++) html += '<span></span>';
+      var sMs = _selStart ? parseDate(_selStart).getTime() : 0;
+      var eMs = _selEnd ? parseDate(_selEnd).getTime() : sMs;
       for (var d = 1; d <= days; d++) {
         var dt = new Date(_dpY, _dpM, d);
         var ds = ymd(dt);
-        var cls = 'hol-dp-day' + (ds === _selDate ? ' sel' : '') + (dt.getTime() === t.getTime() ? ' today' : '');
+        var cls = 'hol-dp-day';
+        if (ds === _selStart || ds === _selEnd) cls += ' sel';
+        else if (sMs && dt.getTime() > sMs && dt.getTime() < eMs) cls += ' inr';
+        if (dt.getTime() === t.getTime()) cls += ' today';
         html += '<button type="button" class="' + cls + '" data-act="dp-day" data-date="' + ds + '"' +
           (dt < tm ? ' disabled' : '') + '>' + d + '</button>';
       }
@@ -389,7 +428,8 @@
     var nameEl = document.getElementById('holName');
     if (!nameEl) return;
     var name = (nameEl.value || '').trim();
-    var date = _selDate;
+    var date = _selStart;
+    var endDate = _selEnd || _selStart;          // no end tapped yet = single day
     if (!name) { toast('给假期起个名字吧'); nameEl.focus(); return; }
     if (!date) { toast('选一个日期'); if (!_dpOpen) { _dpOpen = true; refreshDP(); } return; }
     if (daysBetween(todayMidnight(), parseDate(date)) < 1) { toast('请选择明天或以后的日期'); return; }
@@ -399,19 +439,20 @@
     if (btn) btn.disabled = true;
     var priv = _visPrivate;
     var write = priv
-      ? _mineRef().add({ name: name.slice(0, MAX_NAME), date: date, createdAt: Date.now() })
+      ? _mineRef().add({ name: name.slice(0, MAX_NAME), date: date, endDate: endDate, createdAt: Date.now() })
       : db.collection(COL).add({
           uid: myUid(),
           displayName: myName(),
           name: name.slice(0, MAX_NAME),
           date: date,
+          endDate: endDate,
           createdAt: Date.now()
         });
     write.then(function () {
       toast(priv ? '🔒 已加入你的私密假期倒数' : '📌 已加入假期倒数，大家都看得到啦');
       // Reset the form state; the onSnapshot re-render rebuilds it fresh
       // (the local write reflects instantly).
-      _selDate = null; _dpOpen = false; _dpY = null; _dpM = null; _visPrivate = false;
+      _selStart = null; _selEnd = null; _dpOpen = false; _dpY = null; _dpM = null; _visPrivate = false;
     }).catch(function (e) {
       console.error('add holiday failed:', e);
       toast('添加失败，稍后再试');
@@ -443,7 +484,7 @@
     var arr = [];
     snap.forEach(function (doc) {
       var x = doc.data() || {};
-      arr.push({ id: doc.id, uid: x.uid, displayName: x.displayName, name: x.name, date: x.date, createdAt: x.createdAt });
+      arr.push({ id: doc.id, uid: x.uid, displayName: x.displayName, name: x.name, date: x.date, endDate: x.endDate, createdAt: x.createdAt });
     });
     return arr;
   }
