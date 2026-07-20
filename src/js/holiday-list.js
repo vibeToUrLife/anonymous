@@ -198,7 +198,25 @@
 '.hol-add-hd{font-size:12px;font-weight:800;color:var(--text);margin-bottom:10px;letter-spacing:.03em;}' +
 '.hol-inp{display:block;width:100%;font-family:inherit;font-size:13px;font-weight:700;color:var(--text);background:var(--inpbg);border:3px solid var(--ink);border-radius:5px;padding:9px 10px;margin-bottom:9px;}' +
 '.hol-inp::placeholder{color:var(--ph);font-weight:600;}' +
-':root[data-theme="dark"] .hol-inp::-webkit-calendar-picker-indicator,:root[data-theme="terminal"] .hol-inp::-webkit-calendar-picker-indicator{filter:invert(1) brightness(1.7);}' +
+/* retro pixel date picker (replaces the native <input type=date>) */
+'.hol-dp{margin-bottom:9px;}' +
+'.hol-dp-field{display:flex;align-items:center;gap:8px;width:100%;font-family:inherit;font-size:13px;font-weight:700;color:var(--text);background:var(--inpbg);border:3px solid var(--ink);border-radius:5px;padding:9px 10px;cursor:pointer;text-align:left;}' +
+'.hol-dp-field .ph{color:var(--ph);font-weight:600;}' +
+'.hol-dp-field .arw{margin-left:auto;font-size:10px;color:var(--mute);}' +
+'.hol-dp-panel{margin-top:8px;background:var(--inpbg);border:3px solid var(--ink);border-radius:5px;padding:10px;}' +
+'.hol-dp-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;}' +
+'.hol-dp-nav b{font-size:13px;font-weight:900;color:var(--text);letter-spacing:.05em;}' +
+'.hol-dp-btn{width:28px;height:28px;border:2px solid var(--ink);background:var(--chip);color:var(--text);border-radius:4px;cursor:pointer;font-size:10px;line-height:1;box-shadow:0 2px 0 var(--ink);}' +
+'.hol-dp-btn:disabled{opacity:.3;cursor:default;box-shadow:none;}' +
+'.hol-dp-btn:not(:disabled):active{transform:translateY(2px);box-shadow:none;}' +
+'.hol-dp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}' +
+'.hol-dp-wd{font-size:10px;font-weight:800;color:var(--mute);text-align:center;padding:2px 0 4px;}' +
+'.hol-dp-wd.we{color:var(--coral);}' +
+".hol-dp-day{aspect-ratio:1;min-height:30px;border:2px solid transparent;background:var(--panel2);color:var(--text);border-radius:4px;cursor:pointer;font-family:'Press Start 2P','Courier New',monospace;font-size:9px;display:grid;place-items:center;padding:0;}" +
+'.hol-dp-day:disabled{opacity:.22;cursor:default;}' +
+'.hol-dp-day:not(:disabled):not(.sel):hover{border-color:var(--mute);}' +
+'.hol-dp-day.today{border-color:var(--coral);}' +
+'.hol-dp-day.sel{background:var(--teal);color:var(--tealtx);border-color:var(--ink);box-shadow:0 2px 0 var(--ink);}' +
 '.hol-add-btn{width:100%;font-family:inherit;font-size:13px;font-weight:900;color:var(--tealtx);background:var(--teal);border:3px solid var(--ink);border-radius:5px;padding:10px;cursor:pointer;box-shadow:0 4px 0 var(--tealsh);letter-spacing:.06em;}' +
 '.hol-add-btn:active{transform:translateY(4px);box-shadow:none;}' +
 '.hol-foot{margin-top:13px;font-size:10px;line-height:1.6;color:var(--mute);text-align:center;font-weight:600;}' +
@@ -257,6 +275,10 @@
       if (a === 'close') hide();
       else if (a === 'add') onAdd();
       else if (a === 'del') onDelete(act.getAttribute('data-id'));
+      else if (a === 'dp-toggle') { _dpOpen = !_dpOpen; refreshDP(); }
+      else if (a === 'dp-prev') { if (--_dpM < 0) { _dpM = 11; _dpY--; } refreshDP(); }
+      else if (a === 'dp-next') { if (++_dpM > 11) { _dpM = 0; _dpY++; } refreshDP(); }
+      else if (a === 'dp-day') { _selDate = act.getAttribute('data-date'); _dpOpen = false; refreshDP(); }
     });
   }
 
@@ -293,18 +315,71 @@
       '</div>';
   }
 
+  /* ── Retro pixel date picker (Monday-first; selectable from tomorrow) ── */
+  var _dpOpen = false, _dpY = null, _dpM = null, _selDate = null;
+
+  function _dpInit() {
+    if (_dpY !== null) return;
+    var base = _selDate ? parseDate(_selDate) : new Date(todayMidnight().getTime() + MS_DAY);
+    _dpY = base.getFullYear(); _dpM = base.getMonth();
+  }
+
+  function dpInnerHTML() {
+    _dpInit();
+    var t = todayMidnight();
+    var tm = new Date(t.getTime() + MS_DAY);                    // earliest pickable = tomorrow
+    var label = _selDate
+      ? fmtMD(parseDate(_selDate)) + '（' + WEEK[parseDate(_selDate).getDay()] + '）'
+      : '';
+    var html = '<button type="button" class="hol-dp-field" data-act="dp-toggle">📅 ' +
+      (label ? '<span>' + label + '</span>' : '<span class="ph">选一个日期</span>') +
+      '<span class="arw">' + (_dpOpen ? '▲' : '▼') + '</span></button>';
+    if (_dpOpen) {
+      var days = new Date(_dpY, _dpM + 1, 0).getDate();
+      var lead = (new Date(_dpY, _dpM, 1).getDay() + 6) % 7;    // Monday-first grid
+      var canPrev = (_dpY > tm.getFullYear()) || (_dpY === tm.getFullYear() && _dpM > tm.getMonth());
+      var maxY = tm.getFullYear() + 2;                          // browse up to 2 years ahead
+      var canNext = (_dpY < maxY) || (_dpY === maxY && _dpM < tm.getMonth());
+      html += '<div class="hol-dp-panel"><div class="hol-dp-nav">' +
+        '<button type="button" class="hol-dp-btn" data-act="dp-prev"' + (canPrev ? '' : ' disabled') + '>◀</button>' +
+        '<b>' + _dpY + '年' + (_dpM + 1) + '月</b>' +
+        '<button type="button" class="hol-dp-btn" data-act="dp-next"' + (canNext ? '' : ' disabled') + '>▶</button>' +
+        '</div><div class="hol-dp-grid">';
+      var wd = ['一', '二', '三', '四', '五', '六', '日'];
+      for (var i = 0; i < 7; i++) html += '<span class="hol-dp-wd' + (i >= 5 ? ' we' : '') + '">' + wd[i] + '</span>';
+      for (i = 0; i < lead; i++) html += '<span></span>';
+      for (var d = 1; d <= days; d++) {
+        var dt = new Date(_dpY, _dpM, d);
+        var ds = ymd(dt);
+        var cls = 'hol-dp-day' + (ds === _selDate ? ' sel' : '') + (dt.getTime() === t.getTime() ? ' today' : '');
+        html += '<button type="button" class="' + cls + '" data-act="dp-day" data-date="' + ds + '"' +
+          (dt < tm ? ' disabled' : '') + '>' + d + '</button>';
+      }
+      html += '</div></div>';
+    }
+    return html;
+  }
+
+  function refreshDP() {
+    var el = document.getElementById('holDatePick');
+    if (el) el.innerHTML = dpInnerHTML();
+  }
+
   function addFormHTML() {
-    var min = ymd(new Date(todayMidnight().getTime() + MS_DAY));   // earliest = tomorrow
     return '<div class="hol-add">' +
       '<div class="hol-add-hd">➕ 添加假期（大家都看得到）</div>' +
       '<input class="hol-inp" id="holName" type="text" maxlength="16" placeholder="假期名字（如：公司团建）" autocomplete="off">' +
-      '<input class="hol-inp" id="holDate" type="date" min="' + min + '">' +
+      '<div class="hol-dp" id="holDatePick">' + dpInnerHTML() + '</div>' +
       '<button class="hol-add-btn" data-act="add">加进倒数表</button>' +
       '</div>';
   }
 
   function render() {
     if (!scrollEl) return;
+    // A live snapshot (someone else adding a holiday) can re-render while the
+    // user is mid-typing — keep whatever they had in the name field.
+    var keepEl = document.getElementById('holName');
+    var keepName = keepEl ? keepEl.value : '';
     var t = todayMidnight();
     var list = activeHolidays();
     var html = '<div class="hol-tip">🏝️ 数着日子等放假 · 大家添加的假期所有人都看得到</div>';
@@ -324,17 +399,17 @@
     html += addFormHTML();
     html += '<div class="hol-foot">法定节假日依据国务院公布安排；2027 年具体放假/调休以官方通知为准。<br>大家添加的假期实时同步、所有人共享。</div>';
     scrollEl.innerHTML = html;
+    if (keepName) { var el = document.getElementById('holName'); if (el) el.value = keepName; }
   }
 
   function onAdd() {
     var nameEl = document.getElementById('holName');
-    var dateEl = document.getElementById('holDate');
-    if (!nameEl || !dateEl) return;
+    if (!nameEl) return;
     var name = (nameEl.value || '').trim();
-    var date = dateEl.value;
+    var date = _selDate;
     if (!name) { toast('给假期起个名字吧'); nameEl.focus(); return; }
-    if (!date) { toast('选一个日期'); dateEl.focus(); return; }
-    if (daysBetween(todayMidnight(), parseDate(date)) < 1) { toast('请选择明天或以后的日期'); dateEl.focus(); return; }
+    if (!date) { toast('选一个日期'); if (!_dpOpen) { _dpOpen = true; refreshDP(); } return; }
+    if (daysBetween(todayMidnight(), parseDate(date)) < 1) { toast('请选择明天或以后的日期'); return; }
     if (!hasDB() || !myUid()) { toast('请先登录再添加假期'); return; }
 
     var btn = document.querySelector('.hol-add-btn');
@@ -347,8 +422,9 @@
       createdAt: Date.now()
     }).then(function () {
       toast('📌 已加入假期倒数，大家都看得到啦');
-      // The onSnapshot listener re-renders (the local write reflects instantly),
-      // which also rebuilds the form with empty inputs.
+      // Reset the picker; the onSnapshot re-render rebuilds the form fresh
+      // (the local write reflects instantly).
+      _selDate = null; _dpOpen = false; _dpY = null; _dpM = null;
     }).catch(function (e) {
       console.error('add holiday failed:', e);
       toast('添加失败，稍后再试');
