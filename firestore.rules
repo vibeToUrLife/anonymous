@@ -561,8 +561,9 @@ service cloud.firestore {
     //     Path: holidays/{autoId}
     //     Fields: uid, displayName, name (1–16 chars), date (YYYY-MM-DD string),
     //             createdAt (ms)
-    //     Any signed-in user may add a holiday (as themselves); only the creator
-    //     (or a developer) may delete it. Notes are immutable once created.
+    //     Fully community-managed: any signed-in user may add a holiday (as
+    //     themselves) and DELETE ANY holiday (clients also auto-prune past
+    //     ones). Docs are immutable once created.
     // ═══════════════════════════════════════
     match /holidays/{holidayId} {
       allow read: if isAuth();
@@ -575,9 +576,7 @@ service cloud.firestore {
                     && request.resource.data.date.size() <= 10
                     && request.resource.data.createdAt is number;
       allow update: if false;
-      allow delete: if isAuth()
-                    && (resource.data.uid == request.auth.uid
-                        || isDeveloper(request.auth.uid));
+      allow delete: if isAuth();
     }
 
     // ═══════════════════════════════════════
