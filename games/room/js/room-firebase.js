@@ -496,7 +496,14 @@
           _unsubscribeRoomSnap();
         } else if (document.visibilityState === 'visible' && currentUid) {
           userDocRef().update({ lastSeen: Date.now() }).catch(() => {});
-          // Collect plant coins earned while tab was hidden (capped at 2 hours)
+          // Plant coins earned while the tab was hidden. Mirror the on-load
+          // behaviour: ≥1h away → the mandatory "while you were away" collect
+          // modal (coins pending until collected); a short trip → bank straight
+          // away with a toast. Without the modal branch, users who return by
+          // re-focusing an already-open tab (common on mobile) would silently
+          // bank their coins and never see the modal — while a fresh page load
+          // would show it. That asymmetry is why the modal appeared for some
+          // users but not others.
           const incomeHidden = getTotalPlantIncome();
           if (viewingUid === currentUid && incomeHidden && roomData.lastCoinCollect && !_roomCoinAwayPlan) {
             const coinsPerCycle = incomeHidden.perCycle;
@@ -505,11 +512,18 @@
             const cycles = Math.floor(elapsed / (5 * 60 * 1000));
             if (cycles > 0) {
               const earned = cycles * coinsPerCycle;
-              roomData.coins += earned;
-              roomData.lastCoinCollect = Date.now();
-              saveRoom();
-              const _label = incomeHidden.count > 1 ? ('Your ' + incomeHidden.count + ' trees') : (incomeHidden.top.plantDef ? incomeHidden.top.plantDef.name : 'Plant');
-              showToast('🌱 ' + _label + ' earned ' + earned + ' coins while tab was hidden!', 'success');
+              if (rawElapsed >= PLANT_OFFLINE_MODAL_MS) {
+                const _name = incomeHidden.count > 1
+                  ? ('your ' + incomeHidden.count + ' trees')
+                  : ('Lv.' + incomeHidden.top.plantLvl + ' ' + (incomeHidden.top.plantDef ? incomeHidden.top.plantDef.name : 'plant'));
+                _showRoomCoinAway({ earned: earned, name: _name });
+              } else {
+                roomData.coins += earned;
+                roomData.lastCoinCollect = Date.now();
+                saveRoom();
+                const _label = incomeHidden.count > 1 ? ('Your ' + incomeHidden.count + ' trees') : (incomeHidden.top.plantDef ? incomeHidden.top.plantDef.name : 'Plant');
+                showToast('🌱 ' + _label + ' earned ' + earned + ' coins while tab was hidden!', 'success');
+              }
             }
           }
           // Reattach room listener to resume real-time updates
