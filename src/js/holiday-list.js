@@ -4,11 +4,15 @@
  * A retro pixel popup, opened by the 🏖️ 假期列表 tile in 更多玩法, that counts
  * down to upcoming holidays — the essential 摸鱼 companion. The list is fully
  * community-managed: EVERY signed-in user can add holidays and remove ANY
- * holiday (there is no hard-coded data and no owner restriction).
+ * public holiday (there is no hard-coded data and no owner restriction).
  *
  * Behaviour:
- *   - Holidays live in the shared Firestore `holidays` collection, synced live
- *     via onSnapshot — everyone sees the same list.
+ *   - PUBLIC holidays live in the shared Firestore `holidays` collection,
+ *     synced live via onSnapshot — everyone sees the same list.
+ *   - PRIVATE holidays (add form 🔒 option) live under
+ *     user_holidays/{uid}/items and are readable ONLY by their owner
+ *     (enforced by security rules) — they merge into your own view and
+ *     reminders but nobody else ever sees them.
  *   - A holiday drops off the list the day it arrives (once the countdown hits
  *     0); past docs are best-effort deleted by whichever client sees them.
  *   - On each of the 3 days before a holiday, a full-page 8-bit pixel reminder
@@ -28,11 +32,14 @@
 
   var LS_SEEN = 'hol_seen_';           // + id + '_' + YYYY-MM-DD (personal reminder guard)
   var COL = 'holidays';                // shared Firestore collection — everyone sees the same
+  var COL_MINE = 'user_holidays';      // private holidays: user_holidays/{uid}/items — owner-only (rules)
   var MAX_NAME = 16;
-  var _shared = [];                    // shared holidays (live from Firestore)
-  var _loaded = false;                 // first Firestore snapshot arrived
+  var _shared = [];                    // public shared holidays (live from Firestore)
+  var _mine = [];                      // my private holidays (live from Firestore)
+  var _loaded = false;                 // first public snapshot arrived
   var _remindChecked = false;          // reminder fires at most once per load
-  var _unsub = null;
+  var _unsub = null, _unsubMine = null;
+  var _visPrivate = false;             // add-form visibility choice (default: public)
   var MS_DAY = 86400000;
   var REMIND_WITHIN = 3;               // pixel reminder on the last 3 days
   var WEEK = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
@@ -68,20 +75,25 @@
     return fmtMD(s) + '（' + WEEK[s.getDay()] + '）';
   }
 
-  /** Normalise a shared Firestore holiday doc to the holiday shape. */
+  /** Normalise a public shared holiday doc to the holiday shape. */
   function sharedToHoliday(c) {
-    return { id: c.id, name: c.name || '', emoji: '📌', start: c.date, uid: c.uid || '', by: c.displayName || '' };
+    return { id: c.id, name: c.name || '', emoji: '📌', start: c.date, uid: c.uid || '', by: c.displayName || '', priv: false };
+  }
+  /** Normalise one of MY private holiday docs (only I can see these). */
+  function mineToHoliday(c) {
+    return { id: c.id, name: c.name || '', emoji: '🔒', start: c.date, uid: myUid() || '', by: '', priv: true };
   }
 
   /**
-   * All shared holidays still ahead (countdown ≥ 1 day), sorted chronologically.
-   * A holiday is dropped the day it arrives.
+   * All holidays still ahead (countdown ≥ 1 day): the public shared list plus
+   * MY private ones, merged and sorted chronologically. A holiday is dropped
+   * the day it arrives.
    */
   function activeHolidays() {
     var t = todayMidnight();
-    return _shared
-      .filter(function (c) { return c && c.date; })
-      .map(sharedToHoliday)
+    var all = _shared.filter(function (c) { return c && c.date; }).map(sharedToHoliday)
+      .concat(_mine.filter(function (c) { return c && c.date; }).map(mineToHoliday));
+    return all
       .filter(function (h) { return daysBetween(t, parseDate(h.start)) >= 1; })   // gone the day it arrives
       .sort(function (a, b) { return parseDate(a.start) - parseDate(b.start); });
   }
@@ -145,6 +157,11 @@
 '.hol-add-hd{font-size:12px;font-weight:800;color:var(--text);margin-bottom:10px;letter-spacing:.03em;}' +
 '.hol-inp{display:block;width:100%;font-family:inherit;font-size:13px;font-weight:700;color:var(--text);background:var(--inpbg);border:3px solid var(--ink);border-radius:5px;padding:9px 10px;margin-bottom:9px;}' +
 '.hol-inp::placeholder{color:var(--ph);font-weight:600;}' +
+/* public / private toggle */
+'.hol-vis{display:flex;gap:8px;margin-bottom:9px;}' +
+'.hol-vis-btn{flex:1;font-family:inherit;font-size:12.5px;font-weight:800;color:var(--mute);background:var(--inpbg);border:3px solid var(--ink);border-radius:5px;padding:8px 6px;cursor:pointer;opacity:.5;}' +
+'.hol-vis-btn .sub{display:block;font-size:9.5px;font-weight:600;margin-top:3px;}' +
+'.hol-vis-btn.on{color:var(--text);background:var(--chip);opacity:1;box-shadow:0 3px 0 var(--ink);}' +
 /* retro pixel date picker (replaces the native <input type=date>) */
 '.hol-dp{margin-bottom:9px;}' +
 '.hol-dp-field{display:flex;align-items:center;gap:8px;width:100%;font-family:inherit;font-size:13px;font-weight:700;color:var(--text);background:var(--inpbg);border:3px solid var(--ink);border-radius:5px;padding:9px 10px;cursor:pointer;text-align:left;}' +
@@ -221,7 +238,9 @@
       var a = act.getAttribute('data-act');
       if (a === 'close') hide();
       else if (a === 'add') onAdd();
-      else if (a === 'del') onDelete(act.getAttribute('data-id'));
+      else if (a === 'del') onDelete(act.getAttribute('data-id'), act.getAttribute('data-priv') === '1');
+      else if (a === 'vis-pub') { _visPrivate = false; refreshVis(); }
+      else if (a === 'vis-priv') { _visPrivate = true; refreshVis(); }
       else if (a === 'dp-toggle') { _dpOpen = !_dpOpen; refreshDP(); }
       else if (a === 'dp-prev') { if (--_dpM < 0) { _dpM = 11; _dpY--; } refreshDP(); }
       else if (a === 'dp-next') { if (++_dpM > 11) { _dpM = 0; _dpY++; } refreshDP(); }
@@ -229,10 +248,17 @@
     });
   }
 
+  function delBtnHTML(h, cls) {
+    return '<button class="' + cls + '" data-act="del" data-id="' + esc(h.id) +
+      '" data-priv="' + (h.priv ? '1' : '0') + '" title="移除" aria-label="移除">✕</button>';
+  }
+
   function heroHTML(h, d) {
-    var by = h.by ? '<div class="hol-hero-mk">🙋 ' + esc(h.by) + ' 添加</div>' : '';
+    var by = h.priv
+      ? '<div class="hol-hero-mk">🔒 私密假期 · 只有你看得到</div>'
+      : (h.by ? '<div class="hol-hero-mk">🙋 ' + esc(h.by) + ' 添加</div>' : '');
     return '<div class="hol-hero">' +
-      (canRemove() ? '<button class="hol-hero-x" data-act="del" data-id="' + esc(h.id) + '" title="移除" aria-label="移除">✕</button>' : '') +
+      (canRemove() ? delBtnHTML(h, 'hol-hero-x') : '') +
       '<span class="hol-hero-lb">下一个假期</span>' +
       '<div class="hol-hero-nm"><span class="em">' + h.emoji + '</span>' + esc(h.name) + '</div>' +
       '<div class="hol-hero-dt">' + detailLine(h) + '</div>' +
@@ -243,7 +269,9 @@
   }
 
   function rowHTML(h, d) {
-    var by = h.by ? '<span class="hol-mk">🙋 ' + esc(h.by) + '</span>' : '';
+    var by = h.priv
+      ? '<span class="hol-mk">🔒 只有你看得到</span>'
+      : (h.by ? '<span class="hol-mk">🙋 ' + esc(h.by) + '</span>' : '');
     return '<div class="hol-row">' +
       '<span class="hol-chip">' + h.emoji + '</span>' +
       '<span class="hol-main">' +
@@ -251,7 +279,7 @@
         '<span class="hol-dt">' + detailLine(h) + '</span>' + by +
       '</span>' +
       '<span class="hol-num"><span class="n hol-pix">' + d + '</span><span class="u">天后</span></span>' +
-      (canRemove() ? '<button class="hol-del" data-act="del" data-id="' + esc(h.id) + '" title="移除" aria-label="移除">✕</button>' : '') +
+      (canRemove() ? delBtnHTML(h, 'hol-del') : '') +
       '</div>';
   }
 
@@ -305,11 +333,24 @@
     if (el) el.innerHTML = dpInnerHTML();
   }
 
+  /** Public / private choice — two pixel toggle buttons. */
+  function visInnerHTML() {
+    return '<button type="button" class="hol-vis-btn' + (_visPrivate ? '' : ' on') + '" data-act="vis-pub">' +
+        '🌍 公开<span class="sub">大家都看得到</span></button>' +
+      '<button type="button" class="hol-vis-btn' + (_visPrivate ? ' on' : '') + '" data-act="vis-priv">' +
+        '🔒 私密<span class="sub">只有你看得到</span></button>';
+  }
+  function refreshVis() {
+    var el = document.getElementById('holVis');
+    if (el) el.innerHTML = visInnerHTML();
+  }
+
   function addFormHTML() {
     return '<div class="hol-add">' +
-      '<div class="hol-add-hd">➕ 添加假期（大家都看得到）</div>' +
-      '<input class="hol-inp" id="holName" type="text" maxlength="16" placeholder="假期名字（如：公司团建）" autocomplete="off">' +
+      '<div class="hol-add-hd">➕ 添加假期</div>' +
+      '<input class="hol-inp" id="holName" type="text" maxlength="16" placeholder="假期名字（如：请年假去玩）" autocomplete="off">' +
       '<div class="hol-dp" id="holDatePick">' + dpInnerHTML() + '</div>' +
+      '<div class="hol-vis" id="holVis">' + visInnerHTML() + '</div>' +
       '<button class="hol-add-btn" data-act="add">加进倒数表</button>' +
       '</div>';
   }
@@ -339,7 +380,7 @@
     }
 
     html += addFormHTML();
-    html += '<div class="hol-foot">假期实时同步、所有人共享；任何人都可以添加或移除。</div>';
+    html += '<div class="hol-foot">公开假期实时同步、所有人共享，任何人都可以添加或移除；<br>🔒 私密假期只有你自己看得到。</div>';
     scrollEl.innerHTML = html;
     if (keepName) { var el = document.getElementById('holName'); if (el) el.value = keepName; }
   }
@@ -356,17 +397,21 @@
 
     var btn = document.querySelector('.hol-add-btn');
     if (btn) btn.disabled = true;
-    db.collection(COL).add({
-      uid: myUid(),
-      displayName: myName(),
-      name: name.slice(0, MAX_NAME),
-      date: date,
-      createdAt: Date.now()
-    }).then(function () {
-      toast('📌 已加入假期倒数，大家都看得到啦');
-      // Reset the picker; the onSnapshot re-render rebuilds the form fresh
+    var priv = _visPrivate;
+    var write = priv
+      ? _mineRef().add({ name: name.slice(0, MAX_NAME), date: date, createdAt: Date.now() })
+      : db.collection(COL).add({
+          uid: myUid(),
+          displayName: myName(),
+          name: name.slice(0, MAX_NAME),
+          date: date,
+          createdAt: Date.now()
+        });
+    write.then(function () {
+      toast(priv ? '🔒 已加入你的私密假期倒数' : '📌 已加入假期倒数，大家都看得到啦');
+      // Reset the form state; the onSnapshot re-render rebuilds it fresh
       // (the local write reflects instantly).
-      _selDate = null; _dpOpen = false; _dpY = null; _dpM = null;
+      _selDate = null; _dpOpen = false; _dpY = null; _dpM = null; _visPrivate = false;
     }).catch(function (e) {
       console.error('add holiday failed:', e);
       toast('添加失败，稍后再试');
@@ -374,9 +419,11 @@
     });
   }
 
-  function onDelete(id) {
+  function onDelete(id, priv) {
     if (!hasDB() || !id) return;
-    db.collection(COL).doc(id).delete().catch(function (e) {
+    var ref = priv ? _mineRef() : db.collection(COL);
+    if (!ref) return;
+    ref.doc(id).delete().catch(function (e) {
       console.error('delete holiday failed:', e);
       toast('移除失败，稍后再试');
     });
@@ -387,29 +434,47 @@
   function open() { build(); _subscribe(); render(); overlay.classList.add('show'); }
   window.openHolidayList = open;
 
-  /* ── Shared holidays: live Firestore sync ───────────────────── */
-  function _applySnapshot(snap) {
+  /* ── Live Firestore sync: public `holidays` + my `user_holidays` ── */
+  function _mineRef() {
+    var u = myUid();
+    return (hasDB() && u) ? db.collection(COL_MINE).doc(u).collection('items') : null;
+  }
+  function _docsOf(snap) {
     var arr = [];
     snap.forEach(function (doc) {
       var x = doc.data() || {};
       arr.push({ id: doc.id, uid: x.uid, displayName: x.displayName, name: x.name, date: x.date, createdAt: x.createdAt });
     });
-    _shared = arr;
-    _loaded = true;
+    return arr;
+  }
+  function _afterSnapshot() {
     _prunePast();
     if (overlay && overlay.classList.contains('show')) render();
     maybeRemindOnce();
   }
   function _subscribe() {
-    if (_unsub || !hasDB() || !myUid()) return;   // reads require auth — wait for sign-in
-    try {
-      _unsub = db.collection(COL).onSnapshot(_applySnapshot, function (e) {
-        console.error('holidays snapshot error:', e);
-      });
-    } catch (e) { console.error('holidays subscribe failed:', e); }
+    if (!hasDB() || !myUid()) return;   // reads require auth — wait for sign-in
+    if (!_unsub) {
+      try {
+        _unsub = db.collection(COL).onSnapshot(function (snap) {
+          _shared = _docsOf(snap);
+          _loaded = true;
+          _afterSnapshot();
+        }, function (e) { console.error('holidays snapshot error:', e); });
+      } catch (e) { console.error('holidays subscribe failed:', e); }
+    }
+    if (!_unsubMine) {
+      try {
+        _unsubMine = _mineRef().onSnapshot(function (snap) {
+          _mine = _docsOf(snap);
+          _afterSnapshot();
+        }, function (e) { console.error('my holidays snapshot error:', e); });
+      } catch (e) { console.error('my holidays subscribe failed:', e); }
+    }
   }
-  // Best-effort tidy: everyone may delete, so any client that sees a past
-  // holiday removes it (deletes are idempotent — racing clients are harmless).
+  // Best-effort tidy: public past docs may be deleted by anyone; private past
+  // docs only by me (I'm the only one who can see them). Deletes are
+  // idempotent — racing clients are harmless.
   function _prunePast() {
     if (!hasDB() || !myUid()) return;
     var t = todayMidnight();
@@ -417,6 +482,10 @@
       if (c.date && parseDate(c.date) < t) {
         db.collection(COL).doc(c.id).delete().catch(function () {});
       }
+    });
+    var mine = _mineRef();
+    if (mine) _mine.forEach(function (c) {
+      if (c.date && parseDate(c.date) < t) mine.doc(c.id).delete().catch(function () {});
     });
   }
 
