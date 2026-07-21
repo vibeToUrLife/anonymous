@@ -132,7 +132,12 @@
       await saveRoom();
       showToast('🎁 Claimed ' + reward.coins + ' coins! Streak: ' + newStreak, 'success');
       checkAchievements();
+      // Re-render so today's cell flips to "claimed" and the streak updates,
+      // then auto-dismiss. Once the reward is claimed there's nothing left to do
+      // in here, so we close for the player instead of making them tap Close.
+      // The toast already confirms the coins landed.
       showDailyReward();
+      setTimeout(() => document.getElementById('dailyOverlay').classList.add('hidden'), 700);
     });
 
     document.getElementById('dailyCloseBtn').addEventListener('click', () => {
