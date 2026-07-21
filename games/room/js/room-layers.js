@@ -1464,6 +1464,7 @@
       if (roomData.coins < cost)
         return showToast('Not enough coins! Need ' + cost + ' 🪙', 'error');
       roomData.coins -= cost;
+      logCoin(-cost, 'Unlock floor ' + n);
       roomData.unlockedLayers = n;
       // Initialise the new floor with its default wall/window and empty decors
       if (!roomData.layerData) roomData.layerData = {};

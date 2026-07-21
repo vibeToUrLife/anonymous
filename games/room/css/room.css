@@ -29,6 +29,13 @@
     .coin-icon { width: 22px; height: 22px; flex-shrink: 0; }
     .coin-amount { color: var(--g-coin-ink); font-variant-numeric: tabular-nums; }
     .coin-svg { width: 100%; height: 100%; }
+    /* The coin badge is a button into the coin-history modal (room/farm/aquarium
+       all share this one badge, so this covers every view). */
+    .coin-display { cursor: pointer; transition: transform .15s, box-shadow .15s; }
+    .coin-display:hover { transform: translateY(-1px); box-shadow: var(--g-shadow); }
+    .coin-display:active { transform: translateY(0); }
+    .coin-display:focus-visible { outline: 2px solid var(--g-accent); outline-offset: 2px; }
+    .coin-history-hint { font-size: 12px; opacity: .5; margin-left: 1px; line-height: 1; }
     .price-coin { width: 14px; height: 14px; vertical-align: -2px; }
 
     /* ── Page header ── */
@@ -556,6 +563,28 @@
     .achieve-desc{font-size:11px;color:var(--g-ink-soft);margin-top:2px}
     .achieve-status{font-size:11px;font-weight:600;color:var(--g-ink-faint)}
     .achieve-item.unlocked .achieve-status{color:#2BA86A}
+
+    /* ── Coin history modal ── */
+    .coinhist-overlay{position:fixed;inset:0;z-index:9450;background:var(--g-scrim);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center}
+    .coinhist-overlay.hidden{display:none}
+    .coinhist-box{width:90%;max-width:420px;max-height:80vh;display:flex;flex-direction:column;background:var(--g-card);border:1px solid var(--g-border);border-top:2px solid rgba(255,122,92,0.45);border-radius:24px;padding:24px 18px 16px;box-shadow:var(--g-shadow)}
+    .coinhist-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+    .coinhist-header h3{margin:0;flex:1;font-size:20px;font-weight:800;font-family:var(--g-display);background:var(--g-title-grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+    .coinhist-x-btn{width:32px;height:32px;border:1px solid var(--g-border);border-radius:10px;background:var(--g-hover);color:var(--g-ink-soft);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+    .coinhist-x-btn:hover{background:var(--g-border);color:var(--g-ink)}
+    .coinhist-balance{font-size:13px;color:var(--g-ink-soft);margin-bottom:14px}
+    .coinhist-balance b{color:var(--g-coin-ink);font-variant-numeric:tabular-nums;font-size:15px}
+    .coinhist-list{display:flex;flex-direction:column;gap:6px;overflow-y:auto;scrollbar-width:thin}
+    .coinhist-row{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:12px;background:var(--g-slot);border:1px solid var(--g-border)}
+    .coinhist-row .chr-reason{flex:1;min-width:0;font-size:13px;color:var(--g-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .coinhist-row .chr-time{font-size:11px;color:var(--g-ink-faint);margin-top:1px}
+    .coinhist-row .chr-mid{flex:1;min-width:0;display:flex;flex-direction:column}
+    .coinhist-row .chr-delta{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;flex-shrink:0}
+    .coinhist-row .chr-delta.pos{color:#2BA86A}
+    .coinhist-row .chr-delta.neg{color:#e0556a}
+    .coinhist-row .chr-delta.zero{color:var(--g-ink-faint);font-weight:700}
+    .coinhist-row .chr-bal{font-size:11px;color:var(--g-ink-faint);font-variant-numeric:tabular-nums;flex-shrink:0;min-width:52px;text-align:right}
+    .coinhist-empty{text-align:center;color:var(--g-ink-soft);font-size:13px;padding:28px 10px}
     .achieve-close{display:block;margin:16px auto 0;padding:10px 24px;border:1px solid var(--g-border);border-radius:12px;background:transparent;color:var(--g-ink-soft);font-size:13px;cursor:pointer}
 
     /* ── Guestbook panel ── */

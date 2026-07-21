@@ -5,6 +5,7 @@
       flushLayerData();
       const data = {
         coins: roomData.coins,
+        coinHistory: roomData.coinHistory || [],
         pets: roomData.pets.map(p => ({ id: p.id, type: p.type, name: p.name, hunger: p.hunger, thirst: p.thirst, affection: p.affection, color: p.color, layer: p.layer ?? null, accessory: p.accessory || null, posX: p.posX ?? null, posY: p.posY ?? null, parked: p.parked ?? false, lastDropDay: p.lastDropDay || '', pendingDrops: p.pendingDrops || 0 })),
         petDrops: roomData.petDrops || [],
         petCollections: roomData.petCollections || {},
@@ -106,6 +107,7 @@
       _hideRoomCoinAway();
       if (!plan || viewingUid !== currentUid) return;
       roomData.coins += plan.earned;
+      logCoin(plan.earned, 'While away 💰');
       roomData.lastCoinCollect = Date.now();
       await saveRoom();
       showToast('💰 Collected ' + plan.earned + ' coins!', 'success');
@@ -158,7 +160,14 @@
           }
         }
         const d = snap.data();
+        // Load the coin log first, THEN the balance, THEN reconcile: coins are
+        // shared with the board / mini-games / gifts, so the loaded balance may
+        // have moved outside this app. reconcileCoinHistory folds that gap into a
+        // catch-all row so the history's running total always matches reality.
+        roomData.coinHistory = Array.isArray(d.coinHistory) ? d.coinHistory
+          : (Array.isArray(roomData.coinHistory) ? roomData.coinHistory : []);
         roomData.coins = Math.floor(d.coins ?? 0); // coins are always whole
+        reconcileCoinHistory();
         // Migrate old pet format or load new pets array
         roomData.pets = migratePets(d);
         roomData.plant = d.plant ?? null;
@@ -320,6 +329,7 @@
             } else {
               // Short trip → bank it straight away (no modal).
               roomData.coins += earned;
+              logCoin(earned, 'Plant income 🌱');
               roomData.lastCoinCollect = Date.now();
               saveRoom();
             }
@@ -347,6 +357,7 @@
           });
           if (_afPlan.coinsSpent > 0) {
             roomData.coins = Math.max(0, roomData.coins - _afPlan.coinsSpent);
+            logCoin(-_afPlan.coinsSpent, 'Auto-feeder 🤖');
             const _afSpent = _afPlan.coinsSpent;
             setTimeout(function () {
               showToast('🤖 Auto-Feeder kept your pets fed — spent ' + _afSpent + ' coins while you were away!', 'success');
@@ -432,6 +443,7 @@
         if (r.coinsSpent > 0) {
           pet.hunger = r.hunger; pet.thirst = r.thirst;
           roomData.coins = Math.max(0, roomData.coins - r.coinsSpent);
+          logCoin(-r.coinsSpent, 'Auto-feeder 🤖');
           changed = true;
         }
       }
@@ -519,6 +531,7 @@
                 _showRoomCoinAway({ earned: earned, name: _name });
               } else {
                 roomData.coins += earned;
+                logCoin(earned, 'Plant income 🌱');
                 roomData.lastCoinCollect = Date.now();
                 saveRoom();
                 const _label = incomeHidden.count > 1 ? ('Your ' + incomeHidden.count + ' trees') : (incomeHidden.top.plantDef ? incomeHidden.top.plantDef.name : 'Plant');
@@ -543,6 +556,7 @@
         if (!incomeOnline) return;
         const earned = incomeOnline.perCycle;
         roomData.coins += earned;
+        logCoin(earned, 'Plant income 🌱');
         roomData.lastCoinCollect = Date.now();
         await saveRoom();
         renderAllDebounced();

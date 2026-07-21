@@ -50,6 +50,80 @@
         '<text x="50" y="58" text-anchor="middle" font-size="40" font-weight="bold" fill="#8a5e1f" font-family="sans-serif">$</text></svg>';
     }
 
+    /* ═══════════════════════════════
+       Coin history modal
+       ───────────────────────────────
+       Tapping the coin badge (shared across room / farm / aquarium) opens a
+       readable log of how the balance moved. Rows come from roomData.coinHistory
+       (see logCoin / reconcileCoinHistory in room-state.js). Newest first. */
+    function _coinHistEscape(s) {
+      return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+      });
+    }
+    function _coinHistTime(ts) {
+      if (!ts) return '';
+      const diff = Date.now() - ts;
+      if (diff < 60000) return 'just now';
+      if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+      if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+      if (diff < 604800000) return Math.floor(diff / 86400000) + 'd ago';
+      try {
+        return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      } catch (e) { return ''; }
+    }
+    function renderCoinHistory() {
+      const listEl = document.getElementById('coinHistList');
+      const balEl = document.getElementById('coinHistBalance');
+      if (!listEl) return;
+      if (balEl) balEl.textContent = Math.floor(roomData.coins || 0).toLocaleString();
+      const hist = Array.isArray(roomData.coinHistory) ? roomData.coinHistory : [];
+      if (!hist.length) {
+        listEl.innerHTML = '<div class="coinhist-empty">No coin activity yet.<br>Earn or spend some coins and it\'ll show up here!</div>';
+        return;
+      }
+      let html = '';
+      for (let i = hist.length - 1; i >= 0; i--) {   // newest first
+        const e = hist[i] || {};
+        const d = Math.round(e.d || 0);
+        const cls = d > 0 ? 'pos' : (d < 0 ? 'neg' : 'zero');
+        const deltaTxt = d > 0 ? ('+' + d.toLocaleString()) : (d < 0 ? ('−' + Math.abs(d).toLocaleString()) : '—');
+        const bal = Math.floor(e.b || 0).toLocaleString();
+        html += '<div class="coinhist-row">' +
+          '<div class="chr-mid">' +
+            '<div class="chr-reason">' + _coinHistEscape(e.r || 'Coins') + '</div>' +
+            '<div class="chr-time">' + _coinHistEscape(_coinHistTime(e.t)) + '</div>' +
+          '</div>' +
+          '<div class="chr-delta ' + cls + '">' + deltaTxt + '</div>' +
+          '<div class="chr-bal">' + bal + '</div>' +
+        '</div>';
+      }
+      listEl.innerHTML = html;
+    }
+    function openCoinHistory() {
+      renderCoinHistory();
+      const ov = document.getElementById('coinHistOverlay');
+      if (ov) ov.classList.remove('hidden');
+    }
+    function closeCoinHistory() {
+      const ov = document.getElementById('coinHistOverlay');
+      if (ov) ov.classList.add('hidden');
+    }
+    (function wireCoinHistory() {
+      const badge = document.getElementById('coinDisplay');
+      if (badge) {
+        badge.addEventListener('click', openCoinHistory);
+        badge.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCoinHistory(); }
+        });
+      }
+      const x = document.getElementById('coinHistXBtn');
+      if (x) x.addEventListener('click', closeCoinHistory);
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeCoinHistory();
+      });
+    })();
+
     let _lastPetKey = '';
     let _lastPlantKey = '';
 

@@ -180,6 +180,7 @@
       const dr = drops[i];
       drops.splice(i, 1);
       roomData.coins = (roomData.coins || 0) + (dr.coins || 0);
+      logCoin((dr.coins || 0), 'Pet drop 🐾');
       let msg = '💰 +' + (dr.coins || 0) + ' coins';
       if (dr.kind === 'piece') {
         roomData.petCollections = roomData.petCollections || {};

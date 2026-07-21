@@ -11,6 +11,7 @@
         if (typeCount >= 2) return showToast('Already adopted 2 ' + (petDef ? petDef.name : id) + 's!', 'error');
         if (!petDef || roomData.coins < petDef.cost) return showToast('Not enough coins!', 'error');
         roomData.coins -= petDef.cost;
+        logCoin(-petDef.cost, 'Bought ' + petDef.name);
         const layerPetCount = getPetsOnLayer(currentLayer).length;
         const newPet = {
           id: makePetId(), type: id, name: petDef.name,
@@ -33,6 +34,7 @@
       if (roomData.ownedPlants.includes(id)) return;
 
       roomData.coins -= item.cost;
+      logCoin(-item.cost, 'Bought ' + item.name);
       roomData.ownedPlants.push(id);
       // Inherit only from CHEAPER plants (prevent exploit loop)
       const newPlantCost = item.cost;
@@ -228,6 +230,7 @@
       if (!item || roomData.coins < item.cost) return showToast('Not enough coins!', 'error');
       if (roomData.ownedDecors.includes(id)) return;
       roomData.coins -= item.cost;
+      logCoin(-item.cost, 'Bought ' + item.name);
       roomData.ownedDecors.push(id);
       // Auto-place; if rug, replace any existing rug
       if (item.category === 'rug') {
@@ -274,6 +277,7 @@
       if (!item || roomData.coins < item.cost) return showToast('Not enough coins!', 'error');
       if (roomData.ownedWalls.includes(id)) return;
       roomData.coins -= item.cost;
+      logCoin(-item.cost, 'Bought ' + item.name);
       roomData.ownedWalls.push(id);
       roomData.wallPattern = id;
       _forceRedrawBg();
@@ -298,6 +302,7 @@
       if (!Array.isArray(roomData.ownedFloors)) roomData.ownedFloors = ['floor_wood'];
       if (roomData.ownedFloors.includes(id)) return;
       roomData.coins -= item.cost;
+      logCoin(-item.cost, 'Bought ' + item.name);
       roomData.ownedFloors.push(id);
       roomData.floorStyle = id;
       _forceRedrawBg();
@@ -321,6 +326,7 @@
       if (!item || roomData.coins < item.cost) return showToast('Not enough coins!', 'error');
       if (roomData.ownedWindows.includes(id)) return;
       roomData.coins -= item.cost;
+      logCoin(-item.cost, 'Bought ' + item.name);
       roomData.ownedWindows.push(id);
       roomData.windowStyle = id;
       _forceRedrawBg();
@@ -354,6 +360,7 @@
       const food = FOODS.find(f => f.id === foodId);
       if (!food || roomData.coins < food.cost) return showToast('Not enough coins!', 'error');
       roomData.coins -= food.cost;
+      logCoin(-food.cost, 'Bought ' + food.name);
       pet.hunger = Math.min(100, (pet.hunger ?? 100) + food.restore);
       await saveRoom();
       showToast(food.emoji + ' Fed ' + pet.name + '! +' + food.restore + '%', 'success');
@@ -367,6 +374,7 @@
       const toy = TOYS.find(t => t.id === toyId);
       if (!toy || roomData.coins < toy.cost) return showToast('Not enough coins!', 'error');
       roomData.coins -= toy.cost;
+      logCoin(-toy.cost, 'Bought ' + toy.name);
       const curAff = pet.affection ?? 0;
       const oldMilestone = getAffectionTitle(curAff);
       pet.affection = curAff + toy.affection;
@@ -374,6 +382,7 @@
       await saveRoom();
       if (newMilestone.min > oldMilestone.min && newMilestone.reward > 0) {
         roomData.coins += newMilestone.reward;
+        logCoin(newMilestone.reward, 'Milestone reward 🏆');
         await saveRoom();
         showToast('?? ' + pet.name + ' reached "' + newMilestone.title + '"! +' + newMilestone.reward + ' coins!', 'success');
       } else {
@@ -389,6 +398,7 @@
       const drink = DRINKS.find(d => d.id === drinkId);
       if (!drink || roomData.coins < drink.cost) return showToast('Not enough coins!', 'error');
       roomData.coins -= drink.cost;
+      logCoin(-drink.cost, 'Bought ' + drink.name);
       pet.thirst = Math.min(100, (pet.thirst ?? 100) + drink.restore);
       await saveRoom();
       showToast(drink.emoji + ' Gave ' + pet.name + ' a drink! +' + drink.restore + '%', 'success');
@@ -400,6 +410,7 @@
       if (roomData.autoFeeder) return;
       if (roomData.coins < AUTO_FEEDER_COST) return showToast('Not enough coins!', 'error');
       roomData.coins -= AUTO_FEEDER_COST;
+      logCoin(-AUTO_FEEDER_COST, 'Auto-feeder');
       roomData.autoFeeder = true;
       roomData.autoFeedOn = true;
       runLiveAutoFeed();   // top up any already-hungry pet the moment it's installed
@@ -885,6 +896,7 @@
       const cost = getPlantUpgradeCost(plantId, lvl);
       if (cost === null || roomData.coins < cost) return showToast('Not enough coins!', 'error');
       roomData.coins -= cost;
+      logCoin(-cost, 'Plant upgrade');
       roomData.plantLevels[plantId] = PLANT_LEVELS[lvl].level;
       await saveRoom();
       showToast('Plant upgraded to Lv.' + PLANT_LEVELS[lvl].level + '!', 'success');

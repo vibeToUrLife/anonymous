@@ -332,6 +332,7 @@ function _showAquariumCollect(earned) {
     '</div>';
   const done = function () {
     roomData.coins += earned;
+    logCoin(earned, 'Aquarium 🐟');
     roomData.aquariumLastCollect = Date.now();
     saveRoom();
     if (typeof renderAll === 'function') renderAll();

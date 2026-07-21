@@ -129,6 +129,7 @@
       roomData.loginStreak = newStreak;
       roomData.lastLoginDay = today;
       roomData.coins += reward.coins;
+      logCoin(reward.coins, 'Daily reward 🎁');
       await saveRoom();
       showToast('🎁 Claimed ' + reward.coins + ' coins! Streak: ' + newStreak, 'success');
       checkAchievements();
@@ -410,6 +411,7 @@
       // Update local roomData only if viewing own room
       if (viewingUid === currentUid) {
         roomData.coins -= _giftAmount;
+        logCoin(-_giftAmount, 'Gift sent 🎁');
         roomData.giftsGiven = (roomData.giftsGiven || 0) + 1;
         document.getElementById('coinAmount').textContent = roomData.coins;
       }

@@ -61,7 +61,7 @@ function _aqGameEnd() {
   if (typeof isAquariumView !== 'undefined' && isAquariumView) drawAquariumCanvas();  // restore the swimming tank
 }
 function _aqAward(coins) {
-  if (coins > 0) { roomData.coins += coins; saveRoom(); if (typeof renderAll === 'function') renderAll(); }
+  if (coins > 0) { roomData.coins += coins; logCoin(coins, 'Aquarium game 🐟'); saveRoom(); if (typeof renderAll === 'function') renderAll(); }
 }
 function _aqResultModal(title, sub, coins) {
   const ov = document.createElement('div');
@@ -267,6 +267,7 @@ function _aqShowRaceBet(racers, odds) {
 }
 function _aqRunRace(racers, odds, pickIdx, stake) {
   roomData.coins = Math.max(0, roomData.coins - stake);
+  logCoin(-stake, 'Game stake');
   roomData.aquariumRaceDay = _aqGameToday();
   saveRoom(); if (typeof renderAll === 'function') renderAll();
   const cvs = _aqGameBegin('race'); if (!cvs) return;

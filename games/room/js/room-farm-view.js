@@ -671,6 +671,7 @@
       if (affordable <= 0) return showToast('Not enough coins!', 'error');
       const units = Math.min(Math.ceil(gap), affordable);          // whole units toward the brim
       roomData.coins -= units * FARM_FOOD_COST;
+      logCoin(-(units * FARM_FOOD_COST), 'Farm food refill');
       roomData.farmFood = Math.min(max, food + units);             // clamp so it reaches exactly max
       roomData.farmFoodAt = roomData.farmFoodAt || Date.now();
       await saveRoom();
@@ -687,6 +688,7 @@
       if (roomData.farmAnimals.length >= farmAnimalCap()) return showToast('Farm is full! (' + farmAnimalCap() + ' max) — expand it for more.', 'error');
       if (roomData.coins < def.cost) return showToast('Not enough coins!', 'error');
       roomData.coins -= def.cost;
+      logCoin(-def.cost, 'Bought ' + def.name);
       const now = Date.now();
       // Roll a coat variant: rgb (rarest) → rare → common. Layered thresholds, so
       // FARM_RGB_CHANCE must stay below FARM_RARE_CHANCE.
@@ -757,6 +759,7 @@
       const cost = FARM_EXPAND_COSTS[lvl];
       if (roomData.coins < cost) return showToast('Not enough coins!', 'error');
       roomData.coins -= cost;
+      logCoin(-cost, 'Farm expansion');
       roomData.farmCapLevel = lvl + 1;
       await saveRoom();
       showToast('🏞️ Farm expanded — now holds ' + farmAnimalCap() + ' animals!', 'success');
@@ -772,6 +775,7 @@
       const cost = FARM_TROUGH_COSTS[lvl];
       if (roomData.coins < cost) return showToast('Not enough coins!', 'error');
       roomData.coins -= cost;
+      logCoin(-cost, 'Trough upgrade');
       roomData.farmTroughLevel = lvl + 1;
       await saveRoom();
       showToast('🪣 Bigger trough — now holds ' + farmFoodMax() + ' food!', 'success');
@@ -785,6 +789,7 @@
       if (roomData.farmAutoCollect) return;
       if (roomData.coins < FARM_AUTOCOLLECT_COST) return showToast('Not enough coins!', 'error');
       roomData.coins -= FARM_AUTOCOLLECT_COST;
+      logCoin(-FARM_AUTOCOLLECT_COST, 'Auto-collector');
       roomData.farmAutoCollect = true;
       if (runFarmProduction() >= 0) { /* sweep any drops already on the ground */ }
       await saveRoom();
@@ -799,6 +804,7 @@
       if (!def) return;
       if (roomData.coins < def.cost) return showToast('Not enough coins!', 'error');
       roomData.coins -= def.cost;
+      logCoin(-def.cost, 'Bought ' + def.name);
       roomData.farmDecors = roomData.farmDecors || [];
       roomData.farmDecors.push({
         id: 'fdc' + Date.now() + '_' + Math.floor(Math.random() * 1e4),
@@ -864,6 +870,7 @@
       if (roomData.farmMachines[id] && roomData.farmMachines[id].owned) return;
       if (roomData.coins < mc.cost) return showToast('Not enough coins!', 'error');
       roomData.coins -= mc.cost;
+      logCoin(-mc.cost, 'Built ' + mc.name);
       roomData.farmMachines[id] = { owned: true, slots: 1, jobs: [0] };
       await saveRoom();
       showToast(mc.emoji + ' ' + mc.name + ' built! Tap it on your farm to make goods.', 'success');
@@ -878,6 +885,7 @@
       if (m.slots >= FARM_MAX_SLOTS) return showToast('Max ' + FARM_MAX_SLOTS + ' slots reached!', '');
       if (roomData.coins < FARM_SLOT_COST) return showToast('Not enough coins! (' + FARM_SLOT_COST + '🪙)', 'error');
       roomData.coins -= FARM_SLOT_COST;
+      logCoin(-FARM_SLOT_COST, 'Machine slot');
       m.slots += 1; m.jobs.push(0);
       _slotConfirm = false;
       await saveRoom();
@@ -935,6 +943,7 @@
       o.items.forEach(it => { stockNow[it.id] -= it.qty; });
       roomData.farmStock = stockNow;
       roomData.coins += o.reward;
+      logCoin(o.reward, 'Farm order reward');
       roomData.farmOrdersDone = [...(roomData.farmOrdersDone || []), idx];
       await saveRoom();
       showToast('📦 Order delivered! +' + o.reward + '🪙', 'success');
@@ -952,6 +961,7 @@
       if (roomData.farmPlots.length >= FARM_PLOT_MAX) return showToast('Max plots reached!', '');
       if (roomData.coins < FARM_PLOT_COST) return showToast('Not enough coins!', 'error');
       roomData.coins -= FARM_PLOT_COST;
+      logCoin(-FARM_PLOT_COST, 'Bought plot');
       roomData.farmPlots.push({ id: 'fp' + Date.now() + '_' + Math.floor(Math.random() * 1e4), crop: null, plantedAt: 0 });
       await saveRoom();
       showToast('🌱 New garden plot added!', 'success');
@@ -1015,6 +1025,7 @@
         if (!crop) return;
         if (roomData.coins < crop.seedCost) return showToast('Not enough coins for ' + crop.name + ' seed!', 'error');
         roomData.coins -= crop.seedCost;
+        logCoin(-crop.seedCost, 'Bought ' + crop.name + ' seed');
         plot.crop = crop.id; plot.plantedAt = now;
         _farmParticles.push({ text: crop.emoji, x: pos.x, y: pos.y - 0.05, vy: -0.0008, life: 900, born: performance.now() });
         saveRoom(); renderFarmPanel(); renderAll();
@@ -1045,6 +1056,7 @@
       const crop = FARM_CROPS.find(c => c.id === _selectedCrop);
       if (!crop || roomData.coins < crop.seedCost) return false;
       roomData.coins -= crop.seedCost;
+      logCoin(-crop.seedCost, 'Bought ' + crop.name + ' seed');
       plot.crop = crop.id; plot.plantedAt = Date.now();
       const pos = _farmPlotPos(i);
       _farmParticles.push({ text: crop.emoji, x: pos.x, y: pos.y - 0.05, vy: -0.0008, life: 900, born: performance.now() });
@@ -1178,6 +1190,7 @@
       if (qty <= 0) return;
       const price = farmProductPrices()[prodId] || 0;
       roomData.coins += qty * price;
+      logCoin((qty * price), 'Sold produce');
       roomData.farmStock[prodId] = 0;
       await saveRoom();
       const m = farmProductMeta()[prodId];
@@ -1192,6 +1205,7 @@
       const total = farmSellAllValue(roomData.farmStock || {}, farmProductPrices());
       if (total <= 0) return showToast('No produce to sell.', '');
       roomData.coins += total;
+      logCoin(total, 'Sold all produce');
       roomData.farmStock = {};
       await saveRoom();
       showToast('Sold all produce for ' + total + '🪙!', 'success');
@@ -1538,6 +1552,7 @@
       if (_cartSellable(want, roomData.farmStock || {}) <= 0) return showToast('The cart has had enough of that.', '');
       const price = farmProductPrices()[prodId] || 0;
       roomData.coins += price;
+      logCoin(price, 'Sold to cart');
       roomData.farmStock[prodId] = (roomData.farmStock[prodId] || 0) - 1;
       _cartSold[prodId] = (_cartSold[prodId] || 0) + 1;
       roomData.farmCartSold = { visitStart: cart.visitStart, sold: _cartSold };
@@ -1563,6 +1578,7 @@
       }
       if (!sold) return showToast('Nothing the cart wants right now.', '');
       roomData.coins += total;
+      logCoin(total, 'Sold to cart');
       roomData.farmStock = stock;
       roomData.farmCartSold = { visitStart: cart.visitStart, sold: _cartSold };
       checkAchievements();

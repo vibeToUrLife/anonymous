@@ -120,6 +120,7 @@
       if (resultEl) resultEl.innerHTML = '';
 
       roomData.coins -= GACHA_COST;
+      logCoin(-GACHA_COST, 'Gacha pull 🎰');
       roomData.gachaPulls = (roomData.gachaPulls || 0) + 1;
 
       // Show coin deduction immediately
@@ -178,6 +179,7 @@
       if (prize.type === 'coins') {
         // Coin prize — add coins
         roomData.coins += prize.amount;
+        logCoin(prize.amount, 'Gacha prize');
         document.getElementById('coinAmount').textContent = roomData.coins;
         _lastLocalSaveTime = Date.now();
         saveRoom().then(() => checkAchievements());
@@ -196,6 +198,7 @@
           // Already owned — give coin consolation based on rarity
           const refund = { common: 25, uncommon: 50, rare: 100, epic: 200, legendary: 400 }[prize.rarity] || 25;
           roomData.coins += refund;
+          logCoin(refund, 'Gacha refund');
           document.getElementById('coinAmount').textContent = roomData.coins;
           _lastLocalSaveTime = Date.now();
           saveRoom().then(() => checkAchievements());

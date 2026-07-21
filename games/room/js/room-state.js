@@ -1,7 +1,7 @@
 ﻿    /* ═══════════════════════════════
        State
        ═══════════════════════════════ */
-    let roomData = { coins: 0, petDrops: [], petCollections: {}, autoFeeder: false, autoFeedOn: false, farmAnimals: [], farmDrops: [], farmDecors: [], farmFood: 0, farmFoodAt: 0, farmStock: {}, farmTotalCollected: 0, farmCapLevel: 0, farmAutoCollect: false, farmVariants: {}, farmPlots: [], farmOrdersDay: '', farmOrdersDone: [], farmMachines: {}, pets: [], plant: null, plantLevels: {}, plantPosition: null, ownedPlants: [], ownedDecors: [], placedDecors: [], ownedWalls: ['wall_default'], wallPattern: 'wall_default', ownedWindows: ['win_none','win_classic'], windowStyle: 'win_classic', ownedFloors: ['floor_wood'], floorStyle: 'floor_wood', ownedAccessories: [], displayName: '', lastCoinCollect: 0, loginStreak: 0, lastLoginDay: '', achievements: [], gachaPulls: 0, giftsGiven: 0, giftsReceived: 0, jukeboxTrack: null, jukeboxVol: 0.5, unlockedLayers: 1, layerData: {} };
+    let roomData = { coins: 0, coinHistory: [], petDrops: [], petCollections: {}, autoFeeder: false, autoFeedOn: false, farmAnimals: [], farmDrops: [], farmDecors: [], farmFood: 0, farmFoodAt: 0, farmStock: {}, farmTotalCollected: 0, farmCapLevel: 0, farmAutoCollect: false, farmVariants: {}, farmPlots: [], farmOrdersDay: '', farmOrdersDone: [], farmMachines: {}, pets: [], plant: null, plantLevels: {}, plantPosition: null, ownedPlants: [], ownedDecors: [], placedDecors: [], ownedWalls: ['wall_default'], wallPattern: 'wall_default', ownedWindows: ['win_none','win_classic'], windowStyle: 'win_classic', ownedFloors: ['floor_wood'], floorStyle: 'floor_wood', ownedAccessories: [], displayName: '', lastCoinCollect: 0, loginStreak: 0, lastLoginDay: '', achievements: [], gachaPulls: 0, giftsGiven: 0, giftsReceived: 0, jukeboxTrack: null, jukeboxVol: 0.5, unlockedLayers: 1, layerData: {} };
     // Active layer (1–3) and view mode — local UI state, NOT saved to Firestore
     let currentLayer = 1;
     let isOutsideView = false;
@@ -16,6 +16,61 @@
       toastEl.className = 'toast ' + (type || '') + ' show';
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2500);
+    }
+
+    /* ═══════════════════════════════
+       Coin history (tap the coin badge to view)
+       ───────────────────────────────
+       A rolling, human-readable log of how the (site-wide, shared) coin balance
+       changed while the player was in the room / farm / aquarium. Each entry:
+         { t: epoch-ms, d: signed delta, r: short reason, b: resulting balance }
+       Kept oldest→newest and capped so the Firestore doc stays small.
+
+       Two ways rows get added:
+       • logCoin(delta, reason) — called right AFTER a coin mutation inside the
+         room app, so in-app actions get a specific label ("Bought pet", "Sold
+         crops", …). It records the balance AS-IS, so it must run post-mutation.
+       • reconcileCoinHistory() — called when the room (re)loads its balance from
+         Firestore. Coins are shared with the main board, every mini-game, and
+         gifts from friends, so the balance can change outside this app. If the
+         loaded balance no longer matches the last row's balance, we fold the
+         difference in as a single catch-all row so the running total always
+         reconciles instead of looking wrong. */
+    const COIN_HISTORY_MAX = 100;
+
+    function logCoin(delta, reason) {
+      delta = Math.round(delta || 0);
+      if (!delta) return;                       // a zero change isn't worth a row
+      if (!Array.isArray(roomData.coinHistory)) roomData.coinHistory = [];
+      roomData.coinHistory.push({
+        t: Date.now(),
+        d: delta,
+        r: reason || 'Coins',
+        b: Math.floor(roomData.coins || 0)
+      });
+      const overflow = roomData.coinHistory.length - COIN_HISTORY_MAX;
+      if (overflow > 0) roomData.coinHistory.splice(0, overflow);
+    }
+
+    function reconcileCoinHistory(reason) {
+      if (!Array.isArray(roomData.coinHistory)) roomData.coinHistory = [];
+      const bal = Math.floor(roomData.coins || 0);
+      const h = roomData.coinHistory;
+      if (!h.length) {                          // first time: anchor the baseline
+        h.push({ t: Date.now(), d: 0, r: 'Opening balance', b: bal });
+        return;
+      }
+      const diff = bal - h[h.length - 1].b;
+      if (diff !== 0) {
+        h.push({
+          t: Date.now(),
+          d: diff,
+          r: reason || (diff > 0 ? 'Other activity' : 'Spent elsewhere'),
+          b: bal
+        });
+        const overflow = h.length - COIN_HISTORY_MAX;
+        if (overflow > 0) h.splice(0, overflow);
+      }
     }
 
     // Pet instance helpers
