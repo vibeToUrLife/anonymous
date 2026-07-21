@@ -35,7 +35,6 @@
     .coin-display:hover { transform: translateY(-1px); box-shadow: var(--g-shadow); }
     .coin-display:active { transform: translateY(0); }
     .coin-display:focus-visible { outline: 2px solid var(--g-accent); outline-offset: 2px; }
-    .coin-history-hint { font-size: 12px; opacity: .5; margin-left: 1px; line-height: 1; }
     .price-coin { width: 14px; height: 14px; vertical-align: -2px; }
 
     /* ── Page header ── */
@@ -370,13 +369,13 @@
     .share-board-btn { position: fixed; top: 14px; right: 240px; z-index: 50; width: 40px; height: 40px; border: 1px solid var(--g-border); border-radius: 50%; background: var(--g-card-90); backdrop-filter: blur(10px); color: var(--g-ink-soft); font-size: 19px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s, color 0.2s, transform 0.2s; box-shadow: var(--g-shadow-sm); }
     .share-board-btn:hover { background: var(--g-card-hover); color: var(--g-accent); transform: translateY(-1px); }
     .share-board-btn.hidden { display: none; }
-    @media (max-width: 768px) { .share-board-btn { top: 10px; right: 200px; width: 36px; height: 36px; font-size: 17px; } }
+    @media (max-width: 768px) { .share-board-btn { top: 10px; right: 216px; width: 36px; height: 36px; font-size: 17px; } }
     .panel-shortcuts{display:flex;gap:6px;padding:10px 16px;border-top:1px solid var(--g-border);flex-shrink:0}
     .panel-shortcut-btn{flex:1;padding:8px 4px;border:1px solid var(--g-border);border-radius:10px;background:var(--g-slot);color:var(--g-ink-soft);font-size:11px;font-weight:600;cursor:pointer;text-align:center;transition:all .2s}
     .panel-shortcut-btn:hover{background: var(--g-card-hover);color:var(--g-accent)}
     @media (max-width: 768px) {
-      .settings-btn { top: 10px; right: 110px; width: 36px; height: 36px; font-size: 17px; }
-      .achieve-header-btn { top: 10px; right: 155px; width: 36px; height: 36px; font-size: 17px; }
+      .settings-btn { top: 10px; right: 126px; width: 36px; height: 36px; font-size: 17px; }
+      .achieve-header-btn { top: 10px; right: 171px; width: 36px; height: 36px; font-size: 17px; }
       .panel-shortcut-btn{font-size:10px;padding:6px 2px}
     }
 
