@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Anonymous Bubble Answers</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
-  <link rel="stylesheet" href="./src/css/style.css?v=14">
+  <link rel="stylesheet" href="./src/css/style.css?v=15">
   <link rel="stylesheet" href="./src/css/interactive.css?v=31">
   <!-- Clay "Bubble Pop" design system: tokens + component library (load last so they govern) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1523,6 +1523,7 @@
     })();
   </script>
   <div class="mood-panel" id="moodPanel">
+    <button class="mood-panel-close" id="moodPanelClose" type="button" aria-label="Close">✕</button>
     <h4>How are you feeling today?</h4>
     <div id="moodCheckinArea">
       <div class="mood-emoji-row" id="moodEmojiRow">
@@ -1613,7 +1614,7 @@
   <script src="./src/js/theme.js?v=2"></script>
   <!-- Shared-space link helper (defines window.ShareToBoard for the board render). -->
   <script src="./src/js/share-to-board.js?v=1"></script>
-  <script src="./src/js/app.js?v=31"></script>
+  <script src="./src/js/app.js?v=32"></script>
   <!-- Access code gate — must load after app.js (uses its shared auth/db). Shows after Google login. -->
   <script src="./src/js/access-code-gate.js?v=1"></script>
   <script src="./src/js/feature-flags.js"></script>

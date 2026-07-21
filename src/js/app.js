@@ -3551,6 +3551,11 @@ countdownRef.onSnapshot((snap) => {
     moodPanel.classList.toggle('show');
     });
 
+    // Close button — the daily auto-popup must be dismissible without picking
+    document.getElementById('moodPanelClose').addEventListener('click', () => {
+    moodPanel.classList.remove('show');
+    });
+
     // Close panel on outside click
     document.addEventListener('click', (e) => {
     if (!moodPanel.contains(e.target) && e.target !== moodFab) {
@@ -3652,10 +3657,33 @@ countdownRef.onSnapshot((snap) => {
     const existing = getLocalMood();
     if (existing) renderChecked(existing);
 
+    // Auto-open once per day on page entry. Waits for sign-in AND for the
+    // access-code gate to clear: the gate sits above everything (z-index 2M)
+    // and clicks on it bubble to the outside-click handler, which would
+    // dismiss the popup before anyone saw it. The daily flag is burned only
+    // when the popup actually appears, so a first-visit user still gets it
+    // right after entering the code. Picking stays optional — ✕, outside
+    // click, or the FAB all close it, and it stays away until tomorrow.
+    function maybeAutoOpenPanel() {
+    const POPUP_KEY = 'mood_popup_last';
+    if (getLocalMood()) return;                                 // already picked today
+    if (localStorage.getItem(POPUP_KEY) === todayKey()) return; // already popped today
+    const gate = document.getElementById('accessGate');
+    const through = () => !gate ||
+        (gate.classList.contains('hidden') && localStorage.getItem('access_code_verified') === 'true');
+    const poll = setInterval(() => {
+        if (!through()) return;
+        clearInterval(poll);
+        localStorage.setItem(POPUP_KEY, todayKey());
+        moodPanel.classList.add('show');
+    }, 500);
+    }
+
     // After auth ready, check Firestore for actual vote and start chart listener
-    const unsubAuth = auth.onAuthStateChanged((user) => {
+    const unsubAuth = auth.onAuthStateChanged(async (user) => {
     if (!user) return; // Wait for authenticated state
-    checkExistingVote();
+    await checkExistingVote(); // may learn about a vote made on another device
+    maybeAutoOpenPanel();
     todayDocRef().onSnapshot(
         (snap) => { updateChart(snap.exists ? snap.data() : {}); },
         (err) => { console.warn('Mood chart listener error:', err); }
