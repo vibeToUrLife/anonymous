@@ -48,6 +48,136 @@
   ];
   var CROWD = ['#d8b4a0', '#a0b8d8', '#d8d0a0', '#b8a0d8', '#a0d8c0', '#d8a0a8', '#c8c8c8'];
 
+  /* ── sound (Web Audio, all synthesized — no audio files) ───── */
+  var SND = (function () {
+    var ac = null, master = null, noiseBuf = null;
+    var muted = false;
+    try { muted = localStorage.getItem('hr_sound') === '0'; } catch (e) {}
+    var crowd = null, crowdGain = null;     // looping crowd-noise bed
+    var hoofNext = 0, hoofOn = false;
+    var VOL = 0.5;
+
+    function ensure() {
+      if (ac) return true;
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return false;
+      try { ac = new AC(); } catch (e) { return false; }
+      master = ac.createGain();
+      master.gain.value = muted ? 0 : VOL;
+      master.connect(ac.destination);
+      noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+      var d = noiseBuf.getChannelData(0);
+      for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      return true;
+    }
+    function resume() { if (ac && ac.state === 'suspended') { try { ac.resume(); } catch (e) {} } }
+    function env(g, t0, a, peak, dec) {
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.linearRampToValueAtTime(peak, t0 + a);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + a + dec);
+    }
+    function blip(freq, t0, peak, dec, type) {
+      var o = ac.createOscillator(), g = ac.createGain();
+      o.type = type || 'sine'; o.frequency.value = freq;
+      o.connect(g); g.connect(master);
+      env(g, t0, 0.008, peak, dec);
+      o.start(t0); o.stop(t0 + dec + 0.05);
+    }
+    function noise(t0, peak, dec, freq, q) {
+      var src = ac.createBufferSource(); src.buffer = noiseBuf;
+      src.playbackRate.value = 0.85 + Math.random() * 0.3;
+      var flt = ac.createBiquadFilter();
+      flt.type = 'bandpass'; flt.frequency.value = freq; flt.Q.value = q || 1;
+      var g = ac.createGain();
+      src.connect(flt); flt.connect(g); g.connect(master);
+      env(g, t0, 0.005, peak, dec);
+      src.start(t0, Math.random() * 0.5); src.stop(t0 + dec + 0.05);
+    }
+
+    return {
+      poke: function () { resume(); },
+      muted: function () { return muted; },
+      toggle: function () {
+        muted = !muted;
+        try { localStorage.setItem('hr_sound', muted ? '0' : '1'); } catch (e) {}
+        if (ensure()) {
+          resume();
+          master.gain.setTargetAtTime(muted ? 0 : VOL, ac.currentTime, 0.03);
+        }
+        return muted;
+      },
+      tick: function (last) {
+        if (muted || !ensure()) return; resume();
+        blip(last ? 1318 : 880, ac.currentTime, 0.10, 0.10, 'sine');
+      },
+      bell: function () {                       // starting gate bell
+        if (muted || !ensure()) return; resume();
+        var t0 = ac.currentTime;
+        blip(1568, t0, 0.16, 0.7, 'triangle');
+        blip(2093, t0, 0.10, 0.55, 'sine');
+        blip(1046, t0 + 0.015, 0.06, 0.4, 'sine');
+      },
+      /* per-frame while racing: schedule gallop hits ahead + drive crowd.
+         avgSf = mean normalized pack speed (surges → faster hoof tempo),
+         pLead = leader progress (crowd swells over the final stretch). */
+      race: function (avgSf, pLead) {
+        if (muted || !ensure()) return; resume();
+        var t = ac.currentTime;
+        if (!crowd) {
+          crowd = ac.createBufferSource(); crowd.buffer = noiseBuf; crowd.loop = true;
+          var f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 750; f.Q.value = 0.6;
+          crowdGain = ac.createGain(); crowdGain.gain.value = 0;
+          crowd.connect(f); f.connect(crowdGain); crowdGain.connect(master);
+          crowd.start();
+        }
+        var lvl = 0.10 + (pLead > 0.82 ? (Math.min(pLead, 1) - 0.82) / 0.18 * 0.14 : 0);
+        crowdGain.gain.setTargetAtTime(lvl, t, 0.4);
+        if (!hoofOn) { hoofOn = true; hoofNext = t + 0.05; }
+        var stride = 1 / (1.9 + 0.5 * avgSf);   // gallop: da-da-da-DUM per stride
+        var beats = [0, 0.14, 0.28, 0.47], vols = [0.35, 0.45, 0.55, 0.8];
+        while (hoofNext < t + 0.30) {
+          for (var L = 0; L < 2; L++) {          // two pack layers for depth
+            var jit = L ? 0.045 : 0;
+            for (var b = 0; b < beats.length; b++) {
+              noise(hoofNext + beats[b] * stride + jit + Math.random() * 0.012,
+                    vols[b] * (L ? 0.10 : 0.16), 0.055, 150 + Math.random() * 90, 1.1);
+            }
+          }
+          hoofNext += stride;
+        }
+      },
+      cheer: function () {                      // winner crosses the line
+        if (muted || !ensure()) return; resume();
+        var t0 = ac.currentTime;
+        if (crowdGain) {
+          crowdGain.gain.setTargetAtTime(0.34, t0, 0.06);
+          crowdGain.gain.setTargetAtTime(0.14, t0 + 1.4, 0.5);
+        }
+        for (var i = 0; i < 8; i++) {            // scattered claps/whistles
+          noise(t0 + Math.random() * 0.9, 0.10, 0.05, 2200 + Math.random() * 1500, 2);
+        }
+        var notes = [523.25, 659.25, 783.99, 1046.5];   // C‑E‑G‑C fanfare
+        for (var k = 0; k < notes.length; k++) {
+          blip(notes[k], t0 + 0.05 + k * 0.10, 0.12, k === 3 ? 0.5 : 0.16, 'triangle');
+        }
+      },
+      raceEnd: function () {                    // all horses home → wind down
+        if (!ac) return;
+        hoofOn = false;
+        if (crowdGain) crowdGain.gain.setTargetAtTime(0.0001, ac.currentTime, 0.8);
+      },
+      stopAll: function () {
+        if (!ac) return;
+        hoofOn = false;
+        if (crowdGain) crowdGain.gain.setTargetAtTime(0.0001, ac.currentTime, 0.1);
+      },
+      setHidden: function (hid) {               // tab hidden → duck to silence
+        if (!ac) return;
+        master.gain.setTargetAtTime((hid || muted) ? 0 : VOL, ac.currentTime, 0.05);
+      }
+    };
+  })();
+
   /* ── firebase handles ──────────────────────────────────────── */
   var rtdb = null;
   try { rtdb = firebase.database ? firebase.database() : null; } catch (e) { rtdb = null; }
@@ -123,6 +253,7 @@
   var isOpen = false, view = 'setup';
   var rafId = 0, lastFrameTs = 0;
   var lastAutoId = null, resultsShownFor = null, lastCountNum = null;
+  var cheeredFor = null, endedFor = null;   // per-race sound gates
   var el = {};
 
   function raceOpts() {
@@ -134,6 +265,11 @@
   function maxFinish() {
     var m = 0;
     for (var i = 0; i < horses.length; i++) m = Math.max(m, horses[i].finish);
+    return m;
+  }
+  function minFinish() {
+    var m = Infinity;
+    for (var i = 0; i < horses.length; i++) m = Math.min(m, horses[i].finish);
     return m;
   }
   function stageNow() {
@@ -202,6 +338,10 @@
   '.hr-count .lbl{font-size:13px;font-weight:600;color:rgba(255,255,255,.92);margin-top:8px;' +
     'text-shadow:0 2px 8px rgba(0,0,0,.8);padding:0 16px;text-align:center;}' +
   '.hr-count.go .num{color:#4ade80;text-shadow:0 4px 30px rgba(74,222,128,.6),0 2px 6px rgba(0,0,0,.6);}' +
+  '.hr-mute{position:absolute;bottom:10px;right:10px;width:40px;height:40px;border:1px solid rgba(255,255,255,.16);' +
+    'border-radius:50%;background:rgba(8,12,8,.62);backdrop-filter:blur(6px);color:#fff;font-size:16px;' +
+    'cursor:pointer;transition:transform .12s;display:grid;place-items:center;}' +
+  '.hr-mute:active{transform:scale(.92);}' +
   /* results: podium + rows */
   '.hr-results{margin-top:12px;}' +
   '.hr-res-champ{font-size:15px;font-weight:800;color:#fde68a;text-align:center;margin:2px 0 10px;}' +
@@ -283,6 +423,7 @@
                 '<span class="hr-leadname" id="hrLeadName"></span></div>' +
               '<div class="hr-count" id="hrCount" style="display:none">' +
                 '<div class="num" id="hrCountNum"></div><div class="lbl" id="hrCountLbl"></div></div>' +
+              '<button class="hr-mute" id="hrMute" aria-label="声音开关">🔊</button>' +
             '</div>' +
             '<div class="hr-results" id="hrResults" style="display:none"></div>' +
             '<button class="hr-again" id="hrAgain" style="display:none">🏇 发起新比赛</button>' +
@@ -293,10 +434,15 @@
 
     ['hrClose', 'hrSetup', 'hrTa', 'hrErr', 'hrStart', 'hrLast', 'hrLive',
      'hrCanvas', 'hrChipLive', 'hrLiveTxt', 'hrClock', 'hrChipLead', 'hrLeadTag', 'hrLeadDot', 'hrLeadName',
-     'hrCount', 'hrCountNum', 'hrCountLbl', 'hrResults', 'hrAgain']
+     'hrCount', 'hrCountNum', 'hrCountLbl', 'hrMute', 'hrResults', 'hrAgain']
       .forEach(function (id) { el[id] = document.getElementById(id); });
     canvas = el.hrCanvas; ctx = canvas.getContext('2d');
 
+    el.hrMute.textContent = SND.muted() ? '🔇' : '🔊';
+    el.hrMute.addEventListener('click', function (e) {
+      e.stopPropagation();
+      el.hrMute.textContent = SND.toggle() ? '🔇' : '🔊';
+    });
     el.hrClose.addEventListener('click', closeOverlay);
     overlay.addEventListener('click', function (e) { if (e.target === overlay) closeOverlay(); });
     el.hrStart.addEventListener('click', startRace);
@@ -317,6 +463,7 @@
     isOpen = false;
     overlay.classList.remove('show');
     stopLoop();
+    SND.stopAll();
     if (race && stageNow() !== 'done') {
       try { sessionStorage.setItem('hr_dismissed', race.id); } catch (e) {}
     }
@@ -326,6 +473,7 @@
     el.hrSetup.style.display = v === 'setup' ? '' : 'none';
     el.hrLive.style.display = v === 'live' ? '' : 'none';
     resultsShownFor = null; lastCountNum = null;
+    if (v !== 'live') SND.stopAll();
     if (v === 'live') sizeCanvas();
     refreshSetup(true);
   }
@@ -797,6 +945,7 @@
         el.hrCountNum.classList.remove('tick');
         void el.hrCountNum.offsetWidth;
         el.hrCountNum.classList.add('tick');
+        if (num <= 5) SND.tick(num === 1);
       }
       el.hrCountLbl.textContent = '「' + (race.byName || '有人') + '」发起了比赛 · ' + raceOpts().length + ' 位选手就位';
       el.hrResults.style.display = 'none'; el.hrAgain.style.display = 'none';
@@ -811,15 +960,22 @@
           el.hrCountNum.classList.remove('tick');
           void el.hrCountNum.offsetWidth;
           el.hrCountNum.classList.add('tick');
+          SND.bell();
         }
       } else el.hrCount.style.display = 'none';
       el.hrChipLive.style.display = '';
       el.hrLiveTxt.textContent = 'LIVE';
       el.hrClock.textContent = (t / 1000).toFixed(1) + 's';
-      var lead = null, best = -1;
+      var lead = null, best = -1, sfSum = 0, sfN = 0;
       for (var i = 0; i < horses.length; i++) {
         var p = progressAt(horses[i], t);
         if (p > best) { best = p; lead = horses[i]; }
+        if (t < horses[i].finish) { sfSum += speedAt(horses[i], t); sfN++; }
+      }
+      SND.race(sfN ? sfSum / sfN : 0.5, best);
+      if (cheeredFor !== race.id && t >= minFinish() && t < minFinish() + 2500) {
+        cheeredFor = race.id;         // winner just crossed → crowd erupts
+        SND.cheer();
       }
       if (lead) {
         el.hrChipLead.style.display = '';
@@ -829,6 +985,7 @@
       }
       el.hrResults.style.display = 'none'; el.hrAgain.style.display = 'none';
     } else { /* done */
+      if (endedFor !== race.id) { endedFor = race.id; SND.raceEnd(); }
       el.hrCount.style.display = 'none';
       el.hrChipLead.style.display = 'none';
       el.hrChipLive.style.display = '';
@@ -1008,6 +1165,9 @@
     if (firebase.auth) firebase.auth().onAuthStateChanged(function (u) {
       if (u && !attached) { attached = true; attach(); }
     });
+    /* autoplay policy: resume the (suspended) audio context on any gesture */
+    document.addEventListener('pointerdown', function () { SND.poke(); }, { passive: true });
+    document.addEventListener('visibilitychange', function () { SND.setHidden(document.hidden); });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
