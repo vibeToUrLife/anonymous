@@ -21,7 +21,8 @@
     world:          ['worldEntry'],
     jar:            ['jarToggle'],   // per-bubble 收藏 buttons: bubble-jar.js
     doodle:         ['doodleBtn'],
-    wall:           ['wallToggle']
+    wall:           ['wallToggle'],
+    horse_race:     ['horseRaceBtn']
   };
 
   function apply(flags) {

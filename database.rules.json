@@ -49,6 +49,23 @@
       }
     },
 
+    "horse_race": {
+      "current": {
+        ".read": "auth != null",
+        ".write": "auth != null && (!data.exists() || now > data.child('startAt').val() + 60000) && newData.hasChildren(['id','options','seed','startAt','by'])",
+        "id":      { ".validate": "newData.isString() && newData.val().length <= 30" },
+        "seed":    { ".validate": "newData.isNumber()" },
+        "startAt": { ".validate": "newData.isNumber() && newData.val() >= now - 5000 && newData.val() <= now + 30000" },
+        "by":      { ".validate": "newData.val() == auth.uid" },
+        "byName":  { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "options": {
+          ".validate": "newData.hasChildren(['0','1']) && !newData.child('12').exists()",
+          "$i": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 24" }
+        },
+        "$other": { ".validate": false }
+      }
+    },
+
     "world": {
       "scenes": {
         "$scene": {
