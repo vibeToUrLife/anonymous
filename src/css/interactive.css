@@ -1261,10 +1261,37 @@ body.light-theme .riddle-solvers-empty { color: rgba(0, 0, 0, 0.45); }
   background: linear-gradient(135deg, rgba(252,211,77,0.16), rgba(245,158,11,0.10));
   border: 1px solid rgba(252,211,77,0.34); box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
 }
-.cc-wallet .coin { font-size: 16px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4)); }
+.cc-wallet .coin { font-size: 16px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4)); display: inline-flex; }
 .cc-wallet b { font-size: 16px; font-weight: 800; color: #ffe9a8; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
 .cc-wallet-flash { animation: ccWalletFlash 0.5s ease; }
 @keyframes ccWalletFlash { 40% { transform: scale(1.08); } }
+/* The wallet is a button into the coin-history popup. */
+.cc-wallet { cursor: pointer; transition: transform .15s, box-shadow .15s, border-color .15s; }
+.cc-wallet:hover { transform: translateY(-1px); border-color: rgba(252,211,77,0.6); box-shadow: 0 4px 14px rgba(0,0,0,0.28); }
+.cc-wallet:active { transform: translateY(0); }
+.cc-wallet:focus-visible { outline: 2px solid rgba(252,211,77,0.7); outline-offset: 2px; }
+
+/* Inline SVG coin (replaces the 🪙 emoji, which is a tofu box on old fonts) */
+.cc-coin-ic { width: 1em; height: 1em; vertical-align: -0.14em; display: inline-block; }
+
+/* Coin history popup */
+.cc-hist-card { max-width: 440px; width: 92%; }
+.cc-hist-list { display: flex; flex-direction: column; gap: 6px; max-height: 60vh; overflow-y: auto; margin-top: 6px; }
+.cc-hist-row { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 10px; background: rgba(255,255,255,0.05); }
+.cc-hist-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cc-hist-reason { font-size: 13px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cc-hist-time { font-size: 11px; color: rgba(255,255,255,0.42); margin-top: 1px; }
+.cc-hist-delta { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.cc-hist-delta.pos { color: #34d399; }
+.cc-hist-delta.neg { color: #ff8aab; }
+.cc-hist-delta.zero { color: rgba(255,255,255,0.4); font-weight: 700; }
+.cc-hist-bal { font-size: 11px; color: rgba(255,255,255,0.42); font-variant-numeric: tabular-nums; flex-shrink: 0; min-width: 56px; text-align: right; }
+.cc-hist-empty { text-align: center; color: rgba(255,255,255,0.5); font-size: 13px; padding: 30px 10px; line-height: 1.7; }
+body.light-theme .cc-hist-row { background: rgba(0,0,0,0.04); }
+body.light-theme .cc-hist-reason { color: #2a2150; }
+body.light-theme .cc-hist-time, body.light-theme .cc-hist-bal { color: rgba(0,0,0,0.45); }
+body.light-theme .cc-hist-delta.neg { color: #e0556a; }
+body.light-theme .cc-hist-empty { color: rgba(0,0,0,0.5); }
 .cc-tabs { display: flex; gap: 7px; padding: 2px 16px 14px; overflow-x: auto; scrollbar-width: none; }
 .cc-tabs::-webkit-scrollbar { display: none; }
 .cc-tab {
