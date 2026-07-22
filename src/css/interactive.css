@@ -1325,6 +1325,15 @@ body.light-theme .riddle-solvers-empty { color: rgba(0, 0, 0, 0.45); }
 .cc-hist-delta.zero { color: rgba(255,255,255,0.4); font-weight: 700; }
 .cc-hist-bal { font-size: 11px; color: rgba(255,255,255,0.42); font-variant-numeric: tabular-nums; flex-shrink: 0; min-width: 56px; text-align: right; }
 .cc-hist-empty { text-align: center; color: rgba(255,255,255,0.5); font-size: 13px; padding: 30px 10px; line-height: 1.7; }
+.cc-hist-more {
+  flex-shrink: 0; margin-top: 10px; width: 100%; padding: 10px;
+  border: none; border-radius: 10px; cursor: pointer; font-family: inherit;
+  background: rgba(255,255,255,0.08); color: #ffe9a8; font-size: 13px; font-weight: 700;
+}
+.cc-hist-more:hover { background: rgba(255,255,255,0.14); }
+.cc-hist-more:active { transform: scale(0.99); }
+body.light-theme .cc-hist-more { background: rgba(0,0,0,0.05); color: #b45309; }
+body.light-theme .cc-hist-more:hover { background: rgba(0,0,0,0.09); }
 body.light-theme .cc-hist-row { background: rgba(0,0,0,0.04); }
 body.light-theme .cc-hist-reason { color: #2a2150; }
 body.light-theme .cc-hist-time, body.light-theme .cc-hist-bal { color: rgba(0,0,0,0.45); }

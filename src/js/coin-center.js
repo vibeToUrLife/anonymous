@@ -97,18 +97,36 @@
       listEl.innerHTML = '<div class="cc-hist-empty">还没有金币记录～<br>消费或赚取金币后会显示在这里</div>';
       return;
     }
-    var html = '';
-    for (var i = hist.length - 1; i >= 0; i--) {   // newest first
-      var e = hist[i] || {}; var dd = Math.round(e.d || 0);
+    // Paginate: the whole (≤100) history came back in the single room-doc read
+    // above, so we render it PAGE rows at a time and only build the next page's
+    // DOM when "下一页" is tapped — keeps the list light and matches the ask.
+    var entries = hist.slice().reverse();   // newest first
+    var PAGE = 20, shown = 0;
+    listEl.innerHTML = '';
+    function rowHTML(e) {
+      var dd = Math.round(e.d || 0);
       var cls = dd > 0 ? 'pos' : (dd < 0 ? 'neg' : 'zero');
       var dtxt = dd > 0 ? ('+' + dd.toLocaleString()) : (dd < 0 ? ('−' + Math.abs(dd).toLocaleString()) : '—');
-      html += '<div class="cc-hist-row">'
+      return '<div class="cc-hist-row">'
         + '<div class="cc-hist-mid"><div class="cc-hist-reason">' + esc(e.r || '金币') + '</div>'
         + '<div class="cc-hist-time">' + esc(histTime(e.t)) + '</div></div>'
         + '<div class="cc-hist-delta ' + cls + '">' + dtxt + '</div>'
         + '<div class="cc-hist-bal">' + Math.floor(e.b || 0).toLocaleString() + '</div></div>';
     }
-    listEl.innerHTML = html;
+    var moreBtn = document.createElement('button');
+    moreBtn.type = 'button';
+    moreBtn.className = 'cc-hist-more';
+    function renderMore() {
+      var end = Math.min(shown + PAGE, entries.length), frag = '';
+      for (; shown < end; shown++) frag += rowHTML(entries[shown]);
+      listEl.insertAdjacentHTML('beforeend', frag);
+      var remaining = entries.length - shown;
+      if (remaining > 0) moreBtn.textContent = '下一页（还剩 ' + remaining + ' 条）';
+      else moreBtn.remove();
+    }
+    moreBtn.addEventListener('click', renderMore);
+    pop.querySelector('.cc-hist-card').appendChild(moreBtn);   // pinned below the scroll area
+    renderMore();   // first page
   }
 
   /* ── Equipped-cosmetics mirror for app.js (zero extra reads on post) ── */
