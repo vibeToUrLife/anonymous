@@ -55,7 +55,6 @@
   var COIN_REASON = 'Auto-feeder 🤖';     // same reason string the Room logs, so history groups together
 
   var _timer = null;
-  var _announced = false;   // show the "while you were away" toast at most once per sign-in
 
   // One catch-up pass for `uid`. Reads the room doc, and if the Auto-Feeder is
   // owned + ON and time has elapsed, tops every pet up (spending coins) exactly
@@ -126,9 +125,11 @@
       return;
     }
 
-    if (spent > 0 && announce && !_announced && typeof showToast === 'function') {
-      _announced = true;
-      showToast('🤖 自动喂食器在后台喂了宠物，花费 ' + spent + ' 金币', 'success');
+    // Toast on EVERY background charge so the deduction is visible (previously it
+    // fired at most once per sign-in, so most charges went unnoticed). The initial
+    // catch-up is usually the big "while you were away" one; later ticks are small.
+    if (spent > 0 && typeof showToast === 'function') {
+      showToast('🤖 自动喂食器喂了宠物，花费 ' + spent + ' 金币', 'success');
     }
   }
 
@@ -152,7 +153,6 @@
   }
 
   auth.onAuthStateChanged(function (user) {
-    _announced = false;
     if (user) start(user.uid);
     else stop();
   });
