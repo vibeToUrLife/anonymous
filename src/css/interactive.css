@@ -1305,9 +1305,16 @@ body.light-theme .riddle-solvers-empty { color: rgba(0, 0, 0, 0.45); }
 /* Inline SVG coin (replaces the 🪙 emoji, which is a tofu box on old fonts) */
 .cc-coin-ic { width: 1em; height: 1em; vertical-align: -0.14em; display: inline-block; }
 
-/* Coin history popup */
-.cc-hist-card { max-width: 440px; width: 92%; }
-.cc-hist-list { display: flex; flex-direction: column; gap: 6px; max-height: 60vh; overflow-y: auto; margin-top: 6px; }
+/* Coin history popup — size to content (not the shared 640px card height) with real
+   padding so the title clears the top/✕, and a scroll area with the bar hidden. */
+.cc-hist-card { max-width: 440px; width: 92%; height: auto; max-height: 86vh; padding: 16px 16px 18px; }
+.cc-hist-card .cc-title { margin: 2px 34px 2px 2px; }   /* breathing room; clear the ✕ on the right */
+.cc-hist-list {
+  display: flex; flex-direction: column; gap: 6px; margin-top: 10px;
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  scrollbar-width: none; -ms-overflow-style: none;      /* Firefox / old Edge: no scrollbar */
+}
+.cc-hist-list::-webkit-scrollbar { width: 0; height: 0; display: none; }   /* WebKit: no scrollbar */
 .cc-hist-row { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 10px; background: rgba(255,255,255,0.05); }
 .cc-hist-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .cc-hist-reason { font-size: 13px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
