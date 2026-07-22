@@ -165,6 +165,8 @@
   let _rankUnsub = null;   // live 本周答对榜 subscription
   let _rankList = [];      // last rendered weekly ranking (so "上周获奖" can re-render)
   let _lastWeekWinners = null;   // [{uid,name,count,prize}] paid out last week
+  let _noteOpen = false;   // 玩法说明 is collapsed by default — revealed by the ℹ️ button
+                           // (kept in module state so live re-renders don't snap it shut)
   let _data  = null;    // latest snapshot data (null before first load)
   let _busy  = false;   // a transaction is in flight
   let _expand = { chain: false, board: false, wrong: false };   // "show last 3 / expand" per list
@@ -287,11 +289,13 @@
   const RANK_MEDALS = ['🥇', '🥈', '🥉'];
   function renderRank(list) {
     if (!rankEl) return;
-    const note = '<div class="cj-lb-note">' +
+    const infoBtn = '<button type="button" class="cj-lb-info" data-note="1">ℹ️ 玩法与奖励说明 ' +
+      (_noteOpen ? '▴' : '▾') + '</button>';
+    const note = _noteOpen ? '<div class="cj-lb-note">' +
       '📖 每接对一个成语 +1 个，比谁一周接得多<br>' +
       '🗓️ 每周日 00:00 刷新新一周榜单<br>' +
       '🏆 每周结算：上周前三名自动到账 🥇5000 / 🥈3000 / 🥉1000 金币 💰' +
-      '</div>';
+      '</div>' : '';
     const last = (_lastWeekWinners && _lastWeekWinners.length)
       ? '<div class="cj-lb-last">🎁 上周获奖：' +
           _lastWeekWinners.map(function (w, i) {
@@ -308,7 +312,7 @@
                  '</div>';
         }).join('') + '</div>'
       : '<span class="cj-empty">本周还没有人上榜，接对就能登顶！</span>';
-    rankEl.innerHTML = '<div class="cj-sec-title">🏅 本周答对榜</div>' + note + last + body;
+    rankEl.innerHTML = '<div class="cj-sec-title">🏅 本周答对榜</div>' + infoBtn + note + last + body;
   }
   function subscribeRank() {
     if (typeof db === 'undefined') { if (rankEl) rankEl.hidden = true; return; }
@@ -525,6 +529,11 @@
     if (!btn) return;
     _expand[btn.dataset.list] = !_expand[btn.dataset.list];
     render();
+  });
+  overlay.addEventListener('click', function (e) {
+    if (!(e.target.closest && e.target.closest('.cj-lb-info'))) return;
+    _noteOpen = !_noteOpen;               // reveal / hide the 玩法说明
+    renderRank(_rankList);
   });
   submitBtn.addEventListener('click', submit);
   reseedBtn.addEventListener('click', reseed);
