@@ -69,6 +69,53 @@
   function ymd(d) { var p = function (n) { return n < 10 ? '0' + n : '' + n; }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
   function daysBetween(a, b) { return Math.round((b - a) / MS_DAY); }
   function fmtMD(d) { return (d.getMonth() + 1) + '月' + d.getDate() + '日'; }
+  function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+
+  /* ── Optional start time (stored as 24h "HH:MM"; UI is a 12h clock). ──
+     A holiday with no time behaves as an all-day event: the countdown is in
+     whole days and it drops off at midnight of the arrival day. With a time,
+     the countdown is precise (d/h/m/s) and it drops off at that exact moment. */
+  function parseTime(s) {                                         // "HH:MM" → minutes since midnight, or null
+    if (!s) return null;
+    var p = String(s).split(':');
+    if (p.length !== 2) return null;
+    var h = +p[0], m = +p[1];
+    if (isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) return null;
+    return h * 60 + m;
+  }
+  function minToHHMM(min) { return pad2(Math.floor(min / 60)) + ':' + pad2(min % 60); }
+  function to24Min(h12, m, pm) {                                  // clock selection → minutes since midnight
+    var h = h12 % 12; if (pm) h += 12;                           // 12上午→0, 12下午→12
+    return h * 60 + m;
+  }
+  function fmtTime12(s) {                                         // "18:00" → "下午6:00"
+    var min = parseTime(s); if (min === null) return '';
+    var h = Math.floor(min / 60), m = min % 60;
+    var ap = h < 12 ? '上午' : '下午';
+    var h12 = h % 12; if (h12 === 0) h12 = 12;
+    return ap + h12 + ':' + pad2(m);
+  }
+  /* Exact start moment (ms): the start date at its time, else that day's midnight. */
+  function startMs(h) {
+    var min = parseTime(h.time);
+    return parseDate(h.start).getTime() + (min === null ? 0 : min * 60000);
+  }
+  function remainMs(h) { return startMs(h) - Date.now(); }
+  /* Countdown pieces. Timed → precise & ticking; all-day → whole days. */
+  function countdown(h) {
+    if (!parseTime(h.time)) {
+      var days = Math.round((parseDate(h.start).getTime() - todayMidnight().getTime()) / MS_DAY);
+      return { big: days, unit: '天', sub: '' };
+    }
+    var s = Math.max(0, Math.floor(remainMs(h) / 1000));
+    var d = Math.floor(s / 86400); s -= d * 86400;
+    var h2 = Math.floor(s / 3600); s -= h2 * 3600;
+    var m = Math.floor(s / 60); s -= m * 60;
+    if (d > 0) return { big: d, unit: '天', sub: h2 + '小时' + m + '分' };
+    if (h2 > 0) return { big: h2, unit: '小时', sub: m + '分' + s + '秒' };
+    if (m > 0) return { big: m, unit: '分', sub: s + '秒' };
+    return { big: s, unit: '秒', sub: '' };
+  }
 
   /** "8月15日（周六）" or "8月15日（周六）–8月20日（周四）· 共6天". */
   function detailLine(h) {
@@ -78,6 +125,7 @@
       var e = parseDate(h.end);
       line += '–' + fmtMD(e) + '（' + WEEK[e.getDay()] + '）· 共' + (daysBetween(s, e) + 1) + '天';
     }
+    if (parseTime(h.time)) line += ' ' + fmtTime12(h.time);      // e.g. "…（周六） 下午6:00"
     return line;
   }
 
@@ -87,11 +135,11 @@
   }
   /** Normalise a public shared holiday doc to the holiday shape. */
   function sharedToHoliday(c) {
-    return { id: c.id, name: c.name || '', emoji: '📌', start: c.date, end: _endOf(c), uid: c.uid || '', by: c.displayName || '', priv: false };
+    return { id: c.id, name: c.name || '', emoji: '📌', start: c.date, end: _endOf(c), time: c.time || '', uid: c.uid || '', by: c.displayName || '', priv: false };
   }
   /** Normalise one of MY private holiday docs (only I can see these). */
   function mineToHoliday(c) {
-    return { id: c.id, name: c.name || '', emoji: '🔒', start: c.date, end: _endOf(c), uid: myUid() || '', by: '', priv: true };
+    return { id: c.id, name: c.name || '', emoji: '🔒', start: c.date, end: _endOf(c), time: c.time || '', uid: myUid() || '', by: '', priv: true };
   }
 
   /**
@@ -100,12 +148,12 @@
    * the day it arrives.
    */
   function activeHolidays() {
-    var t = todayMidnight();
+    var now = Date.now();
     var all = _shared.filter(function (c) { return c && c.date; }).map(sharedToHoliday)
       .concat(_mine.filter(function (c) { return c && c.date; }).map(mineToHoliday));
     return all
-      .filter(function (h) { return daysBetween(t, parseDate(h.start)) >= 1; })   // gone the day it arrives
-      .sort(function (a, b) { return parseDate(a.start) - parseDate(b.start); });
+      .filter(function (h) { return startMs(h) > now; })   // gone once its start moment passes (all-day → midnight)
+      .sort(function (a, b) { return startMs(a) - startMs(b); });
   }
 
   /* ── Styles (retro pixel "vacation board") ──────────────────── */
@@ -152,7 +200,8 @@
 '.hol-hero-nm{font-size:26px;font-weight:900;color:var(--text);margin:10px 0 3px;line-height:1.12;}' +
 '.hol-hero-nm .em{margin-right:7px;}' +
 '.hol-hero-dt{font-size:12px;font-weight:700;color:var(--herosub);}' +
-'.hol-hero-cd{margin-top:12px;display:flex;align-items:baseline;justify-content:center;gap:9px;}' +
+'.hol-hero-cd{margin-top:12px;display:flex;flex-wrap:wrap;align-items:baseline;justify-content:center;gap:9px;}' +
+'.hol-hero-sub{flex-basis:100%;text-align:center;font-size:13px;font-weight:800;color:var(--herosub);margin-top:2px;letter-spacing:.02em;}' +
 '.hol-hero-cd .lead{font-size:11px;font-weight:800;color:var(--herosub);letter-spacing:.06em;}' +
 '.hol-hero-cd .num{font-size:40px;color:var(--heronum);line-height:.9;}' +
 '.hol-hero-cd .unit{font-size:14px;font-weight:900;color:var(--text);}' +
@@ -199,6 +248,31 @@
 '.hol-dp-day.sel{background:var(--teal);color:var(--tealtx);border-color:var(--ink);box-shadow:0 2px 0 var(--ink);}' +
 '.hol-dp-day.inr{background:var(--teal);color:var(--tealtx);opacity:.45;}' +
 '.hol-dp-hint{font-size:10px;font-weight:700;color:var(--mute);text-align:center;margin:-2px 0 8px;}' +
+/* retro clock time picker (optional start time) */
+'.hol-tp{margin-bottom:9px;}' +
+'.hol-tp-field{display:flex;align-items:center;gap:8px;width:100%;font-family:inherit;font-size:13px;font-weight:700;color:var(--text);background:var(--inpbg);border:3px solid var(--ink);border-radius:5px;padding:9px 10px;cursor:pointer;text-align:left;}' +
+'.hol-tp-field .ph{color:var(--ph);font-weight:600;}' +
+'.hol-tp-field .arw{margin-left:auto;font-size:10px;color:var(--mute);}' +
+'.hol-tp-panel{margin-top:8px;background:var(--inpbg);border:3px solid var(--ink);border-radius:5px;padding:10px;}' +
+'.hol-tp-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;}' +
+'.hol-tp-time{display:flex;align-items:center;gap:5px;}' +
+".hol-tp-seg{min-width:42px;font-family:'Press Start 2P','Courier New',monospace;font-size:15px;color:var(--text);background:var(--panel2);border:2px solid var(--ink);border-radius:4px;padding:7px 8px;cursor:pointer;}" +
+'.hol-tp-seg.on{background:var(--teal);color:var(--tealtx);box-shadow:0 2px 0 var(--tealsh);}' +
+'.hol-tp-colon{font-weight:900;font-size:15px;color:var(--text);}' +
+'.hol-tp-ap{display:flex;flex-direction:column;gap:3px;}' +
+'.hol-tp-apbtn{font-family:inherit;font-size:11px;font-weight:800;color:var(--text);background:var(--chip);border:2px solid var(--ink);border-radius:4px;padding:3px 10px;cursor:pointer;}' +
+'.hol-tp-apbtn.on{background:var(--teal);color:var(--tealtx);box-shadow:0 2px 0 var(--tealsh);}' +
+'.hol-tp-hint{font-size:10px;font-weight:700;color:var(--mute);text-align:center;margin:2px 0 8px;}' +
+'.hol-tp-face{position:relative;width:210px;max-width:82%;aspect-ratio:1;margin:0 auto 6px;border:3px solid var(--ink);border-radius:50%;background:var(--panel2);cursor:pointer;touch-action:manipulation;}' +
+".hol-tp-num{position:absolute;transform:translate(-50%,-50%);width:26px;height:26px;display:grid;place-items:center;font-family:'Press Start 2P','Courier New',monospace;font-size:10px;color:var(--text);border-radius:50%;pointer-events:none;}" +
+'.hol-tp-num.sel{background:var(--teal);color:var(--tealtx);}' +
+'.hol-tp-hand{position:absolute;left:50%;bottom:50%;width:3px;height:36%;background:var(--ink);transform-origin:bottom center;pointer-events:none;border-radius:2px;}' +
+'.hol-tp-center{position:absolute;left:50%;top:50%;width:10px;height:10px;transform:translate(-50%,-50%);background:var(--ink);border-radius:50%;pointer-events:none;}' +
+'.hol-tp-actions{display:flex;gap:8px;margin-top:2px;}' +
+'.hol-tp-clear{flex:1;font-family:inherit;font-size:12px;font-weight:800;color:var(--text);background:var(--chip);border:2px solid var(--ink);border-radius:4px;padding:8px;cursor:pointer;}' +
+'.hol-tp-done{flex:1;font-family:inherit;font-size:12px;font-weight:900;color:var(--tealtx);background:var(--teal);border:2px solid var(--ink);border-radius:4px;padding:8px;cursor:pointer;box-shadow:0 3px 0 var(--tealsh);}' +
+'.hol-tp-done:active{transform:translateY(3px);box-shadow:none;}' +
+'.hol-row-sub{display:block;font-size:9px;font-weight:700;color:var(--mute);white-space:nowrap;margin-top:2px;}' +
 '.hol-add-btn{width:100%;font-family:inherit;font-size:13px;font-weight:900;color:var(--tealtx);background:var(--teal);border:3px solid var(--ink);border-radius:5px;padding:10px;cursor:pointer;box-shadow:0 4px 0 var(--tealsh);letter-spacing:.06em;}' +
 '.hol-add-btn:active{transform:translateY(4px);box-shadow:none;}' +
 '.hol-foot{margin-top:13px;font-size:10px;line-height:1.6;color:var(--mute);text-align:center;font-weight:600;}' +
@@ -233,6 +307,7 @@
 
   /* ── Popup ──────────────────────────────────────────────────── */
   var overlay = null, scrollEl = null, built = false;
+  var _shownIds = '', _ticker = null;      // live countdown ticker (1s) + the id-set it last drew
 
   function build() {
     if (built) return; built = true;
@@ -251,6 +326,9 @@
 
     overlay.addEventListener('click', function (e) {
       if (e.target === overlay) { hide(); return; }
+      // Clock face: numbers/hand are pointer-events:none, so any tap lands here.
+      var face = e.target.closest && e.target.closest('.hol-tp-face');
+      if (face) { onFaceClick(face, e.clientX, e.clientY); return; }
       var act = e.target.closest && e.target.closest('[data-act]');
       if (!act) return;
       var a = act.getAttribute('data-act');
@@ -273,6 +351,13 @@
         }
         refreshDP();
       }
+      else if (a === 'tp-toggle') { _tpOpen = !_tpOpen; refreshTP(); }
+      else if (a === 'tp-mode-h') { _tpMode = 'h'; refreshTP(); }
+      else if (a === 'tp-mode-m') { _tpMode = 'm'; refreshTP(); }
+      else if (a === 'tp-am') { _selPM = false; refreshTP(); }
+      else if (a === 'tp-pm') { _selPM = true; refreshTP(); }
+      else if (a === 'tp-clear') { _clearTime(); _tpOpen = false; refreshTP(); }
+      else if (a === 'tp-done') { if (_selHour !== null && _selMin === null) _selMin = 0; _tpOpen = false; refreshTP(); }
     });
   }
 
@@ -289,7 +374,20 @@
       '" data-priv="' + (h.priv ? '1' : '0') + '" title="编辑" aria-label="编辑">✎</button>';
   }
 
-  function heroHTML(h, d) {
+  /* Countdown markup, shared by the hero + rows and rewritten in place each
+     second by tick() (located via the [data-cd] wrapper). */
+  function cdInnerHTML(h, hero) {
+    var c = countdown(h);
+    if (hero) {
+      return '<span class="lead">距离放假</span>' +
+        '<span class="num hol-pix">' + c.big + '</span><span class="unit">' + c.unit + '</span>' +
+        (c.sub ? '<span class="hol-hero-sub">' + c.sub + '</span>' : '');
+    }
+    return '<span class="n hol-pix">' + c.big + '</span><span class="u">' + c.unit + '后</span>' +
+      (c.sub ? '<span class="hol-row-sub">' + c.sub + '</span>' : '');
+  }
+
+  function heroHTML(h) {
     var by = h.priv
       ? '<div class="hol-hero-mk">🔒 私密假期 · 只有你看得到</div>'
       : (h.by ? '<div class="hol-hero-mk">🙋 ' + esc(h.by) + ' 添加</div>' : '');
@@ -299,13 +397,12 @@
       '<span class="hol-hero-lb">下一个假期</span>' +
       '<div class="hol-hero-nm"><span class="em">' + h.emoji + '</span>' + esc(h.name) + '</div>' +
       '<div class="hol-hero-dt">' + detailLine(h) + '</div>' +
-      '<div class="hol-hero-cd"><span class="lead">距离放假</span>' +
-        '<span class="num hol-pix">' + d + '</span><span class="unit">天</span></div>' +
+      '<div class="hol-hero-cd" data-cd="' + esc(h.id) + '">' + cdInnerHTML(h, true) + '</div>' +
       by +
       '</div>';
   }
 
-  function rowHTML(h, d) {
+  function rowHTML(h) {
     var by = h.priv
       ? '<span class="hol-mk">🔒 只有你看得到</span>'
       : (h.by ? '<span class="hol-mk">🙋 ' + esc(h.by) + '</span>' : '');
@@ -315,7 +412,7 @@
         '<span class="hol-nm">' + esc(h.name) + '</span>' +
         '<span class="hol-dt">' + detailLine(h) + '</span>' + by +
       '</span>' +
-      '<span class="hol-num"><span class="n hol-pix">' + d + '</span><span class="u">天后</span></span>' +
+      '<span class="hol-num" data-cd="' + esc(h.id) + '">' + cdInnerHTML(h, false) + '</span>' +
       ((canEdit(h) || canRemove()) ? '<span class="hol-acts">' +
         (canEdit(h) ? editBtnHTML(h, 'hol-edit') : '') +
         (canRemove() ? delBtnHTML(h, 'hol-del') : '') + '</span>' : '') +
@@ -326,6 +423,8 @@
      RANGE mode: first tap picks the start, second tap the end (same day =
      single-day holiday; tapping before the start restarts the range). ── */
   var _dpOpen = false, _dpY = null, _dpM = null, _selStart = null, _selEnd = null;
+  /* Clock time picker state (optional): hour 1–12, minute 0–59, 上午/下午. */
+  var _tpOpen = false, _selHour = null, _selMin = null, _selPM = false, _tpMode = 'h';
 
   function _dpInit() {
     if (_dpY !== null) return;
@@ -392,6 +491,89 @@
     if (el) el.innerHTML = dpInnerHTML();
   }
 
+  /* ── Retro clock time picker (optional): tap the face to pick the hour,
+     it auto-advances to minutes; 上午/下午 toggles AM/PM. "不设时间" clears it
+     back to an all-day holiday. Tapping the ring reads the angle, so minutes
+     land on the exact value (hours snap to 1–12). ── */
+  function tpLabel() {
+    if (_selHour === null) return '';
+    return (_selPM ? '下午' : '上午') + _selHour + ':' + pad2(_selMin === null ? 0 : _selMin);
+  }
+  /** Committed time as 24h "HH:MM", or '' when no time is set. */
+  function tpValue() {
+    return _selHour === null ? '' : minToHHMM(to24Min(_selHour, _selMin === null ? 0 : _selMin, _selPM));
+  }
+  function tpInnerHTML() {
+    var lb = tpLabel();
+    var html = '<button type="button" class="hol-tp-field" data-act="tp-toggle">🕐 ' +
+      (lb ? '<span>' + lb + '</span>' : '<span class="ph">选时间（可不选，几点开始放假）</span>') +
+      '<span class="arw">' + (_tpOpen ? '▲' : '▼') + '</span></button>';
+    if (!_tpOpen) return html;
+
+    var isH = _tpMode === 'h';
+    var hh = _selHour === null ? '--' : _selHour;
+    var mm = _selMin === null ? '--' : pad2(_selMin);
+    html += '<div class="hol-tp-panel">' +
+      '<div class="hol-tp-head">' +
+        '<div class="hol-tp-time">' +
+          '<button type="button" class="hol-tp-seg' + (isH ? ' on' : '') + '" data-act="tp-mode-h">' + hh + '</button>' +
+          '<span class="hol-tp-colon">:</span>' +
+          '<button type="button" class="hol-tp-seg' + (!isH ? ' on' : '') + '" data-act="tp-mode-m">' + mm + '</button>' +
+        '</div>' +
+        '<div class="hol-tp-ap">' +
+          '<button type="button" class="hol-tp-apbtn' + (!_selPM ? ' on' : '') + '" data-act="tp-am">上午</button>' +
+          '<button type="button" class="hol-tp-apbtn' + (_selPM ? ' on' : '') + '" data-act="tp-pm">下午</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="hol-tp-hint">' + (isH ? '点表盘选小时' : '点表盘选分钟') + '</div>' +
+      '<div class="hol-tp-face">';
+
+    // hand — only when the value for the active mode is chosen
+    var handDeg = isH ? (_selHour !== null ? _selHour * 30 : null)
+                      : (_selMin !== null ? _selMin * 6 : null);
+    if (handDeg !== null) html += '<div class="hol-tp-hand" style="transform:translateX(-50%) rotate(' + handDeg + 'deg)"></div>';
+    html += '<div class="hol-tp-center"></div>';
+
+    for (var p = 1; p <= 12; p++) {
+      var th = p * Math.PI / 6;
+      var left = 50 + 40 * Math.sin(th);
+      var top = 50 - 40 * Math.cos(th);
+      var val = isH ? p : (p * 5) % 60;                          // hour 1–12 / minute 0,5,…,55
+      var sel = isH ? (_selHour === p) : (_selMin === val);
+      html += '<span class="hol-tp-num' + (sel ? ' sel' : '') + '" style="left:' + left.toFixed(2) + '%;top:' + top.toFixed(2) + '%">' +
+        (isH ? val : pad2(val)) + '</span>';
+    }
+
+    html += '</div>' +
+      '<div class="hol-tp-actions">' +
+        '<button type="button" class="hol-tp-clear" data-act="tp-clear">不设时间</button>' +
+        '<button type="button" class="hol-tp-done" data-act="tp-done">确定</button>' +
+      '</div>' +
+    '</div>';
+    return html;
+  }
+  function refreshTP() {
+    var el = document.getElementById('holTimePick');
+    if (el) el.innerHTML = tpInnerHTML();
+  }
+  /* Map a tap anywhere on the face to a value via its angle from centre. */
+  function onFaceClick(faceEl, clientX, clientY) {
+    var r = faceEl.getBoundingClientRect();
+    var ang = Math.atan2(clientX - (r.left + r.width / 2), -(clientY - (r.top + r.height / 2)));
+    if (ang < 0) ang += Math.PI * 2;
+    var deg = ang * 180 / Math.PI;
+    if (_tpMode === 'h') {
+      var hhh = Math.round(deg / 30); if (hhh === 0 || hhh > 12) hhh = 12;
+      _selHour = hhh;
+      if (_selMin === null) _selMin = 0;
+      _tpMode = 'm';                                             // auto-advance to minutes, like a phone picker
+    } else {
+      _selMin = Math.round(deg / 6) % 60;                        // exact minute (0–59)
+    }
+    refreshTP();
+  }
+  function _clearTime() { _selHour = null; _selMin = null; _selPM = false; _tpMode = 'h'; }
+
   /** Public / private choice — two pixel toggle buttons. */
   function visInnerHTML() {
     return '<button type="button" class="hol-vis-btn' + (_visPrivate ? '' : ' on') + '" data-act="vis-pub">' +
@@ -410,6 +592,7 @@
       '<div class="hol-add-hd">' + (editing ? '✏️ 编辑假期' : '➕ 添加假期') + '</div>' +
       '<input class="hol-inp" id="holName" type="text" maxlength="16" placeholder="假期名字（如：请年假去玩）" autocomplete="off">' +
       '<div class="hol-dp" id="holDatePick">' + dpInnerHTML() + '</div>' +
+      '<div class="hol-tp" id="holTimePick">' + tpInnerHTML() + '</div>' +
       (editing ? '' : '<div class="hol-vis" id="holVis">' + visInnerHTML() + '</div>') +
       '<button class="hol-add-btn" data-act="add">' + (editing ? '💾 保存修改' : '加进倒数表') + '</button>' +
       (editing ? '<button class="hol-cancel-btn" data-act="cancel-edit">取消</button>' : '') +
@@ -422,8 +605,8 @@
     // user is mid-typing — keep whatever they had in the name field.
     var keepEl = document.getElementById('holName');
     var keepName = keepEl ? keepEl.value : '';
-    var t = todayMidnight();
     var list = activeHolidays();
+    _shownIds = list.map(function (h) { return h.id; }).join(',');   // tick() re-renders when this set changes
     var html = '<div class="hol-tip">🏝️ 数着日子等放假 · 假期由大家一起添加和管理</div>';
 
     if (!list.length) {
@@ -431,12 +614,11 @@
         ? '还没有假期在倒数 🏖️<br>加一个假期，大家一起等放假吧！'
         : '假期加载中…') + '</div>';
     } else {
-      var next = list[0];
-      html += heroHTML(next, daysBetween(t, parseDate(next.start)));
+      html += heroHTML(list[0]);
       var rest = list.slice(1);
       if (rest.length) {
         html += '<div class="hol-sec">📅 后续假期</div>';
-        html += rest.map(function (h) { return rowHTML(h, daysBetween(t, parseDate(h.start))); }).join('');
+        html += rest.map(function (h) { return rowHTML(h); }).join('');
       }
     }
 
@@ -449,6 +631,7 @@
   function _clearEdit() {
     _editId = null; _editPriv = false;
     _selStart = null; _selEnd = null; _dpOpen = false; _dpY = null; _dpM = null; _visPrivate = false;
+    _clearTime(); _tpOpen = false;
   }
   // Back to a blank add form: clear edit/pick state AND the name field, then
   // re-render (a live snapshot alone can't reset the name — keepName preserves it).
@@ -466,6 +649,14 @@
     _editId = id; _editPriv = priv;
     _selStart = doc.date; _selEnd = _endOf(doc);   // === start for a single-day holiday
     _dpOpen = false; _dpY = null; _dpM = null;
+    var tmin = parseTime(doc.time);                // preload the clock (if this holiday had a time)
+    if (tmin === null) { _clearTime(); }
+    else {
+      _selPM = tmin >= 720;
+      var th = Math.floor(tmin / 60) % 12; _selHour = th === 0 ? 12 : th;
+      _selMin = tmin % 60; _tpMode = 'h';
+    }
+    _tpOpen = false;
     render();
     var el = document.getElementById('holName');
     if (el) { el.value = doc.name || ''; el.focus(); }
@@ -479,6 +670,7 @@
     var name = (nameEl.value || '').trim();
     var date = _selStart;
     var endDate = _selEnd || _selStart;          // no end tapped yet = single day
+    var time = tpValue();                        // '' = all-day (no time set)
     if (!name) { toast('给假期起个名字吧'); nameEl.focus(); return; }
     if (!date) { toast('选一个日期'); if (!_dpOpen) { _dpOpen = true; refreshDP(); } return; }
     if (daysBetween(todayMidnight(), parseDate(date)) < 1) { toast('请选择明天或以后的日期'); return; }
@@ -493,11 +685,11 @@
     if (btn) btn.disabled = true;
     var write;
     if (editing) {
-      write = ref.doc(_editId).update({ name: name.slice(0, MAX_NAME), date: date, endDate: endDate });
+      write = ref.doc(_editId).update({ name: name.slice(0, MAX_NAME), date: date, endDate: endDate, time: time });
     } else if (priv) {
-      write = ref.add({ name: name.slice(0, MAX_NAME), date: date, endDate: endDate, createdAt: Date.now() });
+      write = ref.add({ name: name.slice(0, MAX_NAME), date: date, endDate: endDate, time: time, createdAt: Date.now() });
     } else {
-      write = ref.add({ uid: myUid(), displayName: myName(), name: name.slice(0, MAX_NAME), date: date, endDate: endDate, createdAt: Date.now() });
+      write = ref.add({ uid: myUid(), displayName: myName(), name: name.slice(0, MAX_NAME), date: date, endDate: endDate, time: time, createdAt: Date.now() });
     }
     write.then(function () {
       toast(editing ? '✏️ 已保存修改' : (priv ? '🔒 已加入你的私密假期倒数' : '📌 已加入假期倒数，大家都看得到啦'));
@@ -520,8 +712,27 @@
     // onSnapshot re-renders once the delete lands.
   }
 
-  function hide() { if (overlay) overlay.classList.remove('show'); }
-  function open() { build(); _subscribe(); render(); overlay.classList.add('show'); }
+  /* Live countdown: rewrite each [data-cd] block in place every second. If the
+     active set changed (a timed holiday hit its moment, or a new one arrived),
+     re-render the whole list so it reflows without disturbing the form. */
+  function tick() {
+    if (!scrollEl || !overlay || !overlay.classList.contains('show')) return;
+    var list = activeHolidays();
+    if (list.map(function (h) { return h.id; }).join(',') !== _shownIds) { render(); return; }
+    for (var i = 0; i < list.length; i++) {
+      var h = list[i];
+      var el = scrollEl.querySelector('[data-cd="' + h.id + '"]');
+      if (el) el.innerHTML = cdInnerHTML(h, el.classList.contains('hol-hero-cd'));
+    }
+  }
+  function hide() {
+    if (overlay) overlay.classList.remove('show');
+    if (_ticker) { clearInterval(_ticker); _ticker = null; }
+  }
+  function open() {
+    build(); _subscribe(); render(); overlay.classList.add('show');
+    if (!_ticker) _ticker = setInterval(tick, 1000);
+  }
   window.openHolidayList = open;
 
   /* ── Live Firestore sync: public `holidays` + my `user_holidays` ── */
@@ -533,7 +744,7 @@
     var arr = [];
     snap.forEach(function (doc) {
       var x = doc.data() || {};
-      arr.push({ id: doc.id, uid: x.uid, displayName: x.displayName, name: x.name, date: x.date, endDate: x.endDate, createdAt: x.createdAt });
+      arr.push({ id: doc.id, uid: x.uid, displayName: x.displayName, name: x.name, date: x.date, endDate: x.endDate, time: x.time, createdAt: x.createdAt });
     });
     return arr;
   }

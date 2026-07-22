@@ -560,7 +560,8 @@ service cloud.firestore {
     // 19. HOLIDAYS — shared 假期列表 (everyone sees the same countdown list)
     //     Path: holidays/{autoId}
     //     Fields: uid, displayName, name (1–16 chars), date (YYYY-MM-DD string),
-    //             endDate (optional YYYY-MM-DD — multi-day range), createdAt (ms)
+    //             endDate (optional YYYY-MM-DD — multi-day range),
+    //             time (optional "HH:MM" 24h start time — precise countdown), createdAt (ms)
     //     Fully community-managed: any signed-in user may add a holiday (as
     //     themselves) and DELETE ANY holiday (clients also auto-prune past
     //     ones). Docs are immutable once created.
@@ -577,6 +578,9 @@ service cloud.firestore {
                     && (!('endDate' in request.resource.data)
                         || (request.resource.data.endDate is string
                             && request.resource.data.endDate.size() <= 10))
+                    && (!('time' in request.resource.data)
+                        || (request.resource.data.time is string
+                            && request.resource.data.time.size() <= 5))
                     && request.resource.data.createdAt is number;
       // Only the creator may edit their own holiday (uid can't be reassigned).
       allow update: if isAuth()
@@ -589,7 +593,10 @@ service cloud.firestore {
                     && request.resource.data.date.size() <= 10
                     && (!('endDate' in request.resource.data)
                         || (request.resource.data.endDate is string
-                            && request.resource.data.endDate.size() <= 10));
+                            && request.resource.data.endDate.size() <= 10))
+                    && (!('time' in request.resource.data)
+                        || (request.resource.data.time is string
+                            && request.resource.data.time.size() <= 5));
       allow delete: if isAuth();
     }
 
@@ -597,7 +604,8 @@ service cloud.firestore {
     // 20. PRIVATE HOLIDAYS — personal 假期列表 entries (🔒 私密 option)
     //     Path: user_holidays/{uid}/items/{autoId}
     //     Fields: name (1–16 chars), date (YYYY-MM-DD string),
-    //             endDate (optional YYYY-MM-DD — multi-day range), createdAt (ms)
+    //             endDate (optional YYYY-MM-DD — multi-day range),
+    //             time (optional "HH:MM" 24h start time — precise countdown), createdAt (ms)
     //     Readable and manageable ONLY by their owner — nobody else can ever
     //     see them. Docs are immutable once created.
     // ═══════════════════════════════════════
@@ -612,6 +620,9 @@ service cloud.firestore {
                     && (!('endDate' in request.resource.data)
                         || (request.resource.data.endDate is string
                             && request.resource.data.endDate.size() <= 10))
+                    && (!('time' in request.resource.data)
+                        || (request.resource.data.time is string
+                            && request.resource.data.time.size() <= 5))
                     && request.resource.data.createdAt is number;
       allow update: if isOwner(uid)
                     && request.resource.data.name is string
@@ -621,7 +632,10 @@ service cloud.firestore {
                     && request.resource.data.date.size() <= 10
                     && (!('endDate' in request.resource.data)
                         || (request.resource.data.endDate is string
-                            && request.resource.data.endDate.size() <= 10));
+                            && request.resource.data.endDate.size() <= 10))
+                    && (!('time' in request.resource.data)
+                        || (request.resource.data.time is string
+                            && request.resource.data.time.size() <= 5));
       allow delete: if isOwner(uid);
     }
 
