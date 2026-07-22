@@ -1204,6 +1204,16 @@ body.light-theme .riddle-rank-count { color: #b45309; }
   font-size: 12px; color: var(--primary-deep);
   background: var(--primary-tint); border-radius: 999px; padding: 4px 11px;
 }
+/* 🏅 累计答对榜 — all-time ranked list (rows with medals + total count). */
+.cj-lb { text-align: left; border-top: 1px solid var(--border); padding-top: 10px; margin-top: 4px; }
+.cj-lb-list { display: flex; flex-direction: column; gap: 4px; max-height: 168px; overflow-y: auto; }
+.cj-lb-row {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--primary-tint); border-radius: 8px; padding: 5px 10px;
+}
+.cj-lb-pos { width: 22px; text-align: center; font-weight: 700; color: var(--ink-faint); }
+.cj-lb-name { flex: 1; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cj-lb-count { font-weight: 700; color: var(--primary-deep); }
 .cj-wrong-item { font-size: 12px; color: var(--ink-soft); padding: 3px 0; word-break: break-word; }
 .cj-wrong-item b { color: var(--ink); }
 .cj-wrong-why { color: var(--ink-faint); margin-left: 4px; }

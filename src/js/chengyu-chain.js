@@ -4,7 +4,9 @@
  * Opened from the 🐉 button stacked above the riddle button. Everyone shares ONE
  * chain per day: each idiom must start with the last character of the previous
  * one (同音/homophone also counts). The chain, the "🏆 答对榜" (who answered how
- * many) and the "❌ 答错记录" (who typed a wrong answer) all reset each day.
+ * many) and the "❌ 答错记录" (who typed a wrong answer) all reset each day. A
+ * separate "🏅 累计答对榜" (chengyu_leaderboard/{uid}) is server-wide and all-time:
+ * it tallies how many idioms each person has EVER answered and never resets.
  *
  * Scoring: each correct idiom pays a flat 20 coins, with NO daily cap. Validation
  * is STRICT — only real 成语 in the bundled dictionary (CHENGYU) are accepted, so
@@ -150,6 +152,7 @@
   const reseedBtn = document.getElementById('cjReseed');
   const feedbackEl = document.getElementById('cjFeedback');
   const boardEl   = document.getElementById('cjBoard');
+  const rankEl    = document.getElementById('cjRank');
   const wrongEl   = document.getElementById('cjWrong');
 
   const today    = L.dateKey();
@@ -158,6 +161,7 @@
 
   const docRef = (typeof db !== 'undefined') ? db.collection('chengyu_chain').doc(today) : null;
   let _unsub = null;
+  let _rankUnsub = null;   // live 累计答对榜 (all-time count) subscription
   let _data  = null;    // latest snapshot data (null before first load)
   let _busy  = false;   // a transaction is in flight
   let _expand = { chain: false, board: false, wrong: false };   // "show last 3 / expand" per list
@@ -256,6 +260,38 @@
     wrongEl.innerHTML = '<div class="cj-sec-title">❌ 答错记录</div>' + body;
   }
 
+  // 🏅 累计答对榜 — the SERVER-WIDE all-time ranking: how many idioms each
+  // person has ever answered, across every day (never resets). Its own live
+  // subscription (top 10 by count), separate from the daily chain snapshot.
+  const RANK_MEDALS = ['🥇', '🥈', '🥉'];
+  function renderRank(list) {
+    if (!rankEl) return;
+    const body = list.length
+      ? '<div class="cj-lb-list">' + list.map(function (r, i) {
+          return '<div class="cj-lb-row">' +
+                   '<span class="cj-lb-pos">' + (RANK_MEDALS[i] || (i + 1)) + '</span>' +
+                   '<span class="cj-lb-name">' + esc(r.name || '匿名') + '</span>' +
+                   '<span class="cj-lb-count">' + (r.count || 0) + ' 个</span>' +
+                 '</div>';
+        }).join('') + '</div>'
+      : '<span class="cj-empty">还没有人上榜，答对就能登顶！</span>';
+    rankEl.innerHTML = '<div class="cj-sec-title">🏅 累计答对榜（总榜）</div>' + body;
+  }
+  function subscribeRank() {
+    if (typeof db === 'undefined') { if (rankEl) rankEl.hidden = true; return; }
+    unsubscribeRank();
+    renderRank([]);                 // show the section (empty state) while it loads
+    try {
+      _rankUnsub = db.collection('chengyu_leaderboard').orderBy('count', 'desc').limit(10)
+        .onSnapshot(function (snap) {
+          const list = [];
+          snap.forEach(function (d) { list.push(d.data() || {}); });
+          renderRank(list);
+        }, function () {});
+    } catch (e) {}
+  }
+  function unsubscribeRank() { if (_rankUnsub) { _rankUnsub(); _rankUnsub = null; } }
+
   function setFeedback(msg, cls) {
     feedbackEl.textContent = msg || '';
     feedbackEl.className = 'cj-feedback' + (cls ? ' ' + cls : '');
@@ -283,9 +319,10 @@
     overlay.classList.add('show');
     fab.classList.remove('has-new');
     subscribe();
+    subscribeRank();                // live 累计答对榜 (all-time, server-wide)
     setTimeout(function () { if (!inputEl.disabled) inputEl.focus(); }, 60);
   }
-  function close() { overlay.classList.remove('show'); unsubscribe(); }
+  function close() { overlay.classList.remove('show'); unsubscribe(); unsubscribeRank(); }
 
   // Append a valid idiom (race-safe) and pay 20 coins — all in one transaction
   // so the chain can't fork and coins can't double-pay.
@@ -295,6 +332,7 @@
     if (!uid) return 'noauth';
     const name = myName();
     const roomRef = db.collection('rooms').doc(uid);
+    const rankRef = db.collection('chengyu_leaderboard').doc(uid);
     try {
       return await db.runTransaction(async function (tx) {
         const d    = await tx.get(docRef);
@@ -313,6 +351,14 @@
         }
         const rd = room.exists ? room.data() : {};              // every correct idiom pays 20 coins
         tx.set(roomRef, { coins: (rd.coins || 0) + L.REWARD }, { merge: true });
+        // …and bumps my all-time correct-answer total (increment sentinel needs
+        // no prior read, so it stays valid alongside the writes above). Powers
+        // the shared 累计答对榜 that, unlike the daily board, never resets.
+        tx.set(rankRef, {
+          name: name,
+          count: firebase.firestore.FieldValue.increment(1),
+          at: Date.now()
+        }, { merge: true });
         return 'granted';
       });
     } catch (e) { return 'error'; }

@@ -517,6 +517,20 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════
+    // 16c. 成语接龙 LEADERBOARD — all-time correct-answer count per user
+    //     Path: chengyu_leaderboard/{uid} = { name, count, at }
+    //     Powers the "🏅 累计答对榜（总榜）" ranking in the chain card — a running
+    //     total of how many idioms each person has ever added, that never resets
+    //     (the daily 答对榜 does). The count is bumped (+1) inside the same
+    //     append transaction that adds a real 成语, so a user can only ever raise
+    //     their OWN total. Any signed-in user reads. Mirrors riddle_leaderboard.
+    // ═══════════════════════════════════════
+    match /chengyu_leaderboard/{uid} {
+      allow read: if isAuth();
+      allow write: if isOwner(uid);
+    }
+
+    // ═══════════════════════════════════════
     // 17. UPCOMING EVENTS — pinned 便利贴 (sticky notes)
     //     Path: events/{autoId}
     //     Fields: uid, displayName, title (≤300 chars), eventAt (ms), createdAt (ms)
