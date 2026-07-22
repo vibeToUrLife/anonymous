@@ -706,6 +706,14 @@ body.no-animations .pg-shake { animation: none; }
   -webkit-user-select: none;
   -webkit-touch-callout: none;
 }
+/* ✋ Move mode: step the canvas out of the touch path (keeps the veil, drops
+   pointer capture) so a finger scrolls the document-anchored wall instead of
+   drawing. Must follow .drawing to win the pointer-events / touch-action cascade. */
+.wall-canvas.drawing.panning {
+  pointer-events: none;
+  touch-action: pan-y;
+  cursor: grab;
+}
 /* Ghost the bubbles while drawing so the wall is readable but the board
    stays visible for placing doodles around it. */
 body.wall-drawing .bubble { opacity: 0.4 !important; }
@@ -765,6 +773,7 @@ body.wall-drawing .bubble { opacity: 0.4 !important; }
   cursor: pointer;
 }
 .wall-eraser.sel { border-color: var(--accent, #c8b6ff); background: rgba(200, 182, 255, 0.28); }
+.wall-move.sel { background: rgba(200, 182, 255, 0.28); box-shadow: inset 0 0 0 2px var(--accent, #c8b6ff); }
 .wall-canvas.erasing { cursor: cell; }
 .wall-canvas.shaping { cursor: crosshair; }
 .wall-shape {

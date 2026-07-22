@@ -213,13 +213,33 @@
   let shapeRow = null;                     // toolbar shapes row (highlight toggle)
   let hintEl = null;                       // toolbar hint line (retargets per tool)
   let shapePreviewRaf = 0;                 // rAF handle throttling the preview repaint
+  let panning = false;                     // ✋ move mode: finger scrolls the page, not draws
+  let moveBtn = null;                      // toolbar ref (highlight toggle)
   const SHAPE_MIN_PX = 6;                  // 2nd click nearer than this = too small → cancel
 
   const HINT_PEN   = '✏️ 画在留言板背景上 · 大家都看得到 · 每天自动清空';
   const HINT_SHAPE = '⬡ 点一下定起点，再点一下完成 · Esc / 右键取消';
   const HINT_ERASE = '🧽 拖动擦掉我自己画的';
+  const HINT_MOVE  = '✋ 拖动屏幕上下浏览画布 · 选其它工具继续画';
   function updateHint() {
-    if (hintEl) hintEl.textContent = erasing ? HINT_ERASE : (shapeKind ? HINT_SHAPE : HINT_PEN);
+    if (!hintEl) return;
+    hintEl.textContent = panning ? HINT_MOVE
+      : (erasing ? HINT_ERASE : (shapeKind ? HINT_SHAPE : HINT_PEN));
+  }
+
+  // ✋ Move mode: on touch the whole canvas grabs the finger to draw, leaving no
+  // way to scroll the document-anchored wall. Toggling this drops the canvas out
+  // of the way (pointer-events:none via .panning) so the finger scrolls the page;
+  // picking any drawing tool turns it back off.
+  function setPanning(on) {
+    panning = on;
+    if (on) {                               // abandon anything mid-draw before stepping aside
+      stroke = null; lastPx = null; activePid = null;
+      cancelShape();
+    }
+    canvas.classList.toggle('panning', on);
+    if (moveBtn) moveBtn.classList.toggle('sel', on);
+    updateHint();
   }
 
   // Highlight the active shape button ('pen' == free-hand). Safe before the row exists.
@@ -247,6 +267,7 @@
 
   // Pick a drawing tool: null = free-hand pen, else a shape kind.
   function setShape(kind) {
+    setPanning(false);                      // choosing a tool means we want to draw again
     if (erasing) setErasing(false);         // leaving the eraser
     shapeKind = kind;
     cancelShape();
@@ -289,6 +310,7 @@
     row.className = 'wall-row';
     function selectColor(hex, el) {
       colorHex = hex;
+      setPanning(false);
       setErasing(false);
       row.querySelectorAll('.wall-swatch').forEach(x => x.classList.remove('sel'));
       if (el) el.classList.add('sel');
@@ -342,17 +364,26 @@
       bt.innerHTML = '<i style="width:' + w + 'px;height:' + w + 'px"></i>';
       bt.addEventListener('click', () => {
         widthIdx = i;
+        setPanning(false);
         row2.querySelectorAll('.wall-brush').forEach(x => x.classList.remove('sel'));
         bt.classList.add('sel');
       });
       row2.appendChild(bt);
     });
+    // ✋ Move — the mobile way out of "every touch draws": drag to scroll the wall.
+    moveBtn = document.createElement('button');
+    moveBtn.type = 'button';
+    moveBtn.className = 'wall-tool wall-move' + (panning ? ' sel' : '');
+    moveBtn.title = '移动 — 拖动屏幕上下浏览画布';
+    moveBtn.textContent = '✋';
+    moveBtn.addEventListener('click', () => setPanning(!panning));
+    row2.appendChild(moveBtn);
     eraserBtn = document.createElement('button');
     eraserBtn.type = 'button';
     eraserBtn.className = 'wall-tool wall-eraser';
     eraserBtn.title = '橡皮擦 — 擦掉我自己画的';
     eraserBtn.textContent = '🧽';
-    eraserBtn.addEventListener('click', () => setErasing(!erasing));
+    eraserBtn.addEventListener('click', () => { setPanning(false); setErasing(!erasing); });
     row2.appendChild(eraserBtn);
     const undoBt = document.createElement('button');
     undoBt.type = 'button';
@@ -386,12 +417,13 @@
     drawMode = false;
     endStroke();                            // commit anything mid-flight
     setErasing(false);
+    panning = false;                        // reset move mode; class dropped below
     shapeKind = null; shapeAnchor = null; shapePreviewPx = null;
     if (shapePreviewRaf) { cancelAnimationFrame(shapePreviewRaf); shapePreviewRaf = 0; }
     activePid = null; lastPx = null;
-    eraserBtn = null; shapeRow = null; hintEl = null;
+    eraserBtn = null; shapeRow = null; hintEl = null; moveBtn = null;
     document.body.classList.remove('wall-drawing');
-    canvas.classList.remove('drawing', 'shaping');
+    canvas.classList.remove('drawing', 'shaping', 'panning');
     toggle.classList.remove('active');
     if (toolbar) { toolbar.remove(); toolbar = null; }
   }
