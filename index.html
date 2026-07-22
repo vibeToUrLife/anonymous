@@ -1667,6 +1667,13 @@
   <script src="./games/pets/goose.js"></script>
   <script src="./games/pets/tom.js"></script>
   <script src="./games/pets/jerry.js"></script>
+
+  <!-- Auto-Feeder background catch-up: keeps pets fed (and deducts coins) while
+       you're anywhere in the main app, so the 🤖 device no longer needs you to
+       open the Room page to work. Pure logic (room-autofeed.js) must load first. -->
+  <script src="./games/room/js/room-autofeed.js"></script>
+  <script src="./src/js/autofeed-bg.js?v=1"></script>
+
   <script>
     // Initialize daily quote banner
     (function() {

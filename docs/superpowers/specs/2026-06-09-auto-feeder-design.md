@@ -51,6 +51,24 @@ help pay for it), if the device is owned and ON and `viewingUid === currentUid`:
 - **No time cap** on protection (it lasts as long as coins do). The natural
   coins bound plus the transparent summary prevents a silent wallet drain.
 
+### Background catch-up (main app) — added 2026-07-22
+The offline catch-up above only runs when the **Room page** is opened. To keep
+pets fed (and coins deducted) without needing to visit the Room, the same
+catch-up also runs from the **main app** (`index.html`):
+- New module `src/js/autofeed-bg.js` loads `room-autofeed.js` and, while the
+  owner is signed in, runs `planOfflineAutoFeed` on a timer (once per decay
+  cycle) plus on sign-in and tab-return.
+- Every write is a **Firestore transaction** on `rooms/{uid}` so it composes
+  safely with the coin-center's coin transactions and any open Room tab — it
+  updates `pets`, `coins`, `coinHistory` (reason `Auto-feeder 🤖`) and
+  `updatedAt`. Advancing `updatedAt` means a later Room-open sees `decay≈0` and
+  never double-charges.
+- Same guards as the Room: only acts when `autoFeeder && autoFeedOn`, only for
+  the signed-in owner, bounded by coins, silent except a one-time
+  "while you were away" toast per sign-in.
+- This is client-side "background" (whenever the app is open in a tab), not a
+  server cron — the site is a static Firebase app with no backend.
+
 ### Live top-up (while the room is open)
 Hooks into the existing hunger-decay interval (the periodic tick that already
 decays hunger/thirst live). Each tick, for every owned pet with the device ON:
