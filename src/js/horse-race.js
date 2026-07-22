@@ -346,20 +346,25 @@
   '.hr-results{margin-top:12px;}' +
   '.hr-res-champ{font-size:15px;font-weight:800;color:#fde68a;text-align:center;margin:2px 0 10px;}' +
   '.hr-podium{display:flex;align-items:flex-end;gap:8px;margin:0 0 10px;}' +
+  /* Column = readable label (medal/dot/name/time) sitting ABOVE a colored
+     pedestal. The pedestal (.hr-pod-base) carries the stepped height, so the
+     name is free to wrap over 2 full-width lines instead of being clipped. */
   '.hr-pod{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;' +
-    'border-radius:12px 12px 5px 5px;padding:10px 6px 8px;min-width:0;}' +
-  '.hr-pod .pm{font-size:20px;line-height:1;}' +
-  '.hr-pod .pd{width:12px;height:12px;border-radius:50%;box-shadow:0 0 0 2px rgba(255,255,255,.3);}' +
-  '.hr-pod .pn{font-size:12.5px;font-weight:700;color:#fff;max-width:100%;overflow:hidden;' +
-    'text-overflow:ellipsis;white-space:nowrap;}' +
+    'padding:0 2px;min-width:0;}' +
+  '.hr-pod .pm{font-size:22px;line-height:1;}' +
+  '.hr-pod .pd{width:11px;height:11px;border-radius:50%;box-shadow:0 0 0 2px rgba(255,255,255,.3);}' +
+  '.hr-pod .pn{width:100%;font-size:12.5px;font-weight:700;color:#fff;text-align:center;line-height:1.25;' +
+    'min-height:2.5em;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;' +
+    'word-break:break-word;}' +
   '.hr-pod .pt{font-family:"Russo One",system-ui,sans-serif;font-size:10.5px;color:rgba(255,255,255,.6);' +
     'font-variant-numeric:tabular-nums;}' +
-  '.hr-pod-1{height:104px;background:linear-gradient(180deg,rgba(251,191,36,.30),rgba(251,191,36,.04));' +
-    'border:1px solid rgba(251,191,36,.45);border-bottom-width:3px;}' +
-  '.hr-pod-2{height:78px;background:linear-gradient(180deg,rgba(203,213,225,.22),rgba(203,213,225,.03));' +
-    'border:1px solid rgba(203,213,225,.35);}' +
-  '.hr-pod-3{height:64px;background:linear-gradient(180deg,rgba(217,119,6,.20),rgba(217,119,6,.03));' +
-    'border:1px solid rgba(217,119,6,.35);}' +
+  '.hr-pod-base{width:100%;border-radius:8px 8px 4px 4px;margin-top:4px;}' +
+  '.hr-pod-1 .hr-pod-base{height:66px;background:linear-gradient(180deg,rgba(251,191,36,.32),rgba(251,191,36,.05));' +
+    'border:1px solid rgba(251,191,36,.5);border-bottom-width:3px;}' +
+  '.hr-pod-2 .hr-pod-base{height:44px;background:linear-gradient(180deg,rgba(203,213,225,.24),rgba(203,213,225,.04));' +
+    'border:1px solid rgba(203,213,225,.4);}' +
+  '.hr-pod-3 .hr-pod-base{height:30px;background:linear-gradient(180deg,rgba(217,119,6,.22),rgba(217,119,6,.04));' +
+    'border:1px solid rgba(217,119,6,.4);}' +
   '.hr-res-row{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:10px;margin-bottom:5px;' +
     'background:rgba(255,255,255,.05);font-size:13.5px;color:#fff;}' +
   '.hr-res-rank{width:24px;text-align:center;font-family:"Russo One",system-ui,sans-serif;font-size:12px;' +
@@ -372,7 +377,7 @@
     'font-size:14px;font-weight:700;color:#052e12;background:linear-gradient(135deg,#fbbf24,#d97706);transition:transform .12s;}' +
   '.hr-again:active{transform:scale(.98);}' +
   '@media (max-width:520px){.hr-overlay{padding:8px;}.hr-body{padding:4px 10px 12px;}.hr-count .num{font-size:64px;}' +
-    '.hr-pod-1{height:88px;}.hr-pod-2{height:66px;}.hr-pod-3{height:56px;}}' +
+    '.hr-pod-1 .hr-pod-base{height:54px;}.hr-pod-2 .hr-pod-base{height:36px;}.hr-pod-3 .hr-pod-base{height:26px;}}' +
   '@media (prefers-reduced-motion: reduce){.hr-livedot{animation:none;}.hr-count .num.tick{animation:none;}}';
 
   /* ── overlay DOM ───────────────────────────────────────────── */
@@ -1019,9 +1024,10 @@
       var pm = document.createElement('div'); pm.className = 'pm';
       pm.textContent = h.rank === 0 ? '🥇' : h.rank === 1 ? '🥈' : '🥉';
       var pd = document.createElement('div'); pd.className = 'pd'; pd.style.background = h.pal.a;
-      var pn = document.createElement('div'); pn.className = 'pn'; pn.textContent = opts[h.i];
+      var pn = document.createElement('div'); pn.className = 'pn'; pn.textContent = opts[h.i]; pn.title = opts[h.i];
       var pt = document.createElement('div'); pt.className = 'pt'; pt.textContent = (h.finish / 1000).toFixed(2) + 's';
-      col.appendChild(pm); col.appendChild(pd); col.appendChild(pn); col.appendChild(pt);
+      var base = document.createElement('div'); base.className = 'hr-pod-base';   // colored pedestal (stepped height)
+      col.appendChild(pm); col.appendChild(pd); col.appendChild(pn); col.appendChild(pt); col.appendChild(base);
       podium.appendChild(col);
     });
     el.hrResults.appendChild(podium);
@@ -1031,7 +1037,7 @@
       row.className = 'hr-res-row';
       var rank = document.createElement('span'); rank.className = 'hr-res-rank'; rank.textContent = String(h.rank + 1);
       var dot = document.createElement('span'); dot.className = 'hr-res-dot'; dot.style.background = h.pal.a;
-      var name = document.createElement('span'); name.className = 'hr-res-name'; name.textContent = opts[h.i];
+      var name = document.createElement('span'); name.className = 'hr-res-name'; name.textContent = opts[h.i]; name.title = opts[h.i];
       var time = document.createElement('span'); time.className = 'hr-res-time'; time.textContent = (h.finish / 1000).toFixed(2) + 's';
       row.appendChild(rank); row.appendChild(dot); row.appendChild(name); row.appendChild(time);
       el.hrResults.appendChild(row);
