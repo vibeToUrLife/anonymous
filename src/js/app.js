@@ -637,6 +637,8 @@ let showingFavs = false;
 
 gifBtnEl.addEventListener('click', () => {
     _gifSelectCallback = null;   // main GIF button → main-input context (never a stale reply)
+    pollCreator.classList.remove('show');   // mutual exclusion: GIF picker & Poll creator never both open
+    pollBtnEl.classList.remove('active');
     gifPickerEl.classList.toggle('show');
     if (gifPickerEl.classList.contains('show')) {
     gifSearchInput.focus();
@@ -943,9 +945,25 @@ const pollAddOptionBtn = document.getElementById('pollAddOptionBtn');
 const pollSubmitBtn = document.getElementById('pollSubmitBtn');
 
 pollBtnEl.addEventListener('click', () => {
+    gifPickerEl.classList.remove('show');   // mutual exclusion: close the GIF picker if it's open
+    _gifSelectCallback = null;
     pollCreator.classList.toggle('show');
     pollBtnEl.classList.toggle('active', pollCreator.classList.contains('show'));
     if (pollCreator.classList.contains('show')) pollQuestionInput.focus();
+});
+// Close either popup when clicking outside it (but not on its own opener button).
+// The reply-GIF button stops propagation, so it manages its own open separately.
+document.addEventListener('click', (e) => {
+    if (gifPickerEl.classList.contains('show') &&
+        !e.target.closest('#gifPicker') && !e.target.closest('#gifBtn')) {
+        gifPickerEl.classList.remove('show');
+        _gifSelectCallback = null;
+    }
+    if (pollCreator.classList.contains('show') &&
+        !e.target.closest('#pollCreator') && !e.target.closest('#pollBtn')) {
+        pollCreator.classList.remove('show');
+        pollBtnEl.classList.remove('active');
+    }
 });
 pollCreatorClose.addEventListener('click', () => {
     pollCreator.classList.remove('show');
@@ -1847,6 +1865,8 @@ function buildReplyInput(docId, parentReplyPath, depth) {
             previewImg.src = url;
             preview.style.display = 'flex';
         };
+        pollCreator.classList.remove('show');   // mutual exclusion: opening any GIF picker closes the poll creator
+        pollBtnEl.classList.remove('active');
         gifPickerEl.classList.add('show');
         gifSearchInput.focus();
         if (showingFavs) { showingFavs = false; if (gifFavBtn) gifFavBtn.classList.remove('on'); loadTrendingGifs(); }
