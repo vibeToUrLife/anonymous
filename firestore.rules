@@ -517,17 +517,33 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════
-    // 16c. 成语接龙 LEADERBOARD — all-time correct-answer count per user
-    //     Path: chengyu_leaderboard/{uid} = { name, count, at }
-    //     Powers the "🏅 累计答对榜（总榜）" ranking in the chain card — a running
-    //     total of how many idioms each person has ever added, that never resets
-    //     (the daily 答对榜 does). The count is bumped (+1) inside the same
-    //     append transaction that adds a real 成语, so a user can only ever raise
-    //     their OWN total. Any signed-in user reads. Mirrors riddle_leaderboard.
+    // 16c. 成语接龙 WEEKLY BOARD — correct-answer ranking that resets weekly
+    //     Path: chengyu_week/{weekId}/users/{uid} = { name, count, at }
+    //       weekId = the Sunday date (YYYY-MM-DD) that starts the week. Powers the
+    //       "🏅 本周答对榜". count is bumped (+1) only inside the append transaction
+    //       that adds a REAL 成语; the rules pin each write to +1, so a user can
+    //       raise ONLY their own weekly total (no daily cap — many idioms/day).
+    //     Path: chengyu_week/{weekId} = { settled:true, winners:[{uid,name,count,prize}], at }
+    //       One-time settlement marker for a FINISHED week. The first client to open
+    //       the chain in the next week creates it and, in the SAME transaction, pays
+    //       last week's top 3 their prizes (5000/3000/1000 coins) into their rooms.
+    //       Create-once + no update/delete = idempotent payout (can never run twice).
+    //       Coins land via the rooms "add coins to anyone" clause (§1).
     // ═══════════════════════════════════════
-    match /chengyu_leaderboard/{uid} {
+    match /chengyu_week/{weekId} {
       allow read: if isAuth();
-      allow write: if isOwner(uid);
+      allow create: if isAuth()
+                    && request.resource.data.settled == true
+                    && request.resource.data.winners is list;
+      allow update, delete: if false;   // immutable once settled → payout can't repeat
+
+      match /users/{uid} {
+        allow read: if isAuth();
+        // First idiom of the week creates the doc at count 1; each later idiom may
+        // add exactly 1 (no daily cap — 成语接龙 has no once-per-day limit).
+        allow create: if isOwner(uid) && request.resource.data.count == 1;
+        allow update: if isOwner(uid) && request.resource.data.count == resource.data.count + 1;
+      }
     }
 
     // ═══════════════════════════════════════

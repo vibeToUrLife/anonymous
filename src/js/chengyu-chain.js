@@ -5,8 +5,9 @@
  * chain per day: each idiom must start with the last character of the previous
  * one (同音/homophone also counts). The chain, the "🏆 答对榜" (who answered how
  * many) and the "❌ 答错记录" (who typed a wrong answer) all reset each day. A
- * separate "🏅 累计答对榜" (chengyu_leaderboard/{uid}) is server-wide and all-time:
- * it tallies how many idioms each person has EVER answered and never resets.
+ * separate "🏅 本周答对榜" (chengyu_week/{weekId}/users/{uid}) is server-wide and
+ * resets every Sunday 00:00; last week's top 3 win 5000/3000/1000 coins (auto-
+ * settled by the first client to open in the new week, once, via a marker doc).
  *
  * Scoring: each correct idiom pays a flat 20 coins, with NO daily cap. Validation
  * is STRICT — only real 成语 in the bundled dictionary (CHENGYU) are accepted, so
@@ -161,10 +162,30 @@
 
   const docRef = (typeof db !== 'undefined') ? db.collection('chengyu_chain').doc(today) : null;
   let _unsub = null;
-  let _rankUnsub = null;   // live 累计答对榜 (all-time count) subscription
+  let _rankUnsub = null;   // live 本周答对榜 subscription
+  let _rankList = [];      // last rendered weekly ranking (so "上周获奖" can re-render)
+  let _lastWeekWinners = null;   // [{uid,name,count,prize}] paid out last week
   let _data  = null;    // latest snapshot data (null before first load)
   let _busy  = false;   // a transaction is in flight
   let _expand = { chain: false, board: false, wrong: false };   // "show last 3 / expand" per list
+
+  // ── Weekly leaderboard: the board resets every week (Sunday 00:00 local), and
+  //    last week's top 3 are paid 5000/3000/1000 coins at settlement. weekId is
+  //    the Sunday date (YYYY-MM-DD) that starts the week, computed fresh each call.
+  const WEEK_PRIZES = [5000, 3000, 1000];   // 🥇 🥈 🥉
+  function weekIdFor(d) {
+    d = d || new Date();
+    const s = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    s.setDate(s.getDate() - s.getDay());     // back up to Sunday (getDay: 0=Sun … 6=Sat)
+    return L.dateKey(s);
+  }
+  function curWeekId()  { return weekIdFor(new Date()); }
+  function prevWeekId() {
+    const x = new Date();
+    const s = new Date(x.getFullYear(), x.getMonth(), x.getDate());
+    s.setDate(s.getDate() - s.getDay() - 7); // Sunday that started last week
+    return L.dateKey(s);
+  }
 
   function myName() {
     let name = '';
@@ -266,6 +287,18 @@
   const RANK_MEDALS = ['🥇', '🥈', '🥉'];
   function renderRank(list) {
     if (!rankEl) return;
+    const note = '<div class="cj-lb-note">' +
+      '📖 每接对一个成语 +1 个，比谁一周接得多<br>' +
+      '🗓️ 每周日 00:00 刷新新一周榜单<br>' +
+      '🏆 每周结算：上周前三名自动到账 🥇5000 / 🥈3000 / 🥉1000 金币 💰' +
+      '</div>';
+    const last = (_lastWeekWinners && _lastWeekWinners.length)
+      ? '<div class="cj-lb-last">🎁 上周获奖：' +
+          _lastWeekWinners.map(function (w, i) {
+            return (RANK_MEDALS[i] || (i + 1)) + esc(w.name || '匿名') + ' +' + (w.prize || 0);
+          }).join('　') +
+        '</div>'
+      : '';
     const body = list.length
       ? '<div class="cj-lb-list">' + list.map(function (r, i) {
           return '<div class="cj-lb-row">' +
@@ -274,23 +307,66 @@
                    '<span class="cj-lb-count">' + (r.count || 0) + ' 个</span>' +
                  '</div>';
         }).join('') + '</div>'
-      : '<span class="cj-empty">还没有人上榜，答对就能登顶！</span>';
-    rankEl.innerHTML = '<div class="cj-sec-title">🏅 累计答对榜（总榜）</div>' + body;
+      : '<span class="cj-empty">本周还没有人上榜，接对就能登顶！</span>';
+    rankEl.innerHTML = '<div class="cj-sec-title">🏅 本周答对榜</div>' + note + last + body;
   }
   function subscribeRank() {
     if (typeof db === 'undefined') { if (rankEl) rankEl.hidden = true; return; }
     unsubscribeRank();
+    _rankList = [];
     renderRank([]);                 // show the section (empty state) while it loads
     try {
-      _rankUnsub = db.collection('chengyu_leaderboard').orderBy('count', 'desc').limit(10)
+      _rankUnsub = db.collection('chengyu_week').doc(curWeekId()).collection('users').orderBy('count', 'desc').limit(10)
         .onSnapshot(function (snap) {
           const list = [];
           snap.forEach(function (d) { list.push(d.data() || {}); });
+          _rankList = list;
           renderRank(list);
         }, function () {});
     } catch (e) {}
   }
   function unsubscribeRank() { if (_rankUnsub) { _rankUnsub(); _rankUnsub = null; } }
+
+  // ── Weekly settlement (auto + idempotent) ──────────────────────────────────
+  // The first client to open 成语接龙 in a NEW week pays last week's top 3
+  // (5000/3000/1000 coins) into their rooms and writes a one-time marker doc, all
+  // in ONE transaction guarded by the marker — so the payout can never run twice,
+  // no matter how many clients open at once. Last week's counts are frozen
+  // (appendLink only ever writes the CURRENT week), so the top-3 read is stable.
+  async function maybeSettleLastWeek() {
+    if (typeof db === 'undefined' || typeof auth === 'undefined' || typeof firebase === 'undefined') return;
+    if (!(auth.currentUser && auth.currentUser.uid)) return;
+    const markerRef = db.collection('chengyu_week').doc(prevWeekId());
+    try {
+      const marker = await markerRef.get();
+      if (marker.exists && (marker.data() || {}).settled) { showLastWeek((marker.data() || {}).winners); return; }
+      const snap = await markerRef.collection('users').orderBy('count', 'desc').limit(WEEK_PRIZES.length).get();
+      const top = [];
+      snap.forEach(function (d) { const x = d.data() || {}; top.push({ uid: d.id, name: x.name || '匿名', count: x.count || 0 }); });
+      const winners = await db.runTransaction(async function (tx) {
+        const m = await tx.get(markerRef);
+        if (m.exists && (m.data() || {}).settled) return (m.data() || {}).winners || [];   // someone beat us to it
+        const paid = [];
+        for (let i = 0; i < top.length; i++) {
+          const prize = WEEK_PRIZES[i] || 0;
+          if (prize > 0) {
+            tx.set(db.collection('rooms').doc(top[i].uid),
+                   { coins: firebase.firestore.FieldValue.increment(prize) }, { merge: true });
+          }
+          paid.push({ uid: top[i].uid, name: top[i].name, count: top[i].count, prize: prize });
+        }
+        tx.set(markerRef, { settled: true, winners: paid, at: Date.now() });   // create-once (rules forbid update/delete)
+        return paid;
+      });
+      showLastWeek(winners);
+    } catch (e) { /* another client settled it, or offline — safe to skip */ }
+  }
+  // Show last week's paid winners above the weekly board (re-renders with the
+  // cached list so it appears without waiting for the next live snapshot).
+  function showLastWeek(winners) {
+    _lastWeekWinners = Array.isArray(winners) ? winners.filter(function (w) { return w && w.prize; }) : null;
+    renderRank(_rankList);
+  }
 
   function setFeedback(msg, cls) {
     feedbackEl.textContent = msg || '';
@@ -319,7 +395,8 @@
     overlay.classList.add('show');
     fab.classList.remove('has-new');
     subscribe();
-    subscribeRank();                // live 累计答对榜 (all-time, server-wide)
+    subscribeRank();                // live 本周答对榜
+    maybeSettleLastWeek();          // pay out last week's top 3 if a new week just started (idempotent)
     setTimeout(function () { if (!inputEl.disabled) inputEl.focus(); }, 60);
   }
   function close() { overlay.classList.remove('show'); unsubscribe(); unsubscribeRank(); }
@@ -332,7 +409,7 @@
     if (!uid) return 'noauth';
     const name = myName();
     const roomRef = db.collection('rooms').doc(uid);
-    const rankRef = db.collection('chengyu_leaderboard').doc(uid);
+    const rankRef = db.collection('chengyu_week').doc(curWeekId()).collection('users').doc(uid);
     try {
       return await db.runTransaction(async function (tx) {
         const d    = await tx.get(docRef);
@@ -351,9 +428,9 @@
         }
         const rd = room.exists ? room.data() : {};              // every correct idiom pays 20 coins
         tx.set(roomRef, { coins: (rd.coins || 0) + L.REWARD }, { merge: true });
-        // …and bumps my all-time correct-answer total (increment sentinel needs
-        // no prior read, so it stays valid alongside the writes above). Powers
-        // the shared 累计答对榜 that, unlike the daily board, never resets.
+        // …and bumps my WEEKLY correct-answer count (increment sentinel needs no
+        // prior read, so it's valid alongside the writes above). Powers the
+        // 本周答对榜, which resets every Sunday; last week's top 3 win coins.
         tx.set(rankRef, {
           name: name,
           count: firebase.firestore.FieldValue.increment(1),
