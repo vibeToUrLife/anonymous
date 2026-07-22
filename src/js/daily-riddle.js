@@ -98,28 +98,8 @@
   let riddle     = RIDDLES[L.dailyIndex(RIDDLES.length)];
   let _revealArmed = false;   // 查看答案 needs two taps (first arms the forfeit warning)
   let _solversUnsub = null;   // live "今日答对" subscription
-  let _rankUnsub = null;      // live "本周答对榜" subscription
-  let _rankList = [];         // last rendered weekly ranking (so the "上周获奖" line can re-render)
+  let _rankUnsub = null;      // live "答对排行榜" (all-time count) subscription
   let _dayWatch = null;       // interval that catches midnight rolling over while open
-  let _lastWeekWinners = null;// [{uid,name,count,prize}] paid out last week (for the "上周获奖" line)
-
-  // ── Weekly leaderboard: the board resets every week (Sunday 00:00 local), and
-  //    last week's top 3 are paid 5000/3000/1000 coins at settlement. weekId is
-  //    the Sunday date (YYYY-MM-DD) that starts the week; kept in sync with `today`.
-  const WEEK_PRIZES = [5000, 3000, 1000];   // 🥇 🥈 🥉
-  function weekIdFor(d) {
-    d = d || new Date();
-    const s = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    s.setDate(s.getDate() - s.getDay());     // back up to Sunday (getDay: 0=Sun … 6=Sat)
-    return L.dateKey(s);
-  }
-  function prevWeekId() {
-    const x = new Date();
-    const s = new Date(x.getFullYear(), x.getMonth(), x.getDate());
-    s.setDate(s.getDate() - s.getDay() - 7); // Sunday that started last week
-    return L.dateKey(s);
-  }
-  let weekId = weekIdFor();
 
   // Re-key to the current calendar day. `today`/`DONE_KEY` are captured at load,
   // so if the page/modal is left open past midnight they'd still point at
@@ -133,7 +113,6 @@
     if (d === today) return false;
     today = d;
     DONE_KEY = 'riddle_done_' + today;
-    weekId = weekIdFor();          // the week may have rolled over too
     return true;
   }
 
@@ -207,8 +186,7 @@
     overlay.classList.add('show');
     fab.classList.remove('has-new');
     subscribeSolvers();   // live "今日答对" list (names only)
-    subscribeRank();      // live "本周答对榜"
-    maybeSettleLastWeek();// pay out last week's top 3 if a new week just started (idempotent)
+    subscribeRank();      // live "答对排行榜" (all-time correct count)
     startDayWatch();      // if it's left open at midnight, roll over to the new day
     setTimeout(function () { if (!inputEl.disabled) inputEl.focus(); }, 60);
     // …then reconcile with the account: if THIS account already finished today
@@ -231,7 +209,6 @@
       render();
       subscribeSolvers();
       subscribeRank();
-      maybeSettleLastWeek();       // a new week may have just begun → settle last week
       updateFabPulse();
     }, 30000);
   }
@@ -246,63 +223,19 @@
     const uid = auth.currentUser && auth.currentUser.uid;
     if (!uid) return 'noauth';
     const ref = db.collection('rooms').doc(uid);
-    const weekRef = db.collection('riddle_week').doc(weekId).collection('users').doc(uid);
+    const rankRef = db.collection('riddle_leaderboard').doc(uid);
     try {
       return await db.runTransaction(async function (tx) {
         const doc = await tx.get(ref);
         const data = doc.exists ? doc.data() : {};
         if (data.riddleLastSolvedDay === today) return 'already';
         tx.set(ref, { coins: (data.coins || 0) + L.REWARD, riddleLastSolvedDay: today }, { merge: true });
-        // Bump my WEEKLY correct-answer count in the same transaction, so it can
-        // only ever rise once per day (the day-guard above + the rules' lastDay
-        // check both enforce it). weekId rolls the board over every Sunday.
-        tx.set(weekRef, { name: myName(), count: firebase.firestore.FieldValue.increment(1), lastDay: today, at: Date.now() }, { merge: true });
+        // Bump my all-time correct-answer count here too, so it can only ever go
+        // up once per day (the day-guard above runs in the same transaction).
+        tx.set(rankRef, { name: myName(), count: firebase.firestore.FieldValue.increment(1), at: Date.now() }, { merge: true });
         return 'granted';
       });
     } catch (e) { return 'error'; }
-  }
-
-  // ── Weekly settlement (auto + idempotent) ──────────────────────────────────
-  // The first client to open the riddle in a NEW week pays last week's top 3
-  // (5000/3000/1000 coins) into their rooms and writes a one-time marker doc, all
-  // in ONE transaction guarded by the marker — so the payout can never run twice,
-  // no matter how many clients open at once. Last week's counts are frozen (the
-  // reward transaction only ever writes the CURRENT week), so the top-3 read is
-  // stable. Best-effort: any failure just means another client settles later.
-  async function maybeSettleLastWeek() {
-    if (typeof db === 'undefined' || typeof auth === 'undefined' || typeof firebase === 'undefined') return;
-    if (!(auth.currentUser && auth.currentUser.uid)) return;
-    const markerRef = db.collection('riddle_week').doc(prevWeekId());
-    try {
-      const marker = await markerRef.get();
-      if (marker.exists && (marker.data() || {}).settled) { showLastWeek((marker.data() || {}).winners); return; }
-      const snap = await markerRef.collection('users').orderBy('count', 'desc').limit(WEEK_PRIZES.length).get();
-      const top = [];
-      snap.forEach(function (d) { const x = d.data() || {}; top.push({ uid: d.id, name: x.name || '匿名', count: x.count || 0 }); });
-      const winners = await db.runTransaction(async function (tx) {
-        const m = await tx.get(markerRef);
-        if (m.exists && (m.data() || {}).settled) return (m.data() || {}).winners || [];   // someone beat us to it
-        const paid = [];
-        for (let i = 0; i < top.length; i++) {
-          const prize = WEEK_PRIZES[i] || 0;
-          if (prize > 0) {
-            tx.set(db.collection('rooms').doc(top[i].uid),
-                   { coins: firebase.firestore.FieldValue.increment(prize) }, { merge: true });
-          }
-          paid.push({ uid: top[i].uid, name: top[i].name, count: top[i].count, prize: prize });
-        }
-        tx.set(markerRef, { settled: true, winners: paid, at: Date.now() });   // create-once (rules forbid update/delete)
-        return paid;
-      });
-      showLastWeek(winners);
-    } catch (e) { /* another client settled it, or offline — safe to skip */ }
-  }
-
-  // Show last week's paid winners above the weekly board (re-renders with the
-  // cached list so it appears without waiting for the next live snapshot).
-  function showLastWeek(winners) {
-    _lastWeekWinners = Array.isArray(winners) ? winners.filter(function (w) { return w && w.prize; }) : null;
-    renderRank(_rankList);
   }
 
   async function submit() {
@@ -441,18 +374,6 @@
   function renderRank(list) {
     if (!rankEl) return;
     rankEl.hidden = false;
-    const note = '<div class="riddle-rank-note">' +
-      '📖 答对每日谜语 +1 次（每天最多 +1），比谁一周答对得多<br>' +
-      '🗓️ 每周日 00:00 刷新新一周榜单<br>' +
-      '🏆 每周结算：上周前三名自动到账 🥇5000 / 🥈3000 / 🥉1000 金币 🪙' +
-      '</div>';
-    const lastWeek = (_lastWeekWinners && _lastWeekWinners.length)
-      ? '<div class="riddle-rank-last">🎁 上周获奖：' +
-          _lastWeekWinners.map(function (w, i) {
-            return (RANK_MEDALS[i] || (i + 1)) + _escapeName(w.name || '匿名') + ' +' + (w.prize || 0);
-          }).join('　') +
-        '</div>'
-      : '';
     const body = list.length
       ? '<div class="riddle-rank-list">' +
           list.map(function (r, i) {
@@ -463,21 +384,19 @@
                    '</div>';
           }).join('') +
         '</div>'
-      : '<div class="riddle-solvers-empty">本周还没有人上榜，答对就能登顶！</div>';
-    rankEl.innerHTML = '<div class="riddle-solvers-title">🏅 本周答对榜</div>' + note + lastWeek + body;
+      : '<div class="riddle-solvers-empty">还没有人上榜，答对就能登顶！</div>';
+    rankEl.innerHTML = '<div class="riddle-solvers-title">🏅 答对排行榜（累计）</div>' + body;
   }
 
   function subscribeRank() {
     if (typeof db === 'undefined') { if (rankEl) rankEl.hidden = true; return; }
     unsubscribeRank();
-    _rankList = [];
     renderRank([]);   // show the section right away (empty state) while it loads
     try {
-      _rankUnsub = db.collection('riddle_week').doc(weekId).collection('users').orderBy('count', 'desc').limit(10)
+      _rankUnsub = db.collection('riddle_leaderboard').orderBy('count', 'desc').limit(10)
         .onSnapshot(function (snap) {
           const list = [];
           snap.forEach(function (d) { list.push(d.data() || {}); });
-          _rankList = list;
           renderRank(list);
         }, function () {});
     } catch (e) {}

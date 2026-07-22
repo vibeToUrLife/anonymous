@@ -438,36 +438,15 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════
-    // 15b. DAILY RIDDLE WEEKLY BOARD — correct-answer ranking that resets weekly
-    //     Path: riddle_week/{weekId}/users/{uid} = { name, count, lastDay, at }
-    //       weekId = the Sunday date (YYYY-MM-DD) that starts the week. Powers the
-    //       "🏅 本周答对榜". count is bumped (+1) only inside the daily reward
-    //       transaction; the rules pin it to +1 per calendar day (lastDay must
-    //       advance), so a user can raise ONLY their own weekly total, ≤ once/day.
-    //     Path: riddle_week/{weekId} = { settled:true, winners:[{uid,name,count,prize}], at }
-    //       One-time settlement marker for a FINISHED week. The first client to open
-    //       the riddle in the next week creates it and, in the SAME transaction, pays
-    //       last week's top 3 their prizes (5000/3000/1000 coins) into their rooms.
-    //       Create-once + no update/delete = idempotent payout (can never run twice).
-    //       Coins land via the rooms "add coins to anyone" clause (§1), consistent
-    //       with this app's client-authoritative coin model.
+    // 15b. DAILY RIDDLE LEADERBOARD — all-time correct-answer count per user
+    //     Path: riddle_leaderboard/{uid} = { name, count, at }
+    //     Powers the "🏅 答对排行榜（累计）" ranking in the riddle card. The count
+    //     is only ever bumped (+1) inside the once-per-day reward transaction, so a
+    //     user can raise ONLY their own total, once per day. Any signed-in user reads.
     // ═══════════════════════════════════════
-    match /riddle_week/{weekId} {
+    match /riddle_leaderboard/{uid} {
       allow read: if isAuth();
-      allow create: if isAuth()
-                    && request.resource.data.settled == true
-                    && request.resource.data.winners is list;
-      allow update, delete: if false;   // immutable once settled → payout can't repeat
-
-      match /users/{uid} {
-        allow read: if isAuth();
-        // First solve of the week creates the doc at count 1; later solves may add
-        // exactly 1, and only when lastDay advances (so at most once per day).
-        allow create: if isOwner(uid) && request.resource.data.count == 1;
-        allow update: if isOwner(uid)
-                      && request.resource.data.count == resource.data.count + 1
-                      && request.resource.data.lastDay != resource.data.lastDay;
-      }
+      allow write: if isOwner(uid);
     }
 
     // ═══════════════════════════════════════
