@@ -441,7 +441,11 @@
   function renderRank(list) {
     if (!rankEl) return;
     rankEl.hidden = false;
-    const note = '<div class="riddle-rank-note">🗓️ 每周日 00:00 刷新 · 上周前三名得 🥇5000 / 🥈3000 / 🥉1000 金币 🪙</div>';
+    const note = '<div class="riddle-rank-note">' +
+      '📖 答对每日谜语 +1 次（每天最多 +1），比谁一周答对得多<br>' +
+      '🗓️ 每周日 00:00 刷新新一周榜单<br>' +
+      '🏆 每周结算：上周前三名自动到账 🥇5000 / 🥈3000 / 🥉1000 金币 🪙' +
+      '</div>';
     const lastWeek = (_lastWeekWinners && _lastWeekWinners.length)
       ? '<div class="riddle-rank-last">🎁 上周获奖：' +
           _lastWeekWinners.map(function (w, i) {
