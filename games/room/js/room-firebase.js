@@ -79,40 +79,10 @@
       }
     }
 
-    // ── Room "while you were away" coin modal (mirrors the farm offline modal).
-    // Mandatory: no Close; the button OR a backdrop tap collects (auto-collect).
-    let _roomCoinAwayPlan = null;
-    function _showRoomCoinAway(plan) {
-      _roomCoinAwayPlan = plan;
-      const el = document.getElementById('roomCoinModal');
-      if (!el) return;
-      el.innerHTML =
-        '<div class="ws-box">' +
-          '<div class="ws-head">🌱 While you were away…</div>' +
-          '<div class="ws-sub">Your ' + plan.name + ' earned coins. Collect them to keep it growing!</div>' +
-          '<div class="ws-slot"><span class="ws-slot-no">🪙 Coins</span><span class="ws-slot-state">+' + plan.earned + '</span></div>' +
-          '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="collectRoomCoinAway()">📦 Collect</button>' +
-        '</div>';
-      el.style.display = 'flex';
-    }
-    function _hideRoomCoinAway() {
-      _roomCoinAwayPlan = null;
-      const el = document.getElementById('roomCoinModal');
-      if (el) el.style.display = 'none';
-    }
-    // Collect the offline coins (button OR backdrop tap). Only here do the coins get
-    // added and the timer reset — until collected they stay pending (recomputed on reload).
-    async function collectRoomCoinAway() {
-      const plan = _roomCoinAwayPlan;
-      _hideRoomCoinAway();
-      if (!plan || viewingUid !== currentUid) return;
-      roomData.coins += plan.earned;
-      logCoin(plan.earned, 'While away 💰');
-      roomData.lastCoinCollect = Date.now();
-      await saveRoom();
-      showToast('💰 Collected ' + plan.earned + ' coins!', 'success');
-      renderAllDebounced();
-    }
+    // ── Room "while you were away" plant coins.
+    // No blocking modal: once you're in the room the coins are auto-banked and a
+    // top notice (showToast) simply tells you how much — see the on-load and
+    // tab-refocus handlers below.
 
     /* ═══════════════════════════════
        Init
@@ -320,18 +290,16 @@
             const earned = cycles * coinsPerCycle;
             const _top = incomeOffline.top;
             const _name = incomeOffline.count > 1
-              ? ('your ' + incomeOffline.count + ' trees')
+              ? ('Your ' + incomeOffline.count + ' trees')
               : ('Lv.' + _top.plantLvl + ' ' + (_top.plantDef ? _top.plantDef.name : 'plant'));
+            // Bank it straight away — no gating modal now that you're in the room.
+            roomData.coins += earned;
+            logCoin(earned, 'Plant income 🌱');
+            roomData.lastCoinCollect = Date.now();
+            saveRoom();
             if (rawElapsed >= PLANT_OFFLINE_MODAL_MS) {
-              // ≥1h away → mandatory collect modal. Coins are added (and the timer
-              // reset) only on collect — until then they stay pending.
-              setTimeout(function () { _showRoomCoinAway({ earned: earned, name: _name }); }, 800);
-            } else {
-              // Short trip → bank it straight away (no modal).
-              roomData.coins += earned;
-              logCoin(earned, 'Plant income 🌱');
-              roomData.lastCoinCollect = Date.now();
-              saveRoom();
+              // Away a while → pop a top notice so they know, without interrupting.
+              setTimeout(function () { showToast('🌱 ' + _name + ' earned ' + earned + ' coins while you were away!', 'success'); }, 800);
             }
           } else {
             // No cycles earned but reset the timer on page load
@@ -509,34 +477,25 @@
         } else if (document.visibilityState === 'visible' && currentUid) {
           userDocRef().update({ lastSeen: Date.now() }).catch(() => {});
           // Plant coins earned while the tab was hidden. Mirror the on-load
-          // behaviour: ≥1h away → the mandatory "while you were away" collect
-          // modal (coins pending until collected); a short trip → bank straight
-          // away with a toast. Without the modal branch, users who return by
-          // re-focusing an already-open tab (common on mobile) would silently
-          // bank their coins and never see the modal — while a fresh page load
-          // would show it. That asymmetry is why the modal appeared for some
-          // users but not others.
+          // behaviour: bank them straight away and pop a top notice — whether they
+          // were away an hour or just tabbed out for a bit — so returning by
+          // re-focusing an already-open tab (common on mobile) stays consistent
+          // with a fresh page load. No blocking modal either way.
           const incomeHidden = getTotalPlantIncome();
-          if (viewingUid === currentUid && incomeHidden && roomData.lastCoinCollect && !_roomCoinAwayPlan) {
+          if (viewingUid === currentUid && incomeHidden && roomData.lastCoinCollect) {
             const coinsPerCycle = incomeHidden.perCycle;
             const rawElapsed = Date.now() - roomData.lastCoinCollect;
             const elapsed = Math.min(rawElapsed, PLANT_OFFLINE_CAP_MS);
             const cycles = Math.floor(elapsed / (5 * 60 * 1000));
             if (cycles > 0) {
               const earned = cycles * coinsPerCycle;
-              if (rawElapsed >= PLANT_OFFLINE_MODAL_MS) {
-                const _name = incomeHidden.count > 1
-                  ? ('your ' + incomeHidden.count + ' trees')
-                  : ('Lv.' + incomeHidden.top.plantLvl + ' ' + (incomeHidden.top.plantDef ? incomeHidden.top.plantDef.name : 'plant'));
-                _showRoomCoinAway({ earned: earned, name: _name });
-              } else {
-                roomData.coins += earned;
-                logCoin(earned, 'Plant income 🌱');
-                roomData.lastCoinCollect = Date.now();
-                saveRoom();
-                const _label = incomeHidden.count > 1 ? ('Your ' + incomeHidden.count + ' trees') : (incomeHidden.top.plantDef ? incomeHidden.top.plantDef.name : 'Plant');
-                showToast('🌱 ' + _label + ' earned ' + earned + ' coins while tab was hidden!', 'success');
-              }
+              roomData.coins += earned;
+              logCoin(earned, 'Plant income 🌱');
+              roomData.lastCoinCollect = Date.now();
+              saveRoom();
+              const _label = incomeHidden.count > 1 ? ('Your ' + incomeHidden.count + ' trees') : (incomeHidden.top.plantDef ? incomeHidden.top.plantDef.name : 'Plant');
+              const _tail = rawElapsed >= PLANT_OFFLINE_MODAL_MS ? ' coins while you were away!' : ' coins while tab was hidden!';
+              showToast('🌱 ' + _label + ' earned ' + earned + _tail, 'success');
             }
           }
           // Reattach room listener to resume real-time updates
