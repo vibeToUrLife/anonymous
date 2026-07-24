@@ -147,7 +147,7 @@ body.world-touch #worldJoystick { display: block; }
 .world-chatline b { color: var(--w-accent); }
 #worldChatRow { display: flex; gap: 8px; }
 #worldChatInput {
-  flex: 1; border: 0; border-radius: 999px; padding: 11px 16px; font-size: 15px; font-family: inherit;
+  flex: 1; border: 0; border-radius: 999px; padding: 11px 16px; font-size: 16px; font-family: inherit;
   background: var(--w-card); box-shadow: var(--w-shadow); outline: none; color: var(--w-ink);
 }
 #worldChatSend { border: 0; border-radius: 50%; width: 46px; height: 46px; font-size: 18px; background: var(--w-accent); color: #fff; cursor: pointer; box-shadow: var(--w-shadow); }
@@ -245,7 +245,7 @@ body.world-touch .world-note-key { display: none; } /* mobile has no keyboard â€
 .world-board-write { display: flex; gap: 8px; }
 #worldBoardInput {
   flex: 1; box-sizing: border-box; border: 0; border-radius: 10px; padding: 11px 14px;
-  font-size: 15px; font-family: inherit; outline: none; color: var(--w-ink); background: #fff8ec;
+  font-size: 16px; font-family: inherit; outline: none; color: var(--w-ink); background: #fff8ec;
 }
 #worldBoardAdd {
   border: 0; border-radius: 10px; padding: 11px 18px; font-family: inherit; font-weight: 800;

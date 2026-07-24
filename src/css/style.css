@@ -5,7 +5,17 @@
 :root { color-scheme: dark; }
 body.light-theme { color-scheme: light; }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+/* iOS Safari auto-zooms the page whenever a focused text field's font-size is
+   below 16px. Force every text-entry control to >=16px so focus never zooms.
+   Uses !important so the responsive overrides further down cannot re-introduce
+   the zoom on phones. Checkboxes/radios/ranges/colors are excluded (no text). */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+textarea,
+select {
+    font-size: 16px !important;
+}
 
 body {
     min-height: 100vh;
@@ -55,6 +65,9 @@ body {
     display: flex;
     gap: 10px;
     padding: 14px 20px;
+    /* Keep the fixed bar clear of the iPhone home indicator (needs
+       viewport-fit=cover on the page's viewport meta to resolve). */
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
     background: rgba(15, 12, 41, 0.94);
     backdrop-filter: blur(14px);
     border-top: 1px solid rgba(255,255,255,0.08);
@@ -2244,6 +2257,7 @@ body.sidebar-open .bubble-wrap {
     .bubble { max-width: 90vw; font-size: 14px; padding: 16px 18px 12px; }
     .input-area {
         padding: 10px 12px;
+        padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
         gap: 8px;
         flex-wrap: wrap;
         align-items: center;

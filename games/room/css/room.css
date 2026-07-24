@@ -594,7 +594,7 @@
     .gb-time{font-size:10px;color:var(--g-ink-faint);margin-top:4px}
     .gb-sticker{font-size:32px;margin-bottom:4px}
     .gb-input-area{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
-    .gb-textarea{width:100%;padding:10px 12px;border:1px solid var(--g-border);border-radius:12px;background: var(--g-card-hover);color:var(--g-ink);font-size:13px;resize:none;font-family:inherit}
+    .gb-textarea{width:100%;padding:10px 12px;border:1px solid var(--g-border);border-radius:12px;background: var(--g-card-hover);color:var(--g-ink);font-size:16px;resize:none;font-family:inherit}
     .gb-textarea::placeholder{color:var(--g-ink-faint)}
     .gb-sticker-row{display:flex;gap:6px;flex-wrap:wrap}
     .gb-sticker-btn{font-size:22px;padding:4px 6px;border:1px solid var(--g-border);border-radius:8px;background:transparent;cursor:pointer;transition:all .2s}
@@ -610,7 +610,7 @@
     .gb-reply-btn{font-size:10px;padding:4px 10px;border:1px solid var(--g-border);border-radius:8px;background:transparent;color:var(--g-ink-soft);cursor:pointer;margin-top:6px}
     .gb-reply-btn:hover{background:var(--g-hover);color:var(--g-ink)}
     .gb-reply-form{display:flex;gap:6px;margin-top:6px;align-items:center}
-    .gb-reply-input{flex:1;padding:6px 10px;border:1px solid var(--g-border);border-radius:8px;background: var(--g-card-hover);color:var(--g-ink);font-size:12px;font-family:inherit}
+    .gb-reply-input{flex:1;padding:6px 10px;border:1px solid var(--g-border);border-radius:8px;background: var(--g-card-hover);color:var(--g-ink);font-size:16px;font-family:inherit}
     .gb-reply-input::placeholder{color:var(--g-ink-faint)}
     .gb-reply-send{padding:6px 12px;border:none;border-radius:8px;background:var(--g-accent-grad);color:#fff;font-size:11px;font-weight:600;cursor:pointer}
 
