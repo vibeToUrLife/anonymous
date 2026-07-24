@@ -99,17 +99,38 @@
       return FARM_MAX_ANIMALS + 10 * (roomData.farmCapLevel || 0);
     }
 
+    // Normalized y of the fence that divides the animal pasture (above) from the
+    // crop garden (below). It drops as the farm is expanded so each upgrade
+    // visibly enlarges the pasture, but is capped so the crop rows below always
+    // keep enough room to stay inside their plank (not overlap the animals).
+    function _farmDivY() {
+      return Math.min(0.76, 0.66 + 0.04 * (roomData.farmCapLevel || 0));
+    }
+
+    // The soil band the garden plots live in: always below the dividing fence
+    // and above the bottom fence, split into the max plot rows so every owned
+    // row sits inside the plank at any expansion level. `rows` is fixed (max)
+    // so a row's screen slot doesn't shift as you buy more plots.
+    function _farmCropBand() {
+      const top = _farmDivY() + 0.03;
+      const bot = 0.91;                              // clear of the bottom fence (0.93)
+      const rows = Math.max(1, farmRowCount(FARM_PLOT_MAX, 7));
+      return { top: top, bot: bot, rows: rows, rowGap: (bot - top) / rows };
+    }
+
     // Screen-normalized position of garden plot index i. Plots sit in rows of 7
     // across the soil strip, shifted right to leave room for the row signboard.
     function _farmPlotPos(i) {
       const perRow = 7;
       const col = i % perRow, row = Math.floor(i / perRow);
-      return { x: 0.20 + col * 0.088, y: 0.72 + row * 0.066 };
+      const band = _farmCropBand();
+      return { x: 0.20 + col * 0.088, y: band.top + (row + 0.5) * band.rowGap };
     }
 
     // Normalized position of the signboard sitting to the LEFT of grid row `row`.
     function _farmSignPos(row) {
-      return { x: 0.085, y: 0.72 + row * 0.066 };
+      const band = _farmCropBand();
+      return { x: 0.085, y: band.top + (row + 0.5) * band.rowGap };
     }
 
     // Local YYYY-MM-DD for the daily orders seed.
@@ -2077,7 +2098,11 @@
     function _drawFarmSign(ctx, W, H, row, st) {
       const pos = _farmSignPos(row);
       const cx = pos.x * W, cy = pos.y * H;
-      const w = Math.max(36, Math.min(W, H) * 0.095), h = w * 0.72;
+      // Keep the signboard within its row slot so stacked rows never collide
+      // when the soil band is compressed at high expansion levels.
+      const _slot = _farmCropBand().rowGap * H;
+      const w = Math.max(32, Math.min(Math.min(W, H) * 0.095, _slot * 1.2));
+      const h = Math.min(w * 0.72, _slot * 0.86);
       const x0 = cx - w / 2, y0 = cy - h / 2;
       ctx.fillStyle = '#5a3c22';                                   // post
       ctx.fillRect(cx - 2, y0 + h - 3, 4, h * 0.5);
@@ -2112,7 +2137,10 @@
     function _drawFarmPlots(ctx, W, H, t) {
       const plots = roomData.farmPlots || [];
       const now = Date.now();
-      const tile = Math.max(22, Math.min(W, H) * 0.05);
+      // Cap tile height to the row slot so beds never overlap the next row (or
+      // the animals) when the soil band is compressed at high expansion levels.
+      const _band = _farmCropBand();
+      const tile = Math.max(18, Math.min(Math.min(W, H) * 0.05, _band.rowGap * H * 0.82));
       ctx.textAlign = 'center';
       // Row signboards (left of each row that owns ≥1 plot).
       const _rows = farmRowCount(plots.length, 7);
@@ -2223,7 +2251,7 @@
         // The dividing fence between the animal pasture (above) and the crop
         // garden (below). It moves DOWN as the farm is expanded, so each
         // "Expand farm" visibly enlarges the pasture.
-        const divY = Math.min(0.82, 0.66 + 0.04 * (roomData.farmCapLevel || 0));
+        const divY = _farmDivY();
         const gy = H * divY;
 
         // Animal pasture — grass from the horizon down to the dividing fence
