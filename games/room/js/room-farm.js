@@ -69,6 +69,48 @@
     return Math.max(0, Math.min(1, (now - plantedAt) / growMs));
   }
 
+  // Number of grid rows a plot count occupies (rows of `perRow`). 0 → 0.
+  function farmRowCount(plotCount, perRow) {
+    return Math.ceil((plotCount || 0) / perRow);
+  }
+
+  // Owned plot indices in grid row `row` (rows of `perRow`), bounded by
+  // plotCount. Empty array if the row owns no plots (partial/last row).
+  function farmRowIndices(plotCount, row, perRow) {
+    const out = [], start = row * perRow, end = Math.min(start + perRow, plotCount || 0);
+    for (let i = start; i < end; i++) out.push(i);
+    return out;
+  }
+
+  // State of one garden row from its plot objects.
+  //   rowPlots : [{ crop, plantedAt }] — the plots owned in this row
+  //   crops    : FARM_CROPS-shaped [{ id, growMs }]
+  //   now      : Date.now()
+  // 'ripe' if any planted plot is fully grown; 'growing' if planted but none
+  // ripe; 'empty' if no plot has a crop. cropId = first planted plot's crop
+  // (row label). progress = min progress of growing plots; msLeft = max time left.
+  function farmRowState(rowPlots, crops, now) {
+    let cropId = null, anyRipe = false, msLeft = 0, minProg = 1;
+    for (const p of rowPlots) {
+      if (!p || !p.crop) continue;
+      if (cropId == null) cropId = p.crop;
+      const c = crops.find(x => x.id === p.crop);
+      if (!c) continue;
+      const prog = cropProgress(p.plantedAt, now, c.growMs);
+      if (prog >= 1) anyRipe = true;
+      else { msLeft = Math.max(msLeft, c.growMs - (now - p.plantedAt)); minProg = Math.min(minProg, prog); }
+    }
+    if (cropId == null) return { state: 'empty', cropId: null, progress: 0, msLeft: 0 };
+    if (anyRipe) return { state: 'ripe', cropId: cropId, progress: 1, msLeft: 0 };
+    return { state: 'growing', cropId: cropId, progress: minProg, msLeft: msLeft };
+  }
+
+  // How many empty plots you can afford to plant with a given seed.
+  function farmAffordableCount(coins, seedCost, emptyCount) {
+    const byCoins = seedCost > 0 ? Math.floor(coins / seedCost) : emptyCount;
+    return Math.max(0, Math.min(emptyCount, byCoins));
+  }
+
   // Total coins for selling an entire stock; prices maps product id → unit coins.
   function farmSellAllValue(stock, prices) {
     let total = 0;
@@ -127,5 +169,5 @@
     return Math.max(0, Math.min(Math.floor(foodMax - foodStock), Math.floor(coins / costPerUnit)));
   }
 
-  return { farmCycleMs, animalLevel, cropProgress, generateFarmOrders, farmSellAllValue, planFarmTick, farmRefillUnits };
+  return { farmCycleMs, animalLevel, cropProgress, generateFarmOrders, farmSellAllValue, planFarmTick, farmRefillUnits, farmRowCount, farmRowIndices, farmRowState, farmAffordableCount };
 });
