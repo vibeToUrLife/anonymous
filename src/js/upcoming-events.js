@@ -224,6 +224,40 @@ const UpcomingEvents = (() => {
     return true;
   }
 
+  /**
+   * The CSS sizes the reminder as large as the viewport's width/height allow —
+   * right for a short title, but a long one still wraps past the bottom. Find
+   * the LARGEST --ue-fit that still fits, so it only shrinks as much as it has
+   * to (a plain ratio overshoots: shrinking also removes wrapped lines).
+   * offsetHeight is the layout height, so the uePop scale animation on the box
+   * doesn't skew the measurement.
+   */
+  function _fitReminder(ov) {
+    const box = ov && ov.querySelector('.ue-reminder-box');
+    if (!box) return;
+    const cs = getComputedStyle(ov);
+    const avail = ov.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    if (!(avail > 0)) return;
+
+    const fitsAt = v => {
+      box.style.setProperty('--ue-fit', v);
+      return box.offsetHeight <= avail;
+    };
+    if (fitsAt(1)) return;                  // full size already fits — done
+
+    // Binary search in [MIN_FIT, 1]. Below MIN_FIT the text stops being a
+    // reminder and starts being fine print; the overlay scrolls as a backstop.
+    const MIN_FIT = 0.5;
+    let lo = MIN_FIT, hi = 1;
+    for (let i = 0; i < 7; i++) {
+      const mid = (lo + hi) / 2;
+      if (fitsAt(mid)) lo = mid; else hi = mid;
+    }
+    // Land on a value that is verified to fit in the CURRENT layout, not just
+    // one that fit at some point during the search.
+    while (!fitsAt(lo) && lo > MIN_FIT) lo = Math.max(MIN_FIT, lo - 0.05);
+  }
+
   function _showReminder(ev, tag) {
     const ov = document.getElementById('ueReminder');
     if (!ov) return;
@@ -238,7 +272,13 @@ const UpcomingEvents = (() => {
 
     ov.classList.remove('hidden');
     void ov.offsetWidth;          // reflow so the fade-in transition runs
+    _fitReminder(ov);
     ov.classList.add('show');
+
+    // The pixel webfont is much wider than the fallback — re-fit once it lands.
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => { if (_reminderOpen) _fitReminder(ov); });
+    }
 
     clearTimeout(_reminderTimer);
     const hold = Math.min(FADE_MAX, FADE_MS + (ev.title || '').length * 45);
@@ -302,6 +342,8 @@ const UpcomingEvents = (() => {
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); _create(); }
     });
     if (ov) ov.addEventListener('click', _hideReminder);
+    // Rotating the phone / resizing the window changes what fits.
+    window.addEventListener('resize', () => { if (_reminderOpen) _fitReminder(ov); });
 
     auth.onAuthStateChanged(user => { if (user) { _subscribe(); _startTick(); } });
   }
