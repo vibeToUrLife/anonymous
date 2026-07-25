@@ -45,9 +45,11 @@
        garden beds are capped by their row slot, so the only way to grow them is
        to hand the soil band more height, and the only place that height can
        come from is the sky and the grass above it. */
-    const FARM_SKY_Y      = 0.26;   // sky → grass
-    const FARM_TOPFENCE_Y = 0.30;   // top fence + the two trees that stand on it
-    const FARM_HUT_Y      = 0.33;   // workshop huts sit just above the pen band
+    const FARM_SKY_Y      = 0.22;   // sky → grass
+    const FARM_TOPFENCE_Y = 0.26;   // top fence + the two trees that stand on it
+    // A hut is about 0.05 of the stage tall either side of its centre, so this
+    // leaves ~0.04 of clear grass between the hut bases and the pen rails.
+    const FARM_HUT_Y      = 0.29;   // workshop huts sit above the pen band
     const FARM_PEN_TOP    = 0.38;   // animal pen band top
 
     /* ── Farm tick (shared by load catch-up, farm open, live tick) ──
@@ -135,32 +137,41 @@
       // Stop short of the tap hint pinned to the bottom of the stage. That hint
       // is a fixed ~30px of HTML, so on a short stage it claims a bigger share.
       const bot = Math.min(0.95, 1 - 30 / Math.max(1, H || 600));
-      const rows = Math.max(1, farmRowCount(FARM_PLOT_MAX, 7));
+      const rows = Math.max(1, farmRowCount(FARM_PLOT_MAX, FARM_PER_ROW));
       return { top: top, bot: bot, rows: rows, rowGap: (bot - top) / rows };
     }
 
-    // Side of one garden bed. The row slot is what really constrains it, so the
-    // min(W,H) cap is loose enough to let the slot bind on ordinary canvases.
-    function _farmTile(W, H) {
+    // Signboard width. Depends only on the row slot, so the bed can be sized
+    // against it without the two definitions chasing each other.
+    function _farmSignW(W, H) {
       const band = _farmCropBand(H);
-      return Math.max(18, Math.min(Math.min(W, H) * 0.095, band.rowGap * H * 0.82));
+      return Math.max(32, Math.min(Math.min(W, H) * 0.095, band.rowGap * H * 1.2));
     }
 
-    // Horizontal geometry of a garden row. The signboard and the 7 beds are laid
+    // Side of one garden bed, capped two ways: by the row slot's height, and by
+    // the width the whole row needs (a 10-wide row would otherwise run off the
+    // side of a phone stage). Layout below keeps groupW = signW + tile*1.45*perRow,
+    // so the width cap is exactly that solved for tile at 90% of the stage.
+    function _farmTile(W, H) {
+      const band = _farmCropBand(H);
+      const byRow  = band.rowGap * H * 0.82;
+      const byWide = (W * 0.90 - _farmSignW(W, H)) / (1.45 * FARM_PER_ROW);
+      return Math.max(18, Math.min(Math.min(W, H) * 0.095, byRow, byWide));
+    }
+
+    // Horizontal geometry of a garden row. The signboard and the beds are laid
     // out as ONE group and centred, so the field reads as wide as the pasture
     // above it instead of huddling in the middle.
     function _farmRowGeom(W, H) {
-      const band = _farmCropBand(H);
       const tile = _farmTile(W, H);
-      const signW = Math.max(32, Math.min(Math.min(W, H) * 0.095, band.rowGap * H * 1.2));
+      const signW = _farmSignW(W, H);
       // Spacing is relative to the bed, never to the canvas width. Driving it
       // from W spread the beds out on a wide stage — the bed is capped by the
       // row slot (so by H), so extra width only ever became extra gap: at 3440px
-      // the gaps ran 2.9x the bed and the field read as scattered dots. The
-      // trade-off is that on a very wide stage the field sits in the middle.
+      // the gaps ran 2.9x the bed and the field read as scattered dots.
       const step = tile * 1.45;
       const gap = tile * 0.45;                           // signboard → first bed
-      const groupW = signW + gap + tile + 6 * step;      // sign | gap | 7 beds
+      const groupW = signW + gap + tile + (FARM_PER_ROW - 1) * step;
       const x0 = Math.max(0, (W - groupW) / 2);
       return {
         tile: tile, signW: signW,
@@ -170,10 +181,10 @@
       };
     }
 
-    // Screen-normalized position of garden plot index i. Plots sit in rows of 7
-    // across the soil strip, to the right of the row signboard.
+    // Screen-normalized position of garden plot index i. Plots sit in rows of
+    // FARM_PER_ROW across the soil strip, to the right of the row signboard.
     function _farmPlotPos(i, W, H) {
-      const col = i % 7, row = Math.floor(i / 7);
+      const col = i % FARM_PER_ROW, row = Math.floor(i / FARM_PER_ROW);
       const band = _farmCropBand(H), geom = _farmRowGeom(W, H);
       return { x: geom.plotX0 + col * geom.step, y: band.top + (row + 0.5) * band.rowGap };
     }
@@ -1105,7 +1116,7 @@
     function _farmRowClick(row) {
       if (viewingUid !== currentUid) return;
       const plots = roomData.farmPlots || [];
-      const idxs = farmRowIndices(plots.length, row, 7);
+      const idxs = farmRowIndices(plots.length, row, FARM_PER_ROW);
       if (!idxs.length) return;
       const st = farmRowState(idxs.map(i => plots[i]), FARM_CROPS, Date.now());
       if (st.state === 'ripe') return harvestAllFarm();
@@ -1140,7 +1151,7 @@
       const picker = document.getElementById('cropPicker');
       if (!picker) return;
       const plots = roomData.farmPlots || [];
-      const empties = farmRowIndices(plots.length, _plantRow, 7).filter(i => !plots[i].crop).length;
+      const empties = farmRowIndices(plots.length, _plantRow, FARM_PER_ROW).filter(i => !plots[i].crop).length;
       picker.innerHTML =
         '<div class="cp-head">🌱 Plant this row</div>' +
         '<div class="cp-bulk-info">Empty plots in row: <b>' + empties + '</b> · Coins: <b>' + roomData.coins + '</b></div>' +
@@ -1160,7 +1171,7 @@
     function plantRow(cropId) {
       if (viewingUid !== currentUid) return;
       const plots = roomData.farmPlots || [];
-      const emptyIdxs = farmRowIndices(plots.length, _plantRow, 7).filter(i => !plots[i].crop);
+      const emptyIdxs = farmRowIndices(plots.length, _plantRow, FARM_PER_ROW).filter(i => !plots[i].crop);
       const crop = FARM_CROPS.find(c => c.id === cropId);
       if (!crop || !emptyIdxs.length) { closeCropPicker(); return; }
       const affordable = farmAffordableCount(roomData.coins, crop.seedCost, emptyIdxs.length);
@@ -1210,7 +1221,7 @@
     function confirmPlantPartial() {
       if (!_pendingPlant) return closeCropPicker();
       const plots = roomData.farmPlots || [];
-      const idxs = farmRowIndices(plots.length, _pendingPlant.row, 7)
+      const idxs = farmRowIndices(plots.length, _pendingPlant.row, FARM_PER_ROW)
         .filter(i => !plots[i].crop).slice(0, _pendingPlant.count);
       const cropId = _pendingPlant.cropId;
       _pendingPlant = null;
@@ -2224,9 +2235,9 @@
       const tile = _farmTile(W, H);
       ctx.textAlign = 'center';
       // Row signboards (left of each row that owns ≥1 plot).
-      const _rows = farmRowCount(plots.length, 7);
+      const _rows = farmRowCount(plots.length, FARM_PER_ROW);
       for (let _r = 0; _r < _rows; _r++) {
-        const _st = farmRowState(farmRowIndices(plots.length, _r, 7).map(k => plots[k]), FARM_CROPS, now);
+        const _st = farmRowState(farmRowIndices(plots.length, _r, FARM_PER_ROW).map(k => plots[k]), FARM_CROPS, now);
         _drawFarmSign(ctx, W, H, _r, _st);
       }
       plots.forEach((plot, i) => {
@@ -2679,9 +2690,9 @@
           for (let i = 0; i < plots.length; i++) {
             const pp = _farmPlotPos(i, _wh.W, _wh.H);
             const d = Math.hypot(pp.x - cx, pp.y - cy);
-            if (d < best) { best = d; rowIdx = Math.floor(i / 7); }
+            if (d < best) { best = d; rowIdx = Math.floor(i / FARM_PER_ROW); }
           }
-          const _rows = farmRowCount(plots.length, 7);
+          const _rows = farmRowCount(plots.length, FARM_PER_ROW);
           for (let r = 0; r < _rows; r++) {
             const sp = _farmSignPos(r, _wh.W, _wh.H);
             const d = Math.hypot(sp.x - cx, sp.y - cy);

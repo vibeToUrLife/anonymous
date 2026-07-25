@@ -320,7 +320,7 @@
         const moonProgress = nightHours / 12; // 0 = moonrise, 0.5 = midnight, 1 = moonset
         const moonX = W * (0.10 + moonProgress * 0.80);
         const moonArc = Math.sin(moonProgress * Math.PI);
-        const moonY = skyBot ? skyBot * (0.85 - moonArc * 0.60) : H * (0.45 - moonArc * 0.38);
+        const moonY = skyBot ? skyBot * (0.84 - moonArc * 0.52) : H * (0.45 - moonArc * 0.38);
         const moonR = Math.min(W, H) * 0.05;
         // Soft moon glow
         ctx.fillStyle = 'rgba(200,210,255,0.08)';
@@ -336,7 +336,7 @@
         const sunProgress = dayHours / 12; // 0 = sunrise, 0.5 = noon, 1 = sunset
         const sunX = W * (0.10 + sunProgress * 0.80);
         const sunArc = Math.sin(sunProgress * Math.PI);
-        const sunY = skyBot ? skyBot * (0.90 - sunArc * 0.62) : H * (0.50 - sunArc * 0.42);
+        const sunY = skyBot ? skyBot * (0.88 - sunArc * 0.55) : H * (0.50 - sunArc * 0.42);
         const sunR = Math.min(W, H) * 0.06;
         // Warm halo glow
         const glow = ctx.createRadialGradient(sunX, sunY, sunR * 0.2, sunX, sunY, sunR * 3);
