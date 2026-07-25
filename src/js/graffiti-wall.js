@@ -22,6 +22,12 @@
  * incrementally, so idle cost is zero and the wall resets itself daily.
  * Undo deletes your own last stroke (rules allow author-delete only).
  *
+ * 🪣 填色 is the one tool whose input is pixels, not points: it floods the
+ * on-screen bitmap, traces the outline of the region it flooded, and commits
+ * THAT as a normal stroke marked f:1 — so a fill is still a polyline on the
+ * wire and rides all of the above unchanged. Fills paint underneath ink (see
+ * redraw), which is what keeps them from burying anyone else's drawing.
+ *
  * Depends on firebase + auth from app.js and WallLogic. If RTDB is
  * unavailable the toggle hides itself. Feature flag: wall (#wallToggle).
  */
@@ -86,7 +92,8 @@
     const pts = WL.unpackPoints(v.p);
     let minY = Infinity, maxY = -Infinity;
     for (const p of pts) { if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y; }
-    return { c: v.c, w: v.w, by: v.by, pts: pts, minY: minY, maxY: maxY };
+    // f=1 → a 🪣 paint-bucket area: the same polyline, painted solid.
+    return { c: v.c, w: v.w, by: v.by, f: v.f ? 1 : 0, pts: pts, minY: minY, maxY: maxY };
   }
 
   const CULL_PAD = Math.max.apply(null, WL.WIDTHS) / 2;   // widest brush half
@@ -104,6 +111,15 @@
     const wi = Math.abs(Math.floor(s.w) || 0) % WL.WIDTHS.length;
     ctx.strokeStyle = ctx.fillStyle = WL.intToHex(s.c);
     const w = WL.WIDTHS[wi];
+    if (s.f) {                              // 🪣 area — solid, no outline
+      if (pts.length < 3) return;
+      ctx.beginPath();
+      ctx.moveTo(scrX(pts[0].x), scrY(pts[0].y));
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(scrX(pts[i].x), scrY(pts[i].y));
+      ctx.closePath();
+      ctx.fill();
+      return;
+    }
     if (pts.length === 1) {
       ctx.beginPath();
       ctx.arc(scrX(pts[0].x), scrY(pts[0].y), w / 2, 0, Math.PI * 2);
@@ -117,9 +133,14 @@
     ctx.stroke();
   }
 
+  // Two passes: 🪣 areas first, ink on top. A paint bucket can then never bury
+  // someone else's drawing, whatever inside the region gets painted over the
+  // fill instead of the other way round (so a fill needs no holes traced), and
+  // the fill's 1px overshoot hides under the ink that bounds it.
   function redraw() {
     ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-    order.forEach((k) => { const s = strokes.get(k); if (s) drawStroke(s); });
+    order.forEach((k) => { const s = strokes.get(k); if (s && s.f) drawStroke(s); });
+    order.forEach((k) => { const s = strokes.get(k); if (s && !s.f) drawStroke(s); });
   }
 
   // Repaint on scroll so the wall tracks the page. rAF-throttled; the bitmap
@@ -149,7 +170,9 @@
       const s = makeStroke(v);
       strokes.set(snap.key, s);
       order.push(snap.key);
-      drawStroke(s);                       // incremental — no full repaint
+      // A 🪣 area belongs UNDER the ink, so it can't just be painted on top —
+      // repaint properly. Fills are rare; strokes stay incremental.
+      if (s.f) redraw(); else drawStroke(s);
     }, () => {
       // Read denied (rules not deployed yet / signed out): listeners are
       // cancelled for good — drop ref so a later auth change re-subscribes,
@@ -215,16 +238,23 @@
   let shapePreviewRaf = 0;                 // rAF handle throttling the preview repaint
   let panning = false;                     // ✋ move mode: finger scrolls the page, not draws
   let moveBtn = null;                      // toolbar ref (highlight toggle)
+  let filling = false;                     // 🪣 paint bucket: one click fills a closed area
   const SHAPE_MIN_PX = 6;                  // 2nd click nearer than this = too small → cancel
 
   const HINT_PEN   = '✏️ 画在留言板背景上 · 大家都看得到 · 每天自动清空';
   const HINT_SHAPE = '⬡ 点一下定起点，再点一下完成 · Esc / 右键取消';
   const HINT_ERASE = '🧽 拖动擦掉我自己画的';
   const HINT_MOVE  = '✋ 拖动屏幕上下浏览画布 · 选其它工具继续画';
+  const HINT_FILL  = '🪣 点一下封闭区域填色 · 区域要整个在屏幕里';
   function updateHint() {
     if (!hintEl) return;
     hintEl.textContent = panning ? HINT_MOVE
-      : (erasing ? HINT_ERASE : (shapeKind ? HINT_SHAPE : HINT_PEN));
+      : (erasing ? HINT_ERASE
+        : (filling ? HINT_FILL : (shapeKind ? HINT_SHAPE : HINT_PEN)));
+  }
+
+  function toast(msg) {
+    if (typeof showToast === 'function') showToast(msg);
   }
 
   // ✋ Move mode: on touch the whole canvas grabs the finger to draw, leaving no
@@ -242,11 +272,15 @@
     updateHint();
   }
 
-  // Highlight the active shape button ('pen' == free-hand). Safe before the row exists.
-  function highlightShapes(kind) {
+  // Which button in the shape row is lit: 'pen' (free-hand), a shape, or 'fill'.
+  function currentToolKey() { return filling ? 'fill' : (shapeKind || 'pen'); }
+
+  // Highlight the active tool button. Safe before the row exists.
+  function highlightShapes() {
     if (!shapeRow) return;
+    const key = currentToolKey();
     shapeRow.querySelectorAll('.wall-shape').forEach((b) =>
-      b.classList.toggle('sel', b.dataset.shape === (kind || 'pen')));
+      b.classList.toggle('sel', b.dataset.shape === key));
   }
 
   // Drop a half-drawn shape (anchor placed, waiting for the 2nd click).
@@ -258,7 +292,12 @@
 
   function setErasing(on) {
     erasing = on;
-    if (on) { stroke = null; shapeKind = null; cancelShape(); highlightShapes(null); }
+    if (on) {
+      stroke = null; shapeKind = null; filling = false;
+      canvas.classList.remove('filling');
+      cancelShape();
+      highlightShapes();
+    }
     canvas.classList.toggle('erasing', on);
     canvas.classList.toggle('shaping', !!shapeKind);
     if (eraserBtn) eraserBtn.classList.toggle('sel', on);
@@ -269,10 +308,28 @@
   function setShape(kind) {
     setPanning(false);                      // choosing a tool means we want to draw again
     if (erasing) setErasing(false);         // leaving the eraser
+    filling = false;
+    canvas.classList.remove('filling');
     shapeKind = kind;
     cancelShape();
-    highlightShapes(kind);
+    highlightShapes();
     canvas.classList.toggle('shaping', !!kind);
+    updateHint();
+  }
+
+  // 🪣 Paint bucket. A single click rather than the shapes' two, so it gets its
+  // own mode instead of riding the shape flow.
+  function setFilling(on) {
+    if (on) {
+      setPanning(false);
+      if (erasing) setErasing(false);
+      shapeKind = null;
+      cancelShape();
+      canvas.classList.remove('shaping');
+    }
+    filling = on;
+    canvas.classList.toggle('filling', on);
+    highlightShapes();
     updateHint();
   }
 
@@ -286,6 +343,15 @@
       if (!s || s.by !== myUid) return;
       const pts = s.pts;
       if (!pts.length) return;
+      // A 🪣 area is solid, so it erases from anywhere inside it — hunting for
+      // its outline would be a puzzle, not a tool.
+      if (s.f) {
+        if (pts.length >= 3 && WL.pointInPoly(cx, cy,
+            pts.map((p) => ({ x: scrX(p.x), y: scrY(p.y) })))) {
+          rtdb.ref('wall/' + day + '/strokes/' + k).remove().catch(() => {});
+        }
+        return;
+      }
       const wHalf = WL.WIDTHS[Math.abs(Math.floor(s.w) || 0) % WL.WIDTHS.length] / 2;
       const thr = (rBase + wHalf) * (rBase + wHalf);
       let hit = WL.dist2(scrX(pts[0].x), scrY(pts[0].y), cx, cy) <= thr;   // covers a dot
@@ -296,6 +362,71 @@
       }
       if (hit) rtdb.ref('wall/' + day + '/strokes/' + k).remove().catch(() => {});
     });
+  }
+
+  /* ── 🪣 Paint bucket ─────────────────────────────────────────
+     A region only exists as PIXELS, but the wall is vector. So: flood the
+     on-screen bitmap from the click, trace the outline of what was flooded,
+     simplify it to a polygon, and commit that as an ordinary stroke with f:1.
+     One tiny write, and it inherits sync / eraser / undo / daily reset.
+
+     The flood can only see what's on screen, so a region running off the edge
+     isn't provably closed — refuse instead of drowning the whole viewport. */
+  function fillAt(cx, cy) {
+    if (!drawMode || !myUid) return;
+    const W = Math.max(1, Math.round(window.innerWidth));
+    const H = Math.max(1, Math.round(window.innerHeight));
+    const sx = Math.floor(cx), sy = Math.floor(cy);
+    if (sx < 0 || sy < 0 || sx >= W || sy >= H) return;
+
+    let img;
+    // Nothing but paths is ever drawn here, so the canvas can't be tainted —
+    // but a getImageData failure must not take the whole tool down with it.
+    try { img = ctx.getImageData(0, 0, canvas.width, canvas.height); }
+    catch (e) { return; }
+
+    const data = img.data, bw = canvas.width, bh = canvas.height;
+    const TOL = WL.FILL_TOL;
+    const at = (x, y) =>
+      ((Math.min(bh - 1, (y * dpr) | 0) * bw) + Math.min(bw - 1, (x * dpr) | 0)) * 4;
+    const s = at(sx, sy);
+    const sr = data[s], sg = data[s + 1], sb = data[s + 2], sa = data[s + 3];
+    const onBlank = sa <= TOL;
+
+    // Reduce the device-pixel bitmap to a CSS-pixel match mask in one pass:
+    // 4× less work on hi-DPI screens, and the contour is simplified anyway.
+    const cell = new Uint8Array(W * H);
+    for (let y = 0, i = 0; y < H; y++) {
+      const rowBase = Math.min(bh - 1, (y * dpr) | 0) * bw;
+      for (let x = 0; x < W; x++, i++) {
+        const p = (rowBase + Math.min(bw - 1, (x * dpr) | 0)) * 4;
+        const a = data[p + 3];
+        cell[i] = onBlank
+          ? (a <= TOL ? 1 : 0)              // seeded on bare wall → bare wall only
+          : ((Math.abs(a - sa) <= TOL && Math.abs(data[p] - sr) <= TOL &&
+              Math.abs(data[p + 1] - sg) <= TOL &&
+              Math.abs(data[p + 2] - sb) <= TOL) ? 1 : 0);
+      }
+    }
+
+    const res = WL.floodRegion((i) => cell[i] === 1, W, H, sx, sy);
+    if (res.touchedEdge) { toast('这块区域没封闭 · 先把它围起来'); return; }
+    if (res.count < WL.FILL_MIN_CELLS) { toast('这块太小了，换个地方点'); return; }
+
+    const ring = WL.fitPath(
+      WL.traceContour(WL.dilateMask(res.mask, W, H, WL.FILL_DILATE), W, H),
+      WL.MAX_POINTS);
+    if (ring.length < 3) return;
+
+    // Instant ink — the RTDB echo repaints it into its proper place under the
+    // strokes, which at a 1px overshoot is invisible.
+    ctx.fillStyle = colorHex;
+    ctx.beginPath();
+    ctx.moveTo(ring[0].x, ring[0].y);
+    for (let i = 1; i < ring.length; i++) ctx.lineTo(ring[i].x, ring[i].y);
+    ctx.closePath();
+    ctx.fill();
+    commitPoints(ring.map((p) => screenToDoc(p.x, p.y)), true);
   }
 
   function buildToolbar() {
@@ -343,14 +474,18 @@
      ['line', '╱', '直线'],
      ['rect', '▭', '矩形'],
      ['circle', '◯', '圆形'],
-     ['triangle', '△', '三角形']].forEach(([k, glyph, title]) => {
+     ['triangle', '△', '三角形'],
+     ['fill', '🪣', '填色 — 点一下封闭区域，用当前颜色填满']].forEach(([k, glyph, title]) => {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'wall-shape' + ((shapeKind || 'pen') === k ? ' sel' : '');
+      b.className = 'wall-shape' + (currentToolKey() === k ? ' sel' : '');
       b.dataset.shape = k;
       b.title = title;
       b.textContent = glyph;
-      b.addEventListener('click', () => setShape(k === 'pen' ? null : k));
+      b.addEventListener('click', () => {
+        if (k === 'fill') setFilling(true);
+        else setShape(k === 'pen' ? null : k);
+      });
       shapeRow.appendChild(b);
     });
     toolbar.appendChild(shapeRow);
@@ -418,12 +553,13 @@
     endStroke();                            // commit anything mid-flight
     setErasing(false);
     panning = false;                        // reset move mode; class dropped below
+    filling = false;
     shapeKind = null; shapeAnchor = null; shapePreviewPx = null;
     if (shapePreviewRaf) { cancelAnimationFrame(shapePreviewRaf); shapePreviewRaf = 0; }
     activePid = null; lastPx = null;
     eraserBtn = null; shapeRow = null; hintEl = null; moveBtn = null;
     document.body.classList.remove('wall-drawing');
-    canvas.classList.remove('drawing', 'shaping', 'panning');
+    canvas.classList.remove('drawing', 'shaping', 'panning', 'filling');
     toggle.classList.remove('active');
     if (toolbar) { toolbar.remove(); toolbar = null; }
   }
@@ -514,6 +650,7 @@
   canvas.addEventListener('pointerdown', (e) => {
     if (!drawMode || !e.isPrimary || activePid !== null) return;  // one gesture at a time
     e.preventDefault();
+    if (filling) { fillAt(e.clientX, e.clientY); return; }        // 🪣 one click, no drag
     if (shapeKind) { handleShapeClick(e); return; }               // two-click shape, no drag
     activePid = e.pointerId;
     lastPx = { x: e.clientX, y: e.clientY };
@@ -582,7 +719,7 @@
   // Push one finished polyline (free-hand OR a shape outline) to RTDB. Points
   // are DOC coords; a shape is indistinguishable from a stroke on the wire, so
   // it inherits sync, the eraser, undo and the daily reset for free.
-  function commitPoints(docPts) {
+  function commitPoints(docPts, filled) {
     const packed = WL.packPoints(docPts);
     if (!packed || !myUid) return;
     // Past-midnight strokes belong to the NEW day's wall — roll the
@@ -590,7 +727,11 @@
     if (day !== localDay()) subscribe();
     const strokeDay = day;
     const node = rtdb.ref('wall/' + strokeDay + '/strokes').push();
-    node.set({ p: packed, c: WL.hexToInt(colorHex), w: widthIdx, by: myUid, ts: Date.now() })
+    const rec = { p: packed, c: WL.hexToInt(colorHex), w: widthIdx, by: myUid, ts: Date.now() };
+    // Only fills carry the flag, so every existing stroke stays byte-identical
+    // on the wire (and the RTDB rules, which don't whitelist fields, are happy).
+    if (filled) rec.f = 1;
+    node.set(rec)
       .then(() => {
         myKeys.push({ day: strokeDay, key: node.key });   // undoable once it's real
         if (myKeys.length > 50) myKeys.shift();

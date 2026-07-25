@@ -776,6 +776,7 @@ body.wall-drawing .bubble { opacity: 0.4 !important; }
 .wall-move.sel { background: rgba(200, 182, 255, 0.28); box-shadow: inset 0 0 0 2px var(--accent, #c8b6ff); }
 .wall-canvas.erasing { cursor: cell; }
 .wall-canvas.shaping { cursor: crosshair; }
+.wall-canvas.filling { cursor: copy; }
 .wall-shape {
   width: 30px; height: 30px;
   border-radius: 8px;
