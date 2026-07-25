@@ -39,6 +39,17 @@
     // Trough position on the pasture (normalized)
     const FARM_TROUGH_X = 0.14, FARM_TROUGH_Y = 0.58;
 
+    /* ── Scene vertical budget (fractions of canvas height) ──
+       Single source of truth for the horizon and the animal band. The pasture
+       used to start at 0.50 and end at ~0.61, which left only ~0.06 of usable
+       height once the pen padding was taken out — thinner than the animals
+       drawn inside it, so a herd could only spread sideways. Raising the
+       horizon gives the band ~2.4x the inner height it had. */
+    const FARM_SKY_Y      = 0.32;   // sky → grass
+    const FARM_TOPFENCE_Y = 0.36;   // top fence + the two trees that stand on it
+    const FARM_HUT_Y      = 0.38;   // workshop huts sit just above the pen band
+    const FARM_PEN_TOP    = 0.44;   // animal pen band top
+
     /* ── Farm tick (shared by load catch-up, farm open, live tick) ──
        Herd eats from the trough (happiness up/down), production clocks
        advance, spawned produce lands near its animal. Returns the number
@@ -82,7 +93,7 @@
           animalId: s.animalId,
           type: s.type,
           x: Math.max(0.05, Math.min(0.95, (a?.posX ?? 0.5) + (Math.random() - 0.5) * 0.18)),
-          y: Math.max(0.50, Math.min(0.92, (a?.posY ?? 0.7) + (Math.random() - 0.5) * 0.12)),
+          y: Math.max(FARM_PEN_TOP, Math.min(0.92, (a?.posY ?? 0.7) + (Math.random() - 0.5) * 0.12)),
         });
       }
       if (roomData.farmAutoCollect) _autoCollectAll(); // straight into stock, no tapping
@@ -107,6 +118,14 @@
       return Math.min(0.76, 0.66 + 0.04 * (roomData.farmCapLevel || 0));
     }
 
+    // The pasture band the herd lives in: from the fixed top down to just above
+    // the dividing fence, so expanding the farm (which lowers divY) also grows
+    // the band. Everything that places something on the pasture — pens, animal
+    // spawns, produce drops — derives from this.
+    function _farmPenBand() {
+      return { top: FARM_PEN_TOP, bot: Math.max(FARM_PEN_TOP + 0.10, _farmDivY() - 0.02) };
+    }
+
     // The soil band the garden plots live in: always below the dividing fence
     // and above the bottom fence, split into the max plot rows so every owned
     // row sits inside the plank at any expansion level. `rows` is fixed (max)
@@ -118,19 +137,54 @@
       return { top: top, bot: bot, rows: rows, rowGap: (bot - top) / rows };
     }
 
-    // Screen-normalized position of garden plot index i. Plots sit in rows of 7
-    // across the soil strip, shifted right to leave room for the row signboard.
-    function _farmPlotPos(i) {
-      const perRow = 7;
-      const col = i % perRow, row = Math.floor(i / perRow);
+    // Side of one garden bed. The row slot is what really constrains it, so the
+    // min(W,H) cap is loose enough to let the slot bind on ordinary canvases.
+    function _farmTile(W, H) {
       const band = _farmCropBand();
-      return { x: 0.20 + col * 0.088, y: band.top + (row + 0.5) * band.rowGap };
+      return Math.max(18, Math.min(Math.min(W, H) * 0.062, band.rowGap * H * 0.82));
+    }
+
+    // Horizontal geometry of a garden row. The signboard and the 7 beds are laid
+    // out as ONE group and centred: spacing used to be a flat 0.088 of the canvas
+    // width, which on a wide canvas left gaps twice as wide as the beds.
+    function _farmRowGeom(W, H) {
+      const band = _farmCropBand();
+      const tile = _farmTile(W, H);
+      const signW = Math.max(32, Math.min(Math.min(W, H) * 0.095, band.rowGap * H * 1.2));
+      // Spacing follows the bed, with a floor so that expanding the farm — which
+      // compresses the soil band and therefore the beds — doesn't also shrink the
+      // whole field sideways.
+      const step = Math.max(tile * 1.35, Math.min(W, H) * 0.068);
+      const gap = tile * 0.45;                           // signboard → first bed
+      const groupW = signW + gap + tile + 6 * step;      // sign | gap | 7 beds
+      const x0 = Math.max(0, (W - groupW) / 2);
+      return {
+        tile: tile, signW: signW,
+        signX: (x0 + signW / 2) / W,
+        plotX0: (x0 + signW + gap + tile / 2) / W,
+        step: step / W,
+      };
+    }
+
+    // Screen-normalized position of garden plot index i. Plots sit in rows of 7
+    // across the soil strip, to the right of the row signboard.
+    function _farmPlotPos(i, W, H) {
+      const col = i % 7, row = Math.floor(i / 7);
+      const band = _farmCropBand(), geom = _farmRowGeom(W, H);
+      return { x: geom.plotX0 + col * geom.step, y: band.top + (row + 0.5) * band.rowGap };
     }
 
     // Normalized position of the signboard sitting to the LEFT of grid row `row`.
-    function _farmSignPos(row) {
+    function _farmSignPos(row, W, H) {
       const band = _farmCropBand();
-      return { x: 0.085, y: band.top + (row + 0.5) * band.rowGap };
+      return { x: _farmRowGeom(W, H).signX, y: band.top + (row + 0.5) * band.rowGap };
+    }
+
+    // Canvas pixel size, for the places outside the draw loop that still need
+    // scene coordinates (harvest particles, hover tooltip, taps).
+    function _farmWH() {
+      const v = document.getElementById('farmView');
+      return { W: (v && v.clientWidth) || 900, H: (v && v.clientHeight) || 600 };
     }
 
     // Local YYYY-MM-DD for the daily orders seed.
@@ -724,6 +778,7 @@
       if (rgbV && roll < FARM_RGB_CHANCE) variant = rgbV;
       else if (variants.length > 1 && roll < FARM_RARE_CHANCE) variant = variants[1];
       else variant = variants[0] || { id: null };
+      const band = _farmPenBand();                 // spawn inside the pasture, not on the crops
       roomData.farmAnimals.push({
         id: 'fa' + now + '_' + Math.floor(Math.random() * 1e4),
         type: def.id,
@@ -732,7 +787,7 @@
         happiness: FARM_START_HAPPINESS,
         lastDropTime: now,
         posX: 0.15 + Math.random() * 0.7,
-        posY: 0.54 + Math.random() * 0.13,   // stay in the pasture (above the crop fence)
+        posY: band.top + Math.random() * (band.bot - band.top),
       });
       roomData.farmVariants = roomData.farmVariants || {};
       roomData.farmVariants[def.id + '_' + (variant.id || 'default')] = true;
@@ -1015,6 +1070,7 @@
       if (viewingUid !== currentUid) return;
       const plots = roomData.farmPlots || [];
       const now = Date.now();
+      const _wh = _farmWH();
       let n = 0;
       for (let i = 0; i < plots.length; i++) {
         const plot = plots[i];
@@ -1022,7 +1078,7 @@
         const crop = FARM_CROPS.find(c => c.id === plot.crop);
         if (!crop) { plot.crop = null; plot.plantedAt = 0; continue; }
         if (cropProgress(plot.plantedAt, now, crop.growMs) < 1) continue;
-        const pos = _farmPlotPos(i);
+        const pos = _farmPlotPos(i, _wh.W, _wh.H);
         if (crop.yield.food) {
           roomData.farmFood = Math.min(farmFoodMax(), (roomData.farmFood || 0) + crop.yield.food);
           if (!roomData.farmFoodAt) roomData.farmFoodAt = now;
@@ -1116,12 +1172,13 @@
       const crop = FARM_CROPS.find(c => c.id === cropId);
       if (!crop) { closeCropPicker(); return; }
       const now = Date.now();
+      const _wh = _farmWH();
       let planted = 0;
       for (const i of idxs) {
         if (roomData.coins < crop.seedCost) break;
         roomData.coins -= crop.seedCost;
         plots[i].crop = crop.id; plots[i].plantedAt = now;
-        const pos = _farmPlotPos(i);
+        const pos = _farmPlotPos(i, _wh.W, _wh.H);
         _farmParticles.push({ text: crop.emoji, x: pos.x, y: pos.y - 0.05, vy: -0.0008, life: 900, born: performance.now() });
         planted++;
       }
@@ -1360,7 +1417,7 @@
     // Fixed slot position for machine `slot` (its hut). Sits well left of the sky
     // plane's tap zone (plane at x 0.84, y 0.24, r 0.18); huts are hit-tested
     // first so any overlap resolves to the hut.
-    function _workshopPos(slot) { return { x: 0.22 + slot * 0.11, y: 0.45 }; }
+    function _workshopPos(slot) { return { x: 0.22 + slot * 0.11, y: FARM_HUT_Y }; }
 
     // Zones animals must not walk into: owned machine huts. (The merchant is now
     // an aeroplane that hovers in the sky, so it no longer blocks the pasture.)
@@ -1839,32 +1896,53 @@
     function _farmAnimState(a, idx, n) {
       if (!_farmAnimStates[a.id]) {
         const ix = (idx != null && n) ? (0.10 + ((idx + 0.5) / n) * 0.80) : (a.posX ?? 0.5);
-        const iy = 0.54 + (idx != null ? (idx % 3) * 0.04 : Math.random() * 0.08);
+        const band = _farmPenBand();                 // seed inside the pasture band
+        const iy = band.top + (band.bot - band.top) * (0.3 + (idx != null ? (idx % 3) * 0.2 : Math.random() * 0.4));
         _farmAnimStates[a.id] = { x: ix, y: iy, tx: ix, ty: iy, nextWander: 0, facingRight: Math.random() < 0.5, moving: false };
       }
       return _farmAnimStates[a.id];
     }
 
-    // Group the herd into one fenced pen per animal type. Pen WIDTHS are proportional
-    // to each type's count, so animal density stays even and every animal is visible.
-    // Pure normalized (0..1) geometry — no canvas size needed.
+    // Group the herd into one fenced pen per animal type. Every animal is given a
+    // square `cell`, so a pen is only as wide as its own herd needs and the pens
+    // are centred on the pasture with grass showing either side. Previously the
+    // widths were renormalized back onto the full 0.05–0.95 span, so three geese
+    // got a pen stretched across 90% of the canvas.
     const FARM_PEN_PLURAL = { goose: 'Geese', pig: 'Pigs', cow: 'Cows', horse: 'Horses' };
-    function _buildAnimalPens(herd, penTop, penBot) {
+    function _buildAnimalPens(herd, penTop, penBot, W, H) {
       const order = ['goose', 'pig', 'cow', 'horse'];
       const counts = {};
       for (const a of herd) counts[a.type] = (counts[a.type] || 0) + 1;
       const types = order.filter(tp => counts[tp] > 0);
       const byType = {}, list = [];
-      if (!types.length) return { list, byType };
-      const PX0 = 0.05, PX1 = 0.95, GAP = 0.012;
-      const span = (PX1 - PX0) - GAP * (types.length - 1);
-      const total = types.reduce((s, tp) => s + counts[tp], 0);
-      const MINW = 0.13;                                   // floor so a tiny herd still gets a tappable pen
-      let w = types.map(tp => Math.max(MINW, (counts[tp] / total) * span));
-      const wSum = w.reduce((s, v) => s + v, 0);
-      w = w.map(v => v * span / wSum);                     // renormalize back to the span
       const padX = 0.012, padTop = 0.036, padBot = 0.012;
-      let x = PX0;
+      if (!types.length) return { list, byType, cell: 0 };
+      const PX0 = 0.05, PX1 = 0.95, GAP = 0.012;
+      const span = (PX1 - PX0) - GAP * (types.length - 1);  // widest the pens may total
+      // Cell side: as large as the band allows, shrinking only once the whole
+      // herd can no longer fit the pasture area.
+      const bandPx = Math.max(1, (penBot - penTop - padTop - padBot) * H);
+      const spanPx = Math.max(1, (span - types.length * padX * 2) * W);
+      const cell = Math.max(26, Math.min(
+        bandPx * 0.9,                                       // one row must fit the band
+        Math.min(W, H) * 0.115,                             // comfortable absolute cap
+        Math.sqrt(bandPx * spanPx * 0.55 / herd.length)     // shrink for a big herd
+      ));
+      // Stack into a second/third row only when one row genuinely overflows the
+      // span — a small herd looks better as one row of larger animals.
+      let rows = 1, cellR = cell;
+      const needPx = (r, c) => types.reduce((s, tp) => s + Math.ceil(counts[tp] / r) * c, 0);
+      while (rows < 4 && needPx(rows, cellR) > spanPx) {
+        rows++;
+        cellR = Math.max(22, Math.min(cell, bandPx / rows));
+      }
+      const minPen = Math.max(64, cellR * 1.5);             // one animal still gets a tappable pen
+      let w = types.map(tp =>
+        Math.max(minPen, Math.ceil(counts[tp] / rows) * cellR + padX * 2 * W) / W);
+      const wSum = w.reduce((s, v) => s + v, 0);
+      if (wSum > span) w = w.map(v => v * span / wSum);     // compress only when it overflows
+      const used = w.reduce((s, v) => s + v, 0) + GAP * (types.length - 1);
+      let x = PX0 + Math.max(0, (PX1 - PX0 - used) / 2);    // centre when there is slack
       types.forEach((tp, i) => {
         const def = FARM_ANIMALS.find(f => f.id === tp) || { emoji: '🐾', name: tp };
         const pen = {
@@ -1875,7 +1953,7 @@
         byType[tp] = pen; list.push(pen);
         x += w[i] + GAP;
       });
-      return { list, byType };
+      return { list, byType, cell: cellR };
     }
 
     // Draw the pens (grass panel + wooden rail + label tab) behind the animals.
@@ -2096,12 +2174,12 @@
     // A wooden signboard on a post, drawn to the left of a garden row. `st` is a
     // farmRowState() result: blank when empty, crop emoji + name (+ % or ✨) else.
     function _drawFarmSign(ctx, W, H, row, st) {
-      const pos = _farmSignPos(row);
+      const pos = _farmSignPos(row, W, H);
       const cx = pos.x * W, cy = pos.y * H;
       // Keep the signboard within its row slot so stacked rows never collide
       // when the soil band is compressed at high expansion levels.
       const _slot = _farmCropBand().rowGap * H;
-      const w = Math.max(32, Math.min(Math.min(W, H) * 0.095, _slot * 1.2));
+      const w = _farmRowGeom(W, H).signW;
       const h = Math.min(w * 0.72, _slot * 0.86);
       const x0 = cx - w / 2, y0 = cy - h / 2;
       ctx.fillStyle = '#5a3c22';                                   // post
@@ -2137,10 +2215,9 @@
     function _drawFarmPlots(ctx, W, H, t) {
       const plots = roomData.farmPlots || [];
       const now = Date.now();
-      // Cap tile height to the row slot so beds never overlap the next row (or
-      // the animals) when the soil band is compressed at high expansion levels.
-      const _band = _farmCropBand();
-      const tile = Math.max(18, Math.min(Math.min(W, H) * 0.05, _band.rowGap * H * 0.82));
+      // Tile height is capped to the row slot so beds never overlap the next row
+      // (or the animals) when the soil band is compressed at high expansion levels.
+      const tile = _farmTile(W, H);
       ctx.textAlign = 'center';
       // Row signboards (left of each row that owns ≥1 plot).
       const _rows = farmRowCount(plots.length, 7);
@@ -2149,7 +2226,7 @@
         _drawFarmSign(ctx, W, H, _r, _st);
       }
       plots.forEach((plot, i) => {
-        const pos = _farmPlotPos(i);
+        const pos = _farmPlotPos(i, W, H);
         const px = pos.x * W, py = pos.y * H;
         // 3D raised garden bed: front (wooden) face for depth + top soil face
         const _x0 = px - tile / 2, _y0 = py - tile / 2, _r = Math.max(3, tile * 0.16);
@@ -2255,17 +2332,18 @@
         const gy = H * divY;
 
         // Animal pasture — grass from the horizon down to the dividing fence
-        const grass = ctx.createLinearGradient(0, H * 0.42, 0, gy);
+        const skyY = H * FARM_SKY_Y;
+        const grass = ctx.createLinearGradient(0, skyY, 0, gy);
         grass.addColorStop(0, night ? '#22432b' : '#9ed26b');    // soft sunny top
         grass.addColorStop(0.5, night ? '#1a3622' : '#79c052');
         grass.addColorStop(1, night ? '#13291a' : '#5ba23c');    // richer deep bottom
         ctx.fillStyle = grass;
-        ctx.fillRect(0, H * 0.42, W, gy - H * 0.42);
+        ctx.fillRect(0, skyY, W, gy - skyY);
 
         // 3D mown field — alternating stripes converging to the horizon point
         ctx.save();
-        ctx.beginPath(); ctx.rect(0, H * 0.42, W, gy - H * 0.42); ctx.clip();
-        const vpx = W / 2, vpy = H * 0.40;
+        ctx.beginPath(); ctx.rect(0, skyY, W, gy - skyY); ctx.clip();
+        const vpx = W / 2, vpy = skyY - H * 0.02;
         const gSeg = 12, gSpread = W * 1.7, gx0 = W / 2 - gSpread / 2;
         for (let i = 0; i < gSeg; i++) {
           const xA = gx0 + (i / gSeg) * gSpread, xB = gx0 + ((i + 1) / gSeg) * gSpread;
@@ -2276,7 +2354,7 @@
         }
         // horizontal depth bands (tighter toward the horizon)
         ctx.strokeStyle = night ? 'rgba(0,0,0,0.14)' : 'rgba(18,70,16,0.16)'; ctx.lineWidth = 1;
-        for (let k = 1; k <= 5; k++) { const f = k / 6; const yy = gy - (gy - H * 0.42) * (f * f); ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(W, yy); ctx.stroke(); }
+        for (let k = 1; k <= 5; k++) { const f = k / 6; const yy = gy - (gy - skyY) * (f * f); ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(W, yy); ctx.stroke(); }
         ctx.restore();
 
         // Crop garden — a tilled soil band below the dividing fence
@@ -2299,11 +2377,12 @@
         ctx.restore();
 
         // Fences: top of the pasture, the dividing 围栏 (farm | crops), bottom edge
-        _drawFence(ctx, W * 0.02, H * 0.46, W * 0.96, night);
+        const topFenceY = H * FARM_TOPFENCE_Y;
+        _drawFence(ctx, W * 0.02, topFenceY, W * 0.96, night);
         _drawFence(ctx, W * 0.02, gy, W * 0.96, night);
         _drawFence(ctx, W * 0.02, H * 0.93, W * 0.96, night);
-        _drawHDTree(ctx, W * 0.06, H * 0.46, H * 0.18, windSway, night);
-        _drawHDTree(ctx, W * 0.94, H * 0.46, H * 0.15, windSway * 0.7, night);
+        _drawHDTree(ctx, W * 0.06, topFenceY, H * 0.18, windSway, night);
+        _drawHDTree(ctx, W * 0.94, topFenceY, H * 0.15, windSway * 0.7, night);
 
         _drawFarmTrough(ctx, W, H, night);
         _drawFarmPlots(ctx, W, H, t);
@@ -2332,17 +2411,16 @@
 
         // Animals: wander + drawn renderers, mini happiness bar above
         // Animals stay in the pasture, above the dividing fence (crops are below).
-        const penTop = 0.50, penBot = Math.max(0.60, divY - 0.05);
+        const _band = _farmPenBand();
+        const penTop = _band.top, penBot = _band.bot;
         _drawWorkshopMachines(ctx, W, H, t, night);   // huts behind the herd
         const _blocked = _farmBlockedZones();           // workshop + cart: animals keep out
         const _herd = roomData.farmAnimals || [];
         // Group the herd into one fenced pen per type, then keep each animal in its pen.
-        const _pens = _buildAnimalPens(_herd, penTop, penBot);
+        const _pens = _buildAnimalPens(_herd, penTop, penBot, W, H);
         _drawAnimalPens(ctx, W, H, _pens.list, night);
-        // Even, comfortable animal size: derived from the pasture area and herd size.
-        const _bandH = (penBot - penTop) * H, _bandW = 0.90 * W;
-        const _aSize = Math.max(28, Math.min(Math.min(W, H) * 0.085, _bandH * 0.80,
-                                Math.sqrt((_bandW * _bandH * 0.6) / Math.max(1, _herd.length))));
+        // One animal per cell, drawn a little smaller so it has room inside it.
+        const _aSize = Math.max(22, (_pens.cell || 0) * 0.72);
         let _ai = 0;
         for (const a of _herd) {
           const idx = _ai++;
@@ -2498,8 +2576,9 @@
             tip = '🌾 Food  ' + Math.floor(roomData.farmFood || 0) + ' / ' + farmFoodMax();
           } else {
             const plots = roomData.farmPlots || [];
+            const _wh = _farmWH();
             for (let i = 0; i < plots.length; i++) {
-              const pp = _farmPlotPos(i);
+              const pp = _farmPlotPos(i, _wh.W, _wh.H);
               if (Math.hypot(pp.x - p.x, pp.y - p.y) < 0.045) {
                 const plot = plots[i];
                 if (!plot.crop) { tip = '🌱 Empty — tap to plant'; }
@@ -2588,15 +2667,16 @@
         // that whole row (plant / harvest / status). No precision needed on phones.
         const plots = roomData.farmPlots || [];
         if (plots.length && cy > 0.65) {
+          const _wh = { W: rect.width, H: rect.height };
           let rowIdx = 0, best = Infinity;
           for (let i = 0; i < plots.length; i++) {
-            const pp = _farmPlotPos(i);
+            const pp = _farmPlotPos(i, _wh.W, _wh.H);
             const d = Math.hypot(pp.x - cx, pp.y - cy);
             if (d < best) { best = d; rowIdx = Math.floor(i / 7); }
           }
           const _rows = farmRowCount(plots.length, 7);
           for (let r = 0; r < _rows; r++) {
-            const sp = _farmSignPos(r);
+            const sp = _farmSignPos(r, _wh.W, _wh.H);
             const d = Math.hypot(sp.x - cx, sp.y - cy);
             if (d < best) { best = d; rowIdx = r; }
           }
