@@ -1661,10 +1661,18 @@
         const remaining = Math.max(0, w.qty - (_cartSold[w.id] || 0));
         const sellable = _cartSellable(w, stock);
         sellableTotal += sellable;
+        const mk = _farmMachineFor(w.id);
         for (let k = 0; k < remaining; k++) {
-          squares += k < sellable
-            ? '<button class="cart-sq" onclick="sellOneToCart(\'' + w.id + '\')">' +
-                '<span class="cart-sq-icon">' + m.emoji + '</span><span class="cart-sq-cap">+' + (prices[w.id] || 0) + '🪙</span></button>'
+          if (k < sellable) {
+            squares += '<button class="cart-sq" onclick="sellOneToCart(\'' + w.id + '\')">' +
+              '<span class="cart-sq-icon">' + m.emoji + '</span><span class="cart-sq-cap">+' + (prices[w.id] || 0) + '🪙</span></button>';
+            continue;
+          }
+          // Don't have it yet — send them to the workshop that makes it rather
+          // than leaving a dead square that only says "make".
+          squares += mk
+            ? '<button class="cart-sq make" onclick="goMakeForCart(\'' + mk.id + '\')" title="Make ' + m.name + ' in the ' + mk.name + '">' +
+                '<span class="cart-sq-icon">' + m.emoji + '</span><span class="cart-sq-cap">' + mk.emoji + ' make</span></button>'
             : '<div class="cart-sq locked" title="Make this in the workshop, then sell it">' +
                 '<span class="cart-sq-icon">' + m.emoji + '</span><span class="cart-sq-cap">make</span></div>';
         }
@@ -1673,7 +1681,7 @@
       el.innerHTML =
         '<div class="cp-head">🛒 Merchant Cart</div>' +
         (cart.wanted.length
-          ? '<div class="farm-panel-empty" style="padding:0 2px 4px">Wants: ' + wantsLine + ' · tap a square to sell; greyed “make” squares you still need to produce.</div>' +
+          ? '<div class="farm-panel-empty" style="padding:0 2px 4px">Wants: ' + wantsLine + ' · tap a square to sell it; tap a “make” square to go to the workshop that makes it.</div>' +
             '<div class="cart-grid">' + squares + '</div>' +
             (sellableTotal > 0
               ? '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="sellAllToCart()">💰 Sell all it wants</button>'
@@ -1888,6 +1896,20 @@
     // just THAT machine (start a batch / collect it). Machines are BUILT in the
     // Garden tab; this modal only operates an already-built one.
     function openMachineModal(id) { _workshopModalId = id; _makeChoiceSlot = null; _slotConfirm = false; _workshopModalOpen = true; renderWorkshopModal(); }
+
+    // Which workshop makes `prodId`. _cartBuildWanted only ever asks for goods
+    // from machines you already own, so this resolves for anything the cart
+    // wants — but callers still handle null.
+    function _farmMachineFor(prodId) {
+      return FARM_MACHINES.find(m => (m.recipes || []).some(r => r.out && r.out.id === prodId)) || null;
+    }
+
+    // A "make" square in the cart sheet → go straight to the workshop that makes
+    // it. Closes the cart sheet first so the two sheets never stack.
+    function goMakeForCart(machineId) {
+      closeCartSheet();
+      openMachineModal(machineId);
+    }
     function closeWorkshopModal() {
       _workshopModalOpen = false; _workshopModalId = null; _makeChoiceSlot = null; _slotConfirm = false;
       const el = document.getElementById('workshopModal');
