@@ -34,21 +34,21 @@
     let _workshopModalId = null;      // which machine's modal is open
     let _makeChoiceSlot = null;       // slot index currently choosing a recipe (or null)
     let _slotConfirm = false;         // awaiting confirmation to open (buy) a new slot
-    const FARM_CART_X = 0.84, FARM_CART_Y = 0.24; // where the sky merchant plane hovers (normalized; up in the sky band)
+    const FARM_CART_X = 0.84, FARM_CART_Y = 0.19; // where the sky merchant plane hovers (normalized; up in the sky band)
 
     // Trough position on the pasture (normalized)
-    const FARM_TROUGH_X = 0.14, FARM_TROUGH_Y = 0.58;
+    const FARM_TROUGH_X = 0.14, FARM_TROUGH_Y = 0.50;
 
     /* ── Scene vertical budget (fractions of canvas height) ──
-       Single source of truth for the horizon and the animal band. The pasture
-       used to start at 0.50 and end at ~0.61, which left only ~0.06 of usable
-       height once the pen padding was taken out — thinner than the animals
-       drawn inside it, so a herd could only spread sideways. Raising the
-       horizon gives the band ~2.4x the inner height it had. */
-    const FARM_SKY_Y      = 0.32;   // sky → grass
-    const FARM_TOPFENCE_Y = 0.36;   // top fence + the two trees that stand on it
-    const FARM_HUT_Y      = 0.38;   // workshop huts sit just above the pen band
-    const FARM_PEN_TOP    = 0.44;   // animal pen band top
+       Single source of truth for the horizon and the animal band. The whole
+       pasture sits higher than the sky/grass split alone would suggest: the
+       garden beds are capped by their row slot, so the only way to grow them is
+       to hand the soil band more height, and the only place that height can
+       come from is the sky and the grass above it. */
+    const FARM_SKY_Y      = 0.26;   // sky → grass
+    const FARM_TOPFENCE_Y = 0.30;   // top fence + the two trees that stand on it
+    const FARM_HUT_Y      = 0.33;   // workshop huts sit just above the pen band
+    const FARM_PEN_TOP    = 0.38;   // animal pen band top
 
     /* ── Farm tick (shared by load catch-up, farm open, live tick) ──
        Herd eats from the trough (happiness up/down), production clocks
@@ -115,7 +115,7 @@
     // visibly enlarges the pasture, but is capped so the crop rows below always
     // keep enough room to stay inside their plank (not overlap the animals).
     function _farmDivY() {
-      return Math.min(0.76, 0.66 + 0.04 * (roomData.farmCapLevel || 0));
+      return Math.min(0.68, 0.58 + 0.04 * (roomData.farmCapLevel || 0));
     }
 
     // The pasture band the herd lives in: from the fixed top down to just above
@@ -143,7 +143,7 @@
     // min(W,H) cap is loose enough to let the slot bind on ordinary canvases.
     function _farmTile(W, H) {
       const band = _farmCropBand(H);
-      return Math.max(18, Math.min(Math.min(W, H) * 0.075, band.rowGap * H * 0.82));
+      return Math.max(18, Math.min(Math.min(W, H) * 0.095, band.rowGap * H * 0.82));
     }
 
     // Horizontal geometry of a garden row. The signboard and the 7 beds are laid
@@ -2326,7 +2326,7 @@
         ctx.clearRect(0, 0, W, H);
         const windSway = Math.sin(t / 1400) * 0.012;
 
-        _drawHDSky(ctx, W, H, night, t);
+        _drawHDSky(ctx, W, H, night, t, H * FARM_SKY_Y);   // arc the sun/moon inside the farm's shallower sky
         _drawRollingHills(ctx, W, H, night);
 
         // The dividing fence between the animal pasture (above) and the crop
@@ -2670,8 +2670,10 @@
 
         // Garden strip: any tap picks the nearest plot OR signboard, then acts on
         // that whole row (plant / harvest / status). No precision needed on phones.
+        // Anything below the dividing fence is garden — derived, not a literal,
+        // so raising the fence can't leave the top bed row unreachable.
         const plots = roomData.farmPlots || [];
-        if (plots.length && cy > 0.65) {
+        if (plots.length && cy > _farmDivY()) {
           const _wh = { W: rect.width, H: rect.height };
           let rowIdx = 0, best = Infinity;
           for (let i = 0; i < plots.length; i++) {

@@ -277,7 +277,12 @@
     }
 
     // -- Sky with warm Hay Day palette, sun/moon follow real time --
-    function _drawHDSky(ctx, W, H, night, t) {
+    /* `skyBot` (px) is the bottom of the VISIBLE sky — the caller's horizon. The
+       outside view omits it and keeps the original arc, which assumes ground at
+       0.70. The farm's horizon is much higher, so without this the sun spends
+       most of the day behind the grass (at 0.26 it only cleared the horizon
+       between about 08:20 and 15:40). */
+    function _drawHDSky(ctx, W, H, night, t, skyBot) {
       // Shared by the outside view AND the farm. Stars are normally seeded in
       // drawOutsideCanvas, but the farm can be opened directly (deep-link) without
       // that ever running — so make sure they exist before the night branch.
@@ -315,7 +320,7 @@
         const moonProgress = nightHours / 12; // 0 = moonrise, 0.5 = midnight, 1 = moonset
         const moonX = W * (0.10 + moonProgress * 0.80);
         const moonArc = Math.sin(moonProgress * Math.PI);
-        const moonY = H * (0.45 - moonArc * 0.38);
+        const moonY = skyBot ? skyBot * (0.85 - moonArc * 0.60) : H * (0.45 - moonArc * 0.38);
         const moonR = Math.min(W, H) * 0.05;
         // Soft moon glow
         ctx.fillStyle = 'rgba(200,210,255,0.08)';
@@ -331,7 +336,7 @@
         const sunProgress = dayHours / 12; // 0 = sunrise, 0.5 = noon, 1 = sunset
         const sunX = W * (0.10 + sunProgress * 0.80);
         const sunArc = Math.sin(sunProgress * Math.PI);
-        const sunY = H * (0.50 - sunArc * 0.42);
+        const sunY = skyBot ? skyBot * (0.90 - sunArc * 0.62) : H * (0.50 - sunArc * 0.42);
         const sunR = Math.min(W, H) * 0.06;
         // Warm halo glow
         const glow = ctx.createRadialGradient(sunX, sunY, sunR * 0.2, sunX, sunY, sunR * 3);
