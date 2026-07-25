@@ -463,6 +463,10 @@
       }
       /* Outside/farm: room fills the whole screen on mobile too */
       .main-wrap.no-panel .room-container { height: calc(100vh - 60px); }
+      /* The farm's garden needs four rows of 44px beds, which don't fit in 55vh.
+         Scoped to the farm so the room and aquarium keep their split. */
+      .main-wrap.farm-stage .room-container { height: 66vh; }
+      .main-wrap.farm-stage .panel-inner { max-height: calc(34vh - 10px); }
       /* Toggle becomes horizontal bar at top of panel */
       .panel-toggle {
         position: relative; left: auto; top: auto; transform: none;

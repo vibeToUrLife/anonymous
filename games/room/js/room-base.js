@@ -283,8 +283,14 @@
       { id: 'carrot', emoji: '🥕', name: 'Carrot', seedCost: 25, growMs: 90 * 60 * 1000,  yield: { product: 'carrot', qty: 1 } },
       { id: 'corn',   emoji: '🌽', name: 'Corn',   seedCost: 50, growMs: 120 * 60 * 1000, yield: { product: 'corn', qty: 1 } },
     ];
-    const FARM_PER_ROW  = 10;      // garden beds per row (a "row" is the bulk plant/harvest unit)
-    const FARM_PLOT_MAX = 30;      // most garden plots you can own (3 rows × 10)
+    // Garden beds per row (a "row" is the bulk plant/harvest unit). The bed
+    // hit-test is a nearest-bed partition, so a bed's tap tolerance is half the
+    // column spacing — 44px targets need 44px spacing, and ten columns need
+    // 440px of stage that a phone hasn't got. Narrow stages get eight.
+    const FARM_PER_ROW = 10;
+    const FARM_PER_ROW_NARROW = 8;
+    const FARM_NARROW_W = 600;     // stage width below which the narrow layout applies
+    const FARM_PLOT_MAX = 30;      // most garden plots you can own
     const FARM_PLOT_COST = 300;    // coins per added plot
 
     const FARM_ORDER_COUNT = 3;          // daily delivery orders

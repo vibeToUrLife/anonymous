@@ -26,6 +26,10 @@
       const out  = typeof isOutsideView !== 'undefined' && isOutsideView;
       const farm = typeof isFarmView    !== 'undefined' && isFarmView;
       wrap.classList.toggle('no-panel', !!(out && !farm));
+      // The farm needs a taller stage than the room on a phone: its garden rows
+      // have to stay individually tappable, and four rows of 44px beds don't fit
+      // in 55vh. Only the farm gets it — the room and aquarium are unaffected.
+      wrap.classList.toggle('farm-stage', !!farm);
     }
 
     /**

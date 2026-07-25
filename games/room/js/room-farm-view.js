@@ -151,30 +151,40 @@
     // into the max plot rows so every owned row sits inside the plank at any
     // expansion level. `rows` is fixed (max) so a row's screen slot doesn't
     // shift as you buy more plots.
-    function _farmCropBand(H) {
+    function _farmCropBand(H, W) {
       const top = _farmDivY() + 0.03;
       // Stop short of the tap hint pinned to the bottom of the stage. That hint
       // is a fixed ~30px of HTML, so on a short stage it claims a bigger share.
       const bot = Math.min(0.95, 1 - 30 / Math.max(1, H || 600));
-      const rows = Math.max(1, farmRowCount(FARM_PLOT_MAX, FARM_PER_ROW));
+      const rows = Math.max(1, farmRowCount(FARM_PLOT_MAX, _farmPerRow(W)));
       return { top: top, bot: bot, rows: rows, rowGap: (bot - top) / rows };
     }
 
-    // Signboard width. Depends only on the row slot, so the bed can be sized
-    // against it without the two definitions chasing each other.
+    // Beds per row for this stage. See FARM_PER_ROW in room-base.js: ten columns
+    // can't be individually tappable on a phone, so a narrow stage gets eight.
+    function _farmPerRow(W) {
+      return (W || _farmWH().W) < FARM_NARROW_W ? FARM_PER_ROW_NARROW : FARM_PER_ROW;
+    }
+
+    // Signboard width, or 0 on a narrow stage — there the sign is too small to
+    // read anyway, and its width is the difference between the beds clearing the
+    // 44px touch floor and missing it.
     function _farmSignW(W, H) {
-      const band = _farmCropBand(H);
+      if (W < FARM_NARROW_W) return 0;
+      const band = _farmCropBand(H, W);
       return Math.max(32, Math.min(Math.min(W, H) * 0.095, band.rowGap * H * 1.2));
     }
 
     // Side of one garden bed, capped two ways: by the row slot's height, and by
-    // the width the whole row needs (a 10-wide row would otherwise run off the
-    // side of a phone stage). Layout below keeps groupW = signW + tile*1.45*perRow,
-    // so the width cap is exactly that solved for tile at 90% of the stage.
+    // the width the whole row needs. Layout below keeps
+    // groupW = signW + tile*1.45*perRow, so the width cap is that solved for
+    // tile. With no signboard the row may use more of the stage, which is what
+    // lifts a narrow stage's columns over the 44px touch floor.
     function _farmTile(W, H) {
-      const band = _farmCropBand(H);
+      const band = _farmCropBand(H, W);
+      const signW = _farmSignW(W, H);
       const byRow  = band.rowGap * H * 0.82;
-      const byWide = (W * 0.90 - _farmSignW(W, H)) / (1.45 * FARM_PER_ROW);
+      const byWide = (W * (signW ? 0.90 : 0.97) - signW) / (1.45 * _farmPerRow(W));
       return Math.max(18, Math.min(Math.min(W, H) * 0.095, byRow, byWide));
     }
 
@@ -189,8 +199,8 @@
       // row slot (so by H), so extra width only ever became extra gap: at 3440px
       // the gaps ran 2.9x the bed and the field read as scattered dots.
       const step = tile * 1.45;
-      const gap = tile * 0.45;                           // signboard → first bed
-      const groupW = signW + gap + tile + (FARM_PER_ROW - 1) * step;
+      const gap = signW ? tile * 0.45 : 0;               // signboard → first bed
+      const groupW = signW + gap + tile + (_farmPerRow(W) - 1) * step;
       const x0 = Math.max(0, (W - groupW) / 2);
       return {
         tile: tile, signW: signW,
@@ -201,16 +211,18 @@
     }
 
     // Screen-normalized position of garden plot index i. Plots sit in rows of
-    // FARM_PER_ROW across the soil strip, to the right of the row signboard.
+    // _farmPerRow across the soil strip, to the right of the row signboard.
     function _farmPlotPos(i, W, H) {
-      const col = i % FARM_PER_ROW, row = Math.floor(i / FARM_PER_ROW);
-      const band = _farmCropBand(H), geom = _farmRowGeom(W, H);
+      const per = _farmPerRow(W);
+      const col = i % per, row = Math.floor(i / per);
+      const band = _farmCropBand(H, W), geom = _farmRowGeom(W, H);
       return { x: geom.plotX0 + col * geom.step, y: band.top + (row + 0.5) * band.rowGap };
     }
 
     // Normalized position of the signboard sitting to the LEFT of grid row `row`.
+    // Narrow stages have no signboards — callers check _farmSignW first.
     function _farmSignPos(row, W, H) {
-      const band = _farmCropBand(H);
+      const band = _farmCropBand(H, W);
       return { x: _farmRowGeom(W, H).signX, y: band.top + (row + 0.5) * band.rowGap };
     }
 
@@ -1136,7 +1148,7 @@
     function _farmRowClick(row, plotIdx) {
       if (viewingUid !== currentUid) return;
       const plots = roomData.farmPlots || [];
-      const idxs = farmRowIndices(plots.length, row, FARM_PER_ROW);
+      const idxs = farmRowIndices(plots.length, row, _farmPerRow());
       if (!idxs.length) return;
       const st = farmRowState(idxs.map(i => plots[i]), FARM_CROPS, Date.now());
       if (st.state === 'ripe') return harvestAllFarm();
@@ -1167,7 +1179,7 @@
       if (scope === 'all') {
         return plots.reduce((out, p, i) => { if (!p.crop) out.push(i); return out; }, []);
       }
-      return farmRowIndices(plots.length, _plantRow, FARM_PER_ROW).filter(i => !plots[i].crop);
+      return farmRowIndices(plots.length, _plantRow, _farmPerRow()).filter(i => !plots[i].crop);
     }
 
     // Scope switcher in the picker header.
@@ -1181,7 +1193,7 @@
 
     function openCropPicker(row, plotIdx) {
       _plantRow = row || 0;
-      _plantPlot = plotIdx != null ? plotIdx : _plantRow * FARM_PER_ROW;
+      _plantPlot = plotIdx != null ? plotIdx : _plantRow * _farmPerRow();
       _pendingPlant = null;
       // The remembered scope may have nothing to plant where this tap landed
       // (e.g. 'one' onto an already-planted bed). Fall back to one that does,
@@ -2288,7 +2300,7 @@
       const cx = pos.x * W, cy = pos.y * H;
       // Keep the signboard within its row slot so stacked rows never collide
       // when the soil band is compressed at high expansion levels.
-      const _slot = _farmCropBand(H).rowGap * H;
+      const _slot = _farmCropBand(H, W).rowGap * H;
       const w = _farmRowGeom(W, H).signW;
       const h = Math.min(w * 0.72, _slot * 0.86);
       const x0 = cx - w / 2, y0 = cy - h / 2;
@@ -2329,11 +2341,14 @@
       // (or the animals) when the soil band is compressed at high expansion levels.
       const tile = _farmTile(W, H);
       ctx.textAlign = 'center';
-      // Row signboards (left of each row that owns ≥1 plot).
-      const _rows = farmRowCount(plots.length, FARM_PER_ROW);
-      for (let _r = 0; _r < _rows; _r++) {
-        const _st = farmRowState(farmRowIndices(plots.length, _r, FARM_PER_ROW).map(k => plots[k]), FARM_CROPS, now);
-        _drawFarmSign(ctx, W, H, _r, _st);
+      // Row signboards (left of each row that owns ≥1 plot). A narrow stage has
+      // none — _farmSignW returns 0 there and the width goes to the beds.
+      if (_farmSignW(W, H) > 0) {
+        const _rows = farmRowCount(plots.length, _farmPerRow(W));
+        for (let _r = 0; _r < _rows; _r++) {
+          const _st = farmRowState(farmRowIndices(plots.length, _r, _farmPerRow(W)).map(k => plots[k]), FARM_CROPS, now);
+          _drawFarmSign(ctx, W, H, _r, _st);
+        }
       }
       plots.forEach((plot, i) => {
         const pos = _farmPlotPos(i, W, H);
@@ -2786,13 +2801,18 @@
           for (let i = 0; i < plots.length; i++) {
             const pp = _farmPlotPos(i, _wh.W, _wh.H);
             const d = Math.hypot(pp.x - cx, pp.y - cy);
-            if (d < best) { best = d; rowIdx = Math.floor(i / FARM_PER_ROW); plotIdx = i; }
+            if (d < best) { best = d; rowIdx = Math.floor(i / _farmPerRow(_wh.W)); plotIdx = i; }
           }
-          const _rows = farmRowCount(plots.length, FARM_PER_ROW);
-          for (let r = 0; r < _rows; r++) {
-            const sp = _farmSignPos(r, _wh.W, _wh.H);
-            const d = Math.hypot(sp.x - cx, sp.y - cy);
-            if (d < best) { best = d; rowIdx = r; plotIdx = null; }   // signboard means the row, not one bed
+          // Signboards are targets only where they're drawn. On a narrow stage
+          // there are none, and every tap resolves to a bed — which is the point:
+          // no invisible target can steal a tap meant for a bed.
+          if (_farmSignW(_wh.W, _wh.H) > 0) {
+            const _rows = farmRowCount(plots.length, _farmPerRow(_wh.W));
+            for (let r = 0; r < _rows; r++) {
+              const sp = _farmSignPos(r, _wh.W, _wh.H);
+              const d = Math.hypot(sp.x - cx, sp.y - cy);
+              if (d < best) { best = d; rowIdx = r; plotIdx = null; }   // signboard means the row, not one bed
+            }
           }
           _farmRowClick(rowIdx, plotIdx);
           return;
