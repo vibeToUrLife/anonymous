@@ -45,8 +45,18 @@
     let _slotConfirm = false;         // awaiting confirmation to open (buy) a new slot
     const FARM_CART_X = 0.84, FARM_CART_Y = 0.19; // where the sky merchant plane hovers (normalized; up in the sky band)
 
-    // Trough position on the pasture (normalized)
-    const FARM_TROUGH_X = 0.14, FARM_TROUGH_Y = 0.50;
+    // The trough stands on the open grass between the top fence and the pens,
+    // to the left of the workshop huts (which start at x 0.22). It used to sit
+    // at (0.14, 0.50) — inside the pen band, where the pens' tint and rail are
+    // drawn straight over it, so a full pasture buried it.
+    const FARM_TROUGH_X = 0.085;
+    // Base of the trough: clear of the pen label tabs that hang above the rail.
+    // Those are a fixed ~19-24px tall whatever the stage is, so on a short stage
+    // they claim a bigger share of it and a flat fraction here isn't enough.
+    function _farmTroughY(W, H) {
+      const labelH = Math.max(11, Math.min(16, W * 0.03)) + 8;   // matches _drawPenLabels
+      return FARM_PEN_TOP - (labelH + 12) / Math.max(1, H);
+    }
 
     /* ── Scene vertical budget (fractions of canvas height) ──
        Single source of truth for the horizon and the animal band. The whole
@@ -2074,8 +2084,17 @@
 
     function _drawFarmTrough(ctx, W, H, night) {
       const trLvl = roomData.farmTroughLevel || 0;
-      const tx = FARM_TROUGH_X * W, ty = FARM_TROUGH_Y * H;
-      const tw = Math.max(52, W * 0.11) * (1 + trLvl * 0.14), th = tw * 0.36;  // grows with upgrades
+      const tx = FARM_TROUGH_X * W, ty = _farmTroughY(W, H) * H;
+      // Grows with upgrades, but capped against H as well as W — keyed to width
+      // alone it reached 470px on an ultrawide stage, taller than the pen band
+      // and well up into the sky once it moved onto the grass strip.
+      let tw = Math.max(44, Math.min(W * 0.105, H * 0.125)) * (1 + trLvl * 0.14);
+      let th = tw * 0.34;
+      // Then clamp to the grass actually available between the top fence and the
+      // base, so a fully upgraded trough on a short stage shrinks instead of
+      // standing through the fence.
+      const roomAbove = ty - FARM_TOPFENCE_Y * H - 3;
+      if (th > roomAbove) { th = Math.max(9, roomAbove); tw = th / 0.34; }
       const topY = ty - th, botY = ty;
       const hTop = tw / 2, hBot = tw * 0.40;   // tapered: wider at the brim
       const pct = Math.max(0, Math.min(1, (roomData.farmFood || 0) / farmFoodMax()));
@@ -2642,7 +2661,8 @@
         if (e.type === 'mousemove' && !_farmDragDecorId) {
           const p = pos(e);
           let tip = '';
-          if (Math.hypot(p.x - FARM_TROUGH_X, p.y - FARM_TROUGH_Y) < 0.08) {
+          const _twh = _farmWH();
+          if (Math.hypot(p.x - FARM_TROUGH_X, p.y - _farmTroughY(_twh.W, _twh.H)) < 0.08) {
             tip = '🌾 Food  ' + Math.floor(roomData.farmFood || 0) + ' / ' + farmFoodMax();
           } else {
             const plots = roomData.farmPlots || [];
