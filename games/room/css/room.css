@@ -1010,6 +1010,21 @@
        (Only #cartSheet; the #cropPicker keeps its scroll for long crop lists.) */
     #cartSheet{max-height:none;overflow:visible;top:50%;bottom:auto;transform:translate(-50%,-50%)}
     .cp-head{font-family:var(--farm-display);font-size:14px;font-weight:800;color:var(--g-ink);text-align:center;margin-bottom:10px;letter-spacing:.4px}
+    /* Crop-picker scope switcher — 1 bed / this row / all empty. Sized for a
+       thumb: the whole flow has to work by tapping. */
+    .cp-scope{display:flex;gap:6px;margin-bottom:9px}
+    .cp-scope-btn{
+      flex:1;min-width:0;min-height:44px;padding:6px 4px;cursor:pointer;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+      border:1px solid var(--g-border);border-radius:11px;background:rgba(255,255,255,.04);
+      color:var(--g-ink-soft);font-size:12px;font-weight:700;
+      transition:background .15s,border-color .15s,color .15s;
+    }
+    .cp-scope-btn small{font-size:9px;font-weight:600;color:var(--g-ink-faint)}
+    .cp-scope-btn:hover:not(:disabled){background:rgba(255,255,255,.09);color:var(--g-ink)}
+    .cp-scope-btn.active{color:#2a1c08;background:var(--g-accent-grad);border-color:transparent;font-weight:800}
+    .cp-scope-btn.active small{color:rgba(42,28,8,.75)}
+    .cp-scope-btn:disabled{opacity:.4;cursor:not-allowed}
     .cp-crop{
       display:flex;align-items:center;gap:10px;width:100%;min-height:48px;text-align:left;margin-bottom:8px;padding:11px 12px;cursor:pointer;
       background:rgba(255,255,255,.04);border:1px solid var(--g-border);border-radius:12px;color:var(--g-ink);

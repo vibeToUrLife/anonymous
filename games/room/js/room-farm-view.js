@@ -16,7 +16,16 @@
     let _farmParticles = [];    // floating hearts / +coins effects
     let _farmDropSeq = 0;
     let _plantRow = 0;           // grid row the crop picker is planting into
-    let _pendingPlant = null;    // { row, cropId, count } awaiting partial-plant confirm
+    let _plantPlot = 0;          // the exact plot the tap landed on (used by the 'one' scope)
+    let _pendingPlant = null;    // { cropId, count, total } awaiting partial-plant confirm
+    // How much the crop picker plants: one bed, its row, or every empty bed.
+    // Remembered across sessions so the choice doesn't reset every visit.
+    const FARM_SCOPE_KEY = 'farm_plant_scope';
+    let _plantScope = 'row';
+    try {
+      const _s = localStorage.getItem(FARM_SCOPE_KEY);
+      if (_s === 'one' || _s === 'row' || _s === 'all') _plantScope = _s;
+    } catch (e) { /* private mode — keep the default */ }
     let _farmHerdCollapsed = null; // null = auto; true/false once the user toggles
     const FARM_HERD_COLLAPSE_AT = 4; // herd longer than this auto-collapses the list
     let _farmProduceCollapsed = null; // null = auto; true/false once the user toggles
@@ -1111,20 +1120,25 @@
       showToast('🧺 Harvested ' + n + ' plot' + (n > 1 ? 's' : ''), 'success');
     }
 
-    // Tap anywhere in a garden row → act on the whole row: ripe harvests all
-    // ready crops, growing shows time left, empty opens the crop picker.
-    function _farmRowClick(row) {
+    // Tap in the garden → ripe harvests every ready crop on the farm, an empty
+    // bed opens the crop picker, a growing bed reports its time left.
+    // `plotIdx` is the bed the tap landed on, or null when a signboard won.
+    function _farmRowClick(row, plotIdx) {
       if (viewingUid !== currentUid) return;
       const plots = roomData.farmPlots || [];
       const idxs = farmRowIndices(plots.length, row, FARM_PER_ROW);
       if (!idxs.length) return;
       const st = farmRowState(idxs.map(i => plots[i]), FARM_CROPS, Date.now());
       if (st.state === 'ripe') return harvestAllFarm();
-      if (st.state === 'growing') {
+      // An empty bed opens the picker even when the ROW reads as growing: one
+      // seedling used to lock every other bed in its row out of being planted,
+      // because farmRowState calls any partly-planted row 'growing'.
+      const tapped = plotIdx != null ? plots[plotIdx] : null;
+      if (st.state === 'growing' && (!tapped || tapped.crop)) {
         const crop = FARM_CROPS.find(c => c.id === st.cropId);
         return showToast((crop ? crop.emoji + ' ' + crop.name : 'Crop') + ' growing — ' + _fmtFarmTime(st.msLeft) + ' left', '');
       }
-      openCropPicker(row);
+      openCropPicker(row, plotIdx);
     }
 
     /* ── Crop picker (tap an empty plot) + plant helpers ── */
@@ -1134,9 +1148,37 @@
       return Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
     }
 
-    function openCropPicker(row) {
-      _plantRow = row || 0;
+    // Empty plot indices that `scope` would plant into, given the tapped bed.
+    function _farmPlantIdxs(scope) {
+      const plots = roomData.farmPlots || [];
+      if (scope === 'one') {
+        return (plots[_plantPlot] && !plots[_plantPlot].crop) ? [_plantPlot] : [];
+      }
+      if (scope === 'all') {
+        return plots.reduce((out, p, i) => { if (!p.crop) out.push(i); return out; }, []);
+      }
+      return farmRowIndices(plots.length, _plantRow, FARM_PER_ROW).filter(i => !plots[i].crop);
+    }
+
+    // Scope switcher in the picker header.
+    function setPlantScope(scope) {
+      if (scope !== 'one' && scope !== 'row' && scope !== 'all') return;
+      _plantScope = scope;
+      try { localStorage.setItem(FARM_SCOPE_KEY, scope); } catch (e) { /* private mode */ }
       _pendingPlant = null;
+      _renderCropPicker();
+    }
+
+    function openCropPicker(row, plotIdx) {
+      _plantRow = row || 0;
+      _plantPlot = plotIdx != null ? plotIdx : _plantRow * FARM_PER_ROW;
+      _pendingPlant = null;
+      // The remembered scope may have nothing to plant where this tap landed
+      // (e.g. 'one' onto an already-planted bed). Fall back to one that does,
+      // without persisting it — only an explicit choice is remembered.
+      if (!_farmPlantIdxs(_plantScope).length) {
+        _plantScope = ['one', 'row', 'all'].find(s => _farmPlantIdxs(s).length) || _plantScope;
+      }
       _renderCropPicker();
       const picker = document.getElementById('cropPicker');
       if (picker) picker.style.display = 'block';
@@ -1146,18 +1188,31 @@
       const p = document.getElementById('cropPicker');
       if (p) p.style.display = 'none';
     }
-    // Simple crop chooser for the target row: pick a crop → plant the row.
+    // Crop chooser: pick how much to plant, then pick the crop. Each scope tab
+    // shows how many beds it covers, and each crop row shows what that costs, so
+    // "All" can never spend the coins as a surprise.
     function _renderCropPicker() {
       const picker = document.getElementById('cropPicker');
       if (!picker) return;
-      const plots = roomData.farmPlots || [];
-      const empties = farmRowIndices(plots.length, _plantRow, FARM_PER_ROW).filter(i => !plots[i].crop).length;
+      const counts = { one: _farmPlantIdxs('one').length,
+                       row: _farmPlantIdxs('row').length,
+                       all: _farmPlantIdxs('all').length };
+      const empties = counts[_plantScope];
+      const SCOPES = [['one', '1 bed'], ['row', 'This row'], ['all', 'All empty']];
       picker.innerHTML =
-        '<div class="cp-head">🌱 Plant this row</div>' +
-        '<div class="cp-bulk-info">Empty plots in row: <b>' + empties + '</b> · Coins: <b>' + roomData.coins + '</b></div>' +
+        '<div class="cp-head">🌱 Plant</div>' +
+        '<div class="cp-scope">' +
+          SCOPES.map(s =>
+            '<button class="cp-scope-btn' + (_plantScope === s[0] ? ' active' : '') + '"' +
+              (counts[s[0]] ? '' : ' disabled') +
+              ' onclick="setPlantScope(\'' + s[0] + '\')">' +
+              s[1] + '<small>' + counts[s[0]] + ' empty</small></button>').join('') +
+        '</div>' +
+        '<div class="cp-bulk-info">Planting <b>' + empties + '</b> bed' + (empties === 1 ? '' : 's') +
+          ' · Coins: <b>' + roomData.coins + '</b></div>' +
         FARM_CROPS.map(c => {
           const afford = roomData.coins >= c.seedCost;
-          return '<button class="cp-crop"' + (afford ? '' : ' disabled') + ' onclick="plantRow(\'' + c.id + '\')">' +
+          return '<button class="cp-crop"' + (afford && empties ? '' : ' disabled') + ' onclick="plantRow(\'' + c.id + '\')">' +
             '<span class="cp-emoji">' + c.emoji + '</span>' +
             '<span class="cp-info"><b>' + c.name + '</b><small>grows in ' + _fmtFarmTime(c.growMs) + ' · ' + c.seedCost + '🪙/plot</small></span>' +
             '<span class="cp-cost">' + (c.seedCost * empties) + '🪙</span>' +
@@ -1166,18 +1221,17 @@
         '<button class="cp-close" onclick="closeCropPicker()">Close</button>';
     }
 
-    // Chose a crop in the picker → plant the target row. Full-row when affordable,
-    // else a confirmation to plant as many as coins allow.
+    // Chose a crop in the picker → plant the current scope. Plants the lot when
+    // affordable, else a confirmation to plant as many as coins allow.
     function plantRow(cropId) {
       if (viewingUid !== currentUid) return;
-      const plots = roomData.farmPlots || [];
-      const emptyIdxs = farmRowIndices(plots.length, _plantRow, FARM_PER_ROW).filter(i => !plots[i].crop);
+      const emptyIdxs = _farmPlantIdxs(_plantScope);
       const crop = FARM_CROPS.find(c => c.id === cropId);
       if (!crop || !emptyIdxs.length) { closeCropPicker(); return; }
       const affordable = farmAffordableCount(roomData.coins, crop.seedCost, emptyIdxs.length);
       if (affordable <= 0) { closeCropPicker(); return showToast('Not enough coins for ' + crop.name + ' seed!', 'error'); }
       if (affordable >= emptyIdxs.length) return _doPlant(cropId, emptyIdxs);
-      _pendingPlant = { row: _plantRow, cropId: cropId, count: affordable, total: emptyIdxs.length };
+      _pendingPlant = { cropId: cropId, count: affordable, total: emptyIdxs.length };
       _renderPlantConfirm(crop, emptyIdxs.length, affordable);
     }
 
@@ -1208,21 +1262,21 @@
     function _renderPlantConfirm(crop, total, affordable) {
       const picker = document.getElementById('cropPicker');
       if (!picker) return;
+      const what = _plantScope === 'all' ? 'Every empty bed' : _plantScope === 'one' ? 'That bed' : 'A full row';
       picker.innerHTML =
         '<div class="cp-head">🪙 Not enough coins</div>' +
-        '<div class="cp-bulk-info" style="line-height:1.5">A full row of <b>' + crop.emoji + ' ' + crop.name + '</b> costs <b>' + (crop.seedCost * total) + '🪙</b> (' + total + ' plots).<br>' +
+        '<div class="cp-bulk-info" style="line-height:1.5">' + what + ' of <b>' + crop.emoji + ' ' + crop.name + '</b> costs <b>' + (crop.seedCost * total) + '🪙</b> (' + total + ' plot' + (total === 1 ? '' : 's') + ').<br>' +
           'You have <b>' + roomData.coins + '🪙</b> — enough for <b>' + affordable + ' plots</b>.</div>' +
         '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="confirmPlantPartial()">🌱 Plant ' + affordable + ' · ' + (affordable * crop.seedCost) + '🪙</button>' +
         '<button class="cp-close" onclick="closeCropPicker()">Cancel</button>';
       picker.style.display = 'block';
     }
 
-    // Confirmed the partial plant → fill the affordable empty plots in the row.
+    // Confirmed the partial plant → fill as many of the scope's empty beds as
+    // the coins reach.
     function confirmPlantPartial() {
       if (!_pendingPlant) return closeCropPicker();
-      const plots = roomData.farmPlots || [];
-      const idxs = farmRowIndices(plots.length, _pendingPlant.row, FARM_PER_ROW)
-        .filter(i => !plots[i].crop).slice(0, _pendingPlant.count);
+      const idxs = _farmPlantIdxs(_plantScope).slice(0, _pendingPlant.count);
       const cropId = _pendingPlant.cropId;
       _pendingPlant = null;
       _doPlant(cropId, idxs);
@@ -2686,19 +2740,19 @@
         const plots = roomData.farmPlots || [];
         if (plots.length && cy > _farmDivY()) {
           const _wh = { W: rect.width, H: rect.height };
-          let rowIdx = 0, best = Infinity;
+          let rowIdx = 0, plotIdx = null, best = Infinity;
           for (let i = 0; i < plots.length; i++) {
             const pp = _farmPlotPos(i, _wh.W, _wh.H);
             const d = Math.hypot(pp.x - cx, pp.y - cy);
-            if (d < best) { best = d; rowIdx = Math.floor(i / FARM_PER_ROW); }
+            if (d < best) { best = d; rowIdx = Math.floor(i / FARM_PER_ROW); plotIdx = i; }
           }
           const _rows = farmRowCount(plots.length, FARM_PER_ROW);
           for (let r = 0; r < _rows; r++) {
             const sp = _farmSignPos(r, _wh.W, _wh.H);
             const d = Math.hypot(sp.x - cx, sp.y - cy);
-            if (d < best) { best = d; rowIdx = r; }
+            if (d < best) { best = d; rowIdx = r; plotIdx = null; }   // signboard means the row, not one bed
           }
-          _farmRowClick(rowIdx);
+          _farmRowClick(rowIdx, plotIdx);
           return;
         }
 
