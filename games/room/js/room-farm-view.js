@@ -153,10 +153,12 @@
       const band = _farmCropBand(H);
       const tile = _farmTile(W, H);
       const signW = Math.max(32, Math.min(Math.min(W, H) * 0.095, band.rowGap * H * 1.2));
-      // Spacing is driven by the canvas width, not by the bed: expanding the farm
-      // compresses the soil band (and therefore the beds), and the field should
-      // not narrow with it. The bed-relative bounds only guard the extremes.
-      const step = Math.min(Math.max(tile * 1.35, W * 0.085), tile * 3.5);
+      // Spacing is relative to the bed, never to the canvas width. Driving it
+      // from W spread the beds out on a wide stage — the bed is capped by the
+      // row slot (so by H), so extra width only ever became extra gap: at 3440px
+      // the gaps ran 2.9x the bed and the field read as scattered dots. The
+      // trade-off is that on a very wide stage the field sits in the middle.
+      const step = tile * 1.45;
       const gap = tile * 0.45;                           // signboard → first bed
       const groupW = signW + gap + tile + 6 * step;      // sign | gap | 7 beds
       const x0 = Math.max(0, (W - groupW) / 2);
