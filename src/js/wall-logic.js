@@ -249,9 +249,43 @@
   };
 
   /**
+   * Remove diagonal-only touch points from a mask, by filling one of the two
+   * empty cells of every 2×2 "saddle" (▚ or ▞).
+   *
+   * MUST run before traceContour. The walk takes one boundary edge per corner,
+   * and a saddle is the one place a corner has TWO outgoing edges — take the
+   * wrong one and the ring closes early, so everything past the pinch never
+   * gets filled. Antialiased diagonal ink and sharp corners produce these
+   * constantly. Nudging the mask is easier to reason about than disambiguating
+   * mid-walk, and the added cell is one pixel that ends up under the ink.
+   *
+   * Only ever ADDS cells, so it can't disconnect anything; a few passes catch
+   * the saddles that filling a cell creates in the row above.
+   */
+  WL.unpinchMask = function (mask, w, h) {
+    w = Math.floor(w); h = Math.floor(h);
+    if (!mask || !(w > 1) || !(h > 1)) return mask;
+    const out = new Uint8Array(mask);          // never mutate the caller's mask
+    for (let pass = 0; pass < 6; pass++) {
+      let changed = false;
+      for (let y = 0; y < h - 1; y++) {
+        const r0 = y * w, r1 = r0 + w;
+        for (let x = 0; x < w - 1; x++) {
+          const a = out[r0 + x], b = out[r0 + x + 1];
+          const c = out[r1 + x], d = out[r1 + x + 1];
+          if (a && d && !b && !c) { out[r0 + x + 1] = 1; changed = true; }
+          else if (b && c && !a && !d) { out[r0 + x] = 1; changed = true; }
+        }
+      }
+      if (!changed) break;
+    }
+    return out;
+  };
+
+  /**
    * Outer boundary of a mask, as a closed ring of CORNER coordinates (0..w,
    * 0..h) so the polygon encloses the filled cells rather than cutting through
-   * their centres.
+   * their centres. Run unpinchMask on the mask first — see why there.
    *
    * Walks the "cracks" between filled and empty cells: every filled cell
    * contributes a clockwise directed edge for each empty neighbour, and the

@@ -256,6 +256,70 @@ test('traceContour encloses every filled cell of a ragged region', () => {
   assert.ok(!WL.pointInPoly(0.5, 0.5, ring), 'an empty corner must stay outside');
 });
 
+test('unpinchMask opens up a diagonal-only touch', () => {
+  // two blocks joined at a single corner — the contour walk would otherwise
+  // ring only the first one and leave the second unfilled
+  const g = grid(`
+    ##...
+    ##...
+    ..##.
+    ..##.
+    .....`);
+  const bad = WL.traceContour(g.cells, g.w, g.h);
+  const missedBefore = [];
+  for (let y = 0; y < g.h; y++) for (let x = 0; x < g.w; x++) {
+    if (g.cells[y * g.w + x] && !WL.pointInPoly(x + 0.5, y + 0.5, bad)) missedBefore.push(x + ',' + y);
+  }
+  assert.strictEqual(missedBefore.length, 4, 'the raw mask really does lose the far lobe');
+
+  const fixed = WL.unpinchMask(g.cells, g.w, g.h);
+  const ring = WL.traceContour(fixed, g.w, g.h);
+  for (let y = 0; y < g.h; y++) for (let x = 0; x < g.w; x++) {
+    if (!g.cells[y * g.w + x]) continue;
+    assert.ok(WL.pointInPoly(x + 0.5, y + 0.5, ring),
+      'cell ' + x + ',' + y + ' must be inside the contour after unpinching');
+  }
+  assert.notStrictEqual(fixed, g.cells, 'returns a copy, never mutates the input');
+});
+
+test('unpinchMask handles the other diagonal and leaves clean masks alone', () => {
+  const anti = grid(`
+    .##..
+    .##..
+    #....
+    .....`);            // ▞ saddle at the block's lower-left corner
+  const f = WL.unpinchMask(anti.cells, anti.w, anti.h);
+  const ring = WL.traceContour(f, anti.w, anti.h);
+  for (let y = 0; y < anti.h; y++) for (let x = 0; x < anti.w; x++) {
+    if (!anti.cells[y * anti.w + x]) continue;
+    assert.ok(WL.pointInPoly(x + 0.5, y + 0.5, ring), 'missed ' + x + ',' + y);
+  }
+  const plain = grid(`
+    ....
+    .##.
+    .##.
+    ....`);
+  assert.deepStrictEqual(Array.from(WL.unpinchMask(plain.cells, plain.w, plain.h)),
+    Array.from(plain.cells), 'a mask with no saddle is untouched');
+});
+
+test('a flooded region is fully enclosed by its contour, saddles and all', () => {
+  // Ink at a shallow diagonal: exactly the antialiased-edge case that pinches.
+  const w = 24, h = 18, ink = new Uint8Array(w * h);
+  for (let x = 0; x < w; x++) { const y = Math.floor(x / 3); if (y < h) ink[y * w + x] = 1; }
+  for (let x = 0; x < w; x++) ink[(h - 1) * w + x] = 1;
+  for (let y = 0; y < h; y++) ink[y * w + (w - 1)] = 1;
+  const r = WL.floodRegion((i) => ink[i] === 0, w, h, w - 4, h - 3);
+  assert.ok(r.count > 20);
+  const solid = WL.unpinchMask(WL.dilateMask(r.mask, w, h, WL.FILL_DILATE), w, h);
+  const ring = WL.traceContour(solid, w, h);
+  const missed = [];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (r.mask[y * w + x] && !WL.pointInPoly(x + 0.5, y + 0.5, ring)) missed.push(x + ',' + y);
+  }
+  assert.deepStrictEqual(missed, [], 'every flooded cell must end up inside the ring');
+});
+
 test('traceContour returns nothing for an empty mask', () => {
   assert.deepStrictEqual(WL.traceContour(new Uint8Array(9), 3, 3), []);
   assert.deepStrictEqual(WL.traceContour(null, 3, 3), []);

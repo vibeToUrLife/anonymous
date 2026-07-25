@@ -413,9 +413,11 @@
     if (res.touchedEdge) { toast('这块区域没封闭 · 先把它围起来'); return; }
     if (res.count < WL.FILL_MIN_CELLS) { toast('这块太小了，换个地方点'); return; }
 
-    const ring = WL.fitPath(
-      WL.traceContour(WL.dilateMask(res.mask, W, H, WL.FILL_DILATE), W, H),
-      WL.MAX_POINTS);
+    // dilate → unpinch → trace: unpinch is what stops the contour closing early
+    // at a diagonal touch and leaving half the region unfilled.
+    const solid = WL.unpinchMask(
+      WL.dilateMask(res.mask, W, H, WL.FILL_DILATE), W, H);
+    const ring = WL.fitPath(WL.traceContour(solid, W, H), WL.MAX_POINTS);
     if (ring.length < 3) return;
 
     // Instant ink — the RTDB echo repaints it into its proper place under the
