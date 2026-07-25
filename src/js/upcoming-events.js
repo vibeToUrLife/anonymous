@@ -19,7 +19,8 @@ const UpcomingEvents = (() => {
   const GRACE_MS = 8 * 60 * 60 * 1000;   // note lives 8h past its event time
   const DAY_MS   = 24 * 60 * 60 * 1000;
   const HOUR_MS  = 60 * 60 * 1000;
-  const FADE_MS  = 6000;                  // reminder auto-fades after ~6s
+  const FADE_MS  = 6000;                  // reminder auto-fades after ~6s…
+  const FADE_MAX = 12000;                 // …but longer titles get time to be read
 
   // Developer UIDs — may delete ANY event (mirror isDeveloper in firestore.rules)
   const DEV_UIDS = ['HClZmAeuEaUVjHqUaFLFFMTMQnd2', 'eUs3isAgsaRT9VLKEFI4HEFbCnk1'];
@@ -240,7 +241,8 @@ const UpcomingEvents = (() => {
     ov.classList.add('show');
 
     clearTimeout(_reminderTimer);
-    _reminderTimer = setTimeout(_hideReminder, FADE_MS);
+    const hold = Math.min(FADE_MAX, FADE_MS + (ev.title || '').length * 45);
+    _reminderTimer = setTimeout(_hideReminder, hold);
   }
 
   function _hideReminder() {
