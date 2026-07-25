@@ -145,16 +145,16 @@
     }
 
     // Horizontal geometry of a garden row. The signboard and the 7 beds are laid
-    // out as ONE group and centred: spacing used to be a flat 0.088 of the canvas
-    // width, which on a wide canvas left gaps twice as wide as the beds.
+    // out as ONE group and centred, so the field reads as wide as the pasture
+    // above it instead of huddling in the middle.
     function _farmRowGeom(W, H) {
       const band = _farmCropBand();
       const tile = _farmTile(W, H);
       const signW = Math.max(32, Math.min(Math.min(W, H) * 0.095, band.rowGap * H * 1.2));
-      // Spacing follows the bed, with a floor so that expanding the farm — which
-      // compresses the soil band and therefore the beds — doesn't also shrink the
-      // whole field sideways.
-      const step = Math.max(tile * 1.35, Math.min(W, H) * 0.068);
+      // Spacing is driven by the canvas width, not by the bed: expanding the farm
+      // compresses the soil band (and therefore the beds), and the field should
+      // not narrow with it. The bed-relative bounds only guard the extremes.
+      const step = Math.min(Math.max(tile * 1.35, W * 0.085), tile * 3.5);
       const gap = tile * 0.45;                           // signboard → first bed
       const groupW = signW + gap + tile + 6 * step;      // sign | gap | 7 beds
       const x0 = Math.max(0, (W - groupW) / 2);
