@@ -126,13 +126,15 @@
       return { top: FARM_PEN_TOP, bot: Math.max(FARM_PEN_TOP + 0.10, _farmDivY() - 0.02) };
     }
 
-    // The soil band the garden plots live in: always below the dividing fence
-    // and above the bottom fence, split into the max plot rows so every owned
-    // row sits inside the plank at any expansion level. `rows` is fixed (max)
-    // so a row's screen slot doesn't shift as you buy more plots.
-    function _farmCropBand() {
+    // The soil band the garden plots live in: below the dividing fence, split
+    // into the max plot rows so every owned row sits inside the plank at any
+    // expansion level. `rows` is fixed (max) so a row's screen slot doesn't
+    // shift as you buy more plots.
+    function _farmCropBand(H) {
       const top = _farmDivY() + 0.03;
-      const bot = 0.91;                              // clear of the bottom fence (0.93)
+      // Stop short of the tap hint pinned to the bottom of the stage. That hint
+      // is a fixed ~30px of HTML, so on a short stage it claims a bigger share.
+      const bot = Math.min(0.95, 1 - 30 / Math.max(1, H || 600));
       const rows = Math.max(1, farmRowCount(FARM_PLOT_MAX, 7));
       return { top: top, bot: bot, rows: rows, rowGap: (bot - top) / rows };
     }
@@ -140,15 +142,15 @@
     // Side of one garden bed. The row slot is what really constrains it, so the
     // min(W,H) cap is loose enough to let the slot bind on ordinary canvases.
     function _farmTile(W, H) {
-      const band = _farmCropBand();
-      return Math.max(18, Math.min(Math.min(W, H) * 0.062, band.rowGap * H * 0.82));
+      const band = _farmCropBand(H);
+      return Math.max(18, Math.min(Math.min(W, H) * 0.075, band.rowGap * H * 0.82));
     }
 
     // Horizontal geometry of a garden row. The signboard and the 7 beds are laid
     // out as ONE group and centred, so the field reads as wide as the pasture
     // above it instead of huddling in the middle.
     function _farmRowGeom(W, H) {
-      const band = _farmCropBand();
+      const band = _farmCropBand(H);
       const tile = _farmTile(W, H);
       const signW = Math.max(32, Math.min(Math.min(W, H) * 0.095, band.rowGap * H * 1.2));
       // Spacing is driven by the canvas width, not by the bed: expanding the farm
@@ -170,13 +172,13 @@
     // across the soil strip, to the right of the row signboard.
     function _farmPlotPos(i, W, H) {
       const col = i % 7, row = Math.floor(i / 7);
-      const band = _farmCropBand(), geom = _farmRowGeom(W, H);
+      const band = _farmCropBand(H), geom = _farmRowGeom(W, H);
       return { x: geom.plotX0 + col * geom.step, y: band.top + (row + 0.5) * band.rowGap };
     }
 
     // Normalized position of the signboard sitting to the LEFT of grid row `row`.
     function _farmSignPos(row, W, H) {
-      const band = _farmCropBand();
+      const band = _farmCropBand(H);
       return { x: _farmRowGeom(W, H).signX, y: band.top + (row + 0.5) * band.rowGap };
     }
 
@@ -2178,7 +2180,7 @@
       const cx = pos.x * W, cy = pos.y * H;
       // Keep the signboard within its row slot so stacked rows never collide
       // when the soil band is compressed at high expansion levels.
-      const _slot = _farmCropBand().rowGap * H;
+      const _slot = _farmCropBand(H).rowGap * H;
       const w = _farmRowGeom(W, H).signW;
       const h = Math.min(w * 0.72, _slot * 0.86);
       const x0 = cx - w / 2, y0 = cy - h / 2;
@@ -2376,11 +2378,12 @@
         for (let fy = gy + (H - gy) * 0.42; fy < H - 2; fy += (H - gy) * 0.30) { ctx.beginPath(); ctx.moveTo(0, fy); ctx.lineTo(W, fy); ctx.stroke(); }
         ctx.restore();
 
-        // Fences: top of the pasture, the dividing 围栏 (farm | crops), bottom edge
+        // Fences: top of the pasture and the divider (farm | crops). No bottom
+        // fence — its posts are a fixed 22px tall, so on a short stage they cut
+        // through the last bed row, and the soil band reads fine without it.
         const topFenceY = H * FARM_TOPFENCE_Y;
         _drawFence(ctx, W * 0.02, topFenceY, W * 0.96, night);
         _drawFence(ctx, W * 0.02, gy, W * 0.96, night);
-        _drawFence(ctx, W * 0.02, H * 0.93, W * 0.96, night);
         _drawHDTree(ctx, W * 0.06, topFenceY, H * 0.18, windSway, night);
         _drawHDTree(ctx, W * 0.94, topFenceY, H * 0.15, windSway * 0.7, night);
 
