@@ -197,7 +197,7 @@ test('floodRegion crosses a U-bend rather than stopping at the first wall', () =
   assert.strictEqual(r.mask[3 * g.w + 4], 1, 'the pocket inside the U too');
 });
 
-test('dilateMask grows the region by one cell per pass', () => {
+test('dilateMask grows the region by one cell per pass, diagonals included', () => {
   const g = grid(`
     .....
     .....
@@ -206,11 +206,30 @@ test('dilateMask grows the region by one cell per pass', () => {
     .....`);
   const one = WL.dilateMask(g.cells, 5, 5, 1);
   assert.strictEqual(one[2 * 5 + 2], 1);            // the seed
-  assert.strictEqual(one[1 * 5 + 2], 1);            // and its 4 neighbours
+  assert.strictEqual(one[1 * 5 + 2], 1);            // its 4 cardinal neighbours
   assert.strictEqual(one[2 * 5 + 1], 1);
-  assert.strictEqual(one[0 * 5 + 2], 0, 'only one cell out');
+  assert.strictEqual(one[3 * 5 + 2], 1);
+  assert.strictEqual(one[2 * 5 + 3], 1);
+  // …and the 4 diagonal ones: cardinal-only growth falls ~0.71px short of a
+  // full cell perpendicular to a diagonal edge, which showed up as a hairline
+  assert.strictEqual(one[1 * 5 + 1], 1, 'up-left must grow too');
+  assert.strictEqual(one[1 * 5 + 3], 1, 'up-right');
+  assert.strictEqual(one[3 * 5 + 1], 1, 'down-left');
+  assert.strictEqual(one[3 * 5 + 3], 1, 'down-right');
+  assert.strictEqual(one[0 * 5 + 2], 0, 'still only one cell out');
   assert.strictEqual(WL.dilateMask(g.cells, 5, 5, 2)[0 * 5 + 2], 1);
   assert.strictEqual(WL.dilateMask(g.cells, 5, 5, 0), g.cells, 'r=0 is a no-op');
+});
+
+test('dilateMask thickens a diagonal edge perpendicular to itself', () => {
+  // a 45° staircase: cardinal-only growth leaves the outer step corners bare
+  const w = 9, h = 9, m = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (x + y < 5) m[y * w + x] = 1;
+  const d = WL.dilateMask(m, w, h, 1);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (x + y <= 5) assert.strictEqual(d[y * w + x], 1,
+      'the whole next diagonal must be covered at ' + x + ',' + y);
+  }
 });
 
 test('traceContour rings the filled cells by their corners, not their centres', () => {

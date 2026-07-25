@@ -174,8 +174,17 @@
   /** Per-channel tolerance when deciding whether a pixel matches the seed. */
   WL.FILL_TOL = 32;
   /** Grow the flooded region by this many px so its edge tucks UNDER the
-   *  surrounding ink instead of leaving an antialiased hairline. */
-  WL.FILL_DILATE = 1;
+   *  surrounding ink instead of leaving an antialiased hairline.
+   *
+   *  2, not 1, because the margin gets eaten three ways before it reaches the
+   *  screen: traceContour walks a staircase along a diagonal, fitPath's
+   *  Douglas-Peucker cuts up to its tolerance BETWEEN vertices (which is why a
+   *  too-thin fill shows as a DASHED hairline, touching at the vertices), and
+   *  quantX rounds x onto a 1/1000-of-viewport grid (±0.77px at 1536px wide).
+   *  Measured on a 6px-brush triangle: r=1 left 108 bleed-through px (some
+   *  fully transparent), r=2 left 0. r=3 starts pushing the fill out past a
+   *  3px brush's outer edge, so 2 it is. */
+  WL.FILL_DILATE = 2;
   /** Smaller than this many cells = a mis-click, not a region worth a write. */
   WL.FILL_MIN_CELLS = 24;
 
@@ -226,7 +235,14 @@
     return out;
   };
 
-  /** Grow a mask by `r` cells in the 4 cardinal directions. Returns a new mask. */
+  /**
+   * Grow a mask by `r` cells in all 8 directions. Returns a new mask.
+   *
+   * 8 and not 4: a diagonal edge of the region is a staircase, and growing it
+   * only up/down/left/right moves that edge just ~0.71px perpendicular instead
+   * of a full cell. That shortfall is exactly why fills used to leave a
+   * hairline along diagonals and curves while axis-aligned edges looked fine.
+   */
   WL.dilateMask = function (mask, w, h, r) {
     w = Math.floor(w); h = Math.floor(h);
     r = Math.max(0, Math.floor(r) || 0);
@@ -236,11 +252,17 @@
       const dst = new Uint8Array(src.length);
       for (let y = 0; y < h; y++) {
         const row = y * w;
+        const up = row - w, down = row + w;
+        const hasUp = y > 0, hasDown = y < h - 1;
         for (let x = 0; x < w; x++) {
           const i = row + x;
+          const l = x > 0, rt = x < w - 1;
           if (src[i] ||
-              (x > 0 && src[i - 1]) || (x < w - 1 && src[i + 1]) ||
-              (y > 0 && src[i - w]) || (y < h - 1 && src[i + w])) dst[i] = 1;
+              (l && src[i - 1]) || (rt && src[i + 1]) ||
+              (hasUp && (src[up + x] || (l && src[up + x - 1]) || (rt && src[up + x + 1]))) ||
+              (hasDown && (src[down + x] || (l && src[down + x - 1]) || (rt && src[down + x + 1])))) {
+            dst[i] = 1;
+          }
         }
       }
       src = dst;
