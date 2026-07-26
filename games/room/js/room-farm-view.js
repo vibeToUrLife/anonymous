@@ -1148,10 +1148,10 @@
       }).join('');
       el.innerHTML =
         '<div class="ws-box">' +
-          '<div class="ws-head">🐔 While you were away…</div>' +
-          '<div class="ws-sub">Your animals produced this. Collect it to keep them going!</div>' +
+          '<div class="ws-head">🐔 ' + T('While you were away…') + '</div>' +
+          '<div class="ws-sub">' + T('Your animals produced this. Collect it to keep them going!') + '</div>' +
           rows +
-          '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="collectFarmAway()">📦 Collect all</button>' +
+          '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="collectFarmAway()">📦 ' + T('Collect all') + '</button>' +
         '</div>';
       el.style.display = 'flex';
     }
@@ -1274,7 +1274,7 @@
       const refillUnits = Math.min(Math.max(0, Math.ceil(foodMax - (roomData.farmFood || 0))), Math.floor(roomData.coins / FARM_FOOD_COST));
       const foodColor = foodPct > 40 ? '#6dd56d' : foodPct > 15 ? '#f2c94c' : '#eb5757';
       const foodHtml =
-        '<div class="farm-section-title">🌾 Food Trough</div>' +
+        '<div class="farm-section-title">🌾 ' + T('Food Trough') + '</div>' +
         '<div class="farm-food-row">' +
           '<span class="farm-herd-info">' +
             '<span class="farm-herd-name">' + food + ' / ' + foodMax + '</span>' +
@@ -1295,31 +1295,31 @@
       const cart = _farmCart();
       const wantMeta = cart.wanted.map(w => (meta[w.id] || { emoji: '❓' }).emoji + '×' + w.qty).join('  ');
       const cartHtml =
-        '<div class="farm-section-title">🛒 Merchant Cart</div>' +
+        '<div class="farm-section-title">🛒 ' + T('Merchant Cart') + '</div>' +
         (cart.present
-          ? '<div class="farm-cart-status here">🛒 The cart is here — tap it on the farm, or:</div>' +
-            '<div class="farm-panel-empty" style="padding-top:4px">Buying this visit: ' + (wantMeta || '—') + '</div>' +
-            '<button class="farm-shop-buy" style="width:100%;margin-top:6px" onclick="openCartSheet()">Open cart →</button>'
-          : '<div class="farm-cart-status">🛒 Sold out & rolled on — back in <b>' + _fmtFarmTime(cart.nextInMs) + '</b>.</div>' +
-            '<div class="farm-panel-empty" style="padding-top:4px">It buys a different set each visit — stock up!</div>');
+          ? '<div class="farm-cart-status here">🛒 ' + T('The cart is here — tap it on the farm, or:') + '</div>' +
+            '<div class="farm-panel-empty" style="padding-top:4px">' + T('Buying this visit: {list}', { list: wantMeta || '—' }) + '</div>' +
+            '<button class="farm-shop-buy" style="width:100%;margin-top:6px" onclick="openCartSheet()">' + T('Open cart →') + '</button>'
+          : '<div class="farm-cart-status">🛒 ' + T('Sold out & rolled on — back in {time}.', { time: '<b>' + _fmtFarmTime(cart.nextInMs) + '</b>' }) + '</div>' +
+            '<div class="farm-panel-empty" style="padding-top:4px">' + T('It buys a different set each visit — stock up!') + '</div>');
       // Produce list is collapsible (it grows as you collect more types).
       const _produceCollapsed = _farmProduceCollapsed == null ? stockIds.length > FARM_PRODUCE_COLLAPSE_AT : _farmProduceCollapsed;
       const stockHtml =
         cartHtml +
         '<div class="farm-section-title farm-collapse-head" style="margin-top:12px" onclick="toggleFarmProduce()">' +
-          '<span>📦 Produce <small>(' + stockIds.length + ')</small></span>' +
+          '<span>📦 ' + T('Produce') + ' <small>(' + stockIds.length + ')</small></span>' +
           '<span class="farm-collapse-arrow">' + (_produceCollapsed ? '▸' : '▾') + '</span>' +
         '</div>' +
         (_produceCollapsed
           ? ''
           : !stockIds.length
-          ? '<div class="farm-panel-empty">Tap produce on the farm to collect it here.</div>'
+          ? '<div class="farm-panel-empty">' + T('Tap produce on the farm to collect it here.') + '</div>'
           : stockIds.map(id => {
               const m = meta[id] || { emoji: '❓', name: id };
               const wanted = cart.present && cart.wanted.some(w => w.id === id);
               return '<div class="farm-shop-row">' +
-                '<span class="farm-shop-animal">' + m.emoji + ' ' + m.name + ' <small>×' + stock[id] + '</small>' + (wanted ? ' <span class="farm-want-tag">cart wants</span>' : '') + '</span>' +
-                '<span class="farm-shop-drop">' + (prices[id] || 0) + '🪙 ea</span>' +
+                '<span class="farm-shop-animal">' + m.emoji + ' ' + T(m.name) + ' <small>×' + stock[id] + '</small>' + (wanted ? ' <span class="farm-want-tag">' + T('cart wants') + '</span>' : '') + '</span>' +
+                '<span class="farm-shop-drop">' + (prices[id] || 0) + '🪙 ' + T('ea') + '</span>' +
                 '</div>';
             }).join(''));
 
@@ -1327,7 +1327,7 @@
       const ordersList = _farmOrders();
       const ordersDone = roomData.farmOrdersDone || [];
       const ordersHtml =
-        '<div class="farm-section-title">📋 Orders <span class="farm-panel-cap">resets daily</span></div>' +
+        '<div class="farm-section-title">📋 ' + T('Orders') + ' <span class="farm-panel-cap">' + T('resets daily') + '</span></div>' +
         ordersList.map((o, i) => {
           const isDone = ordersDone.includes(i);
           const canDo = !isDone && o.items.every(it => (stock[it.id] || 0) >= it.qty);
@@ -1336,20 +1336,20 @@
             '<span class="farm-shop-animal">' + itemsStr + '</span>' +
             '<span class="farm-shop-drop">+' + o.reward + '🪙</span>' +
             (isDone
-              ? '<span class="farm-shop-drop">✓ done</span>'
-              : '<button class="farm-shop-buy" onclick="fulfillFarmOrder(' + i + ')"' + (canDo ? '' : ' disabled') + '>Deliver</button>') +
+              ? '<span class="farm-shop-drop">✓ ' + T('done') + '</span>'
+              : '<button class="farm-shop-buy" onclick="fulfillFarmOrder(' + i + ')"' + (canDo ? '' : ' disabled') + '>' + T('Deliver') + '</button>') +
             '</div>';
         }).join('');
 
       const shopHtml =
-        '<div class="farm-section-title">🛒 Animal Shop' +
-          '<button class="farm-mini-btn" onclick="openRgbPreview()" title="Preview the rare rainbow coats">🌈 RGB?</button>' +
+        '<div class="farm-section-title">🛒 ' + T('Animal Shop') +
+          '<button class="farm-mini-btn" onclick="openRgbPreview()" title="' + T('Preview the rare rainbow coats') + '">🌈 RGB?</button>' +
         '</div>' +
-        '<div class="farm-panel-empty" style="padding:0 2px 6px">Every buy has a tiny chance to be a 🌈 rainbow (cosmetic).</div>' +
+        '<div class="farm-panel-empty" style="padding:0 2px 6px">' + T('Every buy has a tiny chance to be a 🌈 rainbow (cosmetic).') + '</div>' +
         FARM_ANIMALS.map(def => {
           const afford = roomData.coins >= def.cost;
           return '<div class="farm-shop-row">' +
-            '<span class="farm-shop-animal">' + def.emoji + ' ' + def.name + ' <small>×' + (counts[def.id] || 0) + '</small></span>' +
+            '<span class="farm-shop-animal">' + def.emoji + ' ' + T(def.name) + ' <small>×' + (counts[def.id] || 0) + '</small></span>' +
             '<span class="farm-shop-drop">' + def.drop.emoji + ' ' + def.drop.coins + '🪙</span>' +
             '<button class="farm-shop-buy" onclick="buyFarmAnimal(\'' + def.id + '\')"' + (full || !afford ? ' disabled' : '') + '>' + def.cost + '🪙</button>' +
             '</div>';
@@ -1360,7 +1360,7 @@
       const _herdCollapsed = _farmHerdCollapsed == null ? animals.length > FARM_HERD_COLLAPSE_AT : _farmHerdCollapsed;
       const herdRows =
         (!animals.length
-          ? '<div class="farm-panel-empty">No animals yet — buy one above to start earning!</div>'
+          ? '<div class="farm-panel-empty">' + T('No animals yet — buy one above to start earning!') + '</div>'
           : animals.map(a => {
               const def = FARM_ANIMALS.find(f => f.id === a.type);
               if (!def) return '';
@@ -1372,12 +1372,12 @@
               const mark = a.variant === 'rgb' ? ' 🌈' : ((FARM_VARIANTS[a.type] || []).some(v => v.id === a.variant && v.rare) ? ' ✨' : '');
               const butcherCtl = _farmButcherConfirmId === a.id
                 ? '<span class="farm-butcher-confirm"><button class="farm-mini-btn danger" onclick="butcherAnimal(\'' + a.id + '\')">✓ 🥩×' + meat + '</button><button class="farm-mini-btn" onclick="cancelButcher()">✗</button></span>'
-                : '<span class="farm-herd-meat" title="Butcher → this much meat">🥩×' + meat + '</span>' +
-                  '<button class="farm-mini-btn" title="Butcher for meat" onclick="askButcher(\'' + a.id + '\')">🔪</button>';
+                : '<span class="farm-herd-meat" title="' + T('Butcher → this much meat') + '">🥩×' + meat + '</span>' +
+                  '<button class="farm-mini-btn" title="' + T('Butcher for meat') + '" onclick="askButcher(\'' + a.id + '\')">🔪</button>';
               return '<div class="farm-herd-row">' +
                 '<span class="farm-herd-emoji">' + def.emoji + '</span>' +
                 '<span class="farm-herd-info">' +
-                  '<span class="farm-herd-name">' + def.name + mark + ' <small>Lv' + lvl + '</small> · ' + h + '%</span>' +
+                  '<span class="farm-herd-name">' + T(def.name) + mark + ' <small>Lv' + lvl + '</small> · ' + h + '%</span>' +
                   '<span class="farm-herd-bar"><span style="width:' + h + '%;background:' + color + '"></span></span>' +
                 '</span>' +
                 (waiting ? '<span class="farm-herd-drops">' + def.drop.emoji + ' ×' + waiting + '</span>' : '') +
@@ -1386,7 +1386,7 @@
             }).join(''));
       const herdHtml =
         '<div class="farm-section-title farm-collapse-head" onclick="toggleFarmHerd()">' +
-          '<span>🐮 My Animals <small>(' + animals.length + ')</small></span>' +
+          '<span>🐮 ' + T('My Animals') + ' <small>(' + animals.length + ')</small></span>' +
           '<span class="farm-collapse-arrow">' + (_herdCollapsed ? '▸' : '▾') + '</span>' +
         '</div>' +
         (_herdCollapsed ? '' : '<div class="farm-herd-list">' + herdRows + '</div>');
@@ -1403,33 +1403,33 @@
       }).length;
       const atMax = plots.length >= FARM_PLOT_MAX;
       const gardenHtml =
-        '<div class="farm-section-title">🌱 Garden ' +
-          '<span class="farm-panel-cap">' + plots.length + '/' + FARM_PLOT_MAX + ' plots</span>' +
+        '<div class="farm-section-title">🌱 ' + T('Garden') + ' ' +
+          '<span class="farm-panel-cap">' + T('{n}/{max} plots', { n: plots.length, max: FARM_PLOT_MAX }) + '</span>' +
           (atMax
             ? ''
-            : '<button class="farm-shop-buy" onclick="addFarmPlot()"' + (roomData.coins < FARM_PLOT_COST ? ' disabled' : '') + '>+ Plot · ' + FARM_PLOT_COST + '🪙</button>') +
+            : '<button class="farm-shop-buy" onclick="addFarmPlot()"' + (roomData.coins < FARM_PLOT_COST ? ' disabled' : '') + '>' + T('+ Plot · {cost}', { cost: FARM_PLOT_COST + '🪙' }) + '</button>') +
         '</div>' +
         '<div class="farm-panel-empty" style="padding-bottom:2px">' +
           T('{used}/{total} planted · {ripe} ripe', { used: usedPlots, total: plots.length, ripe: ripePlots }) + '</div>' +
         '<div class="farm-howto">' +
-          '🪧 Tap a row\'s <b>signboard</b> to plant that whole row.<br>' +
-          '⏳ Tap a ripe row to harvest <b>everything that\'s ready</b>.' +
+          '🪧 ' + T("Tap a row's signboard to plant that whole row.") + '<br>' +
+          '⏳ ' + T('Tap a ripe row to harvest everything that\'s ready.') +
         '</div>';
 
       // Build Machines: buy here; built ones appear on the farm where you operate them.
       const _bm = roomData.farmMachines || {};
       const buildHtml =
-        '<div class="farm-section-title">🏭 Build Machines</div>' +
-        '<div class="farm-panel-empty" style="padding:0 2px 6px">Built machines appear on your farm — tap one there to make goods.</div>' +
+        '<div class="farm-section-title">🏭 ' + T('Build Machines') + '</div>' +
+        '<div class="farm-panel-empty" style="padding:0 2px 6px">' + T('Built machines appear on your farm — tap one there to make goods.') + '</div>' +
         FARM_MACHINES.map(mc => {
           const owned = _bm[mc.id] && _bm[mc.id].owned;
           const makes = mc.recipes.map(rc => (meta[rc.out.id] ? meta[rc.out.id].emoji : '?')).join(' ');
           const note = mc.id === 'butcher' ? ' · ' + T('needs meat') : '';
           return '<div class="farm-shop-row">' +
-            '<span class="farm-shop-animal">' + mc.emoji + ' ' + mc.name + ' <small>makes ' + makes + note + '</small></span>' +
+            '<span class="farm-shop-animal">' + mc.emoji + ' ' + T(mc.name) + ' <small>' + T('makes {list}', { list: makes }) + note + '</small></span>' +
             (owned
-              ? '<span class="farm-shop-drop">✓ on farm</span>'
-              : '<button class="farm-shop-buy" onclick="buyFarmMachine(\'' + mc.id + '\')"' + (roomData.coins < mc.cost ? ' disabled' : '') + '>Build · ' + mc.cost + '🪙</button>') +
+              ? '<span class="farm-shop-drop">✓ ' + T('on farm') + '</span>'
+              : '<button class="farm-shop-buy" onclick="buyFarmMachine(\'' + mc.id + '\')"' + (roomData.coins < mc.cost ? ' disabled' : '') + '>' + T('Build · {cost}', { cost: mc.cost + '🪙' }) + '</button>') +
             '</div>';
         }).join('');
 
@@ -2018,27 +2018,31 @@
                        row: _farmPlantIdxs('row').length,
                        all: _farmPlantIdxs('all').length };
       const empties = counts[_plantScope];
-      const SCOPES = [['one', '1 bed'], ['row', T('This row')], ['all', T('All empty')]];
+      // Keys, not translations: the render below runs each through T(), so a
+      // language change repaints them without rebuilding this table.
+      const SCOPES = [['one', '1 bed'], ['row', 'This row'], ['all', 'All empty']];
       picker.innerHTML =
-        '<div class="cp-head">🌱 Plant</div>' +
+        '<div class="cp-head">🌱 ' + T('Plant') + '</div>' +
         '<div class="cp-scope">' +
           SCOPES.map(s =>
             '<button class="cp-scope-btn' + (_plantScope === s[0] ? ' active' : '') + '"' +
               (counts[s[0]] ? '' : ' disabled') +
               ' onclick="setPlantScope(\'' + s[0] + '\')">' +
-              s[1] + '<small>' + counts[s[0]] + ' empty</small></button>').join('') +
+              T(s[1]) + '<small>' + T('{n} empty', { n: counts[s[0]] }) + '</small></button>').join('') +
         '</div>' +
-        '<div class="cp-bulk-info">Planting <b>' + empties + '</b> bed' + (empties === 1 ? '' : 's') +
-          ' · Coins: <b>' + roomData.coins + '</b></div>' +
+        '<div class="cp-bulk-info">' +
+          I18N.plural(empties, 'Planting <b>1</b> bed', 'Planting <b>{n}</b> beds') +
+          ' · ' + T('Coins: {n}', { n: '<b>' + roomData.coins + '</b>' }) + '</div>' +
         FARM_CROPS.map(c => {
           const afford = roomData.coins >= c.seedCost;
           return '<button class="cp-crop"' + (afford && empties ? '' : ' disabled') + ' onclick="plantRow(\'' + c.id + '\')">' +
             '<span class="cp-emoji">' + c.emoji + '</span>' +
-            '<span class="cp-info"><b>' + c.name + '</b><small>grows in ' + _fmtFarmTime(c.growMs) + ' · ' + c.seedCost + '🪙/plot</small></span>' +
+            '<span class="cp-info"><b>' + T(c.name) + '</b><small>' +
+              T('grows in {time} · {cost} a bed', { time: _fmtFarmTime(c.growMs), cost: c.seedCost + '🪙' }) + '</small></span>' +
             '<span class="cp-cost">' + (c.seedCost * empties) + '🪙</span>' +
             '</button>';
         }).join('') +
-        '<button class="cp-close" onclick="closeCropPicker()">Close</button>';
+        '<button class="cp-close" onclick="closeCropPicker()">' + T('Close') + '</button>';
     }
 
     // Chose a crop in the picker → plant the current scope. Plants the lot when
@@ -2084,11 +2088,16 @@
       if (!picker) return;
       const what = _plantScope === 'all' ? T('Every empty bed') : _plantScope === 'one' ? T('That bed') : T('A full row');
       picker.innerHTML =
-        '<div class="cp-head">🪙 Not enough coins</div>' +
-        '<div class="cp-bulk-info" style="line-height:1.5">' + what + ' of <b>' + crop.emoji + ' ' + crop.name + '</b> costs <b>' + (crop.seedCost * total) + '🪙</b> (' + total + ' plot' + (total === 1 ? '' : 's') + ').<br>' +
-          'You have <b>' + roomData.coins + '🪙</b> — enough for <b>' + affordable + ' plots</b>.</div>' +
-        '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="confirmPlantPartial()">🌱 Plant ' + affordable + ' · ' + (affordable * crop.seedCost) + '🪙</button>' +
-        '<button class="cp-close" onclick="closeCropPicker()">Cancel</button>';
+        '<div class="cp-head">🪙 ' + T('Not enough coins') + '</div>' +
+        '<div class="cp-bulk-info" style="line-height:1.5">' +
+          T('{what} of {crop} costs {cost} ({n} beds).',
+            { what: what, crop: '<b>' + crop.emoji + ' ' + T(crop.name) + '</b>',
+              cost: '<b>' + (crop.seedCost * total) + '🪙</b>', n: total }) + '<br>' +
+          T('You have {coins} — enough for {n} beds.',
+            { coins: '<b>' + roomData.coins + '🪙</b>', n: '<b>' + affordable + '</b>' }) + '</div>' +
+        '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="confirmPlantPartial()">🌱 ' +
+          T('Plant {n} · {cost}', { n: affordable, cost: affordable * crop.seedCost + '🪙' }) + '</button>' +
+        '<button class="cp-close" onclick="closeCropPicker()">' + T('Cancel') + '</button>';
       picker.style.display = 'block';
     }
 
@@ -2487,10 +2496,11 @@
           return '<div class="cart-sq" style="cursor:default;border-style:dashed;border-color:var(--g-border);background:rgba(255,255,255,.04)"><span class="cart-sq-icon">' + m.emoji + '</span><span class="cart-sq-cap" style="color:var(--g-ink-soft)">×' + w.qty + '</span></div>';
         }).join('');
         el.innerHTML =
-          '<div class="cp-head">🛒 Cart is away</div>' +
-          '<div class="farm-panel-empty" style="padding:0 2px 8px">Back in <b>' + _fmtFarmTime(cart.nextInMs) + '</b>. The next cart will want:</div>' +
+          '<div class="cp-head">🛒 ' + T('Cart is away') + '</div>' +
+          '<div class="farm-panel-empty" style="padding:0 2px 8px">' +
+            T('Back in {time}. The next cart will want:', { time: '<b>' + _fmtFarmTime(cart.nextInMs) + '</b>' }) + '</div>' +
           '<div class="cart-grid">' + want + '</div>' +
-          '<button class="cp-close" onclick="closeCartSheet()">Close</button>';
+          '<button class="cp-close" onclick="closeCartSheet()">' + T('Close') + '</button>';
         el.style.display = 'block';
         return;
       }
@@ -2515,23 +2525,25 @@
           // than leaving a dead square that only says "make".
           squares += mk
             ? '<button class="cart-sq make" onclick="goMakeForCart(\'' + mk.id + '\')" title="' + T('Make {product} in the {machine}', { product: T(m.name), machine: T(mk.name) }) + '">' +
-                '<span class="cart-sq-icon">' + m.emoji + '</span><span class="cart-sq-cap">' + mk.emoji + ' make</span></button>'
-            : '<div class="cart-sq locked" title="Make this in the workshop, then sell it">' +
-                '<span class="cart-sq-icon">' + m.emoji + '</span><span class="cart-sq-cap">make</span></div>';
+                '<span class="cart-sq-icon">' + m.emoji + '</span><span class="cart-sq-cap">' + mk.emoji + ' ' + T('make') + '</span></button>'
+            : '<div class="cart-sq locked" title="' + T('Make this in the workshop, then sell it') + '">' +
+                '<span class="cart-sq-icon">' + m.emoji + '</span><span class="cart-sq-cap">' + T('make') + '</span></div>';
         }
       });
       const wantsLine = cart.wanted.map(w => (meta[w.id] || { emoji: '❓' }).emoji + '×' + Math.max(0, w.qty - (_cartSold[w.id] || 0))).join('  ');
       el.innerHTML =
-        '<div class="cp-head">🛒 Merchant Cart</div>' +
+        '<div class="cp-head">🛒 ' + T('Merchant Cart') + '</div>' +
         (cart.wanted.length
-          ? '<div class="farm-panel-empty" style="padding:0 2px 4px">Wants: ' + wantsLine + ' · tap a square to sell it; tap a “make” square to go to the workshop that makes it.</div>' +
+          ? '<div class="farm-panel-empty" style="padding:0 2px 4px">' +
+              T('Wants: {list}', { list: wantsLine }) + ' · ' +
+              T('tap a square to sell it; tap a “make” square to go to the workshop that makes it.') + '</div>' +
             '<div class="cart-grid">' + squares + '</div>' +
             (sellableTotal > 0
-              ? '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="sellAllToCart()">💰 Sell all it wants</button>'
-              : '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="dismissCart()">🐴 Send it off (new cart in 4h)</button>')
-          : '<div class="ws-status">Build a workshop first — then the cart buys what it makes.</div>' +
-            '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="dismissCart()">🐴 Send it off (new cart in 4h)</button>') +
-        '<button class="cp-close" onclick="closeCartSheet()">Close</button>';
+              ? '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="sellAllToCart()">💰 ' + T('Sell all it wants') + '</button>'
+              : '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="dismissCart()">🐴 ' + T('Send it off (new cart in {time})', { time: _fmtFarmTime(FARM_CART_COOLDOWN_MS) }) + '</button>')
+          : '<div class="ws-status">' + T('Build a workshop first — then the cart buys what it makes.') + '</div>' +
+            '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="dismissCart()">🐴 ' + T('Send it off (new cart in {time})', { time: _fmtFarmTime(FARM_CART_COOLDOWN_MS) }) + '</button>') +
+        '<button class="cp-close" onclick="closeCartSheet()">' + T('Close') + '</button>';
       el.style.display = 'block';
     }
 
@@ -2593,12 +2605,12 @@
       if (!el) return;
       el.innerHTML =
         '<div class="rgb-box">' +
-          '<div class="rgb-head">🌈 Rainbow (RGB) coats</div>' +
-          '<div class="rgb-sub">~' + Math.round(FARM_RGB_CHANCE * 100) + '% chance on any animal you buy. Cosmetic only — same value as a normal one.</div>' +
+          '<div class="rgb-head">🌈 ' + T('Rainbow (RGB) coats') + '</div>' +
+          '<div class="rgb-sub">' + T('~{pct}% chance on any animal you buy. Cosmetic only — same value as a normal one.', { pct: Math.round(FARM_RGB_CHANCE * 100) }) + '</div>' +
           '<div class="rgb-grid">' +
-            FARM_ANIMALS.map(d => '<div class="rgb-cell"><canvas class="rgb-canvas" data-type="' + d.id + '" width="120" height="120"></canvas><span>' + d.emoji + ' ' + d.name + '</span></div>').join('') +
+            FARM_ANIMALS.map(d => '<div class="rgb-cell"><canvas class="rgb-canvas" data-type="' + d.id + '" width="120" height="120"></canvas><span>' + d.emoji + ' ' + T(d.name) + '</span></div>').join('') +
           '</div>' +
-          '<button class="cp-close" onclick="closeRgbPreview()">Close</button>' +
+          '<button class="cp-close" onclick="closeRgbPreview()">' + T('Close') + '</button>' +
         '</div>';
       el.style.display = 'flex';
       cancelAnimationFrame(_rgbPreviewAnim);
@@ -2659,22 +2671,22 @@
         actions = '<div class="ws-status">' +
           T('Butcher {name}? You get 🥩×{n} (tier {base} + Lv bonus {bonus}) — gone for good.',
             { name: T(def.name), n: meat, base: meatBase, bonus: meat - meatBase }) + '</div>' +
-          '<button class="cp-crop" style="justify-content:center;font-weight:800;background:var(--g-danger);color:#fff" onclick="confirmButcherAnimal()">✓ Butcher</button>' +
-          '<button class="cp-crop" style="justify-content:center" onclick="cancelAnimalButcher()">✗ Keep it</button>';
+          '<button class="cp-crop" style="justify-content:center;font-weight:800;background:var(--g-danger);color:#fff" onclick="confirmButcherAnimal()">✓ ' + T('Butcher') + '</button>' +
+          '<button class="cp-crop" style="justify-content:center" onclick="cancelAnimalButcher()">✗ ' + T('Keep it') + '</button>';
       } else if (_ownsButcher()) {
-        actions = '<button class="cp-crop" style="justify-content:center;color:#f87171" onclick="askAnimalButcher()">🔪 Butcher for meat (🥩×' + meat + ')</button>';
+        actions = '<button class="cp-crop" style="justify-content:center;color:#f87171" onclick="askAnimalButcher()">🔪 ' + T('Butcher for meat (🥩×{n})', { n: meat }) + '</button>';
       } else {
-        actions = '<div class="ws-status">🔪 Build the Butcher (Garden tab) to butcher animals.</div>';
+        actions = '<div class="ws-status">🔪 ' + T('Build the Butcher (Garden tab) to butcher animals.') + '</div>';
       }
       el.innerHTML =
         '<div class="ws-box">' +
-          '<div class="ws-head">' + def.emoji + ' ' + def.name + mark + '</div>' +
-          '<div class="ws-sub">Lv ' + lvl + ' · ' + lvlInfo + '</div>' +
-          '<div class="ws-status" style="margin:2px 0 6px">Happiness <b style="color:' + color + '">' + h + '%</b></div>' +
+          '<div class="ws-head">' + def.emoji + ' ' + T(def.name) + mark + '</div>' +
+          '<div class="ws-sub">' + T('Lv {n}', { n: lvl }) + ' · ' + lvlInfo + '</div>' +
+          '<div class="ws-status" style="margin:2px 0 6px">' + T('Happiness') + ' <b style="color:' + color + '">' + h + '%</b></div>' +
           '<div style="height:8px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden;margin:0 0 8px"><div style="height:100%;width:' + h + '%;background:' + color + '"></div></div>' +
           '<div class="ws-status" style="margin:0 0 12px">' + prodLine + '</div>' +
           actions +
-          '<button class="cp-close" onclick="closeAnimalModal()">Close</button>' +
+          '<button class="cp-close" onclick="closeAnimalModal()">' + T('Close') + '</button>' +
         '</div>';
       el.style.display = 'flex';
     }
@@ -2722,17 +2734,17 @@
         return '<div class="ws-slot">' +
           '<span class="ws-slot-no">' + def.drop.emoji + ' ' + def.drop.name + '</span>' +
           '<span class="ws-slot-state">×' + n + '</span>' +
-          '<button class="farm-shop-buy" onclick="collectProduceType(\'' + type + '\')"' + (n > 0 ? '' : ' disabled') + '>Collect</button>' +
+          '<button class="farm-shop-buy" onclick="collectProduceType(\'' + type + '\')"' + (n > 0 ? '' : ' disabled') + '>' + T('Collect') + '</button>' +
           '</div>';
-      }).join('') : '<div class="ws-status">No animals yet — buy one in the Animals tab.</div>';
+      }).join('') : '<div class="ws-status">' + T('No animals yet — buy one in the Animals tab.') + '</div>';
       const total = Object.keys(counts).reduce((s, k) => s + counts[k], 0);
       el.innerHTML =
         '<div class="ws-box">' +
-          '<div class="ws-head">🧺 Produce</div>' +
-          '<div class="ws-sub">Your animals keep producing whether you collect or not.</div>' +
+          '<div class="ws-head">🧺 ' + T('Produce') + '</div>' +
+          '<div class="ws-sub">' + T('Your animals keep producing whether you collect or not.') + '</div>' +
           rows +
-          (total > 0 ? '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="collectAllProduce()">📦 Collect all (' + total + ')</button>' : '') +
-          '<button class="cp-close" onclick="closeProduceModal()">Close</button>' +
+          (total > 0 ? '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="collectAllProduce()">📦 ' + T('Collect all ({n})', { n: total }) + '</button>' : '') +
+          '<button class="cp-close" onclick="closeProduceModal()">' + T('Close') + '</button>' +
         '</div>';
       el.style.display = 'flex';
     }
@@ -2775,10 +2787,10 @@
       // What you have of the ingredients this machine uses (e.g. 🥛×3).
       const ingIds = mc.recipes.reduce((a, rc) => { Object.keys(rc.in).forEach(k => { if (a.indexOf(k) < 0) a.push(k); }); return a; }, []);
       const haveStr = ingIds.map(id => (meta[id] ? meta[id].emoji : id) + '×' + (stock[id] || 0)).join('   ');
-      const haveLine = '<div class="ws-status" style="margin:2px 0 8px">In stock: ' + haveStr + '</div>';
+      const haveLine = '<div class="ws-status" style="margin:2px 0 8px">' + T('In stock: {list}', { list: haveStr }) + '</div>';
       let body;
       if (!m) {
-        body = '<div class="ws-status">Not built yet — build it in the 🌱 Garden tab.</div>';
+        body = '<div class="ws-status">' + T('Not built yet — build it in the 🌱 Garden tab.') + '</div>';
       } else {
         // A grid of FARM_MAX_SLOTS squares: locked (buy) · idle (tap to choose) ·
         // making (shows the product + timer) · ready (tap to collect).
@@ -2787,19 +2799,19 @@
           if (i >= m.slots) {                                   // not opened yet
             const afford = roomData.coins >= FARM_SLOT_COST;
             cells += '<button class="ws-cell locked"' + (afford ? '' : ' disabled') + ' onclick="askOpenSlot()">' +
-              '<span class="ws-cell-icon">🔒</span><span class="ws-cell-cap">Open · ' + Math.round(FARM_SLOT_COST / 1000) + 'k🪙</span></button>';
+              '<span class="ws-cell-icon">🔒</span><span class="ws-cell-cap">' + T('Open · {cost}', { cost: Math.round(FARM_SLOT_COST / 1000) + 'k🪙' }) + '</span></button>';
             continue;
           }
           const job = m.jobs[i];
           if (!job) {                                           // open + empty
             cells += '<button class="ws-cell idle' + (_makeChoiceSlot === i ? ' picking' : '') + '" onclick="chooseMake(' + i + ')">' +
-              '<span class="ws-cell-icon">➕</span><span class="ws-cell-cap">Make</span></button>';
+              '<span class="ws-cell-icon">➕</span><span class="ws-cell-cap">' + T('Make') + '</span></button>';
           } else {
             const recipe = mc.recipes[job.r] || mc.recipes[0];
             const oM = meta[recipe.out.id] || { emoji: '❓' };
             if (cropProgress(job.at, now, recipe.timeMs) >= 1) {
               cells += '<button class="ws-cell ready" onclick="collectMachineSlot(\'' + mc.id + '\',' + i + ')">' +
-                '<span class="ws-cell-icon">' + oM.emoji + '</span><span class="ws-cell-cap">✅ Collect</span></button>';
+                '<span class="ws-cell-icon">' + oM.emoji + '</span><span class="ws-cell-cap">✅ ' + T('Collect') + '</span></button>';
             } else {
               cells += '<div class="ws-cell busy">' +
                 '<span class="ws-cell-icon">' + oM.emoji + '</span><span class="ws-cell-cap">⏳ ' + Math.ceil((recipe.timeMs - (now - job.at)) / 60000) + 'm</span></div>';
@@ -2814,26 +2826,26 @@
             const oM = meta[rc.out.id] || { emoji: '❓', name: rc.out.id };
             const inStr = Object.keys(rc.in).map(k => (meta[k] ? meta[k].emoji : k) + '×' + rc.in[k]).join('+');
             const can = Object.keys(rc.in).every(k => (stock[k] || 0) >= rc.in[k]);
-            return '<button class="farm-shop-buy ws-recipe" onclick="startMachineSlot(\'' + mc.id + '\',' + _makeChoiceSlot + ',' + r + ')"' + (can ? '' : ' disabled') + '>' + oM.emoji + ' ' + oM.name + ' <small>' + inStr + ' · ' + Math.round(rc.timeMs / 60000) + 'm</small></button>';
+            return '<button class="farm-shop-buy ws-recipe" onclick="startMachineSlot(\'' + mc.id + '\',' + _makeChoiceSlot + ',' + r + ')"' + (can ? '' : ' disabled') + '>' + oM.emoji + ' ' + T(oM.name) + ' <small>' + inStr + ' · ' + Math.round(rc.timeMs / 60000) + 'm</small></button>';
           }).join('');
-          chooser = '<div class="ws-choose"><div class="ws-slot-no">Slot ' + (_makeChoiceSlot + 1) + ' — pick a product <span class="ws-x" onclick="cancelMake()">✕</span></div>' + choices + '</div>';
+          chooser = '<div class="ws-choose"><div class="ws-slot-no">' + T('Slot {n} — pick a product', { n: _makeChoiceSlot + 1 }) + ' <span class="ws-x" onclick="cancelMake()">✕</span></div>' + choices + '</div>';
         }
         // confirmation before spending coins to open a new slot
         let confirmBanner = '';
         if (_slotConfirm) {
-          confirmBanner = '<div class="ws-choose"><div class="ws-slot-no">Open a new slot for ' + FARM_SLOT_COST + '🪙? <span class="ws-x" onclick="cancelOpenSlot()">✕</span></div>' +
-            '<button class="farm-shop-buy ws-recipe" onclick="buyMachineSlot(\'' + mc.id + '\')"' + (roomData.coins < FARM_SLOT_COST ? ' disabled' : '') + '>✓ Open slot · ' + FARM_SLOT_COST + '🪙</button></div>';
+          confirmBanner = '<div class="ws-choose"><div class="ws-slot-no">' + T('Open a new slot for {cost}?', { cost: FARM_SLOT_COST + '🪙' }) + ' <span class="ws-x" onclick="cancelOpenSlot()">✕</span></div>' +
+            '<button class="farm-shop-buy ws-recipe" onclick="buyMachineSlot(\'' + mc.id + '\')"' + (roomData.coins < FARM_SLOT_COST ? ' disabled' : '') + '>✓ ' + T('Open slot · {cost}', { cost: FARM_SLOT_COST + '🪙' }) + '</button></div>';
         }
         body = grid + chooser + confirmBanner;
       }
       const butcherNote = mc.id === 'butcher'
-        ? '<div class="ws-status" style="margin-top:8px">🔪 Get meat by butchering an animal: 🐮 Animals tab → tap 🔪 on it.</div>' : '';
+        ? '<div class="ws-status" style="margin-top:8px">🔪 ' + T('Get meat by butchering an animal: 🐮 Animals tab → tap 🔪 on it.') + '</div>' : '';
       el.innerHTML =
         '<div class="ws-box">' +
-          '<div class="ws-head">' + mc.emoji + ' ' + mc.name + '</div>' +
-          '<div class="ws-sub">Makes: ' + makesStr + ' · each slot makes one</div>' +
+          '<div class="ws-head">' + mc.emoji + ' ' + T(mc.name) + '</div>' +
+          '<div class="ws-sub">' + T('Makes: {list} · each slot makes one', { list: makesStr }) + '</div>' +
           haveLine + body + butcherNote +
-          '<button class="cp-close" onclick="closeWorkshopModal()">Close</button>' +
+          '<button class="cp-close" onclick="closeWorkshopModal()">' + T('Close') + '</button>' +
         '</div>';
       el.style.display = 'flex';
     }

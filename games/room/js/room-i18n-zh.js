@@ -323,5 +323,60 @@
     'max level': '已满级',
     'Butcher {name}? You get 🥩×{n} (tier {base} + Lv bonus {bonus}) — gone for good.': '宰掉{name}？可得 🥩×{n}（基础 {base} + 等级加成 {bonus}）— 没有后悔药。',
     'tap to': '点这',
+
+
+    /* ── Farm: panel sections & modals ── */
+    'cart wants': '商人要',
+    'ea': '/个',
+    'Orders': '订单',
+    'resets daily': '每日刷新',
+    'done': '已完成',
+    'Animal Shop': '动物商店',
+    'Preview the rare rainbow coats': '看看稀有的彩虹皮毛',
+    'Every buy has a tiny chance to be a 🌈 rainbow (cosmetic).': '每次购买都有极小概率抽到 🌈 彩虹款（纯外观）。',
+    'No animals yet — buy one above to start earning!': '还没有动物 — 在上面买一只就能开始赚钱了！',
+    'Butcher → this much meat': '宰掉能得这么多肉',
+    'Butcher for meat': '宰掉取肉',
+    'Plant': '种植',
+    '1 bed': '一块地',
+    '{n} empty': '{n} 块空地',
+    'Coins: {n}': '金币：{n}',
+    'Planting <b>1</b> bed': '要种 <b>1</b> 块地',
+    'Planting <b>{n}</b> beds': '要种 <b>{n}</b> 块地',
+    'grows in {time} · {cost} a bed': '{time}成熟 · 每块 {cost}',
+    'Not enough coins': '金币不够',
+    '{what} of {crop} costs {cost} ({n} beds).': '{what}种满{crop}要 {cost}（{n} 块地）。',
+    'You have {coins} — enough for {n} beds.': '你有 {coins} — 够种 {n} 块。',
+    'Plant {n} · {cost}': '种 {n} 块 · {cost}',
+
+    /* ── Farm: the cart sheet ── */
+    'Cart is away': '商人不在',
+    'Back in {time}. The next cart will want:': '{time} 后回来。下一趟他想要：',
+    'make': '加工',
+    'Make this in the workshop, then sell it': '先在工坊加工出来，再卖给他',
+    'Wants: {list}': '想要：{list}',
+    'tap a square to sell it; tap a “make” square to go to the workshop that makes it.': '点方块卖出；点「加工」方块会跳到能做它的工坊。',
+    'Sell all it wants': '把他要的全卖了',
+    'Send it off (new cart in {time})': '送他走（{time} 后来新的）',
+    'Build a workshop first — then the cart buys what it makes.': '先造个工坊 — 商人才会收它做出来的东西。',
+
+    /* ── Farm: RGB preview & the animal card ── */
+    'Rainbow (RGB) coats': '彩虹（RGB）皮毛',
+    '~{pct}% chance on any animal you buy. Cosmetic only — same value as a normal one.': '买任何动物都有约 {pct}% 的概率。纯外观 — 价值和普通的完全一样。',
+    'Keep it': '留着',
+    'Butcher for meat (🥩×{n})': '宰掉取肉（🥩×{n}）',
+    'Build the Butcher (Garden tab) to butcher animals.': '先在菜园页造肉铺，才能宰动物。',
+
+    /* ── Farm: produce & workshop modals ── */
+    'No animals yet — buy one in the Animals tab.': '还没有动物 — 去动物页买一只吧。',
+    'Collect all ({n})': '全部收取（{n}）',
+    'In stock: {list}': '库存：{list}',
+    'Not built yet — build it in the 🌱 Garden tab.': '还没造 — 去 🌱 菜园页建造。',
+    'Open · {cost}': '开启 · {cost}',
+    'Slot {n} — pick a product': '第 {n} 个槽位 — 选一样产品',
+    'Open a new slot for {cost}?': '花 {cost} 开一个新槽位？',
+    'Open slot · {cost}': '开启槽位 · {cost}',
+    'Get meat by butchering an animal: 🐮 Animals tab → tap 🔪 on it.': '肉来自宰动物：🐮 动物页 → 点它的 🔪。',
+    'Makes: {list} · each slot makes one': '产出：{list} · 每个槽位做一样',
   });
 })();
