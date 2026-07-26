@@ -169,5 +169,110 @@
     return Math.max(0, Math.min(Math.floor(foodMax - foodStock), Math.floor(coins / costPerUnit)));
   }
 
-  return { farmCycleMs, animalLevel, cropProgress, generateFarmOrders, farmSellAllValue, planFarmTick, farmRefillUnits, farmRowCount, farmRowIndices, farmRowState, farmAffordableCount };
+  /* ── Social layer: visitor inbox + weekly boards ──
+     Visitors drop items into the farm owner's inbox (a cheer, a watering, a
+     scoop of feed, a gift). The owner claims the batch when they next open the
+     farm. Everything here is pure so the settlement is testable without
+     Firestore; the view layer owns the reads/writes. */
+
+  // Local YYYY-MM-DD for a date. Day keys are LOCAL (matching the daily-orders
+  // seed), so "once a day" means the sender's own day.
+  function farmDayKey(d) {
+    d = d || new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  // The Sunday (YYYY-MM-DD) that starts `d`'s week — the id both farm boards are
+  // keyed by. Same rule as the 成语接龙 weekly board, so every weekly board on
+  // the site rolls over at the same moment.
+  function farmWeekIdFor(d) {
+    d = d || new Date();
+    const s = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    s.setDate(s.getDate() - s.getDay());   // getDay: 0=Sun … 6=Sat
+    return farmDayKey(s);
+  }
+
+  // How many more REWARDED helps a visitor has left today. `day`/`count` are the
+  // visitor's stored tally; a stored day that isn't today means the tally is
+  // stale, so the full allowance is back.
+  function farmHelpAllowance(day, today, count, max) {
+    const used = day === today ? (count || 0) : 0;
+    return Math.max(0, (max || 0) - used);
+  }
+
+  // Fold a claimed batch of inbox items into one settlement.
+  //   items : [{ kind:'cheer'|'water'|'feed'|'gift', day, prod, qty }]
+  //   opts  : { cheerCoin, cheerCapPerDay, waterMs, feedUnits, giftMaxQty }
+  // Cheers pay PER DAY up to cheerCapPerDay — a week away still pays for each
+  // day's cheers instead of collapsing them into one day's allowance. Cheers
+  // past a day's cap still count for popularity, they just stop paying coins.
+  // Gift quantities are re-clamped here so an item written under an older
+  // (larger) limit can't over-credit. Returns the whole settlement.
+  function farmInboxEffects(items, opts) {
+    const o = opts || {};
+    const out = { coins: 0, cheers: 0, paidCheers: 0, waterMs: 0, food: 0, stock: {}, gifts: 0 };
+    const perDay = {};
+    for (const it of (items || [])) {
+      if (!it) continue;
+      if (it.kind === 'cheer') {
+        out.cheers++;
+        const d = it.day || '';
+        perDay[d] = (perDay[d] || 0) + 1;
+      } else if (it.kind === 'water') {
+        out.waterMs += o.waterMs || 0;
+      } else if (it.kind === 'feed') {
+        out.food += o.feedUnits || 0;
+      } else if (it.kind === 'gift') {
+        const cap = o.giftMaxQty != null ? o.giftMaxQty : Infinity;
+        const qty = Math.max(0, Math.min(cap, Math.floor(it.qty || 0)));
+        if (it.prod && qty > 0) { out.stock[it.prod] = (out.stock[it.prod] || 0) + qty; out.gifts += qty; }
+      }
+    }
+    const dayCap = o.cheerCapPerDay != null ? o.cheerCapPerDay : Infinity;
+    for (const d in perDay) out.paidCheers += Math.min(perDay[d], dayCap);
+    out.coins = out.paidCheers * (o.cheerCoin || 0);
+    return out;
+  }
+
+  // Roll a room's weekly farm counters to `weekId`, then add to them. A week the
+  // counters don't already belong to starts both from zero, so the boards reset
+  // themselves without a scheduled job. The week that just ended is kept in the
+  // prev* fields — settlement needs last week's numbers after the rollover.
+  // Returns the new field values; the caller decides how to persist them.
+  function farmWeekBump(cur, weekId, cheers, produce) {
+    const c = cur || {};
+    const same = c.farmWeekId === weekId;
+    return {
+      farmWeekId: weekId,
+      farmWeekCheers: (same ? (c.farmWeekCheers || 0) : 0) + (cheers || 0),
+      farmWeekProduce: (same ? (c.farmWeekProduce || 0) : 0) + (produce || 0),
+      farmWeekPrevId: same ? (c.farmWeekPrevId || '') : (c.farmWeekId || ''),
+      farmWeekPrevCheers: same ? (c.farmWeekPrevCheers || 0) : (c.farmWeekCheers || 0),
+      farmWeekPrevProduce: same ? (c.farmWeekPrevProduce || 0) : (c.farmWeekProduce || 0),
+    };
+  }
+
+  // One room's score for `weekId` on a board, whichever slot still holds that
+  // week. A player who hasn't opened the farm since the week ended never rolled
+  // over, so their score is still in the CURRENT slot; one who has played since
+  // finds it in the prev slot. Anything older scores 0.
+  function farmWeekScore(room, weekId, field) {
+    const r = room || {};
+    if (r.farmWeekId === weekId) return r['farmWeek' + field] || 0;
+    if (r.farmWeekPrevId === weekId) return r['farmWeekPrev' + field] || 0;
+    return 0;
+  }
+
+  // Rank board rows and attach prizes. `rows` is [{uid, name, score}]. Ties break
+  // by uid so every client independently settles to the SAME winners list —
+  // whoever gets there first, the payout is identical. Zero scores never win.
+  function farmWeekWinners(rows, prizes) {
+    const p = prizes || [];
+    const list = (rows || []).filter(r => r && (r.score || 0) > 0).slice();
+    list.sort((a, b) => (b.score - a.score) || (a.uid < b.uid ? -1 : a.uid > b.uid ? 1 : 0));
+    return list.slice(0, p.length).map((r, i) => ({ uid: r.uid, name: r.name || '', score: r.score, prize: p[i] || 0 }));
+  }
+
+  return { farmCycleMs, animalLevel, cropProgress, generateFarmOrders, farmSellAllValue, planFarmTick, farmRefillUnits, farmRowCount, farmRowIndices, farmRowState, farmAffordableCount,
+           farmDayKey, farmWeekIdFor, farmHelpAllowance, farmInboxEffects, farmWeekBump, farmWeekScore, farmWeekWinners };
 });

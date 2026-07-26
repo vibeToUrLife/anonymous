@@ -355,6 +355,26 @@
       cow:   [ { id: 'classic', name: 'Classic', rare: false }, { id: 'brown',  name: 'Brown',  rare: true, pal: { coat: '#e8c89a', light: '#d8b681', patch: '#6b4a2e' } }, { id: 'rgb', name: 'RGB', rgb: true, pal: { coat: '#8ad6ff', light: '#ffd6f5', patch: '#7a4fff' } } ],
       horse: [ { id: 'bay',     name: 'Bay',     rare: false }, { id: 'black',  name: 'Black',  rare: true, pal: { coat: '#4a3f3a', mane: '#241f1b' } }, { id: 'rgb', name: 'RGB', rgb: true, pal: { coat: '#9b7afc', mane: '#ff5db1' } } ],
     };
+    /* ── Farm social layer ──
+       Visitors can't touch another player's farm directly (that would be a
+       griefing hole). They drop an item into the owner's inbox
+       (rooms/{uid}/farm_inbox) and the owner claims the batch on their next
+       visit — so every write to farm data is still made by its owner.
+       "Once a day per farm" is enforced by the SERVER: the inbox doc id carries
+       the day and the sender, and the rules allow create but never update. */
+    const FARM_CHEER_COIN = 20;        // coins the owner gets per cheer claimed …
+    const FARM_CHEER_DAILY_CAP = 10;   // … for at most this many cheers per DAY (extras still count for popularity)
+    const FARM_HELP_REWARD = 30;       // coins a visitor earns per helpful action …
+    const FARM_HELP_DAILY_CAP = 5;     // … for their first N actions each day (beyond that, helping still works, it just stops paying)
+    const FARM_WATER_MS = 10 * 60 * 1000;  // 💧 one watering takes this much off every growing crop
+    const FARM_FEED_UNITS = 5;             // 🌾 units a scoop of feed adds to the trough
+    const FARM_GIFT_MAX_QTY = 5;           // most of one product a visitor may gift per farm per day
+    const FARM_INBOX_MAX = 60;             // most inbox items read (and claimed) at once
+    const FARM_ROOMS_SCAN = 50;            // rooms pulled for the visit list + both weekly boards
+    const FARM_VISIT_MAX = 20;             // farms actually listed in the Visit tab
+    const FARM_WEEK_PRIZES = [3000, 2000, 1000];  // 🥇🥈🥉 paid on EACH weekly board at settlement
+    const FARM_WEEK_BOARD_N = 10;          // rows shown per board
+
     const FARM_MAX_ANIMALS = 20;                   // total animals on the farm, any mix
     const FARM_DROP_CAP = 3;                       // (legacy) max uncollected drops per animal
     const FARM_PRODUCE_CAP = 20;                   // max uncollected produce per ANIMAL TYPE — production pauses at this until you collect

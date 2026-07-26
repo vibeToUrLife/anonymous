@@ -848,6 +848,89 @@
     .farm-visit-go{font-size:18px;color:var(--g-ink-faint)}
     .farm-visit-home{width:100%;padding:9px;margin-top:6px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--g-border);border-radius:12px;background:rgba(255,255,255,.06);color:var(--g-ink);transition:background .15s,border-color .15s}
     .farm-visit-home:hover{background:rgba(255,255,255,.12);border-color:var(--g-accent)}
+
+    /* ── Social layer: helping hands, mailbox, gifts, weekly boards ── */
+    /* Visitor's three helping hands. Fixed 3-up row with a tall touch target —
+       these are the primary action on a phone, so they never shrink below 64px. */
+    .farm-help-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .farm-help-btn{
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+      min-height:74px;padding:8px 4px;cursor:pointer;
+      border:1px solid var(--g-border);border-radius:13px;background:rgba(255,255,255,.05);
+      color:var(--g-ink);font:inherit;text-align:center;
+      transition:background .15s,border-color .15s,transform .08s;
+    }
+    .farm-help-btn:hover{background:rgba(255,255,255,.1);border-color:var(--g-accent)}
+    .farm-help-btn:active{transform:scale(.97)}
+    .farm-help-btn.done,.farm-help-btn:disabled{opacity:.45;cursor:default;background:rgba(255,255,255,.03);border-style:dashed}
+    .farm-help-btn.done:hover{background:rgba(255,255,255,.03);border-color:var(--g-border)}
+    .farm-help-emoji{font-size:24px;line-height:1}
+    .farm-help-name{font-family:var(--farm-display);font-size:12px;font-weight:800;color:var(--cream)}
+    .farm-help-hint{font-size:9.5px;line-height:1.2;color:var(--g-ink-faint)}
+
+    /* "You have mail" banner — sits under the farm tabs on every tab */
+    .farm-mail-cta{
+      display:block;width:100%;min-height:44px;margin:0 0 9px;padding:11px 12px;cursor:pointer;
+      font-family:var(--farm-display);font-size:13px;font-weight:800;letter-spacing:.3px;
+      color:#2a1c08;background:var(--g-accent-grad);border:none;border-radius:13px;
+      box-shadow:var(--g-shadow-sm);transition:transform .08s,filter .08s;
+      animation:farmMailNudge 2.4s ease-in-out infinite;
+    }
+    .farm-mail-cta:hover{filter:brightness(1.05)}
+    .farm-mail-cta:active{transform:scale(.99)}
+    @keyframes farmMailNudge{0%,88%,100%{transform:translateY(0)}93%{transform:translateY(-3px)}}
+    @media (prefers-reduced-motion:reduce){.farm-mail-cta{animation:none}}
+
+    /* Inbox modal: the settlement summary + the claim button */
+    .farm-inbox-sum{
+      margin:10px 0 4px;padding:9px 10px;border-radius:11px;
+      background:rgba(251,146,60,.12);border:1px dotted rgba(251,146,60,.4);
+      font-size:12px;font-weight:700;color:var(--g-ink);text-align:center;line-height:1.5;
+    }
+    .farm-inbox-claim{justify-content:center;font-weight:800;margin-top:8px}
+    .farm-inbox-claim:disabled{opacity:.5}
+
+    /* Gift picker: pick a product from MY barn, then a quantity */
+    .farm-gift-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px;margin:6px 0 4px;max-height:38vh;overflow-y:auto}
+    .farm-gift-item{
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+      min-height:74px;padding:7px 4px;cursor:pointer;
+      border:1px solid var(--g-border);border-radius:12px;background:rgba(255,255,255,.04);
+      color:var(--g-ink);font:inherit;transition:background .15s,border-color .15s,transform .08s;
+    }
+    .farm-gift-item:hover{background:rgba(255,255,255,.09);border-color:var(--g-accent)}
+    .farm-gift-item:active{transform:scale(.97)}
+    .farm-gift-item.on{border-color:transparent;background:var(--g-accent-grad);color:#2a1c08}
+    .farm-gift-item.on .farm-gift-name,.farm-gift-item.on .farm-gift-have{color:#2a1c08}
+    .farm-gift-emoji{font-size:24px;line-height:1}
+    .farm-gift-name{font-size:10.5px;font-weight:700;color:var(--cream);text-align:center;line-height:1.15}
+    .farm-gift-have{font-size:9.5px;color:var(--g-ink-faint);font-variant-numeric:tabular-nums}
+    .farm-gift-qty{display:flex;align-items:center;justify-content:center;gap:14px;margin:10px 0 4px}
+    .farm-gift-qty span{font-family:var(--farm-display);font-size:17px;font-weight:800;color:var(--cream);min-width:74px;text-align:center}
+    .farm-gift-qty button{
+      width:44px;height:44px;border-radius:50%;cursor:pointer;font-size:20px;font-weight:800;
+      border:1px solid var(--g-border);background:rgba(255,255,255,.06);color:var(--g-ink);
+    }
+    .farm-gift-qty button:disabled{opacity:.35;cursor:not-allowed}
+    .farm-gift-send{justify-content:center;font-weight:800}
+    .farm-gift-cancel{justify-content:center;margin-top:4px;margin-bottom:0;color:var(--g-ink-soft)}
+
+    /* Weekly boards (🔥 popularity / 🌾 produce) */
+    .farm-board-tabs{display:flex;gap:6px;margin:2px 0 8px}
+    .farm-board-tab{
+      flex:1;min-height:34px;padding:7px 4px;cursor:pointer;
+      border:1px solid var(--g-border);border-radius:10px;background:rgba(255,255,255,.04);
+      color:var(--g-ink-soft);font-family:var(--farm-display);font-size:11.5px;font-weight:800;
+      transition:background .15s,color .15s;
+    }
+    .farm-board-tab:hover{color:var(--cream);background:rgba(255,255,255,.08)}
+    .farm-board-tab.active{color:#2a1c08;background:var(--g-accent-grad);border-color:transparent;box-shadow:var(--g-shadow-sm)}
+    .farm-board-row{display:flex;align-items:center;gap:9px;padding:7px 8px;border-top:1px dotted var(--g-border)}
+    .farm-board-row:first-of-type{border-top:none}
+    .farm-board-row.me{background:rgba(251,146,60,.13);border-radius:9px;border-top-color:transparent}
+    .farm-board-rank{min-width:22px;font-family:var(--farm-display);font-size:13px;font-weight:800;color:var(--g-accent-2);text-align:center}
+    .farm-board-name{flex:1;min-width:0;font-size:12.5px;font-weight:700;color:var(--g-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .farm-board-score{font-size:11.5px;font-weight:800;color:var(--g-accent-2);white-space:nowrap;font-variant-numeric:tabular-nums}
     /* Plant-all / Harvest-all row */
     .farm-garden-actions{display:flex;gap:8px;margin:8px 0 4px}
     .farm-garden-actions .farm-shop-buy{flex:1;text-align:center}

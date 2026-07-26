@@ -29,6 +29,19 @@
         farmCartWanted: roomData.farmCartWanted || null,
         farmCartSold: roomData.farmCartSold || null,
         farmTroughLevel: roomData.farmTroughLevel || 0,
+        // Farm social layer. farmCheersTotal is the lifetime cheer count and the
+        // farmWeek* pair powers the two weekly boards (the prev* slot keeps the
+        // week that just ended, which settlement reads). All owner-written: a
+        // visitor's cheer lands in the inbox, and only claiming it moves these.
+        farmCheersTotal: roomData.farmCheersTotal || 0,
+        farmWeekId: roomData.farmWeekId || '',
+        farmWeekCheers: roomData.farmWeekCheers || 0,
+        farmWeekProduce: roomData.farmWeekProduce || 0,
+        farmWeekPrevId: roomData.farmWeekPrevId || '',
+        farmWeekPrevCheers: roomData.farmWeekPrevCheers || 0,
+        farmWeekPrevProduce: roomData.farmWeekPrevProduce || 0,
+        farmHelpDay: roomData.farmHelpDay || '',
+        farmHelpCount: roomData.farmHelpCount || 0,
         aquariumFish: roomData.aquariumFish || [],
         aquariumTheme: roomData.aquariumTheme || 'tropical',
         aquariumLastCollect: roomData.aquariumLastCollect || 0,
@@ -246,6 +259,15 @@
         roomData.farmCartWanted = d.farmCartWanted || null;
         roomData.farmCartSold = d.farmCartSold || null;
         roomData.farmTroughLevel = d.farmTroughLevel || 0;
+        roomData.farmCheersTotal = d.farmCheersTotal || 0;
+        roomData.farmWeekId = d.farmWeekId || '';
+        roomData.farmWeekCheers = d.farmWeekCheers || 0;
+        roomData.farmWeekProduce = d.farmWeekProduce || 0;
+        roomData.farmWeekPrevId = d.farmWeekPrevId || '';
+        roomData.farmWeekPrevCheers = d.farmWeekPrevCheers || 0;
+        roomData.farmWeekPrevProduce = d.farmWeekPrevProduce || 0;
+        roomData.farmHelpDay = d.farmHelpDay || '';
+        roomData.farmHelpCount = d.farmHelpCount || 0;
         _roomLoaded = true;
         // Persist the unique-plant migration now that the full room is loaded.
         if (_plantDedupChanged) {
@@ -427,7 +449,7 @@
       _unsubscribeRoomSnap();
       if (unsubVisitList) { unsubVisitList(); unsubVisitList = null; }
       // Reset roomData to defaults for clean account switch
-      roomData = { coins: 0, petDrops: [], petCollections: {}, autoFeeder: false, autoFeedOn: false, farmAnimals: [], farmDrops: [], farmDecors: [], farmFood: 0, farmFoodAt: 0, farmStock: {}, farmTotalCollected: 0, farmCapLevel: 0, farmAutoCollect: false, farmVariants: {}, farmPlots: [], farmOrdersDay: '', farmOrdersDone: [], farmMachines: {}, farmCartLeftAt: 0, farmTroughLevel: 0, aquariumFish: [], aquariumTheme: 'tropical', aquariumLastCollect: 0, aquariumRaceDay: '', aquariumBubbleDay: '', aquariumFrenzyAt: 0, aquariumLikes: 0, pets: [], plant: null, plantLevels: {}, plantPosition: null, ownedPlants: [], ownedDecors: [], placedDecors: [], ownedWalls: ['wall_default'], wallPattern: 'wall_default', ownedWindows: ['win_none','win_classic'], windowStyle: 'win_classic', ownedFloors: ['floor_wood'], floorStyle: 'floor_wood', ownedAccessories: [], displayName: getPlayerName(), lastCoinCollect: 0, loginStreak: 0, lastLoginDay: '', achievements: [], gachaPulls: 0, giftsGiven: 0, giftsReceived: 0, jukeboxTrack: null, jukeboxVol: 0.5, unlockedLayers: 1, layerData: {} };
+      roomData = { coins: 0, petDrops: [], petCollections: {}, autoFeeder: false, autoFeedOn: false, farmAnimals: [], farmDrops: [], farmDecors: [], farmFood: 0, farmFoodAt: 0, farmStock: {}, farmTotalCollected: 0, farmCapLevel: 0, farmAutoCollect: false, farmVariants: {}, farmPlots: [], farmOrdersDay: '', farmOrdersDone: [], farmMachines: {}, farmCartLeftAt: 0, farmTroughLevel: 0, farmCheersTotal: 0, farmWeekId: '', farmWeekCheers: 0, farmWeekProduce: 0, farmWeekPrevId: '', farmWeekPrevCheers: 0, farmWeekPrevProduce: 0, farmHelpDay: '', farmHelpCount: 0, aquariumFish: [], aquariumTheme: 'tropical', aquariumLastCollect: 0, aquariumRaceDay: '', aquariumBubbleDay: '', aquariumFrenzyAt: 0, aquariumLikes: 0, pets: [], plant: null, plantLevels: {}, plantPosition: null, ownedPlants: [], ownedDecors: [], placedDecors: [], ownedWalls: ['wall_default'], wallPattern: 'wall_default', ownedWindows: ['win_none','win_classic'], windowStyle: 'win_classic', ownedFloors: ['floor_wood'], floorStyle: 'floor_wood', ownedAccessories: [], displayName: getPlayerName(), lastCoinCollect: 0, loginStreak: 0, lastLoginDay: '', achievements: [], gachaPulls: 0, giftsGiven: 0, giftsReceived: 0, jukeboxTrack: null, jukeboxVol: 0.5, unlockedLayers: 1, layerData: {} };
       // Reset to floor 1 when re-initialising (e.g. account switch)
       currentLayer = 1;
       isOutsideView = false;

@@ -251,3 +251,184 @@ test('farmAffordableCount = min(empty plots, coins / seedCost), floored, >= 0', 
   assert.equal(F.farmAffordableCount(5, 10, 7), 0);   // too broke for 1
   assert.equal(F.farmAffordableCount(50, 0, 7), 7);   // free seed → all empties
 });
+
+/* ── Social layer: day / week keys ── */
+
+test('farmDayKey is the local YYYY-MM-DD, zero-padded', () => {
+  assert.equal(F.farmDayKey(new Date(2026, 6, 26)), '2026-07-26');
+  assert.equal(F.farmDayKey(new Date(2026, 0, 5)), '2026-01-05');
+});
+
+test('farmWeekIdFor backs up to the Sunday that starts the week', () => {
+  // 2026-07-26 is a Sunday → it starts its own week.
+  assert.equal(F.farmWeekIdFor(new Date(2026, 6, 26)), '2026-07-26');
+  assert.equal(F.farmWeekIdFor(new Date(2026, 6, 27)), '2026-07-26'); // Mon
+  assert.equal(F.farmWeekIdFor(new Date(2026, 7, 1)), '2026-07-26');  // Sat
+  assert.equal(F.farmWeekIdFor(new Date(2026, 7, 2)), '2026-08-02');  // next Sun
+});
+
+test('farmWeekIdFor crosses a month boundary correctly', () => {
+  assert.equal(F.farmWeekIdFor(new Date(2026, 7, 1)), '2026-07-26');
+});
+
+/* ── farmHelpAllowance ── */
+
+test('farmHelpAllowance spends down today, and resets on a new day', () => {
+  assert.equal(F.farmHelpAllowance('2026-07-26', '2026-07-26', 0, 5), 5);
+  assert.equal(F.farmHelpAllowance('2026-07-26', '2026-07-26', 3, 5), 2);
+  assert.equal(F.farmHelpAllowance('2026-07-26', '2026-07-26', 5, 5), 0);
+  assert.equal(F.farmHelpAllowance('2026-07-26', '2026-07-26', 9, 5), 0);  // never negative
+  assert.equal(F.farmHelpAllowance('2026-07-25', '2026-07-26', 5, 5), 5);  // stale tally → full again
+  assert.equal(F.farmHelpAllowance('', '2026-07-26', 0, 5), 5);            // never helped
+});
+
+/* ── farmInboxEffects ── */
+
+const IN_OPTS = { cheerCoin: 20, cheerCapPerDay: 10, waterMs: 10 * 60 * 1000, feedUnits: 5, giftMaxQty: 5 };
+
+test('farmInboxEffects folds one of each kind into a single settlement', () => {
+  const e = F.farmInboxEffects([
+    { kind: 'cheer', day: '2026-07-26' },
+    { kind: 'water', day: '2026-07-26' },
+    { kind: 'feed', day: '2026-07-26' },
+    { kind: 'gift', day: '2026-07-26', prod: 'milk', qty: 3 },
+  ], IN_OPTS);
+  assert.equal(e.cheers, 1);
+  assert.equal(e.coins, 20);
+  assert.equal(e.waterMs, 10 * 60 * 1000);
+  assert.equal(e.food, 5);
+  assert.deepEqual(e.stock, { milk: 3 });
+  assert.equal(e.gifts, 3);
+});
+
+test('farmInboxEffects: an empty inbox settles to nothing', () => {
+  const e = F.farmInboxEffects([], IN_OPTS);
+  assert.equal(e.coins, 0);
+  assert.equal(e.cheers, 0);
+  assert.equal(e.waterMs, 0);
+  assert.deepEqual(e.stock, {});
+});
+
+test('farmInboxEffects caps paid cheers PER DAY, not per claim', () => {
+  const mk = (day, n) => Array.from({ length: n }, () => ({ kind: 'cheer', day: day }));
+  // 12 cheers in one day → only 10 pay, but all 12 count for popularity.
+  const one = F.farmInboxEffects(mk('2026-07-26', 12), IN_OPTS);
+  assert.equal(one.cheers, 12);
+  assert.equal(one.paidCheers, 10);
+  assert.equal(one.coins, 200);
+  // Same 12 spread over two days → every one of them pays.
+  const two = F.farmInboxEffects(mk('2026-07-25', 6).concat(mk('2026-07-26', 6)), IN_OPTS);
+  assert.equal(two.paidCheers, 12);
+  assert.equal(two.coins, 240);
+});
+
+test('farmInboxEffects re-clamps a gift written under a larger old limit', () => {
+  const e = F.farmInboxEffects([{ kind: 'gift', prod: 'cake', qty: 99 }], IN_OPTS);
+  assert.deepEqual(e.stock, { cake: 5 });
+});
+
+test('farmInboxEffects ignores junk items and malformed gifts', () => {
+  const e = F.farmInboxEffects([
+    null,
+    { kind: 'bogus' },
+    { kind: 'gift', qty: 3 },            // no product
+    { kind: 'gift', prod: 'milk', qty: 0 },
+    { kind: 'gift', prod: 'milk' },      // no qty
+  ], IN_OPTS);
+  assert.deepEqual(e.stock, {});
+  assert.equal(e.coins, 0);
+});
+
+test('farmInboxEffects sums repeat gifts of the same product', () => {
+  const e = F.farmInboxEffects([
+    { kind: 'gift', prod: 'egg', qty: 2 },
+    { kind: 'gift', prod: 'egg', qty: 3 },
+    { kind: 'gift', prod: 'milk', qty: 1 },
+  ], IN_OPTS);
+  assert.deepEqual(e.stock, { egg: 5, milk: 1 });
+  assert.equal(e.gifts, 6);
+});
+
+test('farmInboxEffects stacks water and feed from several helpers', () => {
+  const e = F.farmInboxEffects([
+    { kind: 'water' }, { kind: 'water' }, { kind: 'water' },
+    { kind: 'feed' }, { kind: 'feed' },
+  ], IN_OPTS);
+  assert.equal(e.waterMs, 30 * 60 * 1000);
+  assert.equal(e.food, 10);
+});
+
+/* ── farmWeekBump / farmWeekScore ── */
+
+test('farmWeekBump adds within the same week', () => {
+  const cur = { farmWeekId: 'W1', farmWeekCheers: 4, farmWeekProduce: 30 };
+  const n = F.farmWeekBump(cur, 'W1', 2, 5);
+  assert.equal(n.farmWeekId, 'W1');
+  assert.equal(n.farmWeekCheers, 6);
+  assert.equal(n.farmWeekProduce, 35);
+});
+
+test('farmWeekBump rolls a new week over to zero and files the old one under prev', () => {
+  const cur = { farmWeekId: 'W1', farmWeekCheers: 4, farmWeekProduce: 30, farmWeekPrevId: 'W0', farmWeekPrevCheers: 9, farmWeekPrevProduce: 90 };
+  const n = F.farmWeekBump(cur, 'W2', 1, 2);
+  assert.equal(n.farmWeekId, 'W2');
+  assert.equal(n.farmWeekCheers, 1);       // fresh week starts from the bump alone
+  assert.equal(n.farmWeekProduce, 2);
+  assert.equal(n.farmWeekPrevId, 'W1');    // the week that just ended is kept
+  assert.equal(n.farmWeekPrevCheers, 4);
+  assert.equal(n.farmWeekPrevProduce, 30);
+});
+
+test('farmWeekBump on a brand-new room starts clean', () => {
+  const n = F.farmWeekBump({}, 'W1', 0, 3);
+  assert.equal(n.farmWeekId, 'W1');
+  assert.equal(n.farmWeekCheers, 0);
+  assert.equal(n.farmWeekProduce, 3);
+  assert.equal(n.farmWeekPrevId, '');
+});
+
+test('farmWeekScore finds a week in whichever slot still holds it', () => {
+  const played = { farmWeekId: 'W2', farmWeekCheers: 1, farmWeekPrevId: 'W1', farmWeekPrevCheers: 7 };
+  const idle   = { farmWeekId: 'W1', farmWeekCheers: 7 };   // never opened the farm in W2
+  assert.equal(F.farmWeekScore(played, 'W1', 'Cheers'), 7); // rolled over → prev slot
+  assert.equal(F.farmWeekScore(idle, 'W1', 'Cheers'), 7);   // never rolled → current slot
+  assert.equal(F.farmWeekScore(played, 'W2', 'Cheers'), 1);
+  assert.equal(F.farmWeekScore(played, 'W0', 'Cheers'), 0); // too old to score
+  assert.equal(F.farmWeekScore({}, 'W1', 'Cheers'), 0);
+});
+
+/* ── farmWeekWinners ── */
+
+test('farmWeekWinners ranks by score and pays the prize table in order', () => {
+  const w = F.farmWeekWinners([
+    { uid: 'a', name: 'A', score: 5 },
+    { uid: 'b', name: 'B', score: 20 },
+    { uid: 'c', name: 'C', score: 12 },
+    { uid: 'd', name: 'D', score: 1 },
+  ], [3000, 2000, 1000]);
+  assert.deepEqual(w.map(x => x.uid), ['b', 'c', 'a']);
+  assert.deepEqual(w.map(x => x.prize), [3000, 2000, 1000]);
+  assert.equal(w.length, 3);   // 4th place gets nothing
+});
+
+test('farmWeekWinners drops zero scores, even when that leaves prizes unpaid', () => {
+  const w = F.farmWeekWinners([
+    { uid: 'a', name: 'A', score: 3 },
+    { uid: 'b', name: 'B', score: 0 },
+  ], [3000, 2000, 1000]);
+  assert.equal(w.length, 1);
+  assert.equal(w[0].uid, 'a');
+});
+
+test('farmWeekWinners breaks ties by uid so every client settles identically', () => {
+  const rows = [{ uid: 'zz', name: 'Z', score: 9 }, { uid: 'aa', name: 'A', score: 9 }];
+  const a = F.farmWeekWinners(rows, [3000, 2000]);
+  const b = F.farmWeekWinners(rows.slice().reverse(), [3000, 2000]);
+  assert.deepEqual(a, b);
+  assert.equal(a[0].uid, 'aa');
+});
+
+test('farmWeekWinners on an empty board pays nobody', () => {
+  assert.deepEqual(F.farmWeekWinners([], [3000, 2000, 1000]), []);
+  assert.deepEqual(F.farmWeekWinners(null, [3000]), []);
+});

@@ -69,6 +69,14 @@ service cloud.firestore {
     //          (board + every mini-game + room/farm/aquarium). Accrued client-side by
     //          stay-time.js and folded in via increment(); owner-only write (covered by isOwner).
     //          Powers the 停留榜 leaderboard via orderBy('totalStaySec').
+    //    NOTE: Farm social layer — farmCheersTotal (number, lifetime 👍 received),
+    //          farmWeekId (string, the Sunday YYYY-MM-DD that starts the week) with
+    //          farmWeekCheers / farmWeekProduce, and the farmWeekPrev* triple holding
+    //          the week that just ended (settlement reads it after a rollover).
+    //          farmHelpDay / farmHelpCount cap how many helps a VISITOR is paid for
+    //          per day. All owner-only writes (covered by the isOwner update rule):
+    //          a visitor never writes farm state, they post to farm_inbox (below) and
+    //          the owner folds it in when they claim. See §16d for the boards.
     //    NOTE: Pet World (multiplayer) — worldPet (string type), worldColor (string key),
     //          worldOutfit (string accessory id|null): the player's chosen World avatar,
     //          persisted so it follows them across devices. Owner-only write (covered by
@@ -92,6 +100,40 @@ service cloud.firestore {
                            .affectedKeys()
                            .hasOnly(['coins', 'giftsReceived', 'aquariumLikes']));
       allow delete: if false;
+
+      // ── FARM INBOX — what visitors leave on this farm ──
+      // rooms/{uid}/farm_inbox/{itemId} = { kind, fromUid, fromName, day, at,
+      //                                     prod?, qty? }   (prod/qty: gifts only)
+      // itemId is `${day}_${fromUid}_${kind}` (gifts add `_${prod}`), and update
+      // is FORBIDDEN — so a second write of the same id that day is rejected and
+      // "once a day per farm" is enforced here, not in the browser. This is the
+      // whole reason visitors can't touch farm data directly: a cheer, a
+      // watering, a scoop of feed or a gift lands here, and the OWNER applies it
+      // when they claim (which is an ordinary owner write to their own room).
+      // Claiming deletes the items, so the collection stays short.
+      // A gift is moved out of the sender's own farmStock in the SAME
+      // transaction that creates the doc, so it can't be duplicated.
+      match /farm_inbox/{itemId} {
+        // Only the farm's owner reads their mail; a visitor just posts and goes.
+        allow read: if isOwner(uid);
+        allow create: if isAuth()
+                      && !isBanned(request.auth.uid)
+                      && request.auth.uid != uid                     // no posting to your own inbox
+                      && request.resource.data.fromUid == request.auth.uid
+                      && request.resource.data.kind in ['cheer', 'water', 'feed', 'gift']
+                      && request.resource.data.day is string
+                      && request.resource.data.at is number
+                      // `is number` rather than `is int`: the client already
+                      // floors qty and the claim re-clamps it, so there is no
+                      // reason to risk a rejection over integer encoding.
+                      && (request.resource.data.kind != 'gift'
+                          || (request.resource.data.prod is string
+                              && request.resource.data.qty is number
+                              && request.resource.data.qty >= 1
+                              && request.resource.data.qty <= 5));   // mirrors FARM_GIFT_MAX_QTY
+        allow update: if false;      // ← the once-a-day rule lives here
+        allow delete: if isOwner(uid);
+      }
 
       match /guestbook/{msgId} {
         allow read: if isAuth();
@@ -544,6 +586,30 @@ service cloud.firestore {
         allow create: if isOwner(uid) && request.resource.data.count == 1;
         allow update: if isOwner(uid) && request.resource.data.count == resource.data.count + 1;
       }
+    }
+
+    // ═══════════════════════════════════════
+    // 16d. FARM WEEKLY BOARDS — 🔥 popularity + 🌾 produce, reset every Sunday
+    //     There is no per-week scores collection: both boards are RANKED FROM
+    //     THE ROOMS DOCS themselves (farmWeekId/farmWeekCheers/farmWeekProduce,
+    //     plus the farmWeekPrev* slot holding the week that just ended). Those
+    //     are ordinary owner-written fields covered by §1 — a visitor's cheer
+    //     only becomes a point once the OWNER claims it out of their farm_inbox,
+    //     which is what keeps the popularity board honest.
+    //     Path: farm_week/{weekId} = { settled:true, winners:[{uid,name,score,prize}], at }
+    //     One-time settlement marker for a FINISHED week, same shape as
+    //     chengyu_week: the first client to open the farm in the next week
+    //     creates it and, in the SAME transaction, pays both boards' top 3
+    //     (3000/2000/1000 each) into their rooms. Create-once + no update/delete
+    //     = idempotent payout. Coins land via the rooms "add coins to anyone"
+    //     clause (§1).
+    // ═══════════════════════════════════════
+    match /farm_week/{weekId} {
+      allow read: if isAuth();
+      allow create: if isAuth()
+                    && request.resource.data.settled == true
+                    && request.resource.data.winners is list;
+      allow update, delete: if false;   // immutable once settled → payout can't repeat
     }
 
     // ═══════════════════════════════════════

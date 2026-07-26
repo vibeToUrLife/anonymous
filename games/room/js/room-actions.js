@@ -940,6 +940,17 @@
       roomData.farmOrdersDay = d.farmOrdersDay || '';
       roomData.farmOrdersDone = Array.isArray(d.farmOrdersDone) ? d.farmOrdersDone : [];
       roomData.farmMachines = d.farmMachines || {};
+      // Popularity + weekly board numbers follow whoever's farm we're looking at
+      // (the visitor panel shows the host's 🔥 count). farmHelpDay/farmHelpCount
+      // are deliberately NOT mirrored — those are the VISITOR's own daily
+      // allowance, and a visit must never overwrite them with the host's.
+      roomData.farmCheersTotal = d.farmCheersTotal || 0;
+      roomData.farmWeekId = d.farmWeekId || '';
+      roomData.farmWeekCheers = d.farmWeekCheers || 0;
+      roomData.farmWeekProduce = d.farmWeekProduce || 0;
+      roomData.farmWeekPrevId = d.farmWeekPrevId || '';
+      roomData.farmWeekPrevCheers = d.farmWeekPrevCheers || 0;
+      roomData.farmWeekPrevProduce = d.farmWeekPrevProduce || 0;
       // Mirror the host's aquarium (read-only; placing/liking are gated separately).
       roomData.aquariumFish = Array.isArray(d.aquariumFish) ? d.aquariumFish : [];
       roomData.aquariumTheme = d.aquariumTheme || 'tropical';

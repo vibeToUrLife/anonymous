@@ -43,6 +43,36 @@
     let _workshopModalId = null;      // which machine's modal is open
     let _makeChoiceSlot = null;       // slot index currently choosing a recipe (or null)
     let _slotConfirm = false;         // awaiting confirmation to open (buy) a new slot
+
+    /* ── Social layer state ──
+       A visitor drops an item into the host's farm_inbox; the host claims the
+       batch from the 📮 mailbox on their own farm. Nothing here writes to
+       another player's farm data — see room-base.js FARM_CHEER_COIN & co. */
+    let _farmInbox = null;            // pending inbox items (null = not loaded yet)
+    let _farmInboxUnsub = null;       // live listener on my own inbox (while the farm is open)
+    let _farmInboxOpen = false;       // mailbox modal visible?
+    let _farmInboxBusy = false;       // a claim is in flight (blocks a double-tap double-claim)
+    let _farmSent = {};               // 'uid|kind' → true for actions sent this session (instant UI)
+    let _myHelpLeft = null;           // rewarded helps I have left today (null = not fetched yet)
+    let _myStock = null;              // MY produce, fetched when the gift picker opens (roomData holds the HOST's)
+    let _giftOpen = false;            // gift picker modal visible?
+    let _giftProd = null, _giftQty = 1;
+    let _farmBoards = null;           // { pop: […], prod: […] } built from one rooms scan
+    let _farmBoardTab = 'pop';        // which weekly board the Visit tab shows
+    let _farmLastWeek = null;         // last week's paid winners, once settlement has run
+    let _farmSettleTried = false;     // settlement attempted this page load (it only ever needs to run once)
+    // The three things a visitor can do, in the order they're shown.
+    const FARM_HELP_LABEL = {
+      cheer: { emoji: '👍', name: '点赞', done: '点赞', hint: '给他鼓个劲' },
+      water: { emoji: '💧', name: '浇水', done: '浇水', hint: '作物快 10 分钟' },
+      feed:  { emoji: '🌾', name: '添料', done: '添料', hint: '食槽 +5' },
+    };
+    const FARM_HELP_KINDS = ['cheer', 'water', 'feed'];
+    // Tuning passed to the pure settlement in room-farm.js.
+    const FARM_INBOX_OPTS = {
+      cheerCoin: FARM_CHEER_COIN, cheerCapPerDay: FARM_CHEER_DAILY_CAP,
+      waterMs: FARM_WATER_MS, feedUnits: FARM_FEED_UNITS, giftMaxQty: FARM_GIFT_MAX_QTY,
+    };
     const FARM_CART_X = 0.84, FARM_CART_Y = 0.19; // where the sky merchant plane hovers (normalized; up in the sky band)
     /* On a narrow stage the plane moves in from the corner and grows. At 0.84 it
        hovers right against the tree at 0.94, and a 47px sprite camouflaged
@@ -69,6 +99,16 @@
       const labelH = Math.max(11, Math.min(16, W * 0.03)) + 8;   // matches _drawPenLabels
       return FARM_PEN_TOP - (labelH + 12) / Math.max(1, H);
     }
+
+    // The 📮 mailbox stands on the same clear grass strip as the trough, but on
+    // the far side — left of the workshop huts is the trough, right of them is
+    // the mail. Own farm only: a visitor has no mail here to read.
+    const FARM_MAIL_X = 0.90;
+    function _farmMailPos(W, H) { return { x: FARM_MAIL_X, y: _farmTroughY(W, H) }; }
+    // Tap radius. The plane's zone (0.18 around ~0.84,0.19) overlaps this on a
+    // wide stage, so the mailbox is hit-tested FIRST — same rule the machine huts
+    // already follow, where a specific target beats the plane's catch-all.
+    const FARM_MAIL_R = 0.12;
 
     /* ── Scene vertical budget (fractions of canvas height) ──
        Single source of truth for the horizon and the animal band. The whole
@@ -251,11 +291,8 @@
       return { W: (v && v.clientWidth) || 900, H: (v && v.clientHeight) || 600 };
     }
 
-    // Local YYYY-MM-DD for the daily orders seed.
-    function _farmToday() {
-      const d = new Date();
-      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    }
+    // Local YYYY-MM-DD — the daily orders seed and the inbox's "once a day" key.
+    function _farmToday() { return farmDayKey(new Date()); }
     // Today's deterministic delivery orders (same for everyone that day).
     function _farmOrders() {
       const prices = farmProductPrices();
@@ -296,6 +333,7 @@
       }
       const n = drops.length;
       roomData.farmDrops = [];
+      _farmWeekAddProduce(n);
       return n;
     }
 
@@ -325,16 +363,20 @@
     function _subFarmVisitList() {
       if (_farmVisitUnsub || typeof db === 'undefined') return;
       try {
-        _farmVisitUnsub = db.collection('rooms').orderBy('updatedAt', 'desc').limit(20)
+        _farmVisitUnsub = db.collection('rooms').orderBy('updatedAt', 'desc').limit(FARM_ROOMS_SCAN)
           .onSnapshot(function (snap) {
-            const rooms = [], now = Date.now();
+            const rooms = [], all = [], now = Date.now();
             snap.forEach(function (doc) {
-              if (doc.id === currentUid) return;                 // never list myself
               const d = doc.data();
-              rooms.push({ uid: doc.id, name: d.displayName, animals: (d.farmAnimals || []).length, online: !!(d.lastSeen && (now - d.lastSeen) < 60000) });
+              // The boards rank EVERYONE (me included); the visit list is the
+              // same scan minus myself. One query, two consumers.
+              all.push(Object.assign({}, d, { uid: doc.id, name: d.displayName }));
+              if (doc.id === currentUid) return;                 // never list myself
+              rooms.push({ uid: doc.id, name: d.displayName, animals: (d.farmAnimals || []).length, cheers: d.farmCheersTotal || 0, online: !!(d.lastSeen && (now - d.lastSeen) < 60000) });
             });
             rooms.sort(function (a, b) { return (b.online ? 1 : 0) - (a.online ? 1 : 0); });   // online first
-            _farmVisitRooms = rooms;
+            _farmVisitRooms = rooms.slice(0, FARM_VISIT_MAX);
+            _farmBoards = _buildFarmBoards(all);
             // Repaint only if the list is currently on screen.
             if (isFarmView && (viewingUid !== currentUid || _farmTab === 'visit')) renderFarmPanel();
           }, function () {});
@@ -349,7 +391,8 @@
       if (_farmVisitRooms == null) return '<div class="farm-panel-empty">加载农场列表中…</div>';
       if (!_farmVisitRooms.length) return '<div class="farm-panel-empty">暂时没有其他农场可参观。</div>';
       return _farmVisitRooms.map(function (r) {
-        const peek = r.animals ? '🐮 ×' + r.animals : '<span style="opacity:.5">空农场</span>';
+        const peek = (r.animals ? '🐮 ×' + r.animals : '<span style="opacity:.5">空农场</span>') +
+                     (r.cheers ? '　🔥 ' + r.cheers : '');
         return '<div class="farm-visit-row" onclick="visitFarm(\'' + r.uid + '\')">' +
           '<span class="farm-visit-emoji">🚜</span>' +
           '<span class="farm-visit-info">' +
@@ -366,7 +409,476 @@
     async function visitFarm(uid) {
       if (typeof visitRoom !== 'function') return;
       await visitRoom(uid);
+      _myHelpLeft = null;   // allowance is read from MY doc; re-read it for the farm we land on
+      _myStock = null;
+      _unsubFarmInbox();    // my mailbox listener doesn't follow me to someone else's farm
+      closeFarmInbox();
+      closeGiftPicker();
       openFarm();
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       Social layer — visitor inbox, gifts, weekly boards
+       A visitor never writes to the host's farm. They create ONE doc in
+       rooms/{host}/farm_inbox, and the host applies it when they claim.
+       The doc id is `${day}_${fromUid}_${kind}`, and the rules allow create
+       but never update — so "once a day per farm" is enforced by the server,
+       not by this file.
+       ══════════════════════════════════════════════════════════════ */
+
+    function _inboxCol(uid) { return db.collection('rooms').doc(uid).collection('farm_inbox'); }
+    function _inboxId(kind, prod) {
+      return _farmToday() + '_' + currentUid + '_' + kind + (prod ? '_' + prod : '');
+    }
+    function _farmInboxCount() { return (_farmInbox || []).length; }
+
+    // Live listener on MY inbox while my farm is open, so mail that arrives
+    // mid-session lights the mailbox up without a reload. Owner only.
+    function _subFarmInbox() {
+      if (_farmInboxUnsub || typeof db === 'undefined' || !currentUid || viewingUid !== currentUid) return;
+      try {
+        _farmInboxUnsub = _inboxCol(currentUid).limit(FARM_INBOX_MAX).onSnapshot(function (snap) {
+          const items = [];
+          snap.forEach(function (doc) { items.push(Object.assign({ id: doc.id }, doc.data())); });
+          items.sort(function (a, b) { return (a.at || 0) - (b.at || 0); });
+          _farmInbox = items;
+          if (isFarmView) { renderFarmPanel(); if (_farmInboxOpen) renderFarmInbox(); }
+        }, function () { _farmInbox = []; });
+      } catch (e) { _farmInbox = []; }
+    }
+    function _unsubFarmInbox() {
+      if (_farmInboxUnsub) { _farmInboxUnsub(); _farmInboxUnsub = null; }
+      _farmInbox = null;
+    }
+
+    /* ── Visitor side ── */
+
+    // My remaining REWARDED helps today. Read from my OWN doc, not roomData:
+    // while visiting, roomData holds the HOST's farm.
+    let _helpLeftFetching = false;
+    async function _refreshMyHelpLeft() {
+      if (_myHelpLeft != null || _helpLeftFetching || typeof db === 'undefined' || !currentUid) return;
+      _helpLeftFetching = true;
+      try {
+        const snap = await userDocRef(currentUid).get();
+        const d = snap.exists ? snap.data() : {};
+        _myHelpLeft = farmHelpAllowance(d.farmHelpDay, _farmToday(), d.farmHelpCount, FARM_HELP_DAILY_CAP);
+      } catch (e) { _myHelpLeft = FARM_HELP_DAILY_CAP; }
+      _helpLeftFetching = false;
+      if (isFarmView && viewingUid !== currentUid) renderFarmPanel();
+    }
+
+    // Pay me for a helpful action and spend one of today's allowance — one
+    // transaction on my own doc so two farms helped at once can't both pay from
+    // the same slot. Returns the coins actually paid (0 once the cap is used up).
+    async function _payVisitorHelp() {
+      const today = _farmToday();
+      const ref = userDocRef(currentUid);
+      return await db.runTransaction(async function (tx) {
+        const snap = await tx.get(ref);
+        const d = snap.exists ? snap.data() : {};
+        const left = farmHelpAllowance(d.farmHelpDay, today, d.farmHelpCount, FARM_HELP_DAILY_CAP);
+        const pay = left > 0 ? FARM_HELP_REWARD : 0;
+        tx.set(ref, {
+          farmHelpDay: today,
+          farmHelpCount: (d.farmHelpDay === today ? (d.farmHelpCount || 0) : 0) + 1,
+          coins: firebase.firestore.FieldValue.increment(pay),
+        }, { merge: true });
+        return pay;
+      });
+    }
+
+    // 👍 / 💧 / 🌾 — drop one item in the host's inbox, then pay myself. The
+    // inbox write goes first: if it's rejected (already sent today) nothing is
+    // paid, and if the payment fails afterwards the host still gets the help.
+    async function helpFarm(kind) {
+      if (viewingUid === currentUid || typeof db === 'undefined') return;
+      const key = viewingUid + '|' + kind;
+      if (_farmSent[key]) return showToast('今天已经' + FARM_HELP_LABEL[kind].done + '过了，明天再来吧！', '');
+      const host = roomData.displayName || 'this';
+      try {
+        await _inboxCol(viewingUid).doc(_inboxId(kind)).set({
+          kind: kind, fromUid: currentUid, fromName: getPlayerName(), day: _farmToday(), at: Date.now(),
+        });
+      } catch (e) {
+        // The rules forbid update, so a same-day repeat is rejected — that's the
+        // only error that means "already done". Anything else (offline, a flaky
+        // write) must stay retryable, so the button is NOT marked as spent.
+        if (e && e.code === 'permission-denied') {
+          _farmSent[key] = true;
+          renderFarmPanel();
+          return showToast('今天已经' + FARM_HELP_LABEL[kind].done + '过这个农场了！', '');
+        }
+        return showToast('没送出去，网络好像不太顺 — 再试一次？', 'error');
+      }
+      _farmSent[key] = true;
+      let paid = 0;
+      try { paid = await _payVisitorHelp(); } catch (e) { /* helped anyway — just unpaid */ }
+      if (paid > 0) {
+        roomData.coins = (roomData.coins || 0) + paid;   // visitRoom leaves coins mine, so this is my balance
+        if (typeof logCoin === 'function') logCoin(paid, '帮忙农场 ' + FARM_HELP_LABEL[kind].emoji);
+        if (_myHelpLeft != null) _myHelpLeft = Math.max(0, _myHelpLeft - 1);
+        // Write the header directly rather than renderAll() — we're standing in
+        // someone else's room, and roomData's room fields are theirs, not ours.
+        const _ca = document.getElementById('coinAmount');
+        if (_ca) _ca.textContent = Math.floor(roomData.coins || 0);
+      } else if (_myHelpLeft != null) {
+        _myHelpLeft = 0;
+      }
+      for (let i = 0; i < 6; i++) {
+        _farmParticles.push({ text: FARM_HELP_LABEL[kind].emoji, x: 0.2 + Math.random() * 0.6, y: 0.7 + Math.random() * 0.1, vy: -0.0012 - Math.random() * 0.0008, life: 1500, born: performance.now() });
+      }
+      renderFarmPanel();
+      showToast(FARM_HELP_LABEL[kind].emoji + ' 你' + FARM_HELP_LABEL[kind].done + '了 ' + host + ' 的农场' +
+                (paid > 0 ? ' · +' + paid + '🪙' : ' · 今日奖励已用完'), 'success');
+    }
+
+    /* ── Gift picker (send produce from MY barn to the farm I'm visiting) ── */
+
+    async function openGiftPicker() {
+      if (viewingUid === currentUid) return;
+      _giftOpen = true; _giftProd = null; _giftQty = 1;
+      renderGiftPicker();
+      if (_myStock == null) {
+        try {
+          const snap = await userDocRef(currentUid).get();   // roomData holds the HOST's barn — read my own
+          _myStock = (snap.exists ? snap.data().farmStock : null) || {};
+        } catch (e) { _myStock = {}; }
+        renderGiftPicker();
+      }
+    }
+    function closeGiftPicker() {
+      _giftOpen = false;
+      const el = document.getElementById('farmGiftModal');
+      if (el) el.style.display = 'none';
+    }
+    function pickGiftProd(id) {
+      _giftProd = id;
+      _giftQty = Math.min(_giftQty, Math.min(FARM_GIFT_MAX_QTY, (_myStock || {})[id] || 1));
+      renderGiftPicker();
+    }
+    function setGiftQty(d) {
+      const max = Math.min(FARM_GIFT_MAX_QTY, (_myStock || {})[_giftProd] || 1);
+      _giftQty = Math.max(1, Math.min(max, _giftQty + d));
+      renderGiftPicker();
+    }
+    function renderGiftPicker() {
+      const el = document.getElementById('farmGiftModal');
+      if (!el) return;
+      if (!_giftOpen) { el.style.display = 'none'; return; }
+      const meta = farmProductMeta();
+      const stock = _myStock || {};
+      const ids = Object.keys(stock).filter(k => stock[k] > 0);
+      let body;
+      if (_myStock == null) {
+        body = '<div class="farm-panel-empty">读取你的仓库中…</div>';
+      } else if (!ids.length) {
+        body = '<div class="farm-panel-empty">你的仓库是空的 — 先去收点产物吧。</div>';
+      } else {
+        const max = _giftProd ? Math.min(FARM_GIFT_MAX_QTY, stock[_giftProd] || 1) : 1;
+        body = '<div class="farm-gift-grid">' + ids.map(function (id) {
+          const m = meta[id] || { emoji: '❓', name: id };
+          return '<button class="farm-gift-item' + (id === _giftProd ? ' on' : '') + '" onclick="pickGiftProd(\'' + id + '\')">' +
+            '<span class="farm-gift-emoji">' + m.emoji + '</span>' +
+            '<span class="farm-gift-name">' + escapeHtml(m.name) + '</span>' +
+            '<span class="farm-gift-have">×' + stock[id] + '</span>' +
+          '</button>';
+        }).join('') + '</div>' +
+        (_giftProd
+          ? '<div class="farm-gift-qty">' +
+              '<button onclick="setGiftQty(-1)"' + (_giftQty <= 1 ? ' disabled' : '') + '>−</button>' +
+              '<span>' + (meta[_giftProd] || {}).emoji + ' ×' + _giftQty + '</span>' +
+              '<button onclick="setGiftQty(1)"' + (_giftQty >= max ? ' disabled' : '') + '>+</button>' +
+            '</div>' +
+            '<button class="cp-crop farm-gift-send" onclick="sendFarmGift()">🎁 送出 ' + (meta[_giftProd] || {}).emoji + ' ×' + _giftQty + '</button>'
+          : '<div class="farm-panel-empty">挑一样东西送过去（每天每样一次，最多 ' + FARM_GIFT_MAX_QTY + ' 个）。</div>');
+      }
+      el.innerHTML =
+        '<div class="ws-box">' +
+          '<div class="ws-head">🎁 送给 ' + escapeHtml(roomData.displayName || '这位农场主') + '</div>' +
+          '<div class="ws-sub">从你自己的仓库里拿 — 对方下次进农场时领取。</div>' +
+          body +
+          '<button class="cp-crop farm-gift-cancel" onclick="closeGiftPicker()">取消</button>' +
+        '</div>';
+      el.style.display = 'flex';
+    }
+
+    // Move produce from my barn into the host's inbox in ONE transaction, so it
+    // can never be deducted without arriving (or arrive without being deducted).
+    async function sendFarmGift() {
+      if (viewingUid === currentUid || !_giftProd || typeof db === 'undefined') return;
+      const prod = _giftProd, host = viewingUid;
+      const qty = Math.max(1, Math.min(FARM_GIFT_MAX_QTY, Math.floor(_giftQty) || 1));
+      const meta = farmProductMeta()[prod] || { emoji: '🎁', name: prod };
+      const meRef = userDocRef(currentUid);
+      const inboxRef = _inboxCol(host).doc(_inboxId('gift', prod));
+      try {
+        await db.runTransaction(async function (tx) {
+          const snap = await tx.get(meRef);
+          const mine = (snap.exists ? snap.data().farmStock : null) || {};
+          if ((mine[prod] || 0) < qty) throw new Error('nostock');
+          const next = Object.assign({}, mine);
+          next[prod] -= qty;
+          if (next[prod] <= 0) delete next[prod];
+          tx.set(meRef, { farmStock: next }, { merge: true });
+          tx.set(inboxRef, {                       // create-only: a repeat today is denied by the rules
+            kind: 'gift', prod: prod, qty: qty,
+            fromUid: currentUid, fromName: getPlayerName(), day: _farmToday(), at: Date.now(),
+          });
+        });
+      } catch (e) {
+        if (e && e.message === 'nostock') return showToast('仓库里不够了！', 'error');
+        if (e && e.code === 'permission-denied') return showToast('今天已经送过 ' + meta.emoji + ' 给这个农场了。', '');
+        return showToast('没送出去，网络好像不太顺 — 再试一次？', 'error');
+      }
+      if (_myStock) {                              // keep the picker's numbers honest
+        _myStock[prod] = (_myStock[prod] || 0) - qty;
+        if (_myStock[prod] <= 0) delete _myStock[prod];
+      }
+      closeGiftPicker();
+      for (let i = 0; i < 6; i++) {
+        _farmParticles.push({ text: meta.emoji, x: 0.2 + Math.random() * 0.6, y: 0.7 + Math.random() * 0.1, vy: -0.0012, life: 1500, born: performance.now() });
+      }
+      renderFarmPanel();
+      showToast('🎁 送出 ' + meta.emoji + ' ×' + qty + ' 给 ' + (roomData.displayName || '对方') + '！', 'success');
+    }
+
+    /* ── Owner side: the 📮 mailbox ── */
+
+    function openFarmInbox() {
+      if (viewingUid !== currentUid) return;
+      _farmInboxOpen = true;
+      renderFarmInbox();
+    }
+    function closeFarmInbox() {
+      _farmInboxOpen = false;
+      const el = document.getElementById('farmInboxModal');
+      if (el) el.style.display = 'none';
+    }
+    function renderFarmInbox() {
+      const el = document.getElementById('farmInboxModal');
+      if (!el) return;
+      if (!_farmInboxOpen) { el.style.display = 'none'; return; }
+      const items = _farmInbox || [];
+      const meta = farmProductMeta();
+      const eff = farmInboxEffects(items, FARM_INBOX_OPTS);
+      const rows = items.map(function (it) {
+        const who = escapeHtml(it.fromName || '某位农场主');
+        let what;
+        if (it.kind === 'cheer') what = '👍 给你点了赞';
+        else if (it.kind === 'water') what = '💧 帮你浇了水';
+        else if (it.kind === 'feed') what = '🌾 帮你添了料';
+        else if (it.kind === 'gift') { const m = meta[it.prod] || { emoji: '🎁', name: it.prod }; what = '🎁 送了 ' + m.emoji + ' ×' + (it.qty || 0); }
+        else what = '❓';
+        return '<div class="ws-slot"><span class="ws-slot-no">' + who + '</span><span class="ws-slot-state">' + what + '</span></div>';
+      }).join('');
+      const gained = [];
+      if (eff.coins) gained.push(eff.coins + '🪙');
+      if (eff.food) gained.push('🌾 食槽 +' + eff.food);
+      if (eff.waterMs) gained.push('💧 作物快 ' + _fmtFarmTime(eff.waterMs));
+      if (eff.gifts) gained.push('🎁 ' + eff.gifts + ' 件产物');
+      const unpaid = eff.cheers - eff.paidCheers;
+      el.innerHTML =
+        '<div class="ws-box">' +
+          '<div class="ws-head">📮 农场信箱 <span class="farm-panel-cap">' + items.length + '</span></div>' +
+          (items.length
+            ? '<div class="ws-sub">串门的人给你留下了这些。</div>' + rows +
+              '<div class="farm-inbox-sum">领取可得：' + (gained.join(' · ') || '—') + '</div>' +
+              (unpaid > 0 ? '<div class="farm-panel-empty">其中 ' + unpaid + ' 个赞超过了当天 ' + FARM_CHEER_DAILY_CAP + ' 个的计币上限，仍然计入人气。</div>' : '') +
+              '<button class="cp-crop farm-inbox-claim" onclick="claimFarmInbox()"' + (_farmInboxBusy ? ' disabled' : '') + '>📬 全部领取</button>'
+            : '<div class="ws-sub">还没有人来串门。去别人的农场帮个忙，他们多半会回访。</div>') +
+          '<button class="cp-crop farm-gift-cancel" onclick="closeFarmInbox()">关闭</button>' +
+        '</div>';
+      el.style.display = 'flex';
+    }
+
+    // Claim the whole inbox. The room-doc update and the inbox deletes go in ONE
+    // batch — Firestore batches are atomic across documents, so the mail can
+    // never be consumed without paying out, nor paid out twice.
+    async function claimFarmInbox() {
+      if (viewingUid !== currentUid || _farmInboxBusy) return;
+      const items = (_farmInbox || []).slice();
+      if (!items.length) return;
+      _farmInboxBusy = true;
+      renderFarmInbox();
+      const eff = farmInboxEffects(items, FARM_INBOX_OPTS);
+      const now = Date.now();
+
+      // Build the new field values WITHOUT touching roomData — if the batch
+      // fails we must be left exactly where we started.
+      const coins = (roomData.coins || 0) + eff.coins;
+      const food = Math.min(farmFoodMax(), (roomData.farmFood || 0) + eff.food);
+      const stock = Object.assign({}, roomData.farmStock || {});
+      for (const k in eff.stock) stock[k] = (stock[k] || 0) + eff.stock[k];
+      // Watering only helps crops that are still growing; a ripe bed is already
+      // waiting for you, so pulling its clock back further buys nothing.
+      const plots = (roomData.farmPlots || []).map(function (p) {
+        if (!p || !p.crop || !eff.waterMs) return p;
+        const c = FARM_CROPS.find(x => x.id === p.crop);
+        if (!c || cropProgress(p.plantedAt, now, c.growMs) >= 1) return p;
+        return Object.assign({}, p, { plantedAt: p.plantedAt - eff.waterMs });
+      });
+      const week = farmWeekBump(roomData, farmWeekIdFor(new Date()), eff.cheers, 0);
+      const fields = Object.assign({
+        coins: coins,
+        farmFood: food,
+        farmFoodAt: roomData.farmFoodAt || now,
+        farmStock: stock,
+        farmPlots: plots,
+        farmCheersTotal: (roomData.farmCheersTotal || 0) + eff.cheers,
+      }, week);
+
+      try {
+        const batch = db.batch();
+        batch.set(userDocRef(currentUid), fields, { merge: true });
+        items.forEach(function (it) { batch.delete(_inboxCol(currentUid).doc(it.id)); });
+        await batch.commit();
+      } catch (e) {
+        _farmInboxBusy = false;
+        renderFarmInbox();
+        return showToast('领取失败，请稍后再试。', 'error');
+      }
+
+      Object.assign(roomData, fields);             // now mirror what we just wrote
+      if (eff.coins && typeof logCoin === 'function') logCoin(eff.coins, '农场人气 👍');
+      // The batch wrote only the fields the claim changes. Follow it with a
+      // normal save so the coin-history row lands too — and so anything the
+      // 60s production tick left pending (new drops, happiness) goes with it.
+      saveRoom();
+      _farmInbox = [];
+      _farmInboxBusy = false;
+      closeFarmInbox();
+      renderFarmPanel();
+      renderAll();
+      const bits = [];
+      if (eff.coins) bits.push('+' + eff.coins + '🪙');
+      if (eff.food) bits.push('🌾+' + eff.food);
+      if (eff.waterMs) bits.push('💧 作物快了 ' + _fmtFarmTime(eff.waterMs));
+      if (eff.gifts) bits.push('🎁 ' + eff.gifts + ' 件');
+      for (let i = 0; i < 8; i++) {
+        _farmParticles.push({ text: ['👍', '💧', '🎁', '✨'][i % 4], x: 0.2 + Math.random() * 0.6, y: 0.6 + Math.random() * 0.1, vy: -0.0012, life: 1600, born: performance.now() });
+      }
+      showToast('📬 领取了 ' + items.length + ' 份心意 · ' + (bits.join(' · ') || '谢谢他们！'), 'success');
+    }
+
+    /* ── Weekly boards (🔥 popularity + 🌾 produce) ── */
+
+    // Count produce toward this week's 🌾 board, rolling the week over if the
+    // stored counters belong to an older one. Called wherever produce lands.
+    function _farmWeekAddProduce(n) {
+      if (viewingUid !== currentUid || !(n > 0)) return;
+      Object.assign(roomData, farmWeekBump(roomData, farmWeekIdFor(new Date()), 0, n));
+    }
+
+    // Coarse countdown for the weekly board — _fmtFarmTime would render five
+    // days as "119h 30m", which nobody can read at a glance.
+    function _fmtFarmDays(ms) {
+      const h = Math.max(0, Math.ceil(ms / 3600000));
+      if (h < 24) return h + '小时';
+      return Math.floor(h / 24) + '天' + (h % 24 ? ' ' + (h % 24) + '小时' : '');
+    }
+
+    // ms until this week's board closes (Sunday 00:00 local).
+    function _farmWeekLeftMs() {
+      const now = new Date();
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      end.setDate(end.getDate() + (7 - end.getDay()));
+      return end.getTime() - now.getTime();
+    }
+
+    // One scan of the rooms collection serves the visit list AND both boards —
+    // the collection is small (a friend group), so a second query per board
+    // would be pure waste. Returns the raw rows.
+    function _buildFarmBoards(rows) {
+      const week = farmWeekIdFor(new Date());
+      const board = (field) => rows
+        .map(r => ({ uid: r.uid, name: r.name, score: farmWeekScore(r, week, field) }))
+        .filter(r => r.score > 0)
+        .sort((a, b) => (b.score - a.score) || (a.uid < b.uid ? -1 : 1))
+        .slice(0, FARM_WEEK_BOARD_N);
+      return { pop: board('Cheers'), prod: board('Produce') };
+    }
+
+    function switchFarmBoard(id) { _farmBoardTab = id; renderFarmPanel(); }
+
+    function _farmBoardHtml() {
+      const b = _farmBoards;
+      const rows = b ? (_farmBoardTab === 'pop' ? b.pop : b.prod) : null;
+      const unit = _farmBoardTab === 'pop' ? '👍' : '🌾';
+      const medals = ['🥇', '🥈', '🥉'];
+      let list;
+      if (!rows) list = '<div class="farm-panel-empty">读取排行榜中…</div>';
+      else if (!rows.length) list = '<div class="farm-panel-empty">本周还没有人上榜 — 去串个门就能开张。</div>';
+      else list = rows.map(function (r, i) {
+        return '<div class="farm-board-row' + (r.uid === currentUid ? ' me' : '') + '">' +
+          '<span class="farm-board-rank">' + (medals[i] || (i + 1)) + '</span>' +
+          '<span class="farm-board-name">' + escapeHtml(r.name || '匿名') + '</span>' +
+          '<span class="farm-board-score">' + r.score + ' ' + unit + '</span>' +
+        '</div>';
+      }).join('');
+      const mine = rows && rows.some(r => r.uid === currentUid);
+      const last = _farmLastWeek && _farmLastWeek.length
+        ? '<div class="farm-panel-empty" style="padding-top:6px">上周得主：' + _farmLastWeek.map(function (w) {
+            return (w.board === 'prod' ? '🌾 ' : '🔥 ') + escapeHtml(w.name || '匿名') + ' +' + w.prize + '🪙';
+          }).join(' · ') + '</div>'
+        : '';
+      return '<div class="farm-section-title">🏅 农场周榜 <span class="farm-panel-cap">' + _fmtFarmDays(_farmWeekLeftMs()) + '后结算</span></div>' +
+        '<div class="farm-board-tabs">' +
+          '<button class="farm-board-tab' + (_farmBoardTab === 'pop' ? ' active' : '') + '" onclick="switchFarmBoard(\'pop\')">🔥 人气</button>' +
+          '<button class="farm-board-tab' + (_farmBoardTab === 'prod' ? ' active' : '') + '" onclick="switchFarmBoard(\'prod\')">🌾 产量</button>' +
+        '</div>' +
+        list +
+        (rows && rows.length && !mine ? '<div class="farm-panel-empty">你还没进前 ' + FARM_WEEK_BOARD_N + ' 名。</div>' : '') +
+        '<div class="farm-panel-empty" style="padding-top:6px">每周日 00:00 结算，两个榜各发 ' + FARM_WEEK_PRIZES.join(' / ') + '🪙。</div>' +
+        last;
+    }
+
+    // The first client to open the farm in a NEW week pays last week's top 3 on
+    // BOTH boards and writes a one-time marker, all in one transaction guarded by
+    // that marker — so the payout can never run twice however many clients race.
+    // Same shape as the 成语接龙 weekly settlement.
+    async function _maybeSettleFarmWeek() {
+      if (_farmSettleTried || typeof db === 'undefined' || !currentUid) return;
+      _farmSettleTried = true;
+      const now = new Date();
+      const prevWeek = farmWeekIdFor(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7));
+      const markerRef = db.collection('farm_week').doc(prevWeek);
+      try {
+        const marker = await markerRef.get();
+        if (marker.exists && (marker.data() || {}).settled) {
+          _farmLastWeek = ((marker.data() || {}).winners || []).filter(w => w && w.prize);
+          if (isFarmView) renderFarmPanel();
+          return;
+        }
+        const snap = await db.collection('rooms').orderBy('updatedAt', 'desc').limit(FARM_ROOMS_SCAN).get();
+        const rows = [];
+        snap.forEach(function (doc) {
+          const d = doc.data() || {};
+          rows.push(Object.assign({}, d, { uid: doc.id, name: d.displayName }));
+        });
+        const score = (field) => rows.map(r => ({ uid: r.uid, name: r.name, score: farmWeekScore(r, prevWeek, field) }));
+        const pop = farmWeekWinners(score('Cheers'), FARM_WEEK_PRIZES);
+        const prod = farmWeekWinners(score('Produce'), FARM_WEEK_PRIZES);
+        const winners = await db.runTransaction(async function (tx) {
+          const m = await tx.get(markerRef);
+          if (m.exists && (m.data() || {}).settled) return (m.data() || {}).winners || [];   // someone beat us to it
+          const paid = [];
+          const total = {};
+          pop.forEach(function (w) { paid.push(Object.assign({ board: 'pop' }, w)); });
+          prod.forEach(function (w) { paid.push(Object.assign({ board: 'prod' }, w)); });
+          paid.forEach(function (w) {                     // top both boards → both prizes, paid once
+            if (w.prize > 0) total[w.uid] = (total[w.uid] || 0) + w.prize;
+          });
+          for (const uid in total) {
+            tx.set(db.collection('rooms').doc(uid),
+                   { coins: firebase.firestore.FieldValue.increment(total[uid]) }, { merge: true });
+          }
+          tx.set(markerRef, { settled: true, winners: paid, at: Date.now() });   // create-once (rules forbid update/delete)
+          return paid;
+        });
+        _farmLastWeek = (winners || []).filter(w => w && w.prize);
+        if (isFarmView) renderFarmPanel();
+      } catch (e) { /* another client settled it, or we're offline — safe to skip */ }
     }
 
     function openFarm() {
@@ -374,8 +886,10 @@
       document.getElementById('farmView')?.classList.add('visible');
       _setFarmPanelMode(true);
       _syncRoomPanel();   // hide the side panel; widens the stage before we draw
+      _maybeSettleFarmWeek();   // pays last week's board winners, once per page load
       if (viewingUid === currentUid) {
         if ((roomData.farmDecors || []).length) roomData.farmDecors = []; // decor feature removed
+        _subFarmInbox();
         _ensureFarmOrders();
         // Offline "while you were away" produce (capped at 3h). Owner only.
         const off = _offlinePlan();
@@ -465,6 +979,7 @@
         const a = roomData.farmAnimals.find(an => an.id === s.animalId);
         if (a) a.collected = (a.collected || 0) + 1;
       }
+      _farmWeekAddProduce(plan.spawns.length);
     }
 
     // The mandatory "while you were away" collect modal. No close button; tapping
@@ -514,6 +1029,8 @@
       closeWorkshopModal();
       closeAnimalModal();
       closeProduceModal();
+      closeFarmInbox();
+      closeGiftPicker();
       _hideFarmAway();
       _hideFarmTip();
       document.getElementById('farmView')?.classList.remove('visible');
@@ -526,6 +1043,7 @@
       clearInterval(_farmTickInterval);
       _farmTickInterval = null;
       _unsubFarmVisitList();
+      _unsubFarmInbox();
     }
 
     // Farm "← Back": a visitor returns to their OWN farm (so they keep farming);
@@ -540,27 +1058,47 @@
       const panel = document.getElementById('farmPanel');
       if (!panel) return;
 
-      // Visiting someone else's farm — read-only summary + a friendly cheer.
+      // Visiting someone else's farm — read-only summary plus the three helping
+      // hands and a gift. None of these touch the host's farm: each drops one
+      // doc in their inbox for them to claim (see helpFarm / sendFarmGift).
       if (viewingUid !== currentUid) {
         const herd = roomData.farmAnimals || [];
         const counts = {};
         for (const a of herd) counts[a.type] = (counts[a.type] || 0) + 1;
         const herdLine = FARM_ANIMALS.filter(d => counts[d.id]).map(d => d.emoji + '×' + counts[d.id]).join('  ') || 'No animals yet';
+        _refreshMyHelpLeft();   // fire-and-forget; re-renders once my allowance is known
+        const left = _myHelpLeft;
+        const helpBtns = FARM_HELP_KINDS.map(function (k) {
+          const L = FARM_HELP_LABEL[k];
+          const done = !!_farmSent[viewingUid + '|' + k];
+          return '<button class="farm-help-btn' + (done ? ' done' : '') + '" onclick="helpFarm(\'' + k + '\')"' + (done ? ' disabled' : '') + '>' +
+            '<span class="farm-help-emoji">' + L.emoji + '</span>' +
+            '<span class="farm-help-name">' + (done ? '已' + L.done : L.name) + '</span>' +
+            '<span class="farm-help-hint">' + (done ? '明天再来' : L.hint) + '</span>' +
+          '</button>';
+        }).join('');
         panel.innerHTML =
-          '<div class="farm-panel-head">🚜 ' + (roomData.displayName || 'Their') + '\'s Farm</div>' +
+          '<div class="farm-panel-head">🚜 ' + escapeHtml(roomData.displayName || 'Their') + '\'s Farm ' +
+            '<span class="farm-panel-cap">🔥 ' + (roomData.farmCheersTotal || 0) + '</span></div>' +
           '<section class="farm-card">' +
-            '<div class="farm-section-title">🐮 Their Herd <span class="farm-panel-cap">Lv ' + (roomData.farmAnimals || []).reduce((m, a) => Math.max(m, animalLevel(a.collected, FARM_LEVELS)), 0) + ' top</span></div>' +
+            '<div class="farm-section-title">🐮 Their Herd <span class="farm-panel-cap">Lv ' + herd.reduce((m, a) => Math.max(m, animalLevel(a.collected, FARM_LEVELS)), 0) + ' top</span></div>' +
             '<div class="farm-shop-row"><span class="farm-shop-animal">' + herd.length + ' animals</span></div>' +
             '<div class="farm-shop-row"><span class="farm-shop-animal">' + herdLine + '</span></div>' +
-            '<div class="farm-shop-row"><span class="farm-shop-animal">🌻 ' + (roomData.farmDecors || []).length + ' decorations · 🌱 ' + (roomData.farmPlots || []).length + ' plots</span></div>' +
+            '<div class="farm-shop-row"><span class="farm-shop-animal">🌱 ' + (roomData.farmPlots || []).length + ' plots</span></div>' +
           '</section>' +
-          '<button class="farm-shop-buy" style="width:100%;padding:9px;font-size:13px" onclick="cheerFarm()">👍 Cheer this farm</button>' +
+          '<section class="farm-card">' +
+            '<div class="farm-section-title">🤝 帮一把 ' +
+              '<span class="farm-panel-cap">' + (left == null ? '…' : left > 0 ? '今日还能赚 ' + left + ' 次' : '今日奖励已满') + '</span></div>' +
+            '<div class="farm-help-row">' + helpBtns + '</div>' +
+            '<button class="farm-shop-buy" style="width:100%;padding:9px;font-size:13px;margin-top:8px" onclick="openGiftPicker()">🎁 送点产物给他</button>' +
+            '<div class="farm-panel-empty" style="padding-top:6px">每样每天一次 · 每次帮忙 +' + FARM_HELP_REWARD + '🪙（每天前 ' + FARM_HELP_DAILY_CAP + ' 次）· 对方下次进农场时领取</div>' +
+          '</section>' +
           '<button class="farm-visit-home" onclick="visitFarm(\'' + currentUid + '\')">🏠 回我的农场</button>' +
           '<section class="farm-card" style="margin-top:10px">' +
             '<div class="farm-section-title">🚜 参观其他农场 <span class="farm-panel-cap">live</span></div>' +
             _farmVisitListHtml() +
           '</section>' +
-          '<div class="farm-panel-hint">你正在参观 — 点赞鼓励，或去逛逛别的农场吧！</div>';
+          '<div class="farm-panel-hint">串门帮个忙，双方都有奖励 — 他也更可能回访你的农场。</div>';
         return;
       }
 
@@ -767,7 +1305,7 @@
       // farm for normal play never spins up the rooms-list listener.
       const visitHtml = _farmTab === 'visit'
         ? '<div class="farm-section-title">🚜 参观农场 <span class="farm-panel-cap">live</span></div>' +
-          '<div class="farm-panel-empty" style="padding:0 2px 6px">点一位农场主，去逛逛他的农场（只看不改）。</div>' +
+          '<div class="farm-panel-empty" style="padding:0 2px 6px">点一位农场主，去他农场帮个忙 — 点赞、浇水、添料、送产物，双方都有奖励。</div>' +
           _farmVisitListHtml()
         : '';
 
@@ -785,21 +1323,28 @@
         garden:   card(gardenHtml) + card(buildHtml),
         market:   card(stockHtml) + card(ordersHtml),
         upgrades: card(upgradesHtml),
-        visit:    card(visitHtml),
+        visit:    card(visitHtml) + card(_farmBoardHtml()),
       };
       const hints = {
         animals:  'Keep the trough filled — fed animals are happy and produce faster!',
         garden:   'Plant on the farm soil. Build machines here — then tap a machine on your farm to make goods.',
         market:   'Tap produce on the farm to collect it, then sell it or fill the daily orders.',
         upgrades: 'Expand your farm, automate collecting, and drag decor to arrange it.',
-        visit:    '参观别人的农场，给他们点赞，再回到自己的农场。',
+        visit:    '去别人农场帮忙能赚币，也能把自己顶上本周人气榜。',
       };
       if (!groups[_farmTab]) _farmTab = 'animals';
+      // Mail waiting is worth surfacing on every tab, not just where the 📮 on
+      // the farm happens to be in view.
+      const mailN = _farmInboxCount();
+      const mailHtml = mailN
+        ? '<button class="farm-mail-cta" onclick="openFarmInbox()">📮 信箱里有 ' + mailN + ' 份心意 — 点开领取</button>'
+        : '';
       panel.innerHTML =
-        '<div class="farm-panel-head">🚜 Farm <span class="farm-panel-cap">' + animals.length + '/' + farmAnimalCap() + ' animals</span></div>' +
+        '<div class="farm-panel-head">🚜 Farm <span class="farm-panel-cap">🔥 ' + (roomData.farmCheersTotal || 0) + ' · ' + animals.length + '/' + farmAnimalCap() + ' animals</span></div>' +
         '<div class="farm-tabs">' +
           FARM_TABS.map(t => '<button class="farm-tab' + (t.id === _farmTab ? ' active' : '') + '" onclick="switchFarmTab(\'' + t.id + '\')">' + t.label + '</button>').join('') +
         '</div>' +
+        mailHtml +
         groups[_farmTab] +
         '<div class="farm-panel-hint">' + hints[_farmTab] + '</div>';
     }
@@ -982,14 +1527,6 @@
     /* ── Social ── */
     // Cheer a friend's farm — cosmetic celebration (no cross-user writes, so no
     // rules change). A coin/host-side reward would need a firestore.rules update.
-    function cheerFarm() {
-      if (viewingUid === currentUid) return;
-      for (let i = 0; i < 8; i++) {
-        _farmParticles.push({ text: ['👍', '❤️', '🎉', '✨'][i % 4], x: 0.2 + Math.random() * 0.6, y: 0.7 + Math.random() * 0.1, vy: -0.0012 - Math.random() * 0.0008, life: 1500, born: performance.now() });
-      }
-      showToast('👍 You cheered ' + (roomData.displayName || 'this') + '\'s farm!', 'success');
-    }
-
     /* ── Workshop (processing machines, parallel slots) ── */
     // Normalize a machine to the slot model, migrating the old single-job shape
     // ({owned, startedAt}) to {owned, slots, jobs:[startedAt,…]}. Returns it or null.
@@ -1156,6 +1693,7 @@
         plot.crop = null; plot.plantedAt = 0; n++;
       }
       if (!n) return showToast('Nothing ripe to harvest yet.', '');
+      _farmWeekAddProduce(n);
       saveRoom(); renderFarmPanel(); renderAll();
       showToast('🧺 Harvested ' + n + ' plot' + (n > 1 ? 's' : ''), 'success');
     }
@@ -1349,6 +1887,7 @@
       roomData.farmTotalCollected = (roomData.farmTotalCollected || 0) + 1;
       const animal = (roomData.farmAnimals || []).find(a => a.id === drop.animalId);
       if (animal) animal.collected = (animal.collected || 0) + 1;
+      _farmWeekAddProduce(1);
       _farmParticles.push({ text: '+1 ' + (def ? def.drop.emoji : ''), x: drop.x, y: drop.y - 0.04, vy: -0.0009, life: 1200, born: performance.now() });
       saveRoom();
       checkAchievements();
@@ -1882,6 +2421,7 @@
       roomData.farmTotalCollected = (roomData.farmTotalCollected || 0) + drops.length;
       drops.forEach(d => { const an = (roomData.farmAnimals || []).find(x => x.id === d.animalId); if (an) an.collected = (an.collected || 0) + 1; });
       roomData.farmDrops = (roomData.farmDrops || []).filter(d => d.type !== type);
+      _farmWeekAddProduce(drops.length);
       await saveRoom();
       showToast('Collected ' + drops.length + ' ' + (def ? def.drop.emoji + ' ' + def.drop.name : type) + '!', 'success');
       checkAchievements(); renderProduceModal(); renderFarmPanel(); renderAll();
@@ -2320,6 +2860,62 @@
 
     // A wooden signboard on a post, drawn to the left of a garden row. `st` is a
     // farmRowState() result: blank when empty, crop emoji + name (+ % or ✨) else.
+    // 📮 The mailbox on your own farm — a post-mounted box whose flag stands up
+    // (with a count badge) whenever visitors have left something to claim. Same
+    // wood/clay palette as the signboards and pen rails.
+    function _drawFarmMailbox(ctx, W, H, t, night) {
+      const p = _farmMailPos(W, H);
+      const gx = p.x * W, gy = p.y * H;
+      const s = Math.max(26, Math.min(W, H) * 0.062);      // box width, and the unit for everything else
+      const n = _farmInboxCount();
+      const bob = n ? Math.sin(t / 260) * (s * 0.06) : 0;  // a gentle nudge while mail is waiting
+
+      ctx.fillStyle = night ? 'rgba(0,0,0,.32)' : 'rgba(30,62,20,.24)';
+      ctx.beginPath(); ctx.ellipse(gx, gy, s * 0.34, s * 0.11, 0, 0, Math.PI * 2); ctx.fill();
+
+      ctx.fillStyle = night ? '#4a3620' : '#714a26';       // post
+      ctx.fillRect(gx - s * 0.07, gy - s * 0.80, s * 0.14, s * 0.80);
+
+      const bh = s * 0.60, by = gy - s * 0.80 - bh + bob;  // box: arched roof, flat base
+      const g = ctx.createLinearGradient(gx - s / 2, by, gx + s / 2, by + bh);
+      g.addColorStop(0, night ? '#7a3f36' : '#c25b43');
+      g.addColorStop(1, night ? '#5a2a24' : '#9b4636');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(gx - s / 2, by, s, bh, [s * 0.30, s * 0.30, s * 0.06, s * 0.06]);
+      else ctx.rect(gx - s / 2, by, s, bh);
+      ctx.fill();
+      ctx.fillStyle = night ? 'rgba(0,0,0,.30)' : 'rgba(40,20,12,.28)';   // door
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(gx - s * 0.30, by + bh * 0.30, s * 0.60, bh * 0.52, s * 0.06);
+      else ctx.rect(gx - s * 0.30, by + bh * 0.30, s * 0.60, bh * 0.52);
+      ctx.fill();
+      ctx.fillStyle = night ? '#d8c08a' : '#ffe9b8';                      // knob
+      ctx.beginPath(); ctx.arc(gx, by + bh * 0.62, s * 0.05, 0, Math.PI * 2); ctx.fill();
+
+      const fx = gx + s * 0.52;                                            // flag: up only when there's mail
+      const flagY = n ? by - bh * 0.25 : by + bh * 0.45;
+      ctx.strokeStyle = night ? '#c9b487' : '#f0e2c0';
+      ctx.lineWidth = Math.max(1.5, s * 0.05);
+      ctx.beginPath(); ctx.moveTo(fx, by + bh * 0.92); ctx.lineTo(fx, flagY); ctx.stroke();
+      ctx.fillStyle = n ? '#eb5757' : (night ? '#5c5348' : '#9a927f');
+      ctx.beginPath();
+      ctx.moveTo(fx, flagY); ctx.lineTo(fx + s * 0.30, flagY + s * 0.10); ctx.lineTo(fx, flagY + s * 0.20);
+      ctx.closePath(); ctx.fill();
+
+      if (n) {                                                             // unread count, opposite the flag
+        const r = Math.max(8, s * 0.22), bx = gx - s * 0.42, byy = by - r * 0.15;
+        ctx.fillStyle = '#eb5757';
+        ctx.beginPath(); ctx.arc(bx, byy, r, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = Math.max(1, s * 0.03); ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.font = '800 ' + Math.round(r * 1.1) + 'px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(String(Math.min(99, n)), bx, byy + 0.5);
+        ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+      }
+    }
+
     function _drawFarmSign(ctx, W, H, row, st) {
       const pos = _farmSignPos(row, W, H);
       const cx = pos.x * W, cy = pos.y * H;
@@ -2536,6 +3132,7 @@
         _drawHDTree(ctx, W * 0.94, topFenceY, H * 0.15, windSway * 0.7, night);
 
         _drawFarmTrough(ctx, W, H, night);
+        if (viewingUid === currentUid) _drawFarmMailbox(ctx, W, H, t, night);   // your mail only
         _drawFarmPlots(ctx, W, H, t);
 
         // Drops on the ground (visual juice) — collected via the Produce modal.
@@ -2724,8 +3321,12 @@
           const p = pos(e);
           let tip = '';
           const _twh = _farmWH();
+          const _mpH = _farmMailPos(_twh.W, _twh.H);
           if (Math.hypot(p.x - FARM_TROUGH_X, p.y - _farmTroughY(_twh.W, _twh.H)) < 0.08) {
             tip = '🌾 Food  ' + Math.floor(roomData.farmFood || 0) + ' / ' + farmFoodMax();
+          } else if (Math.hypot(p.x - _mpH.x, p.y - _mpH.y) < FARM_MAIL_R) {
+            const _mn = _farmInboxCount();
+            tip = _mn ? '📮 信箱 — ' + _mn + ' 份未领取' : '📮 信箱 — 空的';
           } else {
             const plots = roomData.farmPlots || [];
             const _wh = _farmWH();
@@ -2809,6 +3410,12 @@
           }
         }
         if (_hi >= 0) { openMachineModal(FARM_MACHINES[_hi].id); return; }
+
+        // 📮 Mailbox — also before the plane, whose 0.18 catch-all zone reaches
+        // it on a wide stage. Its own radius is tight, so the plane still gets
+        // every tap that isn't actually on the mailbox.
+        const _mp = _farmMailPos(rect.width, rect.height);
+        if (Math.hypot(_mp.x - cx, _mp.y - cy) < FARM_MAIL_R) { openFarmInbox(); return; }
 
         // Sky plane / away cloud: big tap zone covering the plane AND its trailing
         // "Tap to sell!" banner (which streams out to the left of the body).
