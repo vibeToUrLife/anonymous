@@ -73,18 +73,40 @@
       cheerCoin: FARM_CHEER_COIN, cheerCapPerDay: FARM_CHEER_DAILY_CAP,
       waterMs: FARM_WATER_MS, feedUnits: FARM_FEED_UNITS, giftMaxQty: FARM_GIFT_MAX_QTY,
     };
-    const FARM_CART_X = 0.84, FARM_CART_Y = 0.19; // where the sky merchant plane hovers (normalized; up in the sky band)
+    const FARM_CART_X = 0.84, FARM_CART_Y = 0.135; // where the sky merchant plane hovers (normalized; up in the sky band)
     /* On a narrow stage the plane moves in from the corner and grows. At 0.84 it
        hovers right against the tree at 0.94, and a 47px sprite camouflaged
        against a canopy in the hardest corner of a phone to reach is hard to
        FIND — its tap zone was already ~130x166px, so the trouble was never the
        hit-test. Wide stages keep the corner: there the plane is 78px with room
        around it. */
-    function _farmCartPos(W) {
-      return (W < FARM_NARROW_W) ? { x: 0.70, y: FARM_CART_Y } : { x: FARM_CART_X, y: FARM_CART_Y };
+    /* It shares this corner with the floating "🧺 Collect" button — 10px from the
+       top and at least 44px tall on touch, and on a narrow stage it sits right
+       above the plane. That button is a DOM element over the canvas, so anything
+       that drifts under it loses its taps outright. However high we ask the
+       plane to fly, keep its wingtip below the button's floor. */
+    const FARM_CART_CLEAR_PX = 60;
+    function _farmCartPos(W, H) {
+      const ceil = (FARM_CART_CLEAR_PX + _farmCartSize(W, H) * 0.45) / Math.max(1, H || 1);
+      return {
+        x: (W < FARM_NARROW_W) ? 0.70 : FARM_CART_X,
+        y: H ? Math.max(ceil, FARM_CART_Y) : FARM_CART_Y,
+      };
     }
+    /* The plane has to fit between that button's floor and the tops of the
+       workshop huts. The width-only floor below (56px so a phone sprite stays
+       findable) ignores height entirely, and on a short stage it is taller than
+       the whole gap — which used to leave the plane tucked under the button AND
+       parked among the huts. Solving
+           CLEAR + 0.45s (top half) + 0.45s (bottom half) + 0.4s (hut roof)  ≤  FARM_HUT_Y·H
+       for s gives the largest plane the sky can actually hold; the 1.4 divisor
+       is that 1.3 plus a little air. It only bites below ~460px of stage, and
+       the tap rect covers the banner either way, so a smaller plane there costs
+       nothing in reachability. */
     function _farmCartSize(W, H) {
-      return (W < FARM_NARROW_W) ? Math.max(56, W * 0.16) : Math.max(44, Math.min(W, H) * 0.12);
+      const want = (W < FARM_NARROW_W) ? Math.max(56, W * 0.16) : Math.max(44, Math.min(W, H) * 0.12);
+      if (!H) return want;
+      return Math.min(want, Math.max(28, (FARM_HUT_Y * H - FARM_CART_CLEAR_PX) / 1.4));
     }
 
     // The trough stands on the open grass between the top fence and the pens,
@@ -2001,7 +2023,7 @@
     function _drawMerchantCart(ctx, W, H, t, offsetX, alpha) {
       const s = _farmCartSize(W, H);
       const hover = Math.sin(t / 600) * (s * 0.08);
-      const at = _farmCartPos(W);
+      const at = _farmCartPos(W, H);
       const cx = (at.x + (offsetX || 0)) * W, cy = at.y * H + hover;
       ctx.save();
       if (alpha != null) ctx.globalAlpha = alpha;
@@ -2047,7 +2069,7 @@
     function _drawCartAway(ctx, W, H, t, cart) {
       const s = _farmCartSize(W, H) * 0.84;   // the away cloud reads a touch smaller than the plane
       const hover = Math.sin(t / 700) * (s * 0.06);
-      const at = _farmCartPos(W);
+      const at = _farmCartPos(W, H);
       const cx = at.x * W, cy = at.y * H + hover;
       ctx.save();
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -2063,9 +2085,9 @@
       ctx.restore();
     }
 
-    // Fixed slot position for machine `slot` (its hut). Sits well left of the sky
-    // plane's tap zone (plane at x 0.84, y 0.24, r 0.18); huts are hit-tested
-    // first so any overlap resolves to the hut.
+    // Fixed slot position for machine `slot` (its hut), on the grass below the
+    // plane's sky lane. Overlap with the plane's tap rect is resolved by
+    // _farmSkyTarget, which picks the nearest target rather than the first.
     function _workshopPos(slot) { return { x: 0.22 + slot * 0.11, y: FARM_HUT_Y }; }
 
     // Which fixed target a tap in the farm's upper half lands on: an owned
@@ -2081,7 +2103,7 @@
       const targets = [];
       if (viewingUid === currentUid) {
         targets.push(Object.assign({ id: '#cart' },
-          farmCartTapRect(_farmCartPos(W), _farmCartSize(W, H), W, H, _farmCart().present)));
+          farmCartTapRect(_farmCartPos(W, H), _farmCartSize(W, H), W, H, _farmCart().present)));
         const mp = _farmMailPos(W, H);
         targets.push({ id: '#mail', x: mp.x, y: mp.y });
       }

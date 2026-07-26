@@ -55,7 +55,7 @@ function farmSandbox(machines) {
 // Centre of the "Tap to sell!" banner, from the same numbers _drawMerchantCart
 // uses: bnW = s*1.1, bnX = cx - s*0.62 - bnW.
 function bannerCentre(sb, W, H) {
-  const at = sb._farmCartPos(W);
+  const at = sb._farmCartPos(W, H);
   const s = sb._farmCartSize(W, H);
   const cx = at.x * W;
   const bnW = s * 1.1;
@@ -64,6 +64,11 @@ function bannerCentre(sb, W, H) {
 }
 
 const ALL = ['dairy', 'bakery', 'oven', 'butcher', 'forge'];
+
+// Top-level `const` in a classic script is a lexical binding, not a property of
+// the global object, so layout constants have to be evaluated, not read off the
+// sandbox the way its `function` declarations can be.
+function constant(sb, name) { return vm.runInContext(name, sb); }
 
 /* ── The reported bug ── */
 
@@ -78,7 +83,7 @@ test('a tap on the "Tap to sell!" banner opens the cart, not a workshop (phone)'
 
 test('the whole banner, end to end, belongs to the cart on a phone', () => {
   const sb = farmSandbox(ALL);
-  const at = sb._farmCartPos(PHONE.W), s = sb._farmCartSize(PHONE.W, PHONE.H);
+  const at = sb._farmCartPos(PHONE.W, PHONE.H), s = sb._farmCartSize(PHONE.W, PHONE.H);
   const bnW = s * 1.1, bnX = at.x * PHONE.W - s * 0.62 - bnW;
   for (let f = 0; f <= 1.0001; f += 0.25) {
     const x = (bnX + bnW * f) / PHONE.W;
@@ -90,12 +95,63 @@ test('the whole banner, end to end, belongs to the cart on a phone', () => {
 test('the plane body and propeller still open the cart', () => {
   for (const st of [PHONE, NARROW, WIDE]) {
     const sb = farmSandbox(ALL);
-    const at = sb._farmCartPos(st.W), s = sb._farmCartSize(st.W, st.H);
+    const at = sb._farmCartPos(st.W, st.H), s = sb._farmCartSize(st.W, st.H);
     for (const dx of [-0.48, 0, 0.56]) {          // tail, fuselage, propeller
       const x = (at.x * st.W + s * dx) / st.W;
       assert.equal(sb._farmSkyTarget(x, at.y, st.W, st.H), '#cart',
         'plane body at ' + st.W + 'x' + st.H + ', offset ' + dx);
     }
+  }
+});
+
+/* ── How high the plane flies ── */
+
+// The floating "🧺 Collect" button is top:10px and ≥44px tall on touch, and on a
+// narrow stage it sits directly above the plane. It is a DOM element over the
+// canvas, so anything drifting under it loses its taps entirely.
+const COLLECT_BTN_FLOOR = 54;
+
+test('the plane flies clear of the Collect button on every stage', () => {
+  for (const st of [PHONE, NARROW, WIDE, { W: 400, H: 700 }, { W: 360, H: 400 }]) {
+    const sb = farmSandbox(ALL);
+    const pos = sb._farmCartPos(st.W, st.H), s = sb._farmCartSize(st.W, st.H);
+    const top = pos.y * st.H - s * 0.45;
+    assert.ok(top >= COLLECT_BTN_FLOOR,
+      'plane top ' + Math.round(top) + 'px at ' + st.W + 'x' + st.H + ' is under the Collect button');
+  }
+});
+
+test('the plane sits higher than it used to, wherever there is room', () => {
+  const OLD_Y = 0.19;
+  // Below roughly 460px of stage the sky between the Collect button and the hut
+  // roofs is thinner than the plane, and clearing both wins over gaining
+  // altitude — the two tests either side of this one cover that case.
+  for (const st of [PHONE, NARROW, WIDE, { W: 400, H: 700 }]) {
+    const sb = farmSandbox(ALL);
+    const y = sb._farmCartPos(st.W, st.H).y;
+    assert.ok(y < OLD_Y, 'at ' + st.W + 'x' + st.H + ' the plane is at ' + y.toFixed(3) + ', not above ' + OLD_Y);
+  }
+});
+
+test('a short stage shrinks the plane rather than parking it in the huts', () => {
+  const SHORT = { W: 360, H: 400 };
+  const sb = farmSandbox(ALL);
+  const s = sb._farmCartSize(SHORT.W, SHORT.H);
+  assert.ok(s < 56, 'the width-only 56px floor must give way on a short stage, got ' + s.toFixed(1));
+  // …and it must still be big enough to see.
+  assert.ok(s >= 28, 'plane shrank to ' + s.toFixed(1) + 'px');
+  // A tall stage keeps the full-size sprite.
+  assert.equal(sb._farmCartSize(360, 700), Math.max(56, 360 * 0.16));
+});
+
+test('the plane stays in the sky, never down among the huts', () => {
+  for (const st of [PHONE, NARROW, WIDE, { W: 400, H: 700 }, { W: 360, H: 400 }]) {
+    const sb = farmSandbox(ALL);
+    const pos = sb._farmCartPos(st.W, st.H), s = sb._farmCartSize(st.W, st.H);
+    const belly = pos.y * st.H + s * 0.45;
+    const hutTop = constant(sb, 'FARM_HUT_Y') * st.H - s * 0.4;
+    assert.ok(belly < hutTop,
+      'plane belly ' + Math.round(belly) + 'px reaches the huts at ' + Math.round(hutTop) + 'px (' + st.W + 'x' + st.H + ')');
   }
 });
 
@@ -132,7 +188,7 @@ test('the mailbox answers its own tap and does not steal the plane', () => {
     const sb = farmSandbox(ALL);
     const mp = sb._farmMailPos(st.W, st.H);
     assert.equal(sb._farmSkyTarget(mp.x, mp.y, st.W, st.H), '#mail', 'mailbox at ' + st.W + 'x' + st.H);
-    const at = sb._farmCartPos(st.W);
+    const at = sb._farmCartPos(st.W, st.H);
     assert.equal(sb._farmSkyTarget(at.x, at.y, st.W, st.H), '#cart', 'plane at ' + st.W + 'x' + st.H);
   }
 });
@@ -144,7 +200,7 @@ test('while the plane is away, its parking cloud is still tappable', () => {
     const sb = farmSandbox(ALL);
     sb.roomData.farmCartLeftAt = Date.now();     // just sold → gone for the cooldown
     assert.equal(sb._farmCart().present, false, 'cart should read as away');
-    const at = sb._farmCartPos(st.W);
+    const at = sb._farmCartPos(st.W, st.H);
     assert.equal(sb._farmSkyTarget(at.x, at.y, st.W, st.H), '#cart', 'away cloud at ' + st.W + 'x' + st.H);
   }
 });
