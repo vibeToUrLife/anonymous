@@ -186,7 +186,7 @@
   function toast(msg, type) { if (typeof showToast === 'function') showToast(msg, type || ''); }
   function myName() {
     var u = (firebase.auth && firebase.auth().currentUser) || null;
-    return (localStorage.getItem('flappy_name') || (u && u.displayName) || '匿名').slice(0, 40);
+    return (localStorage.getItem('flappy_name') || (u && u.displayName) || T('匿名')).slice(0, 40);
   }
 
   /* ── deterministic simulation ──────────────────────────────── */
@@ -404,16 +404,17 @@
         '<button class="hr-close" id="hrClose" title="关闭" aria-label="关闭">✕</button>' +
         '<div class="hr-head">' +
           '<div class="hr-mark">🏇</div>' +
-          '<div><div class="hr-title">赛马 · 万能决策</div>' +
-          '<div class="hr-sub">写下选项让马来决定 — 全站实时一起看</div></div>' +
+          '<div><div class="hr-title">' + T('赛马 · 万能决策') + '</div>' +
+          '<div class="hr-sub">' + T('写下选项让马来决定 — 全站实时一起看') + '</div></div>' +
         '</div>' +
         '<div class="hr-body">' +
           '<div id="hrSetup">' +
-            '<div class="hr-setup-tip">一行一个选项（' + MIN_OPTS + '~' + MAX_OPTS + ' 个，每个 ≤' + MAX_OPT_LEN + ' 字）。开赛后倒计时 ' +
-              (COUNTDOWN_MS / 1000) + ' 秒，全站在线的人都会看到同一场比赛！</div>' +
-            '<textarea class="hr-ta" id="hrTa" maxlength="400" placeholder="例如：\n奶茶\n咖啡\n柠檬茶\n不喝了省钱"></textarea>' +
+            '<div class="hr-setup-tip">' +
+              T('一行一个选项（{min}~{max} 个，每个 ≤{len} 字）。开赛后倒计时 {sec} 秒，全站在线的人都会看到同一场比赛！',
+                { min: MIN_OPTS, max: MAX_OPTS, len: MAX_OPT_LEN, sec: COUNTDOWN_MS / 1000 }) + '</div>' +
+            '<textarea class="hr-ta" id="hrTa" maxlength="400" placeholder="' + T('例如：\n奶茶\n咖啡\n柠檬茶\n不喝了省钱') + '"></textarea>' +
             '<div class="hr-err" id="hrErr"></div>' +
-            '<button class="hr-start" id="hrStart">🏁 开赛！</button>' +
+            '<button class="hr-start" id="hrStart">' + T('🏁 开赛！') + '</button>' +
             '<div class="hr-last" id="hrLast" style="display:none"></div>' +
           '</div>' +
           '<div id="hrLive" style="display:none">' +
@@ -423,15 +424,15 @@
                 '<span class="hr-livedot"></span><span id="hrLiveTxt">LIVE</span>' +
                 '<span class="hr-clock" id="hrClock"></span></div>' +
               '<div class="hr-chip hr-chip-lead" id="hrChipLead" style="display:none">' +
-                '<span class="hr-leadtag" id="hrLeadTag">领先</span>' +
+                '<span class="hr-leadtag" id="hrLeadTag">' + T('领先') + '</span>' +
                 '<span class="hr-leaddot" id="hrLeadDot"></span>' +
                 '<span class="hr-leadname" id="hrLeadName"></span></div>' +
               '<div class="hr-count" id="hrCount" style="display:none">' +
                 '<div class="num" id="hrCountNum"></div><div class="lbl" id="hrCountLbl"></div></div>' +
-              '<button class="hr-mute" id="hrMute" aria-label="声音开关">🔊</button>' +
+              '<button class="hr-mute" id="hrMute" aria-label="' + T('声音开关') + '">🔊</button>' +
             '</div>' +
             '<div class="hr-results" id="hrResults" style="display:none"></div>' +
-            '<button class="hr-again" id="hrAgain" style="display:none">🏇 发起新比赛</button>' +
+            '<button class="hr-again" id="hrAgain" style="display:none">🏇 ' + T('发起新比赛') + '</button>' +
           '</div>' +
         '</div>' +
       '</div>';
@@ -952,7 +953,8 @@
         el.hrCountNum.classList.add('tick');
         if (num <= 5) SND.tick(num === 1);
       }
-      el.hrCountLbl.textContent = '「' + (race.byName || '有人') + '」发起了比赛 · ' + raceOpts().length + ' 位选手就位';
+      el.hrCountLbl.textContent = T('「{who}」发起了比赛 · {n} 位选手就位',
+        { who: race.byName || T('有人'), n: raceOpts().length });
       el.hrResults.style.display = 'none'; el.hrAgain.style.display = 'none';
     } else if (stage === 'racing') {
       if (t < 900) {
@@ -984,7 +986,7 @@
       }
       if (lead) {
         el.hrChipLead.style.display = '';
-        el.hrLeadTag.textContent = t > lead.finish ? '冲线' : '领先';
+        el.hrLeadTag.textContent = T(t > lead.finish ? '冲线' : '领先');
         el.hrLeadDot.style.background = lead.pal.a;
         el.hrLeadName.textContent = raceOpts()[lead.i];
       }
@@ -994,7 +996,7 @@
       el.hrCount.style.display = 'none';
       el.hrChipLead.style.display = 'none';
       el.hrChipLive.style.display = '';
-      el.hrLiveTxt.textContent = '完赛';
+      el.hrLiveTxt.textContent = T('完赛');
       var winner = null;
       for (var w = 0; w < horses.length; w++) if (horses[w].rank === 0) winner = horses[w];
       el.hrClock.textContent = winner ? (winner.finish / 1000).toFixed(2) + 's' : '';
@@ -1011,7 +1013,7 @@
 
     var champ = document.createElement('div');
     champ.className = 'hr-res-champ';
-    champ.textContent = '🎉 冠军 — ' + opts[order[0].i];
+    champ.textContent = T('🎉 冠军 — {name}', { name: opts[order[0].i] });
     el.hrResults.appendChild(champ);
 
     /* podium: 2nd | 1st | 3rd */
@@ -1053,12 +1055,12 @@
     var stage = stageNow();
     var key, label, disabled;
     if (stage === 'countdown' || stage === 'racing') {
-      key = 'live'; label = '⏱ 比赛进行中 — 点击去观战'; disabled = false;
+      key = 'live'; label = T('⏱ 比赛进行中 — 点击去观战'); disabled = false;
     } else if (race && stage === 'done' && serverNow() < race.startAt + REOPEN_GAP_MS) {
       var wait = Math.ceil((race.startAt + REOPEN_GAP_MS - serverNow()) / 1000);
-      key = 'wait' + wait; label = '🏁 开赛！（上一场刚结束，' + wait + ' 秒后可开）'; disabled = true;
+      key = 'wait' + wait; label = T('🏁 开赛！（上一场刚结束，{n} 秒后可开）', { n: wait }); disabled = true;
     } else {
-      key = 'ready'; label = '🏁 开赛！'; disabled = false;
+      key = 'ready'; label = T('🏁 开赛！'); disabled = false;
     }
     if (!force && key === setupCache) return;
     setupCache = key;
@@ -1069,11 +1071,11 @@
     if (race && stage === 'done') {
       var opts = raceOpts();
       var order = horses.slice().sort(function (a, b) { return a.rank - b.rank; });
-      var parts = ['上一场：'];
+      var parts = [T('上一场：')];
       order.slice(0, 3).forEach(function (h) {
         parts.push((h.rank === 0 ? '🥇' : h.rank === 1 ? '🥈' : '🥉') + opts[h.i]);
       });
-      el.hrLast.textContent = parts.join('  ') + '　点击看完整排名 ›';
+      el.hrLast.textContent = parts.join('  ') + '　' + T('点击看完整排名 ›');
       el.hrLast.style.display = '';
     } else el.hrLast.style.display = 'none';
   }
@@ -1081,13 +1083,13 @@
   function startRace() {
     if (el.hrStart.dataset.mode === 'watch') { showView('live'); return; }
     var user = firebase.auth && firebase.auth().currentUser;
-    if (!user) { toast('请先登录', 'error'); return; }
-    if (!rtdb) { toast('实时服务不可用', 'error'); return; }
+    if (!user) { toast(T('请先登录'), 'error'); return; }
+    if (!rtdb) { toast(T('实时服务不可用'), 'error'); return; }
     var lines = el.hrTa.value.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
-    if (lines.length < MIN_OPTS) { el.hrErr.textContent = '至少要 ' + MIN_OPTS + ' 个选项哦'; return; }
-    if (lines.length > MAX_OPTS) { el.hrErr.textContent = '最多 ' + MAX_OPTS + ' 个选项（现在有 ' + lines.length + ' 个）'; return; }
+    if (lines.length < MIN_OPTS) { el.hrErr.textContent = T('至少要 {n} 个选项哦', { n: MIN_OPTS }); return; }
+    if (lines.length > MAX_OPTS) { el.hrErr.textContent = T('最多 {max} 个选项（现在有 {n} 个）', { max: MAX_OPTS, n: lines.length }); return; }
     for (var i = 0; i < lines.length; i++) {
-      if (lines[i].length > MAX_OPT_LEN) { el.hrErr.textContent = '第 ' + (i + 1) + ' 个选项太长了（≤' + MAX_OPT_LEN + ' 字）'; return; }
+      if (lines[i].length > MAX_OPT_LEN) { el.hrErr.textContent = T('第 {i} 个选项太长了（≤{len} 字）', { i: i + 1, len: MAX_OPT_LEN }); return; }
     }
     el.hrErr.textContent = '';
     el.hrStart.disabled = true;
@@ -1102,7 +1104,7 @@
     }).then(function () {
       setupCache = '';               // listener will flip everyone (incl. us) to live
     }).catch(function () {
-      toast('开赛失败：可能有比赛正在进行', 'error');
+      toast(T('开赛失败：可能有比赛正在进行'), 'error');
       el.hrStart.disabled = false;
     });
   }
@@ -1163,8 +1165,8 @@
   function init() {
     var tile = document.getElementById('horseRaceBtn');
     if (tile) tile.addEventListener('click', function () {
-      if (!(firebase.auth && firebase.auth().currentUser)) { toast('请先登录', 'error'); return; }
-      if (!rtdb) { toast('实时服务不可用，稍后再试', 'error'); return; }
+      if (!(firebase.auth && firebase.auth().currentUser)) { toast(T('请先登录'), 'error'); return; }
+      if (!rtdb) { toast(T('实时服务不可用，稍后再试'), 'error'); return; }
       openOverlay(race && stageNow() !== 'done' ? 'live' : 'setup');
     });
     var attached = false;

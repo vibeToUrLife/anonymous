@@ -84,5 +84,32 @@
     '撤销我画的上一笔': 'Undo my last stroke',
     '完成': 'Done',
     '没有可以撤销的笔画了': 'Nothing left to undo',
+
+    /* ── 🏇 赛马 ── */
+    '赛马 · 万能决策': 'Horse Race · decide anything',
+    '写下选项让马来决定 — 全站实时一起看': 'Write the options, let the horses decide — everyone watches live',
+    '一行一个选项（{min}~{max} 个，每个 ≤{len} 字）。开赛后倒计时 {sec} 秒，全站在线的人都会看到同一场比赛！':
+      'One option per line ({min}-{max} of them, {len} characters each). After the off there is a {sec}s countdown, and everyone online sees the same race.',
+    '例如：\n奶茶\n咖啡\n柠檬茶\n不喝了省钱': 'e.g.\nMilk tea\nCoffee\nLemon tea\nNothing, save the money',
+    '🏁 开赛！': '🏁 Race!',
+    '🏁 开赛！（上一场刚结束，{n} 秒后可开）': '🏁 Race! (last one just ended — {n}s to go)',
+    '⏱ 比赛进行中 — 点击去观战': '⏱ A race is running — tap to watch',
+    '发起新比赛': 'Start a new race',
+    '声音开关': 'Sound on/off',
+    '领先': 'Leading',
+    '冲线': 'At the line',
+    '完赛': 'Finished',
+    '有人': 'Someone',
+    '「{who}」发起了比赛 · {n} 位选手就位': '{who} started a race · {n} runners on the line',
+    '🎉 冠军 — {name}': '🎉 Winner — {name}',
+    '上一场：': 'Last race:',
+    '点击看完整排名 ›': 'Tap for the full result ›',
+    '请先登录': 'Sign in first',
+    '实时服务不可用': 'Live service unavailable',
+    '实时服务不可用，稍后再试': 'Live service unavailable — try again shortly',
+    '至少要 {n} 个选项哦': 'You need at least {n} options',
+    '最多 {max} 个选项（现在有 {n} 个）': 'At most {max} options (you have {n})',
+    '第 {i} 个选项太长了（≤{len} 字）': 'Option {i} is too long (max {len} characters)',
+    '开赛失败：可能有比赛正在进行': "Couldn't start — a race may already be running",
   });
 })();
