@@ -2035,7 +2035,6 @@
     // are centred on the pasture with grass showing either side. Previously the
     // widths were renormalized back onto the full 0.05–0.95 span, so three geese
     // got a pen stretched across 90% of the canvas.
-    const FARM_PEN_PLURAL = { goose: 'Geese', pig: 'Pigs', cow: 'Cows', horse: 'Horses' };
     function _buildAnimalPens(herd, penTop, penBot, W, H) {
       const order = ['goose', 'pig', 'cow', 'horse'];
       const counts = {};
@@ -2073,7 +2072,7 @@
       types.forEach((tp, i) => {
         const def = FARM_ANIMALS.find(f => f.id === tp) || { emoji: '🐾', name: tp };
         const pen = {
-          type: tp, emoji: def.emoji, label: FARM_PEN_PLURAL[tp] || def.name, count: counts[tp],
+          type: tp, emoji: def.emoji, count: counts[tp],
           x0: x, x1: x + w[i], y0: penTop, y1: penBot,
           ix0: x + padX, ix1: x + w[i] - padX, iy0: penTop + padTop, iy1: penBot - padBot,
         };
@@ -2112,21 +2111,27 @@
 
     // Pen name tabs — drawn AFTER the animals so the count is never hidden behind a herd.
     function _drawPenLabels(ctx, W, H, pens, night) {
+      // Badge size is keyed to the stage, not the pen, so every pen's badge
+      // matches whatever the herd looks like. It sits in the pen's padTop strip,
+      // which _buildAnimalPens already keeps clear of animal anchors.
+      const fs = Math.max(10, Math.min(14, W * 0.026));
+      const pad = 6, inset = 4;
+      ctx.font = '800 ' + Math.round(fs) + 'px sans-serif';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       for (const p of pens) {
-        const x = p.x0 * W, y = p.y0 * H, w = (p.x1 - p.x0) * W;
-        const fs = Math.max(11, Math.min(16, W * 0.03));
-        ctx.font = '800 ' + Math.round(fs) + 'px sans-serif';
-        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-        let txt = p.emoji + ' ' + p.label + ' ' + p.count;
-        if (ctx.measureText(txt).width + 18 > w) txt = p.emoji + ' ' + p.count;       // narrow pen -> drop the name
-        const tw = ctx.measureText(txt).width, tpad = 8, th = fs + 8;
-        const tx = x + 6, ty = y - th + 2;                                            // sit just above the pen rail
-        ctx.fillStyle = night ? 'rgba(20,14,6,0.88)' : 'rgba(40,26,12,0.86)';
+        const penW = (p.x1 - p.x0) * W;
+        // The species is already obvious from the animals inside, so the emoji
+        // is the first thing to go if even that won't fit.
+        let txt = p.emoji + ' ' + p.count;
+        if (ctx.measureText(txt).width + pad * 2 + inset * 2 > penW) txt = String(p.count);
+        const bw = ctx.measureText(txt).width + pad * 2, bh = fs + 6;
+        const bx = p.x1 * W - inset - bw, by = p.y0 * H + inset;
+        ctx.fillStyle = night ? 'rgba(20,14,6,0.82)' : 'rgba(40,26,12,0.78)';
         ctx.beginPath();
-        if (ctx.roundRect) ctx.roundRect(tx, ty, tw + tpad * 2, th, th / 2); else ctx.rect(tx, ty, tw + tpad * 2, th);
+        if (ctx.roundRect) ctx.roundRect(bx, by, bw, bh, bh / 2); else ctx.rect(bx, by, bw, bh);
         ctx.fill();
         ctx.fillStyle = '#ffe9b0';
-        ctx.fillText(txt, tx + tpad, ty + th / 2 + 0.5);
+        ctx.fillText(txt, bx + pad, by + bh / 2 + 0.5);
       }
     }
 
