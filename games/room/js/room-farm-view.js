@@ -3208,7 +3208,7 @@
       ctx.font = Math.round(h * 0.34) + 'px system-ui,sans-serif';
       ctx.fillText(crop ? crop.emoji : '🌱', cx, cy - h * 0.08);
       ctx.font = '800 9px system-ui,sans-serif';
-      ctx.fillText(st.state === 'ripe' ? '✨ Ready' : (crop ? crop.name : ''), cx, cy + h * 0.24);
+      ctx.fillText(st.state === 'ripe' ? '✨ ' + T('Ready') : (crop ? T(crop.name) : ''), cx, cy + h * 0.24);
       if (st.state === 'growing') {
         ctx.fillStyle = '#ffe08a';
         ctx.fillText(Math.round(st.progress * 100) + '%', cx, cy + h * 0.42);
@@ -3584,7 +3584,7 @@
           let tip = '';
           const _twh = _farmWH();
           if (Math.hypot(p.x - FARM_TROUGH_X, p.y - _farmTroughY(_twh.W, _twh.H)) < 0.08) {
-            tip = '🌾 Food  ' + Math.floor(roomData.farmFood || 0) + ' / ' + farmFoodMax();
+            tip = '🌾 ' + T('Food') + '  ' + Math.floor(roomData.farmFood || 0) + ' / ' + farmFoodMax();
             // Ask the same resolver the tap uses, so the cursor never promises a
             // mailbox that a click would hand to a hut (or the plane).
           } else if (_farmSkyTarget(p.x, p.y, _twh.W, _twh.H) === '#mail') {
@@ -3597,12 +3597,12 @@
               const pp = _farmPlotPos(i, _wh.W, _wh.H);
               if (Math.hypot(pp.x - p.x, pp.y - p.y) < 0.045) {
                 const plot = plots[i];
-                if (!plot.crop) { tip = '🌱 Empty — tap to plant'; }
+                if (!plot.crop) { tip = '🌱 ' + T('Empty — tap to plant'); }
                 else {
                   const crop = FARM_CROPS.find(c => c.id === plot.crop);
                   if (crop) {
                     const left = crop.growMs - (Date.now() - plot.plantedAt);
-                    tip = left <= 0 ? (crop.emoji + ' Ready to harvest!') : (crop.emoji + ' ' + _fmtFarmTime(left) + ' left');
+                    tip = crop.emoji + ' ' + (left <= 0 ? T('Ready to harvest!') : T('{time} left', { time: _fmtFarmTime(left) }));
                   }
                 }
                 break;
