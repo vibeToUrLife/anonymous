@@ -123,6 +123,78 @@ test('farmRefillUnits fills to max when affordable, else what coins buy', () => 
   assert.equal(F.farmRefillUnits(0, 100, 3, 5), 0);       // too broke for 1 unit
 });
 
+/* ── planFarmAutoFeed ── */
+
+// 4 animals × 18 units/day = 72/day of demand; food costs 5 a unit.
+const FEED = { herd: 4, foodPerDay: 18, foodMax: 100, costPerUnit: 5, threshold: 0.3 };
+function feed(over) { return F.planFarmAutoFeed(Object.assign({}, FEED, over)); }
+
+test('planFarmAutoFeed leaves a comfortable trough alone', () => {
+  const r = feed({ foodStock: 80, coins: 99999, elapsedMs: 60 * 1000 });
+  assert.deepEqual(r, { foodStock: 80, units: 0, coinsSpent: 0 });
+});
+
+test('planFarmAutoFeed tops up once the trough hits the threshold', () => {
+  // 30 is exactly 30% of 100 → triggers. A 60s window's demand rounds to nothing,
+  // so it buys back the 70 the trough is missing.
+  const r = feed({ foodStock: 30, coins: 99999, elapsedMs: 60 * 1000 });
+  assert.equal(r.units, 71);              // 70 short + a sliver of the window's demand
+  assert.equal(r.coinsSpent, 355);
+  assert.equal(r.foodStock, 101);
+});
+
+test('planFarmAutoFeed buys the whole window, not just one trough-full', () => {
+  // 12h away with an empty trough: 36 units eaten, and it should end full at 100.
+  const r = feed({ foodStock: 0, coins: 99999, elapsedMs: 12 * HOUR });
+  assert.equal(r.units, 136);
+  assert.equal(r.foodStock, 136, 'pre-drain, so planFarmTick lands back at foodMax');
+});
+
+test("planFarmAutoFeed hands planFarmTick a stock that drains back to full", () => {
+  const elapsedMs = 12 * HOUR;
+  const fed = feed({ foodStock: 0, coins: 99999, elapsedMs: elapsedMs });
+  const now = elapsedMs;
+  const tick = F.planFarmTick({
+    animals: [animal(), animal({ id: 'a2' }), animal({ id: 'a3' }), animal({ id: 'a4' })],
+    dropCounts: {}, now: now, foodAt: 0, foodStock: fed.foodStock,
+    slowMs: 6 * HOUR, fastMs: 2 * HOUR, dropCap: 99,
+    foodPerDay: FEED.foodPerDay, gainPerDay: 25, decayPerDay: 25,
+  });
+  assert.equal(Math.round(tick.foodStock), FEED.foodMax);
+  // Fed for every one of the 12h, so happiness only rises: 50 + half a day × 25.
+  assert.equal(tick.animals[0].happiness, 62.5);
+});
+
+test('planFarmAutoFeed spends only what the coins cover', () => {
+  const r = feed({ foodStock: 0, coins: 100, elapsedMs: 12 * HOUR });
+  assert.equal(r.units, 20);              // 100 coins / 5
+  assert.equal(r.coinsSpent, 100);
+  assert.equal(r.foodStock, 20);
+});
+
+test('planFarmAutoFeed buys nothing when it cannot afford a single unit', () => {
+  const r = feed({ foodStock: 0, coins: 4, elapsedMs: HOUR });
+  assert.deepEqual(r, { foodStock: 0, units: 0, coinsSpent: 0 });
+});
+
+test('planFarmAutoFeed does nothing without a herd', () => {
+  const r = feed({ herd: 0, foodStock: 0, coins: 99999, elapsedMs: 12 * HOUR });
+  assert.deepEqual(r, { foodStock: 0, units: 0, coinsSpent: 0 });
+});
+
+test('planFarmAutoFeed acts above the threshold when the window would outlast the trough', () => {
+  // 90 units is comfortable by the threshold, but a 2-day window eats 144.
+  const r = feed({ foodStock: 90, coins: 99999, elapsedMs: 2 * DAY });
+  assert.ok(r.units > 0, 'a window bigger than the trough must still be funded');
+  assert.equal(r.foodStock, 90 + r.units);
+});
+
+test('planFarmAutoFeed always buys whole units, so the charge is whole coins', () => {
+  const r = feed({ foodStock: 7.3, coins: 99999, elapsedMs: 37 * 1000 });
+  assert.equal(r.units, Math.floor(r.units));
+  assert.equal(Number.isInteger(r.coinsSpent), true);
+});
+
 /* ── animalLevel ── */
 
 test('animalLevel maps collected count to a 1-based level', () => {

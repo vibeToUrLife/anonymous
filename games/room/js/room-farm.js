@@ -162,6 +162,40 @@
     return { animals: animals, foodStock: foodStock, foodAt: now, spawns: spawns };
   }
 
+  // Auto-feeder: what to buy so the herd eats its way through `elapsedMs` and
+  // still finds the trough full at the end.
+  //   herd, foodPerDay   — how fast the trough drains
+  //   elapsedMs          — the window being accounted for (a 60s live tick, or a
+  //                        whole night of catch-up)
+  //   foodStock, foodMax — the trough now, and what it holds
+  //   coins, costPerUnit — what the purchase is billed against
+  //   threshold          — act once stock falls to/below this SHARE of foodMax
+  // It bills the window's demand rather than one trough-full: a hopper tops the
+  // trough up as it drains, and capping the purchase at capacity would make the
+  // feeder useless exactly when it earns its keep — a long night away — turning
+  // the trough upgrade into a second paywall in front of the first.
+  // Buys whole units and never spends coins it doesn't have; short funds simply
+  // buy less, and the herd goes hungry for the rest of the window as usual.
+  // Returns { foodStock, units, coinsSpent } — foodStock is PRE-drain, so it can
+  // exceed foodMax; feeding it to planFarmTick lands back at foodMax.
+  function planFarmAutoFeed(opts) {
+    const stock = Math.max(0, opts.foodStock || 0);
+    const max = opts.foodMax || 0;
+    const herd = opts.herd || 0;
+    const rate = opts.costPerUnit || 0;
+    const demand = herd * (opts.foodPerDay || 0) * Math.max(0, opts.elapsedMs || 0) / DAY_MS;
+    const trigger = max * (opts.threshold != null ? opts.threshold : 0);
+    const idle = { foodStock: stock, units: 0, coinsSpent: 0 };
+    // Nothing to do with no herd, or while the trough is both comfortable and
+    // already holding enough to see the window out.
+    if (!herd || (stock > trigger && stock >= demand)) return idle;
+    const want = Math.ceil(Math.max(0, demand + max - stock));
+    const affordable = rate > 0 ? Math.floor((opts.coins || 0) / rate) : want;
+    const units = Math.max(0, Math.min(want, affordable));
+    if (!units) return idle;
+    return { foodStock: stock + units, units: units, coinsSpent: units * rate };
+  }
+
   // Whole units a refill adds: fill the trough, bounded by what the coins afford.
   // Both bounds are floored so the result is always an integer — otherwise the
   // fractional capacity gap (foodStock is a float) would charge fractional coins.
@@ -357,7 +391,7 @@
     return list.slice(0, p.length).map((r, i) => ({ uid: r.uid, name: r.name || '', score: r.score, prize: p[i] || 0 }));
   }
 
-  return { farmCycleMs, animalLevel, cropProgress, generateFarmOrders, farmSellAllValue, planFarmTick, farmRefillUnits, farmRowCount, farmRowIndices, farmRowState, farmAffordableCount,
+  return { farmCycleMs, animalLevel, cropProgress, generateFarmOrders, farmSellAllValue, planFarmTick, farmRefillUnits, planFarmAutoFeed, farmRowCount, farmRowIndices, farmRowState, farmAffordableCount,
            farmPickTarget, farmCartTapRect, farmMailTapRect,
            farmDayKey, farmWeekIdFor, farmHelpAllowance, farmSentKinds, farmInboxEffects, farmWeekBump, farmWeekScore, farmWeekWinners };
 });

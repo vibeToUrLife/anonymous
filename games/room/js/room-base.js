@@ -375,6 +375,17 @@
     const FARM_WEEK_PRIZES = [3000, 2000, 1000];  // 🥇🥈🥉 paid on EACH weekly board at settlement
     const FARM_WEEK_BOARD_N = 10;          // rows shown per board
 
+    /* ── Farm automation & storage ──
+       The late-game coin sinks, and the fix for the two places the farm used to
+       simply stop paying attention to you: a produce pool that halts production
+       when it fills, and an offline window shorter than a night's sleep. */
+    const FARM_AUTOFEED_COST = 8000;       // one-time: the trough refills itself from your coins …
+    const FARM_AUTOFEED_AT = 0.30;         // … whenever it falls to/below this share of capacity
+    const FARM_SILO_STEP = 30;             // +uncollected produce per ANIMAL TYPE, per silo level
+    const FARM_SILO_COSTS = [6000, 18000, 45000];        // 20 → 50 → 80 → 110
+    const FARM_COLD_STEP_MS = 3 * 60 * 60 * 1000;        // +offline banking per cold-store level
+    const FARM_COLD_COSTS = [8000, 25000, 60000];        // 3h → 6h → 9h → 12h
+
     const FARM_MAX_ANIMALS = 20;                   // total animals on the farm, any mix
     const FARM_DROP_CAP = 3;                       // (legacy) max uncollected drops per animal
     const FARM_PRODUCE_CAP = 20;                   // max uncollected produce per ANIMAL TYPE — production pauses at this until you collect

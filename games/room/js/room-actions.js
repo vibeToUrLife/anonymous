@@ -940,6 +940,10 @@
       roomData.farmOrdersDay = d.farmOrdersDay || '';
       roomData.farmOrdersDone = Array.isArray(d.farmOrdersDone) ? d.farmOrdersDone : [];
       roomData.farmMachines = d.farmMachines || {};
+      roomData.farmSiloLevel = d.farmSiloLevel || 0;
+      roomData.farmColdLevel = d.farmColdLevel || 0;
+      roomData.farmAutoFeed = d.farmAutoFeed || false;
+      roomData.farmAutoFeedOn = d.farmAutoFeedOn || false;
       // Popularity + weekly board numbers follow whoever's farm we're looking at
       // (the visitor panel shows the host's 🔥 count). farmHelpDay/farmHelpCount
       // are deliberately NOT mirrored — those are the VISITOR's own daily
