@@ -4,7 +4,7 @@
   <script src="src/js/maintenance.js"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title data-i18n>Anonymous Bubble Answers</title>
+  <title>Anonymous Bubble Answers</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
   <link rel="stylesheet" href="./src/css/style.css?v=16">
   <link rel="stylesheet" href="./src/css/interactive.css?v=33">
@@ -931,7 +931,7 @@
     }
   </style>
 </head>
-<body data-i18n>
+<body>
   <!-- Apply theme before first paint (default = light) to avoid a flash.
        Sets data-theme on <html> for the token system; keeps body.light-theme
        in sync for legacy corkboard rules still present during the migration. -->
@@ -945,7 +945,7 @@
       <h2 data-i18n>Enter Access Code</h2>
       <p data-i18n>This site requires an access code to enter.</p>
       <input type="password" class="access-code-input" id="accessCodeInput" data-i18n-placeholder placeholder="Enter code…" autocomplete="off">
-      <button class="access-enter-btn" id="accessEnterBtn">Enter</button>
+      <button class="access-enter-btn" id="accessEnterBtn" data-i18n>Enter</button>
       <div class="access-error" id="accessError"></div>
     </div>
   </div>
@@ -955,7 +955,7 @@
     <div class="login-box">
       <div class="login-icon">🔒</div>
       <h2 data-i18n>Welcome</h2>
-      <p data-i18n>Sign in with Google to continue.<br>Everything stays anonymous — your identity is never shown.</p>
+      <p>Sign in with Google to continue.<br>Everything stays anonymous — your identity is never shown.</p>
       <button class="google-login-btn" id="googleLoginBtn">
         <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59a14.5 14.5 0 0 1 0-9.18l-7.98-6.19a24.0 24.0 0 0 0 0 21.56l7.98-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
         Sign in with Google
@@ -1027,7 +1027,7 @@
       <div class="settings-section">
         <div class="settings-label" data-i18n>Font Size</div>
         <div class="settings-select" id="fontSizeSelect">
-          <button data-size="small">Small</button>
+          <button data-size="small" data-i18n>Small</button>
           <button data-size="medium" data-i18n>Medium</button>
           <button data-size="large" data-i18n>Large</button>
         </div>
@@ -1042,7 +1042,7 @@
           </label>
         </div>
         <div class="settings-row" style="margin-top:8px">
-          <span class="settings-row-label">🔥 营火 Campfire</span>
+          <span class="settings-row-label" data-i18n>🔥 营火 Campfire</span>
           <label class="settings-toggle">
             <input type="checkbox" id="campfireToggle" checked>
             <span class="slider"></span>
@@ -1072,7 +1072,7 @@
       <!-- Developer-only: What's New editor (hidden for regular users) -->
       <hr class="settings-divider" id="wnEditorDivider" style="display:none">
       <div class="settings-section" id="wnEditorSection" style="display:none">
-        <div class="settings-label" data-i18n>📣 What's New Editor <span style="font-size:10px;opacity:0.5">(dev only)</span></div>
+        <div class="settings-label">📣 What's New Editor <span style="font-size:10px;opacity:0.5" data-i18n>(dev only)</span></div>
         <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
           <input type="text" class="wn-editor-input" id="wnVersionInput" data-i18n-placeholder placeholder="Version key e.g. v3" maxlength="20">
           <div class="wn-editor-hint" data-i18n>Bump the version to make all users see the popup again.</div>
@@ -1080,16 +1080,16 @@
           <textarea class="wn-editor-textarea" id="wnItemsInput" data-i18n-placeholder placeholder="One update item per line (plain text or HTML)&#10;e.g. 💬 &lt;strong&gt;New feature&lt;/strong&gt; — description here."></textarea>
           <div class="wn-editor-hint" data-i18n>Each line becomes one bullet in the popup.</div>
           <input type="text" class="wn-editor-input" id="wnUrlInput" data-i18n-placeholder placeholder="可选：介绍页 URL（如 ./whats-new/2026-07.html）">
-          <div class="wn-editor-hint">填了 URL 就改为「首次访问弹出这个 HTML 页面」（用 iframe，一次性）；留空则用上面的条目列表。</div>
+          <div class="wn-editor-hint" data-i18n>填了 URL 就改为「首次访问弹出这个 HTML 页面」（用 iframe，一次性）；留空则用上面的条目列表。</div>
           <button class="wn-editor-save" id="wnSaveBtn" data-i18n>💾 Save &amp; Publish</button>
           <div class="wn-editor-status" id="wnEditorStatus"></div>
         </div>
       </div>
 
       <hr class="settings-divider">
-      <button class="settings-logout-btn" id="settingsLogoutBtn">🚶 Sign Out</button>
+      <button class="settings-logout-btn" id="settingsLogoutBtn" data-i18n>🚶 Sign Out</button>
       <button class="settings-close-btn" id="settingsCloseBtn" data-i18n>Close</button>
-      <div class="settings-about" data-i18n>
+      <div class="settings-about">
         Anonymous Bubble Answers v1.0<br>Made with MIS team
       </div>
     </div>
@@ -1100,7 +1100,7 @@
 
   <!-- Left sidebar -->
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-header">What to Eat?</div>
+    <div class="sidebar-header" data-i18n>What to Eat?</div>
 
     <div class="sidebar-body">
 
@@ -1136,14 +1136,14 @@
         <button class="random-btn" id="randomBtn" style="margin-bottom:8px" data-i18n>&#127922; Spin &amp; Decide!</button>
         <div class="random-result" id="randomResult" data-i18n>Press the button!</div>
         <div class="spin-actions" id="spinActions">
-          <button class="remove-btn" id="spinRemoveBtn">&#10060; Remove from spin</button>
+          <button class="remove-btn" id="spinRemoveBtn" data-i18n>&#10060; Remove from spin</button>
         </div>
         <button class="restore-btn" id="restoreBtn" data-i18n>&#128260; Restore removed food</button>
 
         <!-- Vote list -->
         <div class="reset-info" id="resetInfo" style="margin-top:12px"></div>
         <ul class="vote-list" id="voteList">
-          <li class="vote-empty">No suggestions yet</li>
+          <li class="vote-empty" data-i18n>No suggestions yet</li>
         </ul>
       </div>
     </div>
@@ -1154,21 +1154,21 @@
         <a href="./games/room.html" class="game-card">
           <span class="game-card-emoji">🏠</span>
           <div>
-            <div class="game-card-title">My Room</div>
+            <div class="game-card-title" data-i18n>My Room</div>
             <div class="game-card-sub" data-i18n>Pets, plants & decor</div>
           </div>
         </a>
         <a href="./games/room.html?view=farm" class="game-card">
           <span class="game-card-emoji">🚜</span>
           <div>
-            <div class="game-card-title">My Farm</div>
+            <div class="game-card-title" data-i18n>My Farm</div>
             <div class="game-card-sub" data-i18n>Animals, crops & coins</div>
           </div>
         </a>
         <a href="./games/room.html?view=aquarium" class="game-card">
           <span class="game-card-emoji" style="background:var(--primary-tint)">🐠</span>
           <div>
-            <div class="game-card-title">My Aquarium</div>
+            <div class="game-card-title" data-i18n>My Aquarium</div>
             <div class="game-card-sub" data-i18n>Your Fishing collection</div>
           </div>
         </a>
@@ -1186,35 +1186,35 @@
           <a href="./games/flappy.html" class="game-card">
             <span class="game-card-emoji">🐦</span>
             <div>
-              <div class="game-card-title">Flappy Bird</div>
+              <div class="game-card-title" data-i18n>Flappy Bird</div>
               <div class="game-card-sub" data-i18n>Tap to fly — beat the high score!</div>
             </div>
           </a>
           <a href="./games/tetris.html" class="game-card">
             <span class="game-card-emoji">🧱</span>
             <div>
-              <div class="game-card-title">Tetris</div>
+              <div class="game-card-title" data-i18n>Tetris</div>
               <div class="game-card-sub" data-i18n>Clear lines, earn coins, chain combos!</div>
             </div>
           </a>
           <a href="./games/chinese-chess.html" class="game-card">
             <span class="game-card-emoji">♟️</span>
             <div>
-              <div class="game-card-title">中國象棋</div>
+              <div class="game-card-title" data-i18n>中國象棋</div>
               <div class="game-card-sub" data-i18n>Challenge friends — bet coins & play!</div>
             </div>
           </a>
           <a href="./games/snake.html" class="game-card">
             <span class="game-card-emoji">🐍</span>
             <div>
-              <div class="game-card-title">贪吃蛇</div>
+              <div class="game-card-title" data-i18n>贪吃蛇</div>
               <div class="game-card-sub" data-i18n>Eat, grow, survive — earn coins!</div>
             </div>
           </a>
           <a href="./games/block-blast.html" class="game-card">
             <span class="game-card-emoji">🧩</span>
             <div>
-              <div class="game-card-title">Block Blast</div>
+              <div class="game-card-title" data-i18n>Block Blast</div>
               <div class="game-card-sub" data-i18n>Fill rows & columns — combo for coins!</div>
             </div>
           </a>
@@ -1228,21 +1228,21 @@
           <a href="./games/fishing.html" class="game-card">
             <span class="game-card-emoji">🎣</span>
             <div>
-              <div class="game-card-title">Fishing</div>
+              <div class="game-card-title" data-i18n>Fishing</div>
               <div class="game-card-sub" data-i18n>Cast your line — catch fish for coins!</div>
             </div>
           </a>
           <a href="./games/toto.html" class="game-card">
             <span class="game-card-emoji">🎱</span>
             <div>
-              <div class="game-card-title">TOTO Lottery</div>
+              <div class="game-card-title" data-i18n>TOTO Lottery</div>
               <div class="game-card-sub" data-i18n>Daily 4-digit draw — bet coins, win big!</div>
             </div>
           </a>
           <a href="./games/subway-dash.html" class="game-card">
             <span class="game-card-emoji">🚇</span>
             <div>
-              <div class="game-card-title">Subway Dash</div>
+              <div class="game-card-title" data-i18n>Subway Dash</div>
               <div class="game-card-sub" data-i18n>Run, jump &amp; roll — dodge the trains!</div>
             </div>
           </a>
@@ -1312,19 +1312,19 @@
         <b class="live-score-val" id="liveOnlineCount">1</b>
       </span>
       <span class="live-score-seg fish" id="myStayTime" data-i18n-title title="你在本站的总摸鱼时长（聊天板 + 游戏 + 房间 + 农场 + 水族馆 + Pet World）" hidden>
-        <span class="live-score-lb" id="myStayLbl">摸鱼</span>
+        <span class="live-score-lb" id="myStayLbl" data-i18n>摸鱼</span>
         <span class="live-score-val" id="myStayTimeVal">…</span>
       </span>
       <span class="live-score-seg rank" id="myRankSeg" data-i18n-title title="你在摸鱼榜的名次" hidden>
-        <span class="live-score-lb">排名</span>
+        <span class="live-score-lb" data-i18n>排名</span>
         <span class="live-score-val" id="myRankVal">#—</span>
       </span>
       <span class="live-score-seg today" id="todaySeg" data-i18n-title title="全站今天新发的泡泡数">
-        <span class="live-score-lb">今日</span>
+        <span class="live-score-lb" data-i18n>今日</span>
         <span class="live-score-val" id="todayVal">…</span>
       </span>
       <span class="live-score-seg peak" id="peakSeg" data-i18n-title title="今天你看到的最高同时在线人数">
-        <span class="live-score-lb">峰值</span>
+        <span class="live-score-lb" data-i18n>峰值</span>
         <span class="live-score-val" id="peakVal">1</span>
       </span>
     </span>
@@ -1364,10 +1364,10 @@
 
   <!-- Daily 正能量 (motivational) quote banner -->
   <div class="daily-quote-banner" id="dailyQuoteBanner">
-    <div class="daily-quote-label">🌟 每日正能量</div>
+    <div class="daily-quote-label" data-i18n>🌟 每日正能量</div>
     <div class="daily-quote-text" id="dailyQuoteText"></div>
     <!-- Comment toggle -->
-    <button class="qc-toggle" id="quoteCommentToggle" data-i18n>
+    <button class="qc-toggle" id="quoteCommentToggle">
       💬 评论 <span id="quoteCommentArrow">▼</span>
     </button>
     <!-- Expandable comment section -->
@@ -1391,7 +1391,7 @@
   <div class="cr-banner hidden" id="crBanner" role="status" aria-live="polite">
     <span class="cr-banner-emoji" id="crBannerEmoji">💰</span>
     <span class="cr-banner-body">
-      <span class="cr-banner-line1" id="crBannerLabel">Coin Rush</span>
+      <span class="cr-banner-line1" id="crBannerLabel" data-i18n>Coin Rush</span>
       <span class="cr-banner-sub" id="crBannerSub"></span>
     </span>
     <button class="cr-banner-btn hidden" id="crBannerBtn" type="button" data-i18n>Join</button>
@@ -1468,7 +1468,7 @@
       <button class="gif-picker-close" id="gifPickerClose">✕</button>
     </div>
     <div class="gif-grid" id="gifGrid">
-      <div class="gif-loading">Search for a GIF above</div>
+      <div class="gif-loading" data-i18n>Search for a GIF above</div>
     </div>
     <div class="gif-attribution" data-i18n>Powered by GIPHY</div>
   </div>
@@ -1476,7 +1476,7 @@
   <div class="lightbox" id="lightbox">
     <button class="lightbox-close" id="lightboxClose">&#10005;</button>
     <img id="lightboxImg" src="" alt="full">
-    <div class="lightbox-hint">Scroll to zoom &middot; Drag to pan &middot; Tap outside to close</div>
+    <div class="lightbox-hint" data-i18n>Scroll to zoom &middot; Drag to pan &middot; Tap outside to close</div>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -1639,9 +1639,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-  <script src="./src/js/i18n.js?v=2"></script>
-  <script src="./src/js/i18n-zh-app.js?v=2"></script>
-  <script defer src="./src/js/i18n-ui.js?v=2"></script>
+  <script src="./src/js/i18n.js?v=3"></script>
+  <script src="./src/js/i18n-zh-app.js?v=3"></script>
+  <script defer src="./src/js/i18n-ui.js?v=3"></script>
   <script src="./src/js/firebase-config.js"></script>
   <script src="./src/js/daily-quotes.js?v=2"></script>
   <script src="./src/js/quote-comments.js"></script>

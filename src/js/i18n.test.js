@@ -108,6 +108,60 @@ test('an English key still returns itself under en, dictionary or not', () => {
   });
 });
 
+/* ── applyStatic must never eat markup ── */
+
+// A tiny DOM stand-in: enough for applyStatic to walk and mutate.
+function fakeEl(text, childCount) {
+  return {
+    tagName: 'DIV', dataset: {}, children: { length: childCount || 0 },
+    textContent: text,
+  };
+}
+function sweep(els) {
+  const scope = { querySelectorAll: (sel) => (sel === '[data-i18n]' ? els : []) };
+  const warned = [];
+  const realWarn = console.warn;
+  console.warn = (...a) => warned.push(a[0]);
+  try { I.applyStatic(scope); } finally { console.warn = realWarn; }
+  return warned;
+}
+
+test('applyStatic translates an element whose content is plain text', () => {
+  withLang('zh', () => {
+    const el = fakeEl('Bigger pasture', 0);
+    sweep([el]);
+    assert.equal(el.textContent, '更大的牧场');
+  });
+});
+
+test('applyStatic REFUSES an element that contains markup', () => {
+  withLang('zh', () => {
+    // Assigning textContent here would delete the children — for <body> that
+    // is the whole page, script sources included.
+    const el = fakeEl('Bigger pasture and a child', 2);
+    const warned = sweep([el]);
+    assert.equal(el.textContent, 'Bigger pasture and a child', 'content must be left alone');
+    assert.equal(warned.length, 1, 'and it should say so');
+    assert.match(warned[0], /contains markup/);
+  });
+});
+
+test('applyStatic warns once per element, not on every sweep', () => {
+  withLang('zh', () => {
+    const el = fakeEl('x', 3);
+    assert.equal(sweep([el]).length, 1);
+    assert.equal(sweep([el]).length, 0, 'a language switch must not spam the console');
+  });
+});
+
+test('applyStatic remembers the original, so switching twice cannot compound', () => {
+  const el = fakeEl('Bigger pasture', 0);
+  withLang('zh', () => sweep([el]));
+  assert.equal(el.textContent, '更大的牧场');
+  withLang('en', () => sweep([el]));
+  assert.equal(el.textContent, 'Bigger pasture', 'must return to the source text, not translate the translation');
+});
+
 /* ── the default ── */
 
 test('the default is Chinese, not the browser language', () => {

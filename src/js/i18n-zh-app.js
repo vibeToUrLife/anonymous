@@ -13,6 +13,8 @@
   I18N.register('zh', {
     // Gate & sign-in
     'Anonymous Bubble Answers': '匿名泡泡留言板',
+    '(dev only)': '（仅开发者）',
+    'Flappy Bird': 'Flappy Bird',
     'Anonymous Bubble Answers v1.0': '匿名泡泡留言板 v1.0',
     'Enter Access Code': '输入访问码',
     'This site requires an access code to enter.': '进入本站需要访问码。',
@@ -20,6 +22,7 @@
     'Enter': '进入',
     'Welcome': '欢迎',
     'Sign in with Google to continue.': '用 Google 账号登录后继续。',
+    'Everything stays anonymous — your identity is never shown.': '全程匿名 — 你的身份不会被显示。',
 
     // Settings
     'Settings': '设置',
@@ -131,6 +134,9 @@
   /* ── Chinese keys → English ── */
   I18N.register('en', {
     '在线': 'Online',
+    '🔥 营火 Campfire': '🔥 Campfire',
+    '中國象棋': 'Chinese Chess',
+    '贪吃蛇': 'Snake',
     '现在在线人数': 'People online right now',
     '摸鱼': 'Slacking',
     '你在本站的总摸鱼时长（聊天板 + 游戏 + 房间 + 农场 + 水族馆 + Pet World）':

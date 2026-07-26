@@ -115,6 +115,19 @@
     try { scope = rootEl || document; } catch (e) { return; }
     if (!scope || !scope.querySelectorAll) return;
     scope.querySelectorAll('[data-i18n]').forEach(function (el) {
+      // Assigning textContent DELETES every child, so an element that holds
+      // markup must never be swept — mark the text runs individually instead.
+      // Without this guard, data-i18n landing on a container (worst case
+      // <body>) replaces the whole subtree with its own flattened text, script
+      // sources and all. Refuse loudly rather than quietly wrecking the page.
+      if (el.children && el.children.length) {
+        if (!el.dataset.i18nWarned) {
+          el.dataset.i18nWarned = '1';
+          console.warn('i18n: ignoring data-i18n on <' + el.tagName.toLowerCase() +
+            '> — it contains markup; wrap the text in a span instead.', el);
+        }
+        return;
+      }
       if (el.dataset.i18nSrc == null) el.dataset.i18nSrc = el.textContent.trim();
       el.textContent = t(el.dataset.i18nSrc);
     });
