@@ -1457,13 +1457,20 @@
         (function () {
           const lvl = roomData.farmColdLevel || 0;
           const cost = lvl < FARM_COLD_COSTS.length ? FARM_COLD_COSTS[lvl] : null;
+          const locked = !roomData.farmAutoCollect;
           return '<div class="farm-shop-row">' +
             '<span class="farm-shop-animal">❄️ 冷藏库 <small>Lv ' + lvl + '/' + FARM_COLD_COSTS.length + ' · 离线攒 ' + _fmtFarmTime(farmOfflineCapMs()) + '</small></span>' +
             (cost == null
               ? '<span class="farm-shop-drop">MAX</span>'
+              : locked
+              ? '<button class="farm-shop-buy" disabled>🔒 需要 🤖</button>'
               : '<button class="farm-shop-buy" onclick="buyFarmCold()"' + (roomData.coins < cost ? ' disabled' : '') + '>+' + _fmtFarmTime(FARM_COLD_STEP_MS) + ' · ' + cost + '🪙</button>') +
           '</div>' +
-          '<div class="farm-panel-empty" style="padding:2px 0 4px">不在农场时，动物最多攒这么久的产出。</div>';
+          '<div class="farm-panel-empty" style="padding:2px 0 4px">' +
+            (locked
+              ? '先装上面的 🤖 Auto-Collector — 没有它，离线攒得越久，回来越要先点掉一个弹窗。'
+              : '不在农场时，动物最多攒这么久的产出。配上 🤖 自动喂食器才不会饿着。') +
+          '</div>';
         })();
 
       // Built (and subscribed) only when the Visit tab is active, so opening the
@@ -1663,8 +1670,14 @@
     }
 
     // ❄️ Cold store — how much of an absence the farm banks.
+    // Gated on the Auto-Collector, because without it a longer window only means
+    // a bigger blocking "while you were away" modal to tap through every time
+    // (see openFarm). Automate the collecting first, then buy more to collect.
     async function buyFarmCold() {
       if (viewingUid !== currentUid) return;
+      if (!roomData.farmAutoCollect) {
+        return showToast('❄️ 先装 🤖 Auto-Collector — 否则离线攒得越久，回来越要手动清。', 'error');
+      }
       const lvl = roomData.farmColdLevel || 0;
       if (lvl >= FARM_COLD_COSTS.length) return;
       const cost = FARM_COLD_COSTS[lvl];
