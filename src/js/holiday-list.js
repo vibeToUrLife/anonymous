@@ -43,6 +43,8 @@
   var _editId = null, _editPriv = false;   // when set, the form edits this holiday (creator only)
   var MS_DAY = 86400000;
   var REMIND_WITHIN = 3;               // pixel reminder on the last 3 days
+  // Keys, translated where they're formatted — a module-level T() would freeze
+  // whichever language was active when this file loaded.
   var WEEK = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
   /* ── Small utils ────────────────────────────────────────────── */
@@ -91,7 +93,7 @@
   function fmtTime12(s) {                                         // "18:00" → "下午6:00"
     var min = parseTime(s); if (min === null) return '';
     var h = Math.floor(min / 60), m = min % 60;
-    var ap = h < 12 ? '上午' : '下午';
+    var ap = T(h < 12 ? '上午' : '下午');
     var h12 = h % 12; if (h12 === 0) h12 = 12;
     return ap + h12 + ':' + pad2(m);
   }
@@ -111,19 +113,19 @@
     var d = Math.floor(s / 86400); s -= d * 86400;
     var h2 = Math.floor(s / 3600); s -= h2 * 3600;
     var m = Math.floor(s / 60); s -= m * 60;
-    if (d > 0) return { big: d, unit: '天', sub: h2 + '小时' + m + '分' };
-    if (h2 > 0) return { big: h2, unit: '小时', sub: m + '分' + s + '秒' };
-    if (m > 0) return { big: m, unit: '分', sub: s + '秒' };
-    return { big: s, unit: '秒', sub: '' };
+    if (d > 0) return { big: d, unit: T('天'), sub: T('{h}小时{m}分', { h: h2, m: m }) };
+    if (h2 > 0) return { big: h2, unit: T('小时'), sub: T('{m}分{s}秒', { m: m, s: s }) };
+    if (m > 0) return { big: m, unit: T('分'), sub: T('{s}秒', { s: s }) };
+    return { big: s, unit: T('秒'), sub: '' };
   }
 
   /** "8月15日（周六）" or "8月15日（周六）–8月20日（周四）· 共6天". */
   function detailLine(h) {
     var s = parseDate(h.start);
-    var line = fmtMD(s) + '（' + WEEK[s.getDay()] + '）';
+    var line = fmtMD(s) + '（' + T(WEEK[s.getDay()]) + '）';
     if (h.end && h.end !== h.start) {
       var e = parseDate(h.end);
-      line += '–' + fmtMD(e) + '（' + WEEK[e.getDay()] + '）· 共' + (daysBetween(s, e) + 1) + '天';
+      line += '–' + fmtMD(e) + '（' + T(WEEK[e.getDay()]) + '）· ' + T('共 {n} 天', { n: daysBetween(s, e) + 1 });
     }
     if (parseTime(h.time)) line += ' ' + fmtTime12(h.time);      // e.g. "…（周六） 下午6:00"
     return line;
@@ -315,10 +317,10 @@
     overlay = document.createElement('div');
     overlay.className = 'hol-ov';
     overlay.innerHTML =
-      '<div class="hol-modal" role="dialog" aria-label="假期列表">' +
+      '<div class="hol-modal" role="dialog" aria-label="' + T('假期列表') + '">' +
         '<div class="hol-bar"><span class="hol-bar-ic">🏖️</span>' +
-          '<span class="hol-bar-tt">假期列表</span>' +
-          '<button class="hol-x" data-act="close" title="关闭" aria-label="关闭">✕</button></div>' +
+          '<span class="hol-bar-tt">' + T('假期列表') + '</span>' +
+          '<button class="hol-x" data-act="close" title="' + T('关闭') + '" aria-label="' + T('关闭') + '">✕</button></div>' +
         '<div class="hol-scroll" id="holScroll"></div>' +
       '</div>';
     document.body.appendChild(overlay);
@@ -379,22 +381,22 @@
   function cdInnerHTML(h, hero) {
     var c = countdown(h);
     if (hero) {
-      return '<span class="lead">距离放假</span>' +
+      return '<span class="lead">' + T('距离放假') + '</span>' +
         '<span class="num hol-pix">' + c.big + '</span><span class="unit">' + c.unit + '</span>' +
         (c.sub ? '<span class="hol-hero-sub">' + c.sub + '</span>' : '');
     }
-    return '<span class="n hol-pix">' + c.big + '</span><span class="u">' + c.unit + '后</span>' +
+    return '<span class="n hol-pix">' + c.big + '</span><span class="u">' + c.unit + T('后') + '</span>' +
       (c.sub ? '<span class="hol-row-sub">' + c.sub + '</span>' : '');
   }
 
   function heroHTML(h) {
     var by = h.priv
-      ? '<div class="hol-hero-mk">🔒 私密假期 · 只有你看得到</div>'
-      : (h.by ? '<div class="hol-hero-mk">🙋 ' + esc(h.by) + ' 添加</div>' : '');
+      ? '<div class="hol-hero-mk">' + T('🔒 私密假期 · 只有你看得到') + '</div>'
+      : (h.by ? '<div class="hol-hero-mk">🙋 ' + T('{who} 添加', { who: esc(h.by) }) + '</div>' : '');
     return '<div class="hol-hero">' +
       (canEdit(h) ? editBtnHTML(h, 'hol-hero-e') : '') +
       (canRemove() ? delBtnHTML(h, 'hol-hero-x') : '') +
-      '<span class="hol-hero-lb">下一个假期</span>' +
+      '<span class="hol-hero-lb">' + T('下一个假期') + '</span>' +
       '<div class="hol-hero-nm"><span class="em">' + h.emoji + '</span>' + esc(h.name) + '</div>' +
       '<div class="hol-hero-dt">' + detailLine(h) + '</div>' +
       '<div class="hol-hero-cd" data-cd="' + esc(h.id) + '">' + cdInnerHTML(h, true) + '</div>' +
@@ -404,7 +406,7 @@
 
   function rowHTML(h) {
     var by = h.priv
-      ? '<span class="hol-mk">🔒 只有你看得到</span>'
+      ? '<span class="hol-mk">' + T('🔒 只有你看得到') + '</span>'
       : (h.by ? '<span class="hol-mk">🙋 ' + esc(h.by) + '</span>' : '');
     return '<div class="hol-row">' +
       '<span class="hol-chip">' + h.emoji + '</span>' +
@@ -437,8 +439,8 @@
     if (!_selStart) return '';
     if (!_selEnd || _selEnd === _selStart) {
       var s = parseDate(_selStart);
-      var lb = fmtMD(s) + '（' + WEEK[s.getDay()] + '）';
-      return _selEnd ? lb : lb + ' → 点结束日期';
+      var lb = fmtMD(s) + '（' + T(WEEK[s.getDay()]) + '）';
+      return _selEnd ? lb : lb + ' ' + T('→ 点结束日期');
     }
     var n = daysBetween(parseDate(_selStart), parseDate(_selEnd)) + 1;
     return fmtMD(parseDate(_selStart)) + ' – ' + fmtMD(parseDate(_selEnd)) + ' · ' + n + '天';
@@ -450,7 +452,7 @@
     var tm = new Date(t.getTime() + MS_DAY);                    // earliest pickable = tomorrow
     var label = rangeLabel();
     var html = '<button type="button" class="hol-dp-field" data-act="dp-toggle">📅 ' +
-      (label ? '<span>' + label + '</span>' : '<span class="ph">选日期（可以选连续几天）</span>') +
+      (label ? '<span>' + label + '</span>' : '<span class="ph">' + T('选日期（可以选连续几天）') + '</span>') +
       '<span class="arw">' + (_dpOpen ? '▲' : '▼') + '</span></button>';
     if (_dpOpen) {
       var days = new Date(_dpY, _dpM + 1, 0).getDate();
@@ -458,12 +460,12 @@
       var canPrev = (_dpY > tm.getFullYear()) || (_dpY === tm.getFullYear() && _dpM > tm.getMonth());
       var maxY = tm.getFullYear() + 2;                          // browse up to 2 years ahead
       var canNext = (_dpY < maxY) || (_dpY === maxY && _dpM < tm.getMonth());
-      var hint = !_selStart || _selEnd
+      var hint = T(!_selStart || _selEnd
         ? '点选放假第一天'
-        : '再点最后一天（点同一天＝只放一天）';
+        : '再点最后一天（点同一天＝只放一天）');
       html += '<div class="hol-dp-panel"><div class="hol-dp-nav">' +
         '<button type="button" class="hol-dp-btn" data-act="dp-prev"' + (canPrev ? '' : ' disabled') + '>◀</button>' +
-        '<b>' + _dpY + '年' + (_dpM + 1) + '月</b>' +
+        '<b>' + T('{y}年{m}月', { y: _dpY, m: _dpM + 1 }) + '</b>' +
         '<button type="button" class="hol-dp-btn" data-act="dp-next"' + (canNext ? '' : ' disabled') + '>▶</button>' +
         '</div><div class="hol-dp-hint">' + hint + '</div><div class="hol-dp-grid">';
       var wd = ['一', '二', '三', '四', '五', '六', '日'];
@@ -497,7 +499,7 @@
      land on the exact value (hours snap to 1–12). ── */
   function tpLabel() {
     if (_selHour === null) return '';
-    return (_selPM ? '下午' : '上午') + _selHour + ':' + pad2(_selMin === null ? 0 : _selMin);
+    return T(_selPM ? '下午' : '上午') + _selHour + ':' + pad2(_selMin === null ? 0 : _selMin);
   }
   /** Committed time as 24h "HH:MM", or '' when no time is set. */
   function tpValue() {
@@ -506,7 +508,7 @@
   function tpInnerHTML() {
     var lb = tpLabel();
     var html = '<button type="button" class="hol-tp-field" data-act="tp-toggle">🕐 ' +
-      (lb ? '<span>' + lb + '</span>' : '<span class="ph">选时间（可不选，几点开始放假）</span>') +
+      (lb ? '<span>' + lb + '</span>' : '<span class="ph">' + T('选时间（可不选，几点开始放假）') + '</span>') +
       '<span class="arw">' + (_tpOpen ? '▲' : '▼') + '</span></button>';
     if (!_tpOpen) return html;
 
@@ -521,11 +523,11 @@
           '<button type="button" class="hol-tp-seg' + (!isH ? ' on' : '') + '" data-act="tp-mode-m">' + mm + '</button>' +
         '</div>' +
         '<div class="hol-tp-ap">' +
-          '<button type="button" class="hol-tp-apbtn' + (!_selPM ? ' on' : '') + '" data-act="tp-am">上午</button>' +
-          '<button type="button" class="hol-tp-apbtn' + (_selPM ? ' on' : '') + '" data-act="tp-pm">下午</button>' +
+          '<button type="button" class="hol-tp-apbtn' + (!_selPM ? ' on' : '') + '" data-act="tp-am">' + T('上午') + '</button>' +
+          '<button type="button" class="hol-tp-apbtn' + (_selPM ? ' on' : '') + '" data-act="tp-pm">' + T('下午') + '</button>' +
         '</div>' +
       '</div>' +
-      '<div class="hol-tp-hint">' + (isH ? '点表盘选小时' : '点表盘选分钟') + '</div>' +
+      '<div class="hol-tp-hint">' + T(isH ? '点表盘选小时' : '点表盘选分钟') + '</div>' +
       '<div class="hol-tp-face">';
 
     // hand — only when the value for the active mode is chosen
@@ -546,8 +548,8 @@
 
     html += '</div>' +
       '<div class="hol-tp-actions">' +
-        '<button type="button" class="hol-tp-clear" data-act="tp-clear">不设时间</button>' +
-        '<button type="button" class="hol-tp-done" data-act="tp-done">确定</button>' +
+        '<button type="button" class="hol-tp-clear" data-act="tp-clear">' + T('不设时间') + '</button>' +
+        '<button type="button" class="hol-tp-done" data-act="tp-done">' + T('确定') + '</button>' +
       '</div>' +
     '</div>';
     return html;
@@ -577,9 +579,9 @@
   /** Public / private choice — two pixel toggle buttons. */
   function visInnerHTML() {
     return '<button type="button" class="hol-vis-btn' + (_visPrivate ? '' : ' on') + '" data-act="vis-pub">' +
-        '🌍 公开<span class="sub">大家都看得到</span></button>' +
+        '🌍 ' + T('公开') + '<span class="sub">' + T('大家都看得到') + '</span></button>' +
       '<button type="button" class="hol-vis-btn' + (_visPrivate ? ' on' : '') + '" data-act="vis-priv">' +
-        '🔒 私密<span class="sub">只有你看得到</span></button>';
+        '🔒 ' + T('私密') + '<span class="sub">' + T('只有你看得到') + '</span></button>';
   }
   function refreshVis() {
     var el = document.getElementById('holVis');
@@ -589,13 +591,13 @@
   function addFormHTML() {
     var editing = !!_editId;
     return '<div class="hol-add">' +
-      '<div class="hol-add-hd">' + (editing ? '✏️ 编辑假期' : '➕ 添加假期') + '</div>' +
-      '<input class="hol-inp" id="holName" type="text" maxlength="16" placeholder="假期名字（如：请年假去玩）" autocomplete="off">' +
+      '<div class="hol-add-hd">' + T(editing ? '✏️ 编辑假期' : '➕ 添加假期') + '</div>' +
+      '<input class="hol-inp" id="holName" type="text" maxlength="16" placeholder="' + T('假期名字（如：请年假去玩）') + '" autocomplete="off">' +
       '<div class="hol-dp" id="holDatePick">' + dpInnerHTML() + '</div>' +
       '<div class="hol-tp" id="holTimePick">' + tpInnerHTML() + '</div>' +
       (editing ? '' : '<div class="hol-vis" id="holVis">' + visInnerHTML() + '</div>') +
-      '<button class="hol-add-btn" data-act="add">' + (editing ? '💾 保存修改' : '加进倒数表') + '</button>' +
-      (editing ? '<button class="hol-cancel-btn" data-act="cancel-edit">取消</button>' : '') +
+      '<button class="hol-add-btn" data-act="add">' + T(editing ? '💾 保存修改' : '加进倒数表') + '</button>' +
+      (editing ? '<button class="hol-cancel-btn" data-act="cancel-edit">' + T('取消') + '</button>' : '') +
       '</div>';
   }
 
@@ -607,23 +609,23 @@
     var keepName = keepEl ? keepEl.value : '';
     var list = activeHolidays();
     _shownIds = list.map(function (h) { return h.id; }).join(',');   // tick() re-renders when this set changes
-    var html = '<div class="hol-tip">🏝️ 数着日子等放假 · 假期由大家一起添加和管理</div>';
+    var html = '<div class="hol-tip">' + T('🏝️ 数着日子等放假 · 假期由大家一起添加和管理') + '</div>';
 
     if (!list.length) {
-      html += '<div class="hol-empty">' + (_loaded
+      html += '<div class="hol-empty">' + T(_loaded
         ? '还没有假期在倒数 🏖️<br>加一个假期，大家一起等放假吧！'
         : '假期加载中…') + '</div>';
     } else {
       html += heroHTML(list[0]);
       var rest = list.slice(1);
       if (rest.length) {
-        html += '<div class="hol-sec">📅 后续假期</div>';
+        html += '<div class="hol-sec">📅 ' + T('后续假期') + '</div>';
         html += rest.map(function (h) { return rowHTML(h); }).join('');
       }
     }
 
     html += addFormHTML();
-    html += '<div class="hol-foot">公开假期实时同步、所有人共享，任何人都可以添加或移除；<br>🔒 私密假期只有你自己看得到。</div>';
+    html += '<div class="hol-foot">' + T('公开假期实时同步、所有人共享，任何人都可以添加或移除；<br>🔒 私密假期只有你自己看得到。') + '</div>';
     scrollEl.innerHTML = html;
     if (keepName) { var el = document.getElementById('holName'); if (el) el.value = keepName; }
   }
@@ -671,15 +673,15 @@
     var date = _selStart;
     var endDate = _selEnd || _selStart;          // no end tapped yet = single day
     var time = tpValue();                        // '' = all-day (no time set)
-    if (!name) { toast('给假期起个名字吧'); nameEl.focus(); return; }
-    if (!date) { toast('选一个日期'); if (!_dpOpen) { _dpOpen = true; refreshDP(); } return; }
-    if (daysBetween(todayMidnight(), parseDate(date)) < 1) { toast('请选择明天或以后的日期'); return; }
-    if (!hasDB() || !myUid()) { toast('请先登录再添加假期'); return; }
+    if (!name) { toast(T('给假期起个名字吧')); nameEl.focus(); return; }
+    if (!date) { toast(T('选一个日期')); if (!_dpOpen) { _dpOpen = true; refreshDP(); } return; }
+    if (daysBetween(todayMidnight(), parseDate(date)) < 1) { toast(T('请选择明天或以后的日期')); return; }
+    if (!hasDB() || !myUid()) { toast(T('请先登录再添加假期')); return; }
 
     var editing = !!_editId;
     var priv = editing ? _editPriv : _visPrivate;
     var ref = priv ? _mineRef() : db.collection(COL);
-    if (!ref) { toast('请先登录再操作'); return; }
+    if (!ref) { toast(T('请先登录再操作')); return; }
 
     var btn = document.querySelector('.hol-add-btn');
     if (btn) btn.disabled = true;
@@ -692,11 +694,11 @@
       write = ref.add({ uid: myUid(), displayName: myName(), name: name.slice(0, MAX_NAME), date: date, endDate: endDate, time: time, createdAt: Date.now() });
     }
     write.then(function () {
-      toast(editing ? '✏️ 已保存修改' : (priv ? '🔒 已加入你的私密假期倒数' : '📌 已加入假期倒数，大家都看得到啦'));
+      toast(T(editing ? '✏️ 已保存修改' : (priv ? '🔒 已加入你的私密假期倒数' : '📌 已加入假期倒数，大家都看得到啦')));
       _resetFormAndRender();
     }).catch(function (e) {
       console.error('save holiday failed:', e);
-      toast(editing ? '保存失败，稍后再试' : '添加失败，稍后再试');
+      toast(T(editing ? '保存失败，稍后再试' : '添加失败，稍后再试'));
       if (btn) btn.disabled = false;
     });
   }
@@ -707,7 +709,7 @@
     if (!ref) return;
     ref.doc(id).delete().catch(function (e) {
       console.error('delete holiday failed:', e);
-      toast('移除失败，稍后再试');
+      toast(T('移除失败，稍后再试'));
     });
     // onSnapshot re-renders once the delete lands.
   }
@@ -805,11 +807,11 @@
     remOv.setAttribute('role', 'alertdialog');
     remOv.innerHTML =
       '<div class="holr-box">' +
-        '<div class="holr-flag">★ 假 期 预 告 ★</div>' +
+        '<div class="holr-flag">' + T('★ 假 期 预 告 ★') + '</div>' +
         '<div class="holr-days" id="holrDays"></div>' +
         '<div class="holr-nm" id="holrName"></div>' +
         '<div class="holr-dt" id="holrDate"></div>' +
-        '<div class="holr-press">▶ 点一下关闭 ◀</div>' +
+        '<div class="holr-press">' + T('▶ 点一下关闭 ◀') + '</div>' +
       '</div>';
     document.body.appendChild(remOv);
     remOv.addEventListener('click', hideReminder);
@@ -817,7 +819,7 @@
 
   function showReminder(h, d) {
     buildReminder();
-    remOv.querySelector('#holrDays').innerHTML = '还有 <b>' + d + '</b> 天';
+    remOv.querySelector('#holrDays').innerHTML = T('还有 <b>{n}</b> 天', { n: d });
     remOv.querySelector('#holrName').textContent = h.name;
     var dt = detailLine(h).replace(/（.*?）/g, '');           // drop weekday for the big pixel line
     remOv.querySelector('#holrDate').textContent = dt;
