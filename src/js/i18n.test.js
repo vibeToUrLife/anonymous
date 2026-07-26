@@ -81,6 +81,16 @@ test('Chinese ignores the plural distinction, as it should', () => {
   });
 });
 
+/* ── the default ── */
+
+test('the default is Chinese, not the browser language', () => {
+  // Node has neither localStorage nor navigator, so this is the bare default —
+  // which is the case that matters: a first visit with nothing stored.
+  const fresh = require('./i18n.js');
+  assert.equal(fresh.getLang(), 'zh',
+    'a reader who has never chosen should land on Chinese');
+});
+
 /* ── switching ── */
 
 test('setLang only accepts a language this build speaks', () => {

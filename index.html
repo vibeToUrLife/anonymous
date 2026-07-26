@@ -981,7 +981,7 @@
     <div class="settings-box">
       <h3>⚙️ Settings</h3>
       <div class="settings-section">
-        <div class="settings-label">Minigame Display Name</div>
+        <div class="settings-label" data-i18n>Minigame Display Name</div>
         <div class="settings-name-row">
           <input type="text" id="settingsNameInput" placeholder="Your name" maxlength="20">
           <button id="settingsNameSaveBtn">Save</button>
@@ -990,16 +990,16 @@
       </div>
       <hr class="settings-divider">
       <div class="settings-section">
-        <div class="settings-label">Notifications</div>
+        <div class="settings-label" data-i18n>Notifications</div>
         <div class="settings-row">
-          <span class="settings-row-label">🔔 Push Notifications</span>
+          <span class="settings-row-label" data-i18n>🔔 Push Notifications</span>
           <label class="settings-toggle">
             <input type="checkbox" id="notifToggle">
             <span class="slider"></span>
           </label>
         </div>
         <div class="settings-row" style="margin-top:8px">
-          <span class="settings-row-label">🔊 Notification Sound</span>
+          <span class="settings-row-label" data-i18n>🔊 Notification Sound</span>
           <label class="settings-toggle">
             <input type="checkbox" id="soundToggle">
             <span class="slider"></span>
@@ -1025,7 +1025,7 @@
       </div>
       <hr class="settings-divider">
       <div class="settings-section">
-        <div class="settings-label">Font Size</div>
+        <div class="settings-label" data-i18n>Font Size</div>
         <div class="settings-select" id="fontSizeSelect">
           <button data-size="small">Small</button>
           <button data-size="medium">Medium</button>
@@ -1035,7 +1035,7 @@
       <hr class="settings-divider">
       <div class="settings-section">
         <div class="settings-row">
-          <span class="settings-row-label">💬 Bubble Animations</span>
+          <span class="settings-row-label" data-i18n>💬 Bubble Animations</span>
           <label class="settings-toggle">
             <input type="checkbox" id="animToggle" checked>
             <span class="slider"></span>
@@ -1051,7 +1051,7 @@
       </div>
       <hr class="settings-divider">
       <div class="settings-section">
-        <div class="settings-label">🐾 Walking Pet</div>
+        <div class="settings-label" data-i18n>🐾 Walking Pet</div>
         <div class="settings-select walk-pet-select" id="walkPetSelect">
           <button data-pet="hamster">🐹 Hamster</button>
           <button data-pet="cat">🐱 Cat</button>
@@ -1065,7 +1065,7 @@
       </div>
       <hr class="settings-divider">
       <div class="settings-section">
-        <div class="settings-label">Data</div>
+        <div class="settings-label" data-i18n>Data</div>
         <button class="settings-cache-btn" id="clearCacheBtn">🗑️ Clear Local Cache</button>
       </div>
 
@@ -1640,6 +1640,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="./src/js/i18n.js?v=1"></script>
+  <script src="./src/js/i18n-zh-app.js?v=1"></script>
   <script defer src="./src/js/i18n-ui.js?v=1"></script>
   <script src="./src/js/firebase-config.js"></script>
   <script src="./src/js/daily-quotes.js?v=2"></script>

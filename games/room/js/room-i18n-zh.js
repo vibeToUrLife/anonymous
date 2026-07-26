@@ -192,6 +192,11 @@
     'this farmer': '这位农场主',
     'them': '对方',
     'Their': 'TA',
+    'a farmer': '某位农场主',
+    'Farm popularity': '农场人气',
+    'offline': '离线',
+    '{n}h': '{n} 小时',
+    '{n}d': '{n} 天',
 
     /* ── Farm: offline catch-up ── */
     'While you were away…': '你不在的时候…',

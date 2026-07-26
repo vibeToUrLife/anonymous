@@ -41,6 +41,25 @@
     }
     // Another device changed it, or something else called setLang.
     window.addEventListener('langchange', paintActive);
+
+    // Another TAB changed it. The `storage` event fires in every other tab on
+    // this origin, so switching in the settings on index.html reaches a room or
+    // minigame left open elsewhere — without it those keep their old language
+    // until they're reloaded, which reads as the switch not having worked.
+    window.addEventListener('storage', function (e) {
+      if (e.key !== 'app_lang' || !e.newValue) return;
+      I18N.setLang(e.newValue);       // fires langchange here → each page repaints
+      paintActive();
+    });
+
+    // Coming back to a tab that was open while the choice changed elsewhere:
+    // `storage` doesn't replay, so re-read on focus.
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) return;
+      let stored = null;
+      try { stored = localStorage.getItem('app_lang'); } catch (err) { return; }
+      if (stored && stored !== I18N.getLang()) { I18N.setLang(stored); paintActive(); }
+    });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

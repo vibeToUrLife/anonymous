@@ -30,18 +30,18 @@
   const dicts = { en: null, zh: {} };     // en: null — the key IS the English
   let lang = null;
 
+  // Chinese unless the reader has said otherwise. This app's readers are
+  // Chinese speakers; the UI merely happens to be WRITTEN in English, which is
+  // a fact about the source, not about the audience. Browser language isn't
+  // consulted — a phone set to English is a weak signal next to that, and a
+  // wrong guess is worse than a consistent default anyone can change in one tap.
+  const DEFAULT_LANG = 'zh';
   function _read() {
     try {
       const v = localStorage.getItem(STORE_KEY);
       if (LANGS.indexOf(v) >= 0) return v;
     } catch (e) { /* private mode */ }
-    // First visit: follow the browser, since most of this app's readers are
-    // Chinese speakers but the UI happens to be written in English.
-    try {
-      const nav = (navigator.language || navigator.userLanguage || '').toLowerCase();
-      if (nav.indexOf('zh') === 0) return 'zh';
-    } catch (e) { /* no navigator (tests) */ }
-    return 'en';
+    return DEFAULT_LANG;
   }
 
   function getLang() {

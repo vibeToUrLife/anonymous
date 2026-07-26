@@ -175,8 +175,8 @@
       const fed = _autoFeedPlan(Math.min(_now - (roomData.farmFoodAt || _now), farmOfflineCapMs()));
       if (fed.coinsSpent > 0) {
         roomData.coins = Math.max(0, (roomData.coins || 0) - fed.coinsSpent);
-        if (typeof logCoin === 'function') logCoin(-fed.coinsSpent, '🤖 自动喂食');
-        showToast('🤖 自动喂食器买了 ' + fed.units + ' 份饲料 · −' + fed.coinsSpent + '🪙', '');
+        if (typeof logCoin === 'function') logCoin(-fed.coinsSpent, '🤖 ' + T('Auto-Feeder'));
+        showToast('🤖 ' + T('Auto-feeder bought {n} feed · −{cost}', { n: fed.units, cost: fed.coinsSpent + '🪙' }), '');
       }
       const plan = planFarmTick({
         animals: roomData.farmAnimals,
@@ -793,31 +793,37 @@
       const meta = farmProductMeta();
       const eff = farmInboxEffects(items, FARM_INBOX_OPTS);
       const rows = items.map(function (it) {
-        const who = escapeHtml(it.fromName || '某位农场主');
+        const who = escapeHtml(it.fromName || T('a farmer'));
         let what;
-        if (it.kind === 'cheer') what = '👍 给你点了赞';
-        else if (it.kind === 'water') what = '💧 帮你浇了水';
-        else if (it.kind === 'feed') what = '🌾 帮你添了料';
-        else if (it.kind === 'gift') { const m = meta[it.prod] || { emoji: '🎁', name: it.prod }; what = '🎁 送了 ' + m.emoji + ' ×' + (it.qty || 0); }
-        else what = '❓';
+        if (it.kind === 'cheer') what = '👍 ' + T('cheered you');
+        else if (it.kind === 'water') what = '💧 ' + T('watered your crops');
+        else if (it.kind === 'feed') what = '🌾 ' + T('topped up your trough');
+        else if (it.kind === 'gift') {
+          const m = meta[it.prod] || { emoji: '🎁', name: it.prod };
+          what = '🎁 ' + T('sent {item}', { item: m.emoji + ' ×' + (it.qty || 0) });
+        } else what = '❓';
         return '<div class="ws-slot"><span class="ws-slot-no">' + who + '</span><span class="ws-slot-state">' + what + '</span></div>';
       }).join('');
       const gained = [];
       if (eff.coins) gained.push(eff.coins + '🪙');
-      if (eff.food) gained.push('🌾 食槽 +' + eff.food);
-      if (eff.waterMs) gained.push('💧 作物快 ' + _fmtFarmTime(eff.waterMs));
-      if (eff.gifts) gained.push('🎁 ' + eff.gifts + ' 件产物');
+      if (eff.food) gained.push('🌾 ' + T('Trough +{n}', { n: eff.food }));
+      if (eff.waterMs) gained.push('💧 ' + T('crops {time} sooner', { time: _fmtFarmTime(eff.waterMs) }));
+      if (eff.gifts) gained.push('🎁 ' + T('{n} produce', { n: eff.gifts }));
       const unpaid = eff.cheers - eff.paidCheers;
       el.innerHTML =
         '<div class="ws-box">' +
-          '<div class="ws-head">📮 农场信箱 <span class="farm-panel-cap">' + items.length + '</span></div>' +
+          '<div class="ws-head">📮 ' + T('Farm Mailbox') + ' <span class="farm-panel-cap">' + items.length + '</span></div>' +
           (items.length
-            ? '<div class="ws-sub">串门的人给你留下了这些。</div>' + rows +
-              '<div class="farm-inbox-sum">领取可得：' + (gained.join(' · ') || '—') + '</div>' +
-              (unpaid > 0 ? '<div class="farm-panel-empty">其中 ' + unpaid + ' 个赞超过了当天 ' + FARM_CHEER_DAILY_CAP + ' 个的计币上限，仍然计入人气。</div>' : '') +
-              '<button class="cp-crop farm-inbox-claim" onclick="claimFarmInbox()"' + (_farmInboxBusy ? ' disabled' : '') + '>📬 全部领取</button>'
-            : '<div class="ws-sub">还没有人来串门。去别人的农场帮个忙，他们多半会回访。</div>') +
-          '<button class="cp-crop farm-gift-cancel" onclick="closeFarmInbox()">关闭</button>' +
+            ? '<div class="ws-sub">' + T('Visitors left these for you.') + '</div>' + rows +
+              '<div class="farm-inbox-sum">' + T('You get: {list}', { list: gained.join(' · ') || '—' }) + '</div>' +
+              (unpaid > 0
+                ? '<div class="farm-panel-empty">' +
+                  T('{n} of those cheers passed the {cap}-a-day coin limit — they still count for popularity.',
+                    { n: unpaid, cap: FARM_CHEER_DAILY_CAP }) + '</div>'
+                : '') +
+              '<button class="cp-crop farm-inbox-claim" onclick="claimFarmInbox()"' + (_farmInboxBusy ? ' disabled' : '') + '>📬 ' + T('Claim all') + '</button>'
+            : '<div class="ws-sub">' + T("Nobody has visited yet. Lend a hand at someone else's farm — they usually visit back.") + '</div>') +
+          '<button class="cp-crop farm-gift-cancel" onclick="closeFarmInbox()">' + T('Close') + '</button>' +
         '</div>';
       el.style.display = 'flex';
     }
@@ -866,11 +872,11 @@
       } catch (e) {
         _farmInboxBusy = false;
         renderFarmInbox();
-        return showToast('领取失败，请稍后再试。', 'error');
+        return showToast(T('Claim failed — try again in a moment.'), 'error');
       }
 
       Object.assign(roomData, fields);             // now mirror what we just wrote
-      if (eff.coins && typeof logCoin === 'function') logCoin(eff.coins, '农场人气 👍');
+      if (eff.coins && typeof logCoin === 'function') logCoin(eff.coins, T('Farm popularity') + ' 👍');
       // The batch wrote only the fields the claim changes. Follow it with a
       // normal save so the coin-history row lands too — and so anything the
       // 60s production tick left pending (new drops, happiness) goes with it.
@@ -883,12 +889,12 @@
       const bits = [];
       if (eff.coins) bits.push('+' + eff.coins + '🪙');
       if (eff.food) bits.push('🌾+' + eff.food);
-      if (eff.waterMs) bits.push('💧 作物快了 ' + _fmtFarmTime(eff.waterMs));
-      if (eff.gifts) bits.push('🎁 ' + eff.gifts + ' 件');
+      if (eff.waterMs) bits.push('💧 ' + T('crops {time} sooner', { time: _fmtFarmTime(eff.waterMs) }));
+      if (eff.gifts) bits.push('🎁 ' + T('{n} produce', { n: eff.gifts }));
       for (let i = 0; i < 8; i++) {
         _farmParticles.push({ text: ['👍', '💧', '🎁', '✨'][i % 4], x: 0.2 + Math.random() * 0.6, y: 0.6 + Math.random() * 0.1, vy: -0.0012, life: 1600, born: performance.now() });
       }
-      showToast('📬 领取了 ' + items.length + ' 份心意 · ' + (bits.join(' · ') || '谢谢他们！'), 'success');
+      showToast('📬 ' + T('Claimed {n} — {list}', { n: items.length, list: bits.join(' · ') || T('thanks, everyone!') }), 'success');
     }
 
     /* ── Weekly boards (🔥 popularity + 🌾 produce) ── */
@@ -904,8 +910,8 @@
     // days as "119h 30m", which nobody can read at a glance.
     function _fmtFarmDays(ms) {
       const h = Math.max(0, Math.ceil(ms / 3600000));
-      if (h < 24) return h + '小时';
-      return Math.floor(h / 24) + '天' + (h % 24 ? ' ' + (h % 24) + '小时' : '');
+      if (h < 24) return T('{n}h', { n: h });
+      return T('{n}d', { n: Math.floor(h / 24) }) + (h % 24 ? ' ' + T('{n}h', { n: h % 24 }) : '');
     }
 
     // ms until this week's board closes (Sunday 00:00 local).
@@ -934,32 +940,35 @@
     function _farmBoardHtml() {
       const b = _farmBoards;
       const rows = b ? (_farmBoardTab === 'pop' ? b.pop : b.prod) : null;
-      const unit = _farmBoardTab === 'pop' ? '👍' : '🌾';
+      const unit = _farmBoardTab === 'pop' ? '👍' : '🌾';   // a count's unit, not a word
       const medals = ['🥇', '🥈', '🥉'];
       let list;
-      if (!rows) list = '<div class="farm-panel-empty">读取排行榜中…</div>';
-      else if (!rows.length) list = '<div class="farm-panel-empty">本周还没有人上榜 — 去串个门就能开张。</div>';
+      if (!rows) list = '<div class="farm-panel-empty">' + T('Loading the board…') + '</div>';
+      else if (!rows.length) list = '<div class="farm-panel-empty">' + T('Nobody is on the board yet — one visit gets you started.') + '</div>';
       else list = rows.map(function (r, i) {
         return '<div class="farm-board-row' + (r.uid === currentUid ? ' me' : '') + '">' +
           '<span class="farm-board-rank">' + (medals[i] || (i + 1)) + '</span>' +
-          '<span class="farm-board-name">' + escapeHtml(r.name || '匿名') + '</span>' +
+          '<span class="farm-board-name">' + escapeHtml(r.name || T('Anonymous')) + '</span>' +
           '<span class="farm-board-score">' + r.score + ' ' + unit + '</span>' +
         '</div>';
       }).join('');
       const mine = rows && rows.some(r => r.uid === currentUid);
       const last = _farmLastWeek && _farmLastWeek.length
-        ? '<div class="farm-panel-empty" style="padding-top:6px">上周得主：' + _farmLastWeek.map(function (w) {
-            return (w.board === 'prod' ? '🌾 ' : '🔥 ') + escapeHtml(w.name || '匿名') + ' +' + w.prize + '🪙';
-          }).join(' · ') + '</div>'
+        ? '<div class="farm-panel-empty" style="padding-top:6px">' +
+          T('Last week: {list}', { list: _farmLastWeek.map(function (w) {
+            return (w.board === 'prod' ? '🌾 ' : '🔥 ') + escapeHtml(w.name || T('Anonymous')) + ' +' + w.prize + '🪙';
+          }).join(' · ') }) + '</div>'
         : '';
-      return '<div class="farm-section-title">🏅 农场周榜 <span class="farm-panel-cap">' + _fmtFarmDays(_farmWeekLeftMs()) + '后结算</span></div>' +
+      return '<div class="farm-section-title">🏅 ' + T('Farm Weekly') +
+          ' <span class="farm-panel-cap">' + T('settles in {time}', { time: _fmtFarmDays(_farmWeekLeftMs()) }) + '</span></div>' +
         '<div class="farm-board-tabs">' +
-          '<button class="farm-board-tab' + (_farmBoardTab === 'pop' ? ' active' : '') + '" onclick="switchFarmBoard(\'pop\')">🔥 人气</button>' +
-          '<button class="farm-board-tab' + (_farmBoardTab === 'prod' ? ' active' : '') + '" onclick="switchFarmBoard(\'prod\')">🌾 产量</button>' +
+          '<button class="farm-board-tab' + (_farmBoardTab === 'pop' ? ' active' : '') + '" onclick="switchFarmBoard(\'pop\')">🔥 ' + T('Popularity') + '</button>' +
+          '<button class="farm-board-tab' + (_farmBoardTab === 'prod' ? ' active' : '') + '" onclick="switchFarmBoard(\'prod\')">🌾 ' + T('Produce ranking') + '</button>' +
         '</div>' +
         list +
-        (rows && rows.length && !mine ? '<div class="farm-panel-empty">你还没进前 ' + FARM_WEEK_BOARD_N + ' 名。</div>' : '') +
-        '<div class="farm-panel-empty" style="padding-top:6px">每周日 00:00 结算，两个榜各发 ' + FARM_WEEK_PRIZES.join(' / ') + '🪙。</div>' +
+        (rows && rows.length && !mine ? '<div class="farm-panel-empty">' + T("You're not in the top {n} yet.", { n: FARM_WEEK_BOARD_N }) + '</div>' : '') +
+        '<div class="farm-panel-empty" style="padding-top:6px">' +
+          T('Settles Sunday 00:00. Each board pays {prizes}.', { prizes: FARM_WEEK_PRIZES.join(' / ') + '🪙' }) + '</div>' +
         last;
     }
 
@@ -1108,7 +1117,7 @@
       const plan = off.plan;
       if (off.fed && off.fed.coinsSpent > 0) {          // pay for what the feeder bought while away
         roomData.coins = Math.max(0, (roomData.coins || 0) - off.fed.coinsSpent);
-        if (typeof logCoin === 'function') logCoin(-off.fed.coinsSpent, '🤖 自动喂食（离线）');
+        if (typeof logCoin === 'function') logCoin(-off.fed.coinsSpent, '🤖 ' + T('Auto-Feeder') + ' (' + T('offline') + ')');
       }
       roomData.farmAnimals = plan.animals;
       roomData.farmFood = plan.foodStock;
@@ -1428,73 +1437,76 @@
       const trLvl = roomData.farmTroughLevel || 0;
       const trCost = trLvl < FARM_TROUGH_COSTS.length ? FARM_TROUGH_COSTS[trLvl] : null;
       const upgradesHtml =
-        '<div class="farm-section-title">⚙️ Upgrades</div>' +
+        '<div class="farm-section-title">⚙️ ' + T('Upgrades') + '</div>' +
         '<div class="farm-shop-row">' +
-          '<span class="farm-shop-animal">🏞️ Bigger pasture <small>Lv ' + expLvl + '/' + FARM_EXPAND_COSTS.length + ' · holds ' + farmAnimalCap() + ' animals</small></span>' +
+          '<span class="farm-shop-animal">🏞️ ' + T('Bigger pasture') + ' <small>' +
+            T('Lv {n}/{max} · holds {cap} animals', { n: expLvl, max: FARM_EXPAND_COSTS.length, cap: farmAnimalCap() }) + '</small></span>' +
           (expandCost == null
-            ? '<span class="farm-shop-drop">MAX</span>'
+            ? '<span class="farm-shop-drop">' + T('MAX') + '</span>'
             : '<button class="farm-shop-buy" onclick="expandFarm()"' + (roomData.coins < expandCost ? ' disabled' : '') + '>+10 · ' + expandCost + '🪙</button>') +
         '</div>' +
-        '<div class="farm-panel-empty" style="padding:2px 0 4px">Pushes the crop fence down — more grass for a bigger herd.</div>' +
+        '<div class="farm-panel-empty" style="padding:2px 0 4px">' + T('Pushes the crop fence down — more grass for a bigger herd.') + '</div>' +
         '<div class="farm-shop-row">' +
-          '<span class="farm-shop-animal">🪣 Bigger trough <small>Lv ' + trLvl + '/' + FARM_TROUGH_COSTS.length + ' · holds ' + farmFoodMax() + ' food</small></span>' +
+          '<span class="farm-shop-animal">🪣 ' + T('Bigger trough') + ' <small>' +
+            T('Lv {n}/{max} · holds {cap} food', { n: trLvl, max: FARM_TROUGH_COSTS.length, cap: farmFoodMax() }) + '</small></span>' +
           (trCost == null
-            ? '<span class="farm-shop-drop">MAX</span>'
+            ? '<span class="farm-shop-drop">' + T('MAX') + '</span>'
             : '<button class="farm-shop-buy" onclick="buyFarmTrough()"' + (roomData.coins < trCost ? ' disabled' : '') + '>+' + FARM_TROUGH_STEP + ' · ' + trCost + '🪙</button>') +
         '</div>' +
-        '<div class="farm-panel-empty" style="padding:2px 0 4px">A bigger trough holds more food, so it lasts longer between refills.</div>' +
+        '<div class="farm-panel-empty" style="padding:2px 0 4px">' + T('A bigger trough holds more food, so it lasts longer between refills.') + '</div>' +
         '<div class="farm-shop-row">' +
-          '<span class="farm-shop-animal">🤖 Auto-Collector <small>produce → stock</small></span>' +
+          '<span class="farm-shop-animal">🤖 ' + T('Auto-Collector') + ' <small>' + T('produce → stock') + '</small></span>' +
           (roomData.farmAutoCollect
             ? '<span class="farm-shop-drop">✓ ON</span>'
             : '<button class="farm-shop-buy" onclick="buyFarmAutoCollect()"' + (roomData.coins < FARM_AUTOCOLLECT_COST ? ' disabled' : '') + '>' + FARM_AUTOCOLLECT_COST + '🪙</button>') +
         '</div>' +
         // ── automation & storage ──
         '<div class="farm-shop-row">' +
-          '<span class="farm-shop-animal">🤖 自动喂食器 <small>' +
+          '<span class="farm-shop-animal">🤖 ' + T('Auto-Feeder') + ' <small>' +
             (roomData.farmAutoFeed
-              ? '食槽低于 ' + Math.round(FARM_AUTOFEED_AT * 100) + '% 自动补满 · ' + FARM_FOOD_COST + '🪙/份'
-              : '再也不用手动添料') + '</small></span>' +
+              ? T('Refills at {pct}% · {cost} per feed', { pct: Math.round(FARM_AUTOFEED_AT * 100), cost: FARM_FOOD_COST + '🪙' })
+              : T('Never top up the trough by hand again')) + '</small></span>' +
           (roomData.farmAutoFeed
             ? '<button class="farm-shop-buy" onclick="toggleFarmAutoFeed()">' + (roomData.farmAutoFeedOn ? '✓ ON' : 'OFF') + '</button>'
             : '<button class="farm-shop-buy" onclick="buyFarmAutoFeed()"' + (roomData.coins < FARM_AUTOFEED_COST ? ' disabled' : '') + '>' + FARM_AUTOFEED_COST + '🪙</button>') +
         '</div>' +
-        '<div class="farm-panel-empty" style="padding:2px 0 4px">从你的金币里买饲料 — 钱不够就停手，不会透支。</div>' +
+        '<div class="farm-panel-empty" style="padding:2px 0 4px">' + T('Buys feed with your coins — it stops when they run out, and never overdraws.') + '</div>' +
         (function () {
           const lvl = roomData.farmColdLevel || 0;
           const cost = lvl < FARM_COLD_COSTS.length ? FARM_COLD_COSTS[lvl] : null;
           const locked = !roomData.farmAutoCollect;
           return '<div class="farm-shop-row">' +
-            '<span class="farm-shop-animal">❄️ 冷藏库 <small>Lv ' + lvl + '/' + FARM_COLD_COSTS.length + ' · 离线攒 ' + _fmtFarmTime(farmOfflineCapMs()) + '</small></span>' +
+            '<span class="farm-shop-animal">❄️ ' + T('Cold Store') + ' <small>' +
+              T('Lv {n}/{max} · banks {time} offline', { n: lvl, max: FARM_COLD_COSTS.length, time: _fmtFarmTime(farmOfflineCapMs()) }) + '</small></span>' +
             (cost == null
-              ? '<span class="farm-shop-drop">MAX</span>'
+              ? '<span class="farm-shop-drop">' + T('MAX') + '</span>'
               : locked
-              ? '<button class="farm-shop-buy" disabled>🔒 需要 🤖</button>'
+              ? '<button class="farm-shop-buy" disabled>🔒 ' + T('Needs 🤖') + '</button>'
               : '<button class="farm-shop-buy" onclick="buyFarmCold()"' + (roomData.coins < cost ? ' disabled' : '') + '>+' + _fmtFarmTime(FARM_COLD_STEP_MS) + ' · ' + cost + '🪙</button>') +
           '</div>' +
           '<div class="farm-panel-empty" style="padding:2px 0 4px">' +
-            (locked
-              ? '先装上面的 🤖 Auto-Collector — 没有它，离线攒得越久，回来越要先点掉一个弹窗。'
-              : '不在农场时，动物最多攒这么久的产出。配上 🤖 自动喂食器才不会饿着。') +
+            T(locked
+              ? 'Install the 🤖 Auto-Collector above first — without it, the longer you bank, the bigger the pile you have to tap through on your way back in.'
+              : "How long your animals keep producing while you're away. Pair it with the 🤖 Auto-Feeder so they don't go hungry.") +
           '</div>';
         })();
 
       // Built (and subscribed) only when the Visit tab is active, so opening the
       // farm for normal play never spins up the rooms-list listener.
       const visitHtml = _farmTab === 'visit'
-        ? '<div class="farm-section-title">🚜 参观农场 <span class="farm-panel-cap">live</span></div>' +
-          '<div class="farm-panel-empty" style="padding:0 2px 6px">点一位农场主，去他农场帮个忙 — 点赞、浇水、添料、送产物，双方都有奖励。</div>' +
+        ? '<div class="farm-section-title">🚜 ' + T('Visit other farms') + ' <span class="farm-panel-cap">live</span></div>' +
+          '<div class="farm-panel-empty" style="padding:0 2px 6px">' + T('Pick a farmer and lend a hand — cheer, water, feed or gift. You both gain.') + '</div>' +
           _farmVisitListHtml()
         : '';
 
       const card = (s) => '<section class="farm-card">' + s + '</section>';
       // The farm page is long, so it's split into its own tabs.
       const FARM_TABS = [
-        { id: 'animals',  label: '🐮 Animals' },
-        { id: 'garden',   label: '🌱 Garden' },
-        { id: 'market',   label: '📦 Market' },
-        { id: 'upgrades', label: '⚙️ Upgrades' },
-        { id: 'visit',    label: '🚜 Visit' },
+        { id: 'animals',  emoji: '🐮', label: 'Animals' },
+        { id: 'garden',   emoji: '🌱', label: 'Garden' },
+        { id: 'market',   emoji: '📦', label: 'Market' },
+        { id: 'upgrades', emoji: '⚙️', label: 'Upgrades' },
+        { id: 'visit',    emoji: '🚜', label: 'Visit' },
       ];
       const groups = {
         animals:  card(foodHtml) + card(herdHtml) + card(shopHtml),
@@ -1508,23 +1520,24 @@
         garden:   'Plant on the farm soil. Build machines here — then tap a machine on your farm to make goods.',
         market:   'Tap produce on the farm to collect it, then sell it or fill the daily orders.',
         upgrades: 'Expand your farm, automate collecting, and drag decor to arrange it.',
-        visit:    '去别人农场帮忙能赚币，也能把自己顶上本周人气榜。',
+        visit:    "Helping at other farms earns coins — and puts you on this week's popularity board.",
       };
       if (!groups[_farmTab]) _farmTab = 'animals';
       // Mail waiting is worth surfacing on every tab, not just where the 📮 on
       // the farm happens to be in view.
       const mailN = _farmInboxCount();
       const mailHtml = mailN
-        ? '<button class="farm-mail-cta" onclick="openFarmInbox()">📮 信箱里有 ' + mailN + ' 份心意 — 点开领取</button>'
+        ? '<button class="farm-mail-cta" onclick="openFarmInbox()">📮 ' + T('{n} in your mailbox — tap to claim', { n: mailN }) + '</button>'
         : '';
       panel.innerHTML =
-        '<div class="farm-panel-head">🚜 Farm <span class="farm-panel-cap">🔥 ' + (roomData.farmCheersTotal || 0) + ' · ' + animals.length + '/' + farmAnimalCap() + ' animals</span></div>' +
+        '<div class="farm-panel-head">🚜 ' + T('Farm') + ' <span class="farm-panel-cap">🔥 ' + (roomData.farmCheersTotal || 0) + ' · ' +
+          T('{n}/{cap} animals', { n: animals.length, cap: farmAnimalCap() }) + '</span></div>' +
         '<div class="farm-tabs">' +
-          FARM_TABS.map(t => '<button class="farm-tab' + (t.id === _farmTab ? ' active' : '') + '" onclick="switchFarmTab(\'' + t.id + '\')">' + t.label + '</button>').join('') +
+          FARM_TABS.map(tb => '<button class="farm-tab' + (tb.id === _farmTab ? ' active' : '') + '" onclick="switchFarmTab(\'' + tb.id + '\')">' + tb.emoji + ' ' + T(tb.label) + '</button>').join('') +
         '</div>' +
         mailHtml +
         groups[_farmTab] +
-        '<div class="farm-panel-hint">' + hints[_farmTab] + '</div>';
+        '<div class="farm-panel-hint">' + T(hints[_farmTab]) + '</div>';
     }
 
     /* ── Actions ── */
@@ -1656,15 +1669,15 @@
     async function buyFarmAutoFeed() {
       if (viewingUid !== currentUid) return;
       if (roomData.farmAutoFeed) return;
-      if ((roomData.coins || 0) < FARM_AUTOFEED_COST) return showToast('金币不够！', 'error');
+      if ((roomData.coins || 0) < FARM_AUTOFEED_COST) return showToast(T('Not enough coins!'), 'error');
       roomData.coins -= FARM_AUTOFEED_COST;
-      logCoin(-FARM_AUTOFEED_COST, '🤖 农场自动喂食器');
+      logCoin(-FARM_AUTOFEED_COST, '🤖 ' + T('Auto-Feeder'));
       roomData.farmAutoFeed = true;
       roomData.farmAutoFeedOn = true;
       runFarmProduction();          // top the trough up right away if it's already low
       await saveRoom();
       renderFarmPanel(); renderAll();
-      showToast('🤖 自动喂食器装好了 — 食槽低于 ' + Math.round(FARM_AUTOFEED_AT * 100) + '% 会自动补满。', 'success');
+      showToast('🤖 ' + T('Auto-Feeder installed — the trough refills itself below {pct}%.', { pct: Math.round(FARM_AUTOFEED_AT * 100) }), 'success');
     }
     async function toggleFarmAutoFeed() {
       if (viewingUid !== currentUid || !roomData.farmAutoFeed) return;
@@ -1672,7 +1685,7 @@
       if (roomData.farmAutoFeedOn) runFarmProduction();
       await saveRoom();
       renderFarmPanel(); renderAll();
-      showToast(roomData.farmAutoFeedOn ? '🤖 自动喂食已开启' : '🤖 自动喂食已关闭 — 记得自己添料', '');
+      showToast('🤖 ' + T(roomData.farmAutoFeedOn ? 'Auto-feeding is ON' : 'Auto-feeding is OFF — top the trough up yourself'), '');
     }
 
     // ❄️ Cold store — how much of an absence the farm banks.
@@ -1682,18 +1695,18 @@
     async function buyFarmCold() {
       if (viewingUid !== currentUid) return;
       if (!roomData.farmAutoCollect) {
-        return showToast('❄️ 先装 🤖 Auto-Collector — 否则离线攒得越久，回来越要手动清。', 'error');
+        return showToast('❄️ ' + T('Install the 🤖 Auto-Collector first — otherwise banking longer just means more to clear by hand.'), 'error');
       }
       const lvl = roomData.farmColdLevel || 0;
       if (lvl >= FARM_COLD_COSTS.length) return;
       const cost = FARM_COLD_COSTS[lvl];
-      if ((roomData.coins || 0) < cost) return showToast('金币不够！', 'error');
+      if ((roomData.coins || 0) < cost) return showToast(T('Not enough coins!'), 'error');
       roomData.coins -= cost;
-      logCoin(-cost, '❄️ 冷藏库 Lv' + (lvl + 1));
+      logCoin(-cost, '❄️ ' + T('Cold Store') + ' ' + T('Lv {n}', { n: lvl + 1 }));
       roomData.farmColdLevel = lvl + 1;
       await saveRoom();
       renderFarmPanel(); renderAll();
-      showToast('❄️ 冷藏库扩建 — 离线现在能攒 ' + _fmtFarmTime(farmOfflineCapMs()) + '！', 'success');
+      showToast('❄️ ' + T('Cold Store extended — the farm now banks {time}!', { time: _fmtFarmTime(farmOfflineCapMs()) }), 'success');
     }
 
     async function buyFarmAutoCollect() {
@@ -3576,7 +3589,7 @@
             // mailbox that a click would hand to a hut (or the plane).
           } else if (_farmSkyTarget(p.x, p.y, _twh.W, _twh.H) === '#mail') {
             const _mn = _farmInboxCount();
-            tip = _mn ? '📮 信箱 — ' + _mn + ' 份未领取' : '📮 信箱 — 空的';
+            tip = '📮 ' + (_mn ? T('Mailbox — {n} unclaimed', { n: _mn }) : T('Mailbox — empty'));
           } else {
             const plots = roomData.farmPlots || [];
             const _wh = _farmWH();
@@ -3697,3 +3710,17 @@
         if (hitAnimal) openAnimalModal(hitAnimal.id);
       };
     }
+
+    /* ── Repaint everything when the language changes ──
+       The switch can be thrown on another page (index.html's settings) or
+       another device, so this listens rather than being called by the toggle.
+       Canvas needs no help: it redraws every frame and picks up T() on its own.
+       Each render is guarded — whichever views are closed simply do nothing. */
+    if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('langchange', function () {
+      try { if (typeof renderAll === 'function') renderAll(); } catch (e) {}
+      try { if (isFarmView) { renderFarmPanel(); renderWorkshopModal(); renderAnimalModal(); renderProduceModal(); } } catch (e) {}
+      try { if (_farmInboxOpen) renderFarmInbox(); } catch (e) {}
+      try { if (_giftOpen) renderGiftPicker(); } catch (e) {}
+      try { if (_cartSheetOpen) renderCartSheet(); } catch (e) {}
+      try { if (typeof renderAquariumPanel === 'function' && typeof isAquariumView !== 'undefined' && isAquariumView) renderAquariumPanel(); } catch (e) {}
+    });
