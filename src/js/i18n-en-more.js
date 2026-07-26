@@ -274,5 +274,62 @@
     // Shared errors
     '金币不足': 'Not enough coins',
     '出错了': 'Something went wrong',
+
+    /* ── 🧠 每日脑筋急转弯 ──
+       The riddles themselves stay Chinese: they turn on Chinese wordplay and
+       have no English equivalent. Only the chrome around them switches. */
+    '答案：{list}（都算对）': 'Answer: {list} (any of these)',
+    '答案：{a}': 'Answer: {a}',
+    '（答案 {n} 个字）': '({n} characters)',
+    '✅ 今天已经答对啦，奖励已到账！': '✅ Already solved today — the reward has landed!',
+    '🪙 明天再来挑战，再赚 100 金币！': '🪙 Come back tomorrow for another 100 coins!',
+    '今天已看过答案，明天再来赚金币吧～': "You've seen today's answer — come back tomorrow to earn",
+    '🪙 明天答对可得 100 金币': '🪙 Solve it tomorrow for 100 coins',
+    '❌ 再想想~ 可以点"💡 提示"哦': '❌ Have another think — there is a "💡 Hint" button',
+    '🎉 答对了！': '🎉 Correct!',
+    '🎉 答对了！+100 金币 🪙': '🎉 Correct! +100 coins 🪙',
+    '🧠 答对脑筋急转弯，+100 金币！': '🧠 Riddle solved — +100 coins!',
+    '🪙 已领取今日奖励，明天再来！': "🪙 Today's reward is claimed — see you tomorrow!",
+    '🎉 答对了！(今天已领过奖励)': '🎉 Correct! (reward already claimed today)',
+    '🪙 今天的奖励已经领过啦': "🪙 Today's reward has been claimed",
+    '🎉 答对了！(登录后才能领取金币)': '🎉 Correct! (sign in to collect the coins)',
+    '🪙 登录后答对可得 100 金币': '🪙 Sign in and a correct answer pays 100 coins',
+    '⚠️ 确定看答案？(放弃今天机会)': "⚠️ Reveal the answer? (that's today's attempt gone)",
+    '答案已揭晓，明天再来赚金币吧～': 'Answer revealed — come back tomorrow to earn',
+    '还没有人答对，快来抢首位！': 'Nobody has solved it yet — take first place!',
+    '今日答对（{n}）': "Solved today ({n})",
+    '{n} 次': '{n}x',
+    '还没有人上榜，答对就能登顶！': 'The board is empty — one right answer puts you on top!',
+    '🏅 答对排行榜（累计）': '🏅 All-time solvers',
+
+    /* ── 🐉 每日成语接龙 ──
+       The idioms are Chinese by nature; only the surrounding UI switches. */
+    '要输入四个汉字的成语': 'Enter a four-character idiom',
+    '这不是成语（成语库里查不到）': "That isn't in the idiom dictionary",
+    '这个成语已经用过了': 'That idiom has already been used',
+    '接不上「{ch}」（首字要相同或同音）': "Doesn't follow 「{ch}」 — the first character must match or rhyme",
+    '系统': 'System',
+    '收起 ▴': 'Collapse ▴',
+    '展开全部（{n}）▾': 'Show all ({n}) ▾',
+    '接龙：下一个要接「{ch}」（首字相同或同音）': 'Next one must start with 「{ch}」 (same character or homophone)',
+    '🏆 答对榜': '🏆 Correct answers',
+    '还没有人答错～': 'No wrong answers yet',
+    '❌ 答错记录': '❌ Wrong answers',
+    '玩法与奖励说明': 'How it works & rewards',
+    '📖 每接对一个成语 +1 个，比谁一周接得多': '📖 Each correct idiom is +1 — most in a week wins',
+    '🗓️ 每周日 00:00 刷新新一周榜单': '🗓️ A new week starts Sunday 00:00',
+    '🏆 每周结算：上周前三名自动到账 🥇{a} / 🥈{b} / 🥉{c} 金币 💰':
+      "🏆 Weekly payout: last week's top three are paid 🥇{a} / 🥈{b} / 🥉{c} coins 💰",
+    '上周获奖：': 'Last week:',
+    '{n} 个': '{n}',
+    '本周还没有人上榜，接对就能登顶！': "Nobody on this week's board yet — one link puts you on top!",
+    '🏅 本周答对榜': '🏅 This week',
+    '🎉 接上了！+{n} 金币 💰': '🎉 Linked! +{n} coins 💰',
+    '🐉 成语接龙 +{n} 金币！': '🐉 Idiom chain +{n} coins!',
+    '请先登录再玩哦': 'Sign in to play',
+    '🐢 手慢了，接龙刚被接走，请接「{ch}」': '🐢 Too slow — someone linked first. Now follow 「{ch}」',
+    '出错了，请再试一次': 'Something went wrong — try again',
+    '🔄 换了个新开头，开始接「{ch}」': '🔄 New starting idiom — follow 「{ch}」',
+    '接龙已经开始啦，不能再换开头咯': 'The chain has started — the opener is locked in',
   });
 })();

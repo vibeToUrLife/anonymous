@@ -114,10 +114,10 @@
   // Returns { ok, word, reason }.
   function validate(input, tipWord, usedSet, dict) {
     const w = normalize(input);
-    if (!/^[一-鿿]{4}$/.test(w)) return { ok: false, word: w, reason: '要输入四个汉字的成语' };
-    if (!has(dict, w)) return { ok: false, word: w, reason: '这不是成语（成语库里查不到）' };
-    if (usedSet && usedSet.has(w)) return { ok: false, word: w, reason: '这个成语已经用过了' };
-    if (!connects(tipWord, w, dict)) return { ok: false, word: w, reason: '接不上「' + lastChar(tipWord) + '」（首字要相同或同音）' };
+    if (!/^[一-鿿]{4}$/.test(w)) return { ok: false, word: w, reason: T('要输入四个汉字的成语') };
+    if (!has(dict, w)) return { ok: false, word: w, reason: T('这不是成语（成语库里查不到）') };
+    if (usedSet && usedSet.has(w)) return { ok: false, word: w, reason: T('这个成语已经用过了') };
+    if (!connects(tipWord, w, dict)) return { ok: false, word: w, reason: T('接不上「{ch}」（首字要相同或同音）', { ch: lastChar(tipWord) }) };
     return { ok: true, word: w };
   }
 
@@ -192,12 +192,12 @@
   function myName() {
     let name = '';
     try { name = localStorage.getItem('flappy_name') || ''; } catch (e) {}
-    if (!name) name = (typeof auth !== 'undefined' && auth.currentUser && auth.currentUser.displayName) || '匿名';
+    if (!name) name = (typeof auth !== 'undefined' && auth.currentUser && auth.currentUser.displayName) || T('匿名');
     return name;
   }
 
   // The seed link the day always starts from (system-owned, earns nothing).
-  function seedLink()    { return { w: seedWord, uid: 'sys', name: '系统', at: 0 }; }
+  function seedLink()    { return { w: seedWord, uid: 'sys', name: T('系统'), at: 0 }; }
   function initialData() { return { seed: seedWord, links: [seedLink()], wrong: [] }; }
   // Current view of the day (live snapshot, or a synthesized seed-only day).
   function current()     { return _data || initialData(); }
@@ -219,22 +219,22 @@
   function moreToggle(list, total) {
     if (total <= 3) return '';
     return _expand[list]
-      ? '<button class="cj-more" data-list="' + list + '">收起 ▴</button>'
-      : '<button class="cj-more" data-list="' + list + '">展开全部（' + total + '）▾</button>';
+      ? '<button class="cj-more" data-list="' + list + '">' + T('收起 ▴') + '</button>'
+      : '<button class="cj-more" data-list="' + list + '">' + T('展开全部（{n}）▾', { n: total }) + '</button>';
   }
 
   function render() {
     const data  = current();
     const links = data.links || [];
     const lastLink = links[links.length - 1];
-    nextEl.textContent = '接龙：下一个要接「' + L.lastChar(tipWord()) + '」（首字相同或同音）';
+    nextEl.textContent = T('接龙：下一个要接「{ch}」（首字相同或同音）', { ch: L.lastChar(tipWord()) });
 
     // Chain: show the most recent 3 by default, expand for the full chain.
     const shownLinks = _expand.chain ? links : links.slice(-3);
     chainEl.classList.toggle('expanded', _expand.chain);
     chainEl.innerHTML = shownLinks.map(function (l) {
       const sys = l.uid === 'sys';
-      const who = esc(l.name || (sys ? '系统' : '匿名'));
+      const who = esc(l.name || (sys ? T('系统') : T('匿名')));
       return '<div class="cj-link' + (l === lastLink ? ' tip' : '') + '">' +
                '<span class="cj-word">' + esc(l.w) + '</span>' +
                '<span class="cj-by">· ' + who + '</span>' +
@@ -256,7 +256,7 @@
     links.forEach(function (l) {
       if (l.uid === 'sys') return;                 // skip seed / 换开头
       const k = l.uid || l.name;
-      if (!map[k]) { map[k] = { name: l.name || '匿名', n: 0 }; order.push(k); }
+      if (!map[k]) { map[k] = { name: l.name || T('匿名'), n: 0 }; order.push(k); }
       map[k].n++;
     });
     const arr = order.map(function (k) { return map[k]; })
@@ -266,8 +266,8 @@
       ? '<div class="cj-rank-list">' + shown.map(function (s) {
           return '<span class="cj-rank"><b>' + esc(s.name) + '</b> ×' + s.n + ' · ' + (s.n * L.REWARD) + '💰</span>';
         }).join('') + '</div>' + moreToggle('board', arr.length)
-      : '<span class="cj-empty">还没有人答对，快来抢首位！</span>';
-    boardEl.innerHTML = '<div class="cj-sec-title">🏆 答对榜</div>' + body;
+      : '<span class="cj-empty">' + T('还没有人答对，快来抢首位！') + '</span>';
+    boardEl.innerHTML = '<div class="cj-sec-title">' + T('🏆 答对榜') + '</div>' + body;
   }
 
   // ❌ 答错记录 — who typed a wrong answer (most recent first; last 3, expandable).
@@ -276,11 +276,11 @@
     const shown = _expand.wrong ? all : all.slice(0, 3);
     const body = all.length
       ? shown.map(function (e) {
-          return '<div class="cj-wrong-item"><b>' + esc(e.name || '匿名') + '</b>「' + esc(e.w) + '」' +
+          return '<div class="cj-wrong-item"><b>' + esc(e.name || T('匿名')) + '</b>「' + esc(e.w) + '」' +
                  '<span class="cj-wrong-why">' + esc(e.reason || '') + '</span></div>';
         }).join('') + moreToggle('wrong', all.length)
-      : '<span class="cj-empty">还没有人答错～</span>';
-    wrongEl.innerHTML = '<div class="cj-sec-title">❌ 答错记录</div>' + body;
+      : '<span class="cj-empty">' + T('还没有人答错～') + '</span>';
+    wrongEl.innerHTML = '<div class="cj-sec-title">' + T('❌ 答错记录') + '</div>' + body;
   }
 
   // 🏅 累计答对榜 — the SERVER-WIDE all-time ranking: how many idioms each
@@ -289,17 +289,18 @@
   const RANK_MEDALS = ['🥇', '🥈', '🥉'];
   function renderRank(list) {
     if (!rankEl) return;
-    const infoBtn = '<button type="button" class="cj-lb-info" data-note="1">ℹ️ 玩法与奖励说明 ' +
+    const infoBtn = '<button type="button" class="cj-lb-info" data-note="1">ℹ️ ' + T('玩法与奖励说明') + ' ' +
       (_noteOpen ? '▴' : '▾') + '</button>';
     const note = _noteOpen ? '<div class="cj-lb-note">' +
-      '📖 每接对一个成语 +1 个，比谁一周接得多<br>' +
-      '🗓️ 每周日 00:00 刷新新一周榜单<br>' +
-      '🏆 每周结算：上周前三名自动到账 🥇5000 / 🥈3000 / 🥉1000 金币 💰' +
+      T('📖 每接对一个成语 +1 个，比谁一周接得多') + '<br>' +
+      T('🗓️ 每周日 00:00 刷新新一周榜单') + '<br>' +
+      T('🏆 每周结算：上周前三名自动到账 🥇{a} / 🥈{b} / 🥉{c} 金币 💰',
+        { a: WEEK_PRIZES[0], b: WEEK_PRIZES[1], c: WEEK_PRIZES[2] }) +
       '</div>' : '';
     const last = (_lastWeekWinners && _lastWeekWinners.length)
-      ? '<div class="cj-lb-last">🎁 上周获奖：' +
+      ? '<div class="cj-lb-last">🎁 ' + T('上周获奖：') +
           _lastWeekWinners.map(function (w, i) {
-            return (RANK_MEDALS[i] || (i + 1)) + esc(w.name || '匿名') + ' +' + (w.prize || 0);
+            return (RANK_MEDALS[i] || (i + 1)) + esc(w.name || T('匿名')) + ' +' + (w.prize || 0);
           }).join('　') +
         '</div>'
       : '';
@@ -307,12 +308,12 @@
       ? '<div class="cj-lb-list">' + list.map(function (r, i) {
           return '<div class="cj-lb-row">' +
                    '<span class="cj-lb-pos">' + (RANK_MEDALS[i] || (i + 1)) + '</span>' +
-                   '<span class="cj-lb-name">' + esc(r.name || '匿名') + '</span>' +
-                   '<span class="cj-lb-count">' + (r.count || 0) + ' 个</span>' +
+                   '<span class="cj-lb-name">' + esc(r.name || T('匿名')) + '</span>' +
+                   '<span class="cj-lb-count">' + T('{n} 个', { n: r.count || 0 }) + '</span>' +
                  '</div>';
         }).join('') + '</div>'
-      : '<span class="cj-empty">本周还没有人上榜，接对就能登顶！</span>';
-    rankEl.innerHTML = '<div class="cj-sec-title">🏅 本周答对榜</div>' + infoBtn + note + last + body;
+      : '<span class="cj-empty">' + T('本周还没有人上榜，接对就能登顶！') + '</span>';
+    rankEl.innerHTML = '<div class="cj-sec-title">' + T('🏅 本周答对榜') + '</div>' + infoBtn + note + last + body;
   }
   function subscribeRank() {
     if (typeof db === 'undefined') { if (rankEl) rankEl.hidden = true; return; }
@@ -346,7 +347,7 @@
       if (marker.exists && (marker.data() || {}).settled) { showLastWeek((marker.data() || {}).winners); return; }
       const snap = await markerRef.collection('users').orderBy('count', 'desc').limit(WEEK_PRIZES.length).get();
       const top = [];
-      snap.forEach(function (d) { const x = d.data() || {}; top.push({ uid: d.id, name: x.name || '匿名', count: x.count || 0 }); });
+      snap.forEach(function (d) { const x = d.data() || {}; top.push({ uid: d.id, name: x.name || T('匿名'), count: x.count || 0 }); });
       const winners = await db.runTransaction(async function (tx) {
         const m = await tx.get(markerRef);
         if (m.exists && (m.data() || {}).settled) return (m.data() || {}).winners || [];   // someone beat us to it
@@ -479,7 +480,7 @@
         const pool = WORDS.filter(function (w) { return !used.has(w); });
         if (!pool.length) return 'error';
         const pick = pool[Math.floor(Math.random() * pool.length)];
-        tx.set(docRef, { seed: pick, links: [{ w: pick, uid: 'sys', name: '系统', at: 0 }], wrong: data.wrong || [] });
+        tx.set(docRef, { seed: pick, links: [{ w: pick, uid: 'sys', name: T('系统'), at: 0 }], wrong: data.wrong || [] });
         return 'ok';
       });
     } catch (e) { return 'error'; }
@@ -499,14 +500,14 @@
     _busy = false; submitBtn.disabled = false;
     if (out === 'granted') {
       inputEl.value = ''; markPlayed();
-      setFeedback('🎉 接上了！+' + L.REWARD + ' 金币 💰', 'ok');
-      if (typeof showToast === 'function') showToast('🐉 成语接龙 +' + L.REWARD + ' 金币！', 'success');
+      setFeedback(T('🎉 接上了！+{n} 金币 💰', { n: L.REWARD }), 'ok');
+      if (typeof showToast === 'function') showToast(T('🐉 成语接龙 +{n} 金币！', { n: L.REWARD }), 'success');
     } else if (out === 'noauth') {
-      setFeedback('请先登录再玩哦', 'wrong');
+      setFeedback(T('请先登录再玩哦'), 'wrong');
     } else if (out && out.indexOf('stale:') === 0) {
-      setFeedback('🐢 手慢了，接龙刚被接走，请接「' + L.lastChar(tipWord()) + '」', 'wrong'); shake();
+      setFeedback(T('🐢 手慢了，接龙刚被接走，请接「{ch}」', { ch: L.lastChar(tipWord()) }), 'wrong'); shake();
     } else {
-      setFeedback('出错了，请再试一次', 'wrong');
+      setFeedback(T('出错了，请再试一次'), 'wrong');
     }
   }
 
@@ -515,10 +516,10 @@
     _busy = true; reseedBtn.disabled = true;
     const out = await appendReseed();
     _busy = false; reseedBtn.disabled = false;
-    if (out === 'ok') setFeedback('🔄 换了个新开头，开始接「' + L.lastChar(tipWord()) + '」', '');
-    else if (out === 'locked') setFeedback('接龙已经开始啦，不能再换开头咯', 'wrong');
-    else if (out === 'noauth') setFeedback('请先登录再玩哦', 'wrong');
-    else setFeedback('出错了，请再试一次', 'wrong');
+    if (out === 'ok') setFeedback(T('🔄 换了个新开头，开始接「{ch}」', { ch: L.lastChar(tipWord()) }), '');
+    else if (out === 'locked') setFeedback(T('接龙已经开始啦，不能再换开头咯'), 'wrong');
+    else if (out === 'noauth') setFeedback(T('请先登录再玩哦'), 'wrong');
+    else setFeedback(T('出错了，请再试一次'), 'wrong');
   }
 
   fab.addEventListener('click', open);

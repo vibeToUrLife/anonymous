@@ -132,8 +132,8 @@
     answerEl.hidden = false;
     // Show every accepted answer (canonical first), so users see all that count.
     answerEl.textContent = riddle.a.length > 1
-      ? '答案：' + riddle.a.join('、') + '（都算对）'
-      : '答案：' + riddle.a[0];
+      ? T('答案：{list}（都算对）', { list: riddle.a.join('、') })
+      : T('答案：{a}', { a: riddle.a[0] });
   }
 
   function render() {
@@ -141,7 +141,7 @@
     riddle = RIDDLES[L.dailyIndex(RIDDLES.length)];   // recompute (in case the day rolled over)
     qEl.textContent = riddle.q;
     // Length clue based on the canonical answer a[0] (code-point safe for Chinese).
-    if (lenEl) lenEl.textContent = '（答案 ' + [...riddle.a[0]].length + ' 个字）';
+    if (lenEl) lenEl.textContent = T('（答案 {n} 个字）', { n: [...riddle.a[0]].length });
     inputEl.value = '';
     hintEl.hidden = true; hintEl.textContent = '💡 ' + riddle.hint;
     answerEl.hidden = true;
@@ -150,18 +150,18 @@
     const st = doneState();
     if (st === 'solved') {
       setPlayable(false);
-      feedbackEl.textContent = '✅ 今天已经答对啦，奖励已到账！';
+      feedbackEl.textContent = T('✅ 今天已经答对啦，奖励已到账！');
       feedbackEl.className = 'riddle-feedback ok';
       showAnswer();
-      rewardEl.textContent = '🪙 明天再来挑战，再赚 100 金币！';
+      rewardEl.textContent = T('🪙 明天再来挑战，再赚 100 金币！');
     } else if (st === 'revealed') {
       setPlayable(false);
-      feedbackEl.textContent = '今天已看过答案，明天再来赚金币吧～';
+      feedbackEl.textContent = T('今天已看过答案，明天再来赚金币吧～');
       showAnswer();
-      rewardEl.textContent = '🪙 明天答对可得 100 金币';
+      rewardEl.textContent = T('🪙 明天答对可得 100 金币');
     } else {
       setPlayable(true);
-      rewardEl.textContent = '🪙 答对奖励 100 金币（每天一次）';
+      rewardEl.textContent = T('🪙 答对奖励 100 金币（每天一次）');
     }
   }
 
@@ -241,7 +241,7 @@
   async function submit() {
     if (inputEl.disabled) return;
     if (!L.isCorrect(inputEl.value, riddle.a)) {
-      feedbackEl.textContent = '❌ 再想想~ 可以点"💡 提示"哦';
+      feedbackEl.textContent = T('❌ 再想想~ 可以点"💡 提示"哦');
       feedbackEl.className = 'riddle-feedback wrong';
       // replay the shake animation
       inputEl.classList.remove('shake'); void inputEl.offsetWidth; inputEl.classList.add('shake');
@@ -252,19 +252,19 @@
     recordSolver();   // add me to today's "答对" list (name only)
     setPlayable(false);
     showAnswer();
-    feedbackEl.textContent = '🎉 答对了！';
+    feedbackEl.textContent = T('🎉 答对了！');
     feedbackEl.className = 'riddle-feedback ok';
     const res = await claimReward();
     if (res === 'granted') {
-      feedbackEl.textContent = '🎉 答对了！+100 金币 🪙';
-      if (typeof showToast === 'function') showToast('🧠 答对脑筋急转弯，+100 金币！', 'success');
-      rewardEl.textContent = '🪙 已领取今日奖励，明天再来！';
+      feedbackEl.textContent = T('🎉 答对了！+100 金币 🪙');
+      if (typeof showToast === 'function') showToast(T('🧠 答对脑筋急转弯，+100 金币！'), 'success');
+      rewardEl.textContent = T('🪙 已领取今日奖励，明天再来！');
     } else if (res === 'already') {
-      feedbackEl.textContent = '🎉 答对了！(今天已领过奖励)';
-      rewardEl.textContent = '🪙 今天的奖励已经领过啦';
+      feedbackEl.textContent = T('🎉 答对了！(今天已领过奖励)');
+      rewardEl.textContent = T('🪙 今天的奖励已经领过啦');
     } else {
-      feedbackEl.textContent = '🎉 答对了！(登录后才能领取金币)';
-      rewardEl.textContent = '🪙 登录后答对可得 100 金币';
+      feedbackEl.textContent = T('🎉 答对了！(登录后才能领取金币)');
+      rewardEl.textContent = T('🪙 登录后答对可得 100 金币');
     }
   }
 
@@ -285,13 +285,13 @@
     if (inputEl.disabled) return;
     _revealArmed = true;
     if (warnEl) warnEl.hidden = false;
-    revealBtn.textContent = '⚠️ 确定看答案？(放弃今天机会)';
+    revealBtn.textContent = T('⚠️ 确定看答案？(放弃今天机会)');
     if (cancelBtn) cancelBtn.hidden = false;
   }
   function disarmReveal() {
     _revealArmed = false;
     if (warnEl) warnEl.hidden = true;
-    revealBtn.textContent = '查看答案';
+    revealBtn.textContent = T('查看答案');
     if (cancelBtn) cancelBtn.hidden = true;
   }
   function onRevealClick() {
@@ -305,9 +305,9 @@
     if (doneState() !== 'solved') { setDone('revealed'); markAccountRevealed(); }   // viewing forfeits today's reward
     setPlayable(false);
     showAnswer();
-    feedbackEl.textContent = '答案已揭晓，明天再来赚金币吧～';
+    feedbackEl.textContent = T('答案已揭晓，明天再来赚金币吧～');
     feedbackEl.className = 'riddle-feedback';
-    rewardEl.textContent = '🪙 明天答对可得 100 金币';
+    rewardEl.textContent = T('🪙 明天答对可得 100 金币');
   }
 
   /* ── "今日答对" live list (names only — never the answer) ── */
@@ -316,7 +316,7 @@
   function myName() {
     let name = '';
     try { name = localStorage.getItem('flappy_name') || ''; } catch (e) {}
-    if (!name) name = (auth.currentUser && auth.currentUser.displayName) || '匿名';
+    if (!name) name = (auth.currentUser && auth.currentUser.displayName) || T('匿名');
     return name;
   }
 
@@ -343,10 +343,10 @@
     solversEl.hidden = false;
     const body = list.length
       ? '<div class="riddle-solvers-list">' +
-          list.map(function (s) { return '<span class="riddle-solver-chip">' + _escapeName(s.name || '匿名') + '</span>'; }).join('') +
+          list.map(function (s) { return '<span class="riddle-solver-chip">' + _escapeName(s.name || T('匿名')) + '</span>'; }).join('') +
         '</div>'
-      : '<div class="riddle-solvers-empty">还没有人答对，快来抢首位！</div>';
-    solversEl.innerHTML = '<div class="riddle-solvers-title">🏆 今日答对（' + list.length + '）</div>' + body;
+      : '<div class="riddle-solvers-empty">' + T('还没有人答对，快来抢首位！') + '</div>';
+    solversEl.innerHTML = '<div class="riddle-solvers-title">🏆 ' + T('今日答对（{n}）', { n: list.length }) + '</div>' + body;
   }
 
   function subscribeSolvers() {
@@ -379,13 +379,13 @@
           list.map(function (r, i) {
             return '<div class="riddle-rank-row">' +
                      '<span class="riddle-rank-pos">' + (RANK_MEDALS[i] || (i + 1)) + '</span>' +
-                     '<span class="riddle-rank-name">' + _escapeName(r.name || '匿名') + '</span>' +
-                     '<span class="riddle-rank-count">' + (r.count || 0) + ' 次</span>' +
+                     '<span class="riddle-rank-name">' + _escapeName(r.name || T('匿名')) + '</span>' +
+                     '<span class="riddle-rank-count">' + T('{n} 次', { n: r.count || 0 }) + '</span>' +
                    '</div>';
           }).join('') +
         '</div>'
-      : '<div class="riddle-solvers-empty">还没有人上榜，答对就能登顶！</div>';
-    rankEl.innerHTML = '<div class="riddle-solvers-title">🏅 答对排行榜（累计）</div>' + body;
+      : '<div class="riddle-solvers-empty">' + T('还没有人上榜，答对就能登顶！') + '</div>';
+    rankEl.innerHTML = '<div class="riddle-solvers-title">' + T('🏅 答对排行榜（累计）') + '</div>' + body;
   }
 
   function subscribeRank() {
