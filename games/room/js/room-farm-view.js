@@ -469,8 +469,11 @@
           items.sort(function (a, b) { return (a.at || 0) - (b.at || 0); });
           _farmInbox = items;
           if (isFarmView) { renderFarmPanel(); if (_farmInboxOpen) renderFarmInbox(); }
-        }, function () { _farmInbox = []; });
-      } catch (e) { _farmInbox = []; }
+        }, function (e) {
+          console.warn('farm: inbox listener failed —', e && (e.code || e.message), e);
+          _farmInbox = [];
+        });
+      } catch (e) { console.warn('farm: inbox listener failed —', e); _farmInbox = []; }
     }
     function _unsubFarmInbox() {
       if (_farmInboxUnsub) { _farmInboxUnsub(); _farmInboxUnsub = null; }
@@ -509,7 +512,10 @@
         _sentHere = farmSentKinds(items, today);
       } catch (e) {
         // Can't tell — leave the buttons live rather than locking someone out of
-        // helping. A repeat is refused by the rules anyway.
+        // helping. A repeat is refused by the rules anyway. Say so out loud: a
+        // permission error here is silent on screen (the buttons just never grey
+        // out), which is a miserable thing to debug from the symptom alone.
+        console.warn('farm: could not read help state —', e && (e.code || e.message), e);
         if (_myHelpLeft == null) _myHelpLeft = FARM_HELP_DAILY_CAP;
         if (_sentHere == null) _sentHere = [];
       }
@@ -967,7 +973,11 @@
         });
         _farmLastWeek = (winners || []).filter(w => w && w.prize);
         if (isFarmView) renderFarmPanel();
-      } catch (e) { /* another client settled it, or we're offline — safe to skip */ }
+      } catch (e) {
+        // Another client settled it, or we're offline — safe to skip, but a rules
+        // rejection looks identical from here, so leave a trace.
+        console.warn('farm: weekly settlement skipped —', e && (e.code || e.message), e);
+      }
     }
 
     function openFarm() {
