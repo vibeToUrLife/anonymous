@@ -24,12 +24,24 @@
   const wrap = document.createElement('div');
   wrap.className = 'campfire'; wrap.id = 'campfire'; wrap.setAttribute('aria-hidden', 'true');
   const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
-  const tapZone = document.createElement('div'); tapZone.className = 'cf-tap'; tapZone.title = '点天空放烟花 · 点火堆丢火星 · 点地面走过去';
-  const collapseBtn = document.createElement('button'); collapseBtn.className = 'cf-collapse'; collapseBtn.textContent = '–'; collapseBtn.title = '收起';
-  const mini = document.createElement('button'); mini.className = 'cf-mini'; mini.textContent = '🔥'; mini.title = '展开营火小景';
+  const tapZone = document.createElement('div'); tapZone.className = 'cf-tap';
+  const collapseBtn = document.createElement('button'); collapseBtn.className = 'cf-collapse'; collapseBtn.textContent = '–';
+  const mini = document.createElement('button'); mini.className = 'cf-mini'; mini.textContent = '🔥';
   wrap.appendChild(canvas); wrap.appendChild(tapZone); wrap.appendChild(collapseBtn); wrap.appendChild(mini);
   document.body.appendChild(wrap);
   const ctx = canvas.getContext('2d'); if (ctx) ctx.imageSmoothingEnabled = false;
+
+  /* Tooltips live in a function, not inline: this module runs while the page is
+     still parsing, and the labels have to be repainted when the language
+     changes. The canvas needs no help — it redraws every frame. */
+  function applyLabels() {
+    tapZone.title = T('点天空放烟花 · 点火堆丢火星 · 点地面走过去');
+    collapseBtn.title = T('收起');
+    mini.title = T('展开营火小景');
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyLabels);
+  else applyLabels();
+  window.addEventListener('langchange', applyLabels);
 
   /* collapse / expand — default OPEN everywhere; only stays collapsed if the user
      collapsed it themselves (remembered). */

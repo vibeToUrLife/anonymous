@@ -13,6 +13,19 @@
 
   const Jar = {};
 
+  // relTime's words end up on screen (bubble-jar.js prints them inside
+  // T('收于 {when}')), so they are ordinary i18n KEYS that happen to be written
+  // in Chinese. T is looked up at CALL time rather than called bare, because the
+  // Node unit tests require() this module on its own, without i18n.js — there a
+  // bare T() would throw. The fallback returns the key, which IS the Chinese
+  // source, with its placeholders filled, so behaviour is unchanged.
+  function _t(s, vars) {
+    if (typeof T === 'function') return T(s, vars);
+    return vars ? s.replace(/\{(\w+)\}/g, function (m, k) {
+      return Object.prototype.hasOwnProperty.call(vars, k) ? String(vars[k]) : m;
+    }) : s;
+  }
+
   /** Most entries kept; the oldest fall out when the jar overflows. */
   Jar.CAP = 60;
 
@@ -94,11 +107,11 @@
     let d = nowMs - fromMs;
     if (d < 0) d = 0;
     const MIN = 60000, HR = 3600000, DAY = 86400000;
-    if (d < MIN) return '刚刚';
-    if (d < HR) return Math.floor(d / MIN) + '分钟前';
-    if (d < DAY) return Math.floor(d / HR) + '小时前';
-    if (d < 2 * DAY) return '昨天';
-    if (d < 7 * DAY) return Math.floor(d / DAY) + '天前';
+    if (d < MIN) return _t('刚刚');
+    if (d < HR) return _t('{n}分钟前', { n: Math.floor(d / MIN) });
+    if (d < DAY) return _t('{n}小时前', { n: Math.floor(d / HR) });
+    if (d < 2 * DAY) return _t('昨天');
+    if (d < 7 * DAY) return _t('{n}天前', { n: Math.floor(d / DAY) });
     const dt = new Date(fromMs);
     return (dt.getMonth() + 1) + '/' + dt.getDate();
   };

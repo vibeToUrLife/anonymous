@@ -35,18 +35,18 @@
     modal.className = 'doodle-modal';
     modal.innerHTML =
       '<div class="doodle-panel">' +
-        '<div class="doodle-head">🎨 画个涂鸦' +
-          '<button class="doodle-close" type="button" title="Close (Esc)">✕</button></div>' +
+        '<div class="doodle-head"><span class="doodle-title">🎨 ' + T('画个涂鸦') + '</span>' +
+          '<button class="doodle-close" type="button" title="' + T('Close (Esc)') + '">✕</button></div>' +
         '<canvas class="doodle-canvas"></canvas>' +
         '<div class="doodle-row doodle-colors"></div>' +
         '<div class="doodle-row doodle-tools">' +
           '<span class="doodle-brushes"></span>' +
-          '<button class="doodle-tool doodle-undo" type="button" title="撤销">↩️</button>' +
-          '<button class="doodle-tool doodle-clear" type="button" title="清空">🗑️</button>' +
+          '<button class="doodle-tool doodle-undo" type="button" title="' + T('撤销') + '">↩️</button>' +
+          '<button class="doodle-tool doodle-clear" type="button" title="' + T('清空') + '">🗑️</button>' +
         '</div>' +
         '<div class="doodle-row doodle-actions">' +
-          '<button class="doodle-cancel" type="button">取消</button>' +
-          '<button class="doodle-ok" type="button">✅ 贴到输入框</button>' +
+          '<button class="doodle-cancel" type="button">' + T('取消') + '</button>' +
+          '<button class="doodle-ok" type="button">✅ ' + T('贴到输入框') + '</button>' +
         '</div>' +
       '</div>';
     document.body.appendChild(modal);
@@ -69,7 +69,7 @@
       sw.type = 'button';
       sw.className = 'doodle-swatch' + (c === color ? ' sel' : '');
       sw.style.background = c;
-      sw.title = (i === COLORS.length - 1) ? '橡皮擦（白色）' : c;
+      sw.title = (i === COLORS.length - 1) ? T('橡皮擦（白色）') : c;
       if (i === COLORS.length - 1) sw.textContent = '⌫';
       sw.addEventListener('click', () => {
         color = c;
@@ -85,7 +85,7 @@
       bt.type = 'button';
       bt.className = 'doodle-brush' + (b === brush ? ' sel' : '');
       bt.innerHTML = '<i style="width:' + b + 'px;height:' + b + 'px"></i>';
-      bt.title = '笔刷 ' + b + 'px';
+      bt.title = T('笔刷 {n}px', { n: b });
       bt.addEventListener('click', () => {
         brush = b;
         brushesRow.querySelectorAll('.doodle-brush').forEach(x => x.classList.remove('sel'));
@@ -134,6 +134,23 @@
     canvas.addEventListener('pointercancel', stop);
   }
 
+  /* Restate the chrome when the language changes — the switch can be thrown in
+     the settings panel behind this modal, or in another tab. Labels only: a
+     rebuild would hand back a blank canvas and wipe a drawing in progress. */
+  function applyLabels() {
+    if (!modal) return;
+    modal.querySelector('.doodle-title').textContent = '🎨 ' + T('画个涂鸦');
+    modal.querySelector('.doodle-close').title = T('Close (Esc)');
+    modal.querySelector('.doodle-undo').title = T('撤销');
+    modal.querySelector('.doodle-clear').title = T('清空');
+    modal.querySelector('.doodle-cancel').textContent = T('取消');
+    modal.querySelector('.doodle-ok').textContent = '✅ ' + T('贴到输入框');
+    const swatches = modal.querySelectorAll('.doodle-swatch');
+    const eraser = swatches[swatches.length - 1];
+    if (eraser) eraser.title = T('橡皮擦（白色）');
+    modal.querySelectorAll('.doodle-brush').forEach((bt, i) => { bt.title = T('笔刷 {n}px', { n: BRUSHES[i] }); });
+  }
+
   function toCanvas(e) {
     const r = canvas.getBoundingClientRect();
     return {
@@ -174,7 +191,7 @@
 
   function confirmDoodle() {
     if (canvas.toDataURL('image/png') === blankURL) {
-      if (typeof showToast === 'function') showToast('先画点什么吧 🖌️');
+      if (typeof showToast === 'function') showToast(T('先画点什么吧 🖌️'));
       return;
     }
     // Downscale to the same edge the 📷 pipeline produces, keep the doc small.
@@ -187,7 +204,7 @@
     const url = out.toDataURL('image/jpeg', 0.75);
     if (typeof window.setPendingImage === 'function') {
       window.setPendingImage(url);
-      if (typeof showToast === 'function') showToast('🎨 已贴到输入框，点 Send 发送');
+      if (typeof showToast === 'function') showToast(T('🎨 已贴到输入框，点 Send 发送'));
     }
     close();
   }
@@ -206,4 +223,5 @@
 
   btn.addEventListener('click', open);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal) close(); });
+  window.addEventListener('langchange', applyLabels);
 })();

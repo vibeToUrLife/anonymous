@@ -17,7 +17,7 @@ const loginError   = document.getElementById('loginError');
 // Handle redirect result (fallback — fires on page load after redirect sign-in)
 auth.getRedirectResult().catch((err) => {
     if (err.code) {
-    loginError.textContent = 'Login failed: ' + (err.message || 'Unknown error');
+    loginError.textContent = T('Login failed: {msg}', { msg: err.message || T('Unknown error') });
     }
 });
 
@@ -35,10 +35,10 @@ googleLoginBtn.addEventListener('click', async () => {
     if (err.code === 'auth/popup-blocked' || err.code === 'auth/operation-not-supported-in-this-environment') {
         // Popup blocked or unsupported — fall back to redirect
         try { await auth.signInWithRedirect(provider); } catch (e) {
-        loginError.textContent = 'Login failed: ' + (e.message || 'Unknown error');
+        loginError.textContent = T('Login failed: {msg}', { msg: e.message || T('Unknown error') });
         }
     } else if (err.code !== 'auth/popup-closed-by-user') {
-        loginError.textContent = 'Login failed: ' + (err.message || 'Unknown error');
+        loginError.textContent = T('Login failed: {msg}', { msg: err.message || T('Unknown error') });
     }
     } finally {
     googleLoginBtn.disabled = false;
@@ -57,8 +57,9 @@ function showBlockedScreen() {
     d.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#0b0e14;color:#e8eaf0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;font-family:system-ui,-apple-system,sans-serif';
     d.innerHTML =
         '<div style="font-size:64px">⛔</div>' +
-        '<h1 style="margin:0;font-size:22px">Access blocked</h1>' +
-        '<p style="margin:0;max-width:340px;font-size:14px;color:#9aa0ad;line-height:1.6">Your account has been blocked from this site. If you think this is a mistake, please contact the admin.</p>';
+        '<h1 style="margin:0;font-size:22px">' + T('Access blocked') + '</h1>' +
+        '<p style="margin:0;max-width:340px;font-size:14px;color:#9aa0ad;line-height:1.6">' +
+        T('Your account has been blocked from this site. If you think this is a mistake, please contact the admin.') + '</p>';
     document.body.appendChild(d);
 }
 
@@ -219,10 +220,10 @@ function showToast(msg, type) {
 }
 
 function fmtRemaining(ms) {
-    if (ms <= 0) return 'expiring…';
+    if (ms <= 0) return T('expiring…');
     const h = Math.floor(ms / 3600000);
     const m = Math.floor((ms % 3600000) / 60000);
-    return h > 0 ? h + 'h ' + m + 'm left' : m + 'm left';
+    return h > 0 ? T('{h}h {m}m left', { h: h, m: m }) : T('{n}m left', { n: m });
 }
 
 /* ── Emoji reactions ── */
@@ -347,7 +348,7 @@ async function toggleReaction(docId, emoji) {
     } catch {
     // Revert on failure
     saveMyReaction(docId, mine);
-    showToast('Reaction failed', 'error');
+    showToast(T('Reaction failed'), 'error');
     }
 }
 
@@ -406,7 +407,7 @@ async function toggleReplyReaction(docId, replyPath, emoji) {
     });
     } catch {
     saveMyReplyReaction(storageKey, mine);
-    showToast('Reaction failed', 'error');
+    showToast(T('Reaction failed'), 'error');
     }
 }
 
@@ -433,7 +434,7 @@ function buildReactionsRow(a) {
     const addBtn = document.createElement('button');
     addBtn.className = 'reaction-add';
     addBtn.textContent = '+';
-    addBtn.title = 'React';
+    addBtn.title = T('React');
 
     const popup = document.createElement('div');
     popup.className = 'reaction-picker-popup';
@@ -495,7 +496,7 @@ function buildReplyReactionsRow(docId, reply, replyPath) {
     const addBtn = document.createElement('button');
     addBtn.className = 'reaction-add reply-reaction-add';
     addBtn.textContent = '+';
-    addBtn.title = 'React';
+    addBtn.title = T('React');
 
     const popup = document.createElement('div');
     popup.className = 'reaction-picker-popup reply-reaction-popup';
@@ -531,7 +532,7 @@ function compressImage(file, maxW, maxH, quality) {
     if (file.type === 'image/gif') {
     return new Promise((resolve, reject) => {
         if (file.size > MAX_GIF_SIZE) {
-        reject(new Error('GIF too large (max 500KB). Try a smaller GIF'));
+        reject(new Error(T('GIF too large (max 500KB). Try a smaller GIF')));
         return;
         }
         const reader = new FileReader();
@@ -578,7 +579,7 @@ imageInput.addEventListener('change', async () => {
     imgPreviewThumb.src = pendingImage;
     imgPreviewStrip.classList.add('show');
     } catch (err) {
-    showToast(err.message || 'Failed to load image', 'error');
+    showToast(err.message || T('Failed to load image'), 'error');
     }
     imageInput.value = '';
 });
@@ -609,7 +610,7 @@ input.addEventListener('paste', async (e) => {
         imgPreviewThumb.src = pendingImage;
         imgPreviewStrip.classList.add('show');
         } catch (err) {
-        showToast(err.message || 'Failed to load pasted image', 'error');
+        showToast(err.message || T('Failed to load pasted image'), 'error');
         }
         return;
     }
@@ -671,7 +672,7 @@ gifSearchInput.addEventListener('input', () => {
 
 function gifKeyMissing() {
     if (!GIPHY_KEY || GIPHY_KEY === 'PASTE_YOUR_GIPHY_API_KEY_HERE') {
-        gifGridEl.innerHTML = '<div class="gif-loading">请先填入免费的 Giphy API key<br>（developers.giphy.com → Create App）</div>';
+        gifGridEl.innerHTML = '<div class="gif-loading">' + T('请先填入免费的 Giphy API key<br>（developers.giphy.com → Create App）') + '</div>';
         return true;
     }
     return false;
@@ -679,25 +680,25 @@ function gifKeyMissing() {
 
 async function loadTrendingGifs() {
     if (gifKeyMissing()) return;
-    gifGridEl.innerHTML = '<div class="gif-loading">Loading…</div>';
+    gifGridEl.innerHTML = '<div class="gif-loading">' + T('Loading…') + '</div>';
     try {
     const res = await fetch('https://api.giphy.com/v1/gifs/trending?api_key=' + GIPHY_KEY + '&limit=24&rating=pg-13');
     const data = await res.json();
     renderGifs(data.data || []);
     } catch {
-    gifGridEl.innerHTML = '<div class="gif-loading">Failed to load GIFs</div>';
+    gifGridEl.innerHTML = '<div class="gif-loading">' + T('Failed to load GIFs') + '</div>';
     }
 }
 
 async function searchGifs(query) {
     if (gifKeyMissing()) return;
-    gifGridEl.innerHTML = '<div class="gif-loading">Searching…</div>';
+    gifGridEl.innerHTML = '<div class="gif-loading">' + T('Searching…') + '</div>';
     try {
     const res = await fetch('https://api.giphy.com/v1/gifs/search?api_key=' + GIPHY_KEY + '&q=' + encodeURIComponent(query) + '&limit=24&rating=pg-13');
     const data = await res.json();
     renderGifs(data.data || []);
     } catch {
-    gifGridEl.innerHTML = '<div class="gif-loading">Search failed</div>';
+    gifGridEl.innerHTML = '<div class="gif-loading">' + T('Search failed') + '</div>';
     }
 }
 
@@ -744,7 +745,7 @@ function hydrateGifFavsFromRoom(roomDoc, uid) {
     if (showingFavs) renderFavGifs();
 }
 function isGifFav(u) { return gifFavs.some(f => f && f.u === u); }
-function updateGifFavBtn() { if (gifFavBtn) gifFavBtn.title = '收藏的 GIF' + (gifFavs.length ? '（' + gifFavs.length + '）' : ''); }
+function updateGifFavBtn() { if (gifFavBtn) gifFavBtn.title = gifFavs.length ? T('收藏的 GIF（{n}）', { n: gifFavs.length }) : T('收藏的 GIF'); }
 function toggleGifFav(postUrl, thumb, starEl) {
     if (isGifFav(postUrl)) {
         gifFavs = gifFavs.filter(f => f && f.u !== postUrl);
@@ -770,7 +771,7 @@ function makeGifThumb(postUrl, thumb, title) {
     star.type = 'button';
     star.className = 'gif-fav-star' + (isGifFav(postUrl) ? ' on' : '');
     star.textContent = isGifFav(postUrl) ? '★' : '☆';
-    star.title = '收藏这个 GIF，下次直接用';
+    star.title = T('收藏这个 GIF，下次直接用');
     star.addEventListener('click', (e) => { e.stopPropagation(); toggleGifFav(postUrl, thumb, star); });
     wrap.appendChild(star);
     return wrap;
@@ -778,7 +779,7 @@ function makeGifThumb(postUrl, thumb, title) {
 function renderFavGifs() {
     gifGridEl.innerHTML = '';
     if (!gifFavs.length) {
-        gifGridEl.innerHTML = '<div class="gif-loading">还没有收藏的 GIF —— 点任意 GIF 右上角的 ☆，下次点这里直接用</div>';
+        gifGridEl.innerHTML = '<div class="gif-loading">' + T('还没有收藏的 GIF —— 点任意 GIF 右上角的 ☆，下次点这里直接用') + '</div>';
         return;
     }
     gifFavs.forEach(f => { if (f && f.u) gifGridEl.appendChild(makeGifThumb(f.u, f.th || f.u, 'GIF')); });
@@ -787,7 +788,7 @@ function renderFavGifs() {
 function renderGifs(results) {
     gifGridEl.innerHTML = '';
     if (!results.length) {
-    gifGridEl.innerHTML = '<div class="gif-loading">No GIFs found</div>';
+    gifGridEl.innerHTML = '<div class="gif-loading">' + T('No GIFs found') + '</div>';
     return;
     }
     results.forEach(r => {
@@ -972,11 +973,11 @@ pollCreatorClose.addEventListener('click', () => {
 
 pollAddOptionBtn.addEventListener('click', () => {
     const count = pollOptionsList.querySelectorAll('.poll-option-input').length;
-    if (count >= 10) return showToast('Max 10 options', 'error');
+    if (count >= 10) return showToast(T('Max 10 options'), 'error');
     const inp = document.createElement('input');
     inp.type = 'text';
     inp.className = 'poll-option-input';
-    inp.placeholder = 'Option ' + (count + 1);
+    inp.placeholder = T('Option {n}', { n: count + 1 });
     inp.maxLength = 100;
     pollOptionsList.appendChild(inp);
     inp.focus();
@@ -984,14 +985,14 @@ pollAddOptionBtn.addEventListener('click', () => {
 
 pollSubmitBtn.addEventListener('click', async () => {
     const question = pollQuestionInput.value.trim();
-    if (!question) return showToast('Enter a question', 'error');
+    if (!question) return showToast(T('Enter a question'), 'error');
     const inputs = pollOptionsList.querySelectorAll('.poll-option-input');
     const options = [];
     inputs.forEach(inp => {
         const v = inp.value.trim();
         if (v) options.push(v);
     });
-    if (options.length < 2) return showToast('Add at least 2 options', 'error');
+    if (options.length < 2) return showToast(T('Add at least 2 options'), 'error');
     pollSubmitBtn.disabled = true;
     try {
         suppressNextNotif = true;
@@ -1009,9 +1010,9 @@ pollSubmitBtn.addEventListener('click', async () => {
         while (pollOptionsList.children.length > 2) pollOptionsList.lastChild.remove();
         pollCreator.classList.remove('show');
         pollBtnEl.classList.remove('active');
-        showToast('Poll posted!', 'success');
+        showToast(T('Poll posted!'), 'success');
     } catch {
-        showToast('Failed to post poll', 'error');
+        showToast(T('Failed to post poll'), 'error');
     } finally {
         pollSubmitBtn.disabled = false;
     }
@@ -1019,7 +1020,7 @@ pollSubmitBtn.addEventListener('click', async () => {
 
 async function pollVote(docId, optionIndex) {
     const uid = auth.currentUser?.uid;
-    if (!uid) return showToast('Sign in to vote', 'error');
+    if (!uid) return showToast(T('Sign in to vote'), 'error');
     try {
         const doc = await answersRef.doc(docId).get();
         const votes = doc.data()?.pollVotes || {};
@@ -1034,7 +1035,7 @@ async function pollVote(docId, optionIndex) {
             });
         }
     } catch {
-        showToast('Vote failed', 'error');
+        showToast(T('Vote failed'), 'error');
     }
 }
 
@@ -1044,9 +1045,9 @@ async function pollAddOption(docId, text) {
         await answersRef.doc(docId).update({
             pollOptions: firebase.firestore.FieldValue.arrayUnion(text)
         });
-        showToast('Option added!', 'success');
+        showToast(T('Option added!'), 'success');
     } catch {
-        showToast('Failed to add option', 'error');
+        showToast(T('Failed to add option'), 'error');
     }
 }
 
@@ -1062,7 +1063,7 @@ function buildSpaceContent(space) {
         world:    { icon: '🌍', label: 'Pet World', verb: 'Join'  },
     };
     const meta = KIND[space.kind] || KIND.room;
-    const owner = space.ownerName || 'Someone';
+    const owner = space.ownerName || T('Someone');
 
     const card = document.createElement('a');
     card.className = 'space-card space-' + (space.kind || 'room');
@@ -1080,14 +1081,16 @@ function buildSpaceContent(space) {
 
     const title = document.createElement('span');
     title.className = 'space-card-title';
-    title.textContent = space.kind === 'world' ? 'Join Pet World' : (owner + '’s ' + meta.label);
+    title.textContent = space.kind === 'world'
+        ? T('Join Pet World')
+        : T('{owner}’s {label}', { owner: owner, label: T(meta.label) });
     body.appendChild(title);
 
     const sub = document.createElement('span');
     sub.className = 'space-card-sub';
     sub.textContent = space.kind === 'world'
-        ? 'Come hang out together →'
-        : (meta.verb + ' this ' + meta.label.toLowerCase() + ' →');
+        ? T('Come hang out together →')
+        : T('{verb} this {label} →', { verb: T(meta.verb), label: T(meta.label).toLowerCase() });
     body.appendChild(sub);
 
     card.appendChild(body);
@@ -1100,7 +1103,7 @@ function buildPollContent(a) {
 
     const q = document.createElement('div');
     q.className = 'poll-question';
-    q.textContent = '📊 ' + (a.text || 'Poll');
+    q.textContent = '📊 ' + (a.text || T('Poll'));
     container.appendChild(q);
 
     const uid = auth.currentUser?.uid;
@@ -1159,7 +1162,7 @@ function buildPollContent(a) {
     // Total votes
     const total = document.createElement('div');
     total.className = 'poll-total';
-    total.textContent = totalVotes + ' vote' + (totalVotes !== 1 ? 's' : '');
+    total.textContent = I18N.plural(totalVotes, '1 vote', '{n} votes');
     container.appendChild(total);
 
     // Add option row
@@ -1167,16 +1170,16 @@ function buildPollContent(a) {
     addRow.className = 'poll-add-row';
     const addInput = document.createElement('input');
     addInput.type = 'text';
-    addInput.placeholder = 'Add an option…';
+    addInput.placeholder = T('Add an option…');
     addInput.maxLength = 100;
     addInput.addEventListener('click', (e) => e.stopPropagation());
     const addBtn = document.createElement('button');
-    addBtn.textContent = '+ Add';
+    addBtn.textContent = T('+ Add');
     addBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         const val = addInput.value.trim();
         if (!val) return;
-        if ((a.pollOptions || []).includes(val)) return showToast('Option already exists', 'error');
+        if ((a.pollOptions || []).includes(val)) return showToast(T('Option already exists'), 'error');
         pollAddOption(a.id, val);
         addInput.value = '';
     });
@@ -1200,11 +1203,11 @@ function hpInfo(a, now) {
     // time remaining instead of the normal 6-hour HP decay.
     if (a.boostUntil && a.boostUntil > now) {
     const mins = Math.ceil((a.boostUntil - now) / 60000);
-    const label = mins >= 60 ? ('置顶 ' + Math.round(mins / 60) + 'h') : ('置顶 ' + mins + 'm');
+    const label = mins >= 60 ? T('置顶 {n}h', { n: Math.round(mins / 60) }) : T('置顶 {n}m', { n: mins });
     return { pct: 100, label: '📌 ' + label, color: '#f5b301' };
     }
     const pct = Math.max(0, Math.min(100, ((SIX_HOURS - (now - a.ts)) / SIX_HOURS) * 100));
-    return { pct: pct, label: 'HP ' + Math.round(pct) + '%', color: pct > 50 ? '#58c5b5' : pct > 20 ? '#f2a154' : '#e06377' };
+    return { pct: pct, label: T('HP {n}%', { n: Math.round(pct) }), color: pct > 50 ? '#58c5b5' : pct > 20 ? '#f2a154' : '#e06377' };
 }
 
 // Terminal-theme HP rendered as an ASCII meter, e.g. "[████████----] 64%".
@@ -1234,7 +1237,7 @@ function collapseOtherReplies(except) {
         const btn = b.querySelector('.reply-toggle');
         if (btn) {
             const n = b._replyData ? countAllReplies(b._replyData.replies) : 0;
-            btn.textContent = '💬 Reply' + (n ? ' (' + n + ')' : '');
+            btn.textContent = n ? T('💬 Reply ({n})', { n: n }) : T('💬 Reply');
         }
     });
 }
@@ -1254,7 +1257,7 @@ const ENTRANCE_ANIMS = {
 function render(items) {
     if (!items.length) {
     wrap.innerHTML =
-        '<div class="empty-state"><span class="icon">💬</span>No answers yet — be the first!</div>';
+        '<div class="empty-state"><span class="icon">💬</span>' + T('No answers yet — be the first!') + '</div>';
     knownIds.clear();
     return;
     }
@@ -1431,7 +1434,7 @@ function render(items) {
             const img = document.createElement('img');
             img.className = 'bubble-img';
             img.src = a.image;
-            img.alt = 'image';
+            img.alt = T('image');
             img.addEventListener('click', (e) => {
             e.stopPropagation();
             lightboxImg.src = a.image;
@@ -1457,7 +1460,7 @@ function render(items) {
     const replyBtn = document.createElement('button');
     const replyCount = countAllReplies(a.replies);
     replyBtn.className = 'reply-toggle';
-    replyBtn.textContent = '💬 Reply' + (replyCount ? ' (' + replyCount + ')' : '');
+    replyBtn.textContent = replyCount ? T('💬 Reply ({n})', { n: replyCount }) : T('💬 Reply');
     // Store latest data on bubble for reply toggling
     bubble._replyData = a;
     replyBtn.addEventListener('click', (e) => {
@@ -1468,7 +1471,7 @@ function render(items) {
         const latestReplyCount = countAllReplies(latest.replies);
         if (container) {
         container.remove();
-        replyBtn.textContent = '💬 Reply' + (latestReplyCount ? ' (' + latestReplyCount + ')' : '');
+        replyBtn.textContent = latestReplyCount ? T('💬 Reply ({n})', { n: latestReplyCount }) : T('💬 Reply');
         } else {
         collapseOtherReplies(bubble);   // accordion: only one thread open at a time
         openReplies(bubble, latest);
@@ -1479,8 +1482,8 @@ function render(items) {
     // Pay-to-pin: anyone can spend coins to boost any bubble to the top.
     const boostBtn = document.createElement('button');
     boostBtn.className = 'boost-toggle';
-    boostBtn.textContent = '⭐ 置顶';
-    boostBtn.title = '花金币把这条留言置顶';
+    boostBtn.textContent = T('⭐ 置顶');
+    boostBtn.title = T('花金币把这条留言置顶');
     boostBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         if (typeof window.openBoost === 'function') window.openBoost(a.id);
@@ -1490,8 +1493,8 @@ function render(items) {
     // Pay-to-award: stamp an award (🏆/🌟/…) on any bubble.
     const awardBtn = document.createElement('button');
     awardBtn.className = 'boost-toggle award-toggle';
-    awardBtn.textContent = '🏆 打赏';
-    awardBtn.title = '花金币给这条留言一个奖章';
+    awardBtn.textContent = T('🏆 打赏');
+    awardBtn.title = T('花金币给这条留言一个奖章');
     awardBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         if (typeof window.openAward === 'function') window.openAward(a.id);
@@ -1502,8 +1505,8 @@ function render(items) {
     // device-local — bubble-jar.js owns the logic).
     const jarBtn = document.createElement('button');
     jarBtn.className = 'boost-toggle jar-btn';
-    jarBtn.textContent = '🏺 收藏';
-    jarBtn.title = '收进泡泡罐（只保存在这台设备）';
+    jarBtn.textContent = T('🏺 收藏');
+    jarBtn.title = T('收进泡泡罐（只保存在这台设备）');
     jarBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         if (typeof window.jarCatch === 'function') window.jarCatch(bubble._replyData || a, bubble);
@@ -1594,8 +1597,9 @@ function awardGiversHtml(a) {
     });
     if (!names.length) return '';
     const shown = names.slice(0, 5).join('、');
-    const extra = names.length > 5 ? ' 等' + names.length + '人' : '';
-    return '🎉 ' + shown + extra + ' 打赏了';
+    return names.length > 5
+    ? T('🎉 {names} 等{n}人 打赏了', { names: shown, n: names.length })
+    : T('🎉 {names} 打赏了', { names: shown });
 }
 
 /* ── Safe text with line-break rendering ── */
@@ -1619,7 +1623,7 @@ function updateReplies(bubble, a) {
     if (!container) {
     // Update reply count on the toggle button
     const btn = bubble.querySelector('.reply-toggle');
-    if (btn) btn.textContent = '💬 Reply' + (replyCount ? ' (' + replyCount + ')' : '');
+    if (btn) btn.textContent = replyCount ? T('💬 Reply ({n})', { n: replyCount }) : T('💬 Reply');
     return;
     }
     // Preserve user's in-progress text and pending image before re-rendering
@@ -1678,13 +1682,16 @@ function updateReplies(bubble, a) {
     // draft we just re-attached would be hidden and look like it vanished.
     childrenWrap.classList.add('open');
     // The freshly-built "↪ Reply" toggle needs to reflect that a box is open.
-    const toggle = Array.from(item.querySelectorAll(':scope > .reply-actions > .reply-to-reply-toggle'))
-        .find((b) => b.textContent.trim().charAt(0) === '↪');
-    if (toggle) toggle.textContent = '↪ Cancel';
+    // The thread toggle shares its class, so pick by position — it is always
+    // appended last in buildReplyItem. Matching on the label instead would
+    // break in any language whose translation doesn't start with the arrow.
+    const toggles = item.querySelectorAll(':scope > .reply-actions > .reply-to-reply-toggle');
+    const toggle = toggles[toggles.length - 1];
+    if (toggle) toggle.textContent = T('↪ Cancel');
     });
     // Update button count
     const btn = bubble.querySelector('.reply-toggle');
-    if (btn) btn.textContent = '💬 Reply' + (replyCount ? ' (' + replyCount + ')' : '');
+    if (btn) btn.textContent = replyCount ? T('💬 Reply ({n})', { n: replyCount }) : T('💬 Reply');
 }
 
 function openReplies(bubble, a) {
@@ -1707,7 +1714,7 @@ function buildReplyItem(docId, r, replyPath, depth) {
     const img = document.createElement('img');
     img.className = 'reply-img';
     img.src = r.image;
-    img.alt = 'reply image';
+    img.alt = T('reply image');
     img.addEventListener('click', (e) => {
         e.stopPropagation();
         lightboxImg.src = r.image;
@@ -1756,7 +1763,7 @@ function buildReplyItem(docId, r, replyPath, depth) {
         if (open) _openReplyThreads.add(threadKey);
         else _openReplyThreads.delete(threadKey);
         if (threadBtn) {
-        threadBtn.textContent = (open ? 'Hide thread' : 'Show thread') + ' (' + childCount + ')';
+        threadBtn.textContent = open ? T('Hide thread ({n})', { n: childCount }) : T('Show thread ({n})', { n: childCount });
         }
     }
 
@@ -1770,7 +1777,7 @@ function buildReplyItem(docId, r, replyPath, depth) {
         if (!willOpen) {
             const existingInput = childrenWrap.querySelector('.nested-reply-input');
             if (existingInput) existingInput.remove();
-            replyBtn.textContent = '↪ Reply';
+            replyBtn.textContent = T('↪ Reply');
         }
         setChildrenOpen(willOpen);
         });
@@ -1779,7 +1786,7 @@ function buildReplyItem(docId, r, replyPath, depth) {
 
     const replyBtn = document.createElement('button');
     replyBtn.className = 'reply-to-reply-toggle';
-    replyBtn.textContent = '↪ Reply';
+    replyBtn.textContent = T('↪ Reply');
     actions.appendChild(replyBtn);
     div.appendChild(actions);
     replyBtn.addEventListener('click', (e) => {
@@ -1787,12 +1794,12 @@ function buildReplyItem(docId, r, replyPath, depth) {
         const existingInput = childrenWrap.querySelector('.nested-reply-input');
         if (existingInput) {
         existingInput.remove();
-        replyBtn.textContent = '↪ Reply';
+        replyBtn.textContent = T('↪ Reply');
         if (!childCount) setChildrenOpen(false);
         } else {
         setChildrenOpen(true);
         childrenWrap.appendChild(buildReplyInput(docId, replyPath, depth + 1));
-        replyBtn.textContent = '↪ Cancel';
+        replyBtn.textContent = T('↪ Cancel');
         }
     });
 
@@ -1813,7 +1820,7 @@ function buildReplyInput(docId, parentReplyPath, depth) {
     const attachBtn = document.createElement('button');
     attachBtn.className = 'reply-attach';
     attachBtn.textContent = '📷';
-    attachBtn.title = 'Attach image';
+    attachBtn.title = T('Attach image');
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = 'image/*';
@@ -1844,7 +1851,7 @@ function buildReplyInput(docId, parentReplyPath, depth) {
         previewImg.src = replyPendingImage;
         preview.style.display = 'flex';
     } catch {
-        showToast('Failed to load image', 'error');
+        showToast(T('Failed to load image'), 'error');
     }
     fileInput.value = '';
     });
@@ -1853,7 +1860,7 @@ function buildReplyInput(docId, parentReplyPath, depth) {
     const gifReplyBtn = document.createElement('button');
     gifReplyBtn.className = 'reply-attach';
     gifReplyBtn.textContent = 'GIF';
-    gifReplyBtn.title = 'Search GIFs';
+    gifReplyBtn.title = T('Search GIFs');
     gifReplyBtn.style.fontSize = '10px';
     gifReplyBtn.style.fontWeight = '800';
     gifReplyBtn.style.letterSpacing = '-0.5px';
@@ -1875,7 +1882,7 @@ function buildReplyInput(docId, parentReplyPath, depth) {
 
     const inp = document.createElement('input');
     inp.type = 'text';
-    inp.placeholder = 'Write a reply…';
+    inp.placeholder = T('Write a reply…');
     inp.maxLength = 300;
 
     // Paste image into reply
@@ -1892,7 +1899,7 @@ function buildReplyInput(docId, parentReplyPath, depth) {
             previewImg.src = replyPendingImage;
             preview.style.display = 'flex';
         } catch (err) {
-            showToast(err.message || 'Failed to load pasted image', 'error');
+            showToast(err.message || T('Failed to load pasted image'), 'error');
         }
         return;
         }
@@ -1921,7 +1928,7 @@ function buildReplyInput(docId, parentReplyPath, depth) {
         replyPendingImage = null;
         preview.style.display = 'none';
     } catch {
-        showToast('Reply failed', 'error');
+        showToast(T('Reply failed'), 'error');
     } finally {
         btn.disabled = false;
     }
@@ -1935,7 +1942,7 @@ function buildReplyInput(docId, parentReplyPath, depth) {
     // Anonymous checkbox tick (inline, beside input) — remember last choice
     const anonLabel = document.createElement('label');
     anonLabel.className = 'reply-anon-toggle';
-    anonLabel.title = 'Reply anonymously';
+    anonLabel.title = T('Reply anonymously');
     anonLabel.addEventListener('click', (e) => e.stopPropagation());
     const anonCheckbox = document.createElement('input');
     anonCheckbox.type = 'checkbox';
@@ -1976,7 +1983,7 @@ async function submit() {
     const text = input.value.trim();
     if (!text && !pendingImage) return;
     if (text.length > 500) {
-    showToast('Max 500 characters', 'error');
+    showToast(T('Max 500 characters'), 'error');
     return;
     }
 
@@ -2005,10 +2012,10 @@ async function submit() {
     input.value = '';
     pendingImage = null;
     imgPreviewStrip.classList.remove('show');
-    showToast('Answer sent!', 'success');
+    showToast(T('Answer sent!'), 'success');
     input.focus();
     } catch {
-    showToast('Failed to send — try again', 'error');
+    showToast(T('Failed to send — try again'), 'error');
     } finally {
     sendBtn.disabled = false;
     }
@@ -2162,16 +2169,16 @@ async function addFood() {
     const text = foodInput.value.trim();
     if (!text) return;
     if (text.length > 100) {
-    showToast('Max 100 characters', 'error');
+    showToast(T('Max 100 characters'), 'error');
     return;
     }
     addFoodBtn.disabled = true;
     try {
     await foodRef.add({ text, ts: Date.now(), votes: 0 });
     foodInput.value = '';
-    showToast('Food added!', 'success');
+    showToast(T('Food added!'), 'success');
     } catch {
-    showToast('Failed to add — try again', 'error');
+    showToast(T('Failed to add — try again'), 'error');
     } finally {
     addFoodBtn.disabled = false;
     }
@@ -2186,7 +2193,7 @@ function renderVoteList() {
     const voted = getVotedSet();
     const activeFood = foodItems.filter(f => !f.removed);
     if (!activeFood.length) {
-    voteListEl.innerHTML = '<li class="vote-empty">No suggestions yet</li>';
+    voteListEl.innerHTML = '<li class="vote-empty">' + T('No suggestions yet') + '</li>';
     return;
     }
 
@@ -2215,7 +2222,7 @@ function renderVoteList() {
     const delBtn = document.createElement('button');
     delBtn.className = 'vote-action del';
     delBtn.innerHTML = '&#128465;';
-    delBtn.title = 'Delete';
+    delBtn.title = T('Delete');
     delBtn.addEventListener('click', () => deleteFood(item.id, item.text));
 
     actions.append(delBtn);
@@ -2252,7 +2259,7 @@ async function castVote(docId) {
     await foodRef.doc(docId).update({
         votes: firebase.firestore.FieldValue.increment(alreadyVoted ? -1 : 1)
     });
-    showToast(alreadyVoted ? 'Vote removed' : 'Vote counted!', 'success');
+    showToast(alreadyVoted ? T('Vote removed') : T('Vote counted!'), 'success');
     } catch {
     // Revert localStorage on failure
     if (alreadyVoted) {
@@ -2262,18 +2269,18 @@ async function castVote(docId) {
     }
     saveVotedSet(voted);
     renderVoteList();
-    showToast('Vote failed — try again', 'error');
+    showToast(T('Vote failed — try again'), 'error');
     }
 }
 
 /* ── Delete food ── */
 async function deleteFood(docId, name) {
-    if (!confirm('Delete "' + name + '" from the list?')) return;
+    if (!confirm(T('Delete "{name}" from the list?', { name: name }))) return;
     try {
     await foodRef.doc(docId).delete();
-    showToast('Deleted!', 'success');
+    showToast(T('Deleted!'), 'success');
     } catch {
-    showToast('Delete failed', 'error');
+    showToast(T('Delete failed'), 'error');
     }
 }
 
@@ -2289,7 +2296,7 @@ randomBtn.addEventListener('click', () => {
     // Only spin on active (non-removed) items
     const active = foodItems.filter(f => !f.removed);
     if (!active.length) {
-    randomResult.textContent = 'No food to spin!';
+    randomResult.textContent = T('No food to spin!');
     return;
     }
     randomBtn.disabled = true;
@@ -2336,12 +2343,12 @@ spinRemoveBtn.addEventListener('click', async () => {
     await foodRef.doc(lastSpinDocId).update({ removed: true });
     // Clear shared spin result so all users see the removal
     await spinResultRef.set({ text: null, foodId: null, ts: Date.now() }).catch(() => {});
-    showToast('Removed from list!', 'success');
+    showToast(T('Removed from list!'), 'success');
     } catch {
-    showToast('Remove failed', 'error');
+    showToast(T('Remove failed'), 'error');
     }
     spinActions.classList.remove('show');
-    randomResult.textContent = 'Spin again!';
+    randomResult.textContent = T('Spin again!');
     lastSpinDocId = null;
 });
 
@@ -2353,9 +2360,9 @@ restoreBtn.addEventListener('click', async () => {
     const batch = db.batch();
     removed.forEach(f => batch.update(foodRef.doc(f.id), { removed: false }));
     await batch.commit();
-    showToast('All removed food restored!', 'success');
+    showToast(T('All removed food restored!'), 'success');
     } catch {
-    showToast('Restore failed', 'error');
+    showToast(T('Restore failed'), 'error');
     }
 });
 
@@ -2380,7 +2387,7 @@ spinResultRef.onSnapshot((snap) => {
     if (d.text) {
     randomResult.textContent = '\uD83C\uDF7D\uFE0F ' + d.text + ' \uD83C\uDF89';
     } else {
-    randomResult.textContent = 'Spin again!';
+    randomResult.textContent = T('Spin again!');
     spinActions.classList.remove('show');
     }
 });
@@ -2480,7 +2487,7 @@ settingsNameSaveBtn.addEventListener('click', async () => {
     const newName = settingsNameInput.value.trim();
     if (!newName || newName.length > 20) {
     settingsNameStatus.style.color = '#f87171';
-    settingsNameStatus.textContent = 'Name must be 1-20 characters';
+    settingsNameStatus.textContent = T('Name must be 1-20 characters');
     return;
     }
     const uid = auth.currentUser?.uid;
@@ -2491,7 +2498,7 @@ settingsNameSaveBtn.addEventListener('click', async () => {
     }
     settingsNameSaveBtn.disabled = true;
     settingsNameStatus.style.color = 'rgba(255,255,255,0.4)';
-    settingsNameStatus.textContent = 'Saving\u2026';
+    settingsNameStatus.textContent = T('Saving\u2026');
     try {
     // Migrate flappy leaderboard entry
     if (oldName) {
@@ -2571,12 +2578,12 @@ settingsNameSaveBtn.addEventListener('click', async () => {
         }
     }
     settingsNameStatus.style.color = '#34d399';
-    settingsNameStatus.textContent = '\u2713 Name updated!';
+    settingsNameStatus.textContent = T('\u2713 Name updated!');
     setTimeout(() => settingsOverlay.classList.add('hidden'), 800);
     } catch (e) {
     console.error('Name change error:', e);
     settingsNameStatus.style.color = '#f87171';
-    settingsNameStatus.textContent = 'Failed to save \u2014 try again';
+    settingsNameStatus.textContent = T('Failed to save \u2014 try again');
     } finally {
     settingsNameSaveBtn.disabled = false;
     }
@@ -2591,37 +2598,37 @@ function commitNotif(on, msg) {
     syncSettingsToAccount();
 }
 notifToggle.addEventListener('change', () => {
-    if (!notifToggle.checked) { commitNotif(false, 'Notifications disabled'); return; }
+    if (!notifToggle.checked) { commitNotif(false, T('Notifications disabled')); return; }
     // Turning ON
     if (!('Notification' in window)) {            // e.g. iOS Safari — in-app alerts only
-    commitNotif(true, 'In-app notifications enabled! 🔔');
+    commitNotif(true, T('In-app notifications enabled! 🔔'));
     return;
     }
     if (Notification.permission === 'denied') {
     notifToggle.checked = false;
-    showToast('Notifications blocked — enable in browser settings', 'error');
+    showToast(T('Notifications blocked — enable in browser settings'), 'error');
     return;
     }
     if (Notification.permission === 'granted') {
-    commitNotif(true, 'Notifications enabled! 🔔');
+    commitNotif(true, T('Notifications enabled! 🔔'));
     return;
     }
     // permission === 'default' → ask (handle both promise and callback styles)
     const onPerm = (perm) => {
-    if (perm !== 'granted') { notifToggle.checked = false; showToast('Notifications blocked by browser', 'error'); }
-    else commitNotif(true, 'Notifications enabled! 🔔');
+    if (perm !== 'granted') { notifToggle.checked = false; showToast(T('Notifications blocked by browser'), 'error'); }
+    else commitNotif(true, T('Notifications enabled! 🔔'));
     };
     try {
     const result = Notification.requestPermission(onPerm);
     if (result && result.then) result.then(onPerm);
-    } catch { commitNotif(true, 'Notifications enabled! 🔔'); }
+    } catch { commitNotif(true, T('Notifications enabled! 🔔')); }
 });
 
 // Sound toggle
 soundToggle.addEventListener('change', () => {
     soundEnabled = soundToggle.checked;
     localStorage.setItem('sound_enabled', soundEnabled ? '1' : '0');
-    showToast(soundEnabled ? 'Sound on 🔊' : 'Sound muted 🔇', 'success');
+    showToast(soundEnabled ? T('Sound on 🔊') : T('Sound muted 🔇'), 'success');
     syncSettingsToAccount();
 });
 
@@ -2765,7 +2772,7 @@ function refreshSettingsUI() {
 // Clear cache button
 document.getElementById('clearCacheBtn').addEventListener('click', () => {
     ['cache_answers', 'cache_food'].forEach(k => localStorage.removeItem(k));
-    showToast('Cache cleared!', 'success');
+    showToast(T('Cache cleared!'), 'success');
 });
 
 // Clear badge when user focuses the tab
@@ -2790,7 +2797,7 @@ function flashTitle() {
     if (titleFlashInterval) return;
     let on = true;
     titleFlashInterval = setInterval(() => {
-    document.title = on ? '(' + unseenCount + ') New message!' : originalTitle;
+    document.title = on ? T('({n}) New message!', { n: unseenCount }) : originalTitle;
     on = !on;
     }, 1000);
 }
@@ -2952,7 +2959,7 @@ function notifyNewMessages(items) {
         if (lastReply && (lastReply.ts || 0) > notifReadTs) {
         newReplyCount += currentCount - oldCount;
         replyBubbleIds.push(a.id);
-        newestReplyText = lastReply.text || '📷 Image reply';
+        newestReplyText = lastReply.text || T('📷 Image reply');
         }
     }
     knownReplyCounts[a.id] = currentCount;
@@ -2967,8 +2974,8 @@ function notifyNewMessages(items) {
         freshItems.length,
         freshItems[freshItems.length - 1].text
             ? (freshItems[freshItems.length - 1].text.length > 80 ? freshItems[freshItems.length - 1].text.slice(0, 80) + '…' : freshItems[freshItems.length - 1].text)
-            : '📷 Image message',
-        'New Anonymous Message',
+            : T('📷 Image message'),
+        T('New Anonymous Message'),
         'anon-bubble'
         );
         // In-page: glow the new bubbles + count them in the pill (newest = last, chronological).
@@ -2986,7 +2993,7 @@ function notifyNewMessages(items) {
         fireNotification(
         newReplyCount,
         replyBody,
-        'New Reply',
+        T('New Reply'),
         'anon-reply'
         );
         // In-page: dot the bubbles that got a new reply.
@@ -3018,7 +3025,7 @@ function fireNotification(count, bodyText, title, tag) {
     if (notifEnabled && document.hidden && 'Notification' in window && Notification.permission === 'granted') {
     const n = new Notification(title, {
         body: count > 1
-        ? count + ' new — ' + bodyText
+        ? T('{n} new — {body}', { n: count, body: bodyText })
         : bodyText,
         icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">💬</text></svg>',
         tag: tag
@@ -3110,7 +3117,7 @@ function _subscribeAnswers() {
     render(items);
     }, (err) => {
     console.error('Firestore error:', err);
-    showToast('Connection error — check console (F12)', 'error');
+    showToast(T('Connection error — check console (F12)'), 'error');
     });
 }
 
@@ -3200,7 +3207,7 @@ async function dailyReset() {
         batch.update(doc.ref, { votes: 0 });
     });
     await batch.commit();
-    resetInfoEl.textContent = '\uD83D\uDD04 Votes reset for today (' + today + ')';
+    resetInfoEl.textContent = T('\uD83D\uDD04 Votes reset for today ({date})', { date: today });
     resetInfoEl.className = 'reset-info just-reset';
     } catch (e) {
     console.error('Daily vote reset failed:', e);
@@ -3210,7 +3217,8 @@ dailyReset();
 
 // Show current day info if no reset was needed
 if (!resetInfoEl.textContent) {
-    resetInfoEl.textContent = 'Votes reset daily at 12:00 AM';
+    resetInfoEl.setAttribute('data-default', '1');
+    resetInfoEl.textContent = T('Votes reset daily at 12:00 AM');
 }
 
 // Also schedule a reset if the page stays open past midnight
@@ -3257,9 +3265,12 @@ let cdDismissedTarget  = null;             // target the user closed (stay hidde
 function formatClock(ts) {
     const d = new Date(ts);
     let h = d.getHours();
-    const ap = h >= 12 ? 'PM' : 'AM';
+    const pm = h >= 12;
     h = h % 12 || 12;
-    return h + ':' + padZ(d.getMinutes()) + ' ' + ap;
+    // One key per clock reading — Chinese puts 上午/下午 BEFORE the digits, so the
+    // meridiem can't be a separate T() glued on the end.
+    return pm ? T('{h}:{m} PM', { h: h, m: padZ(d.getMinutes()) })
+              : T('{h}:{m} AM', { h: h, m: padZ(d.getMinutes()) });
 }
 function hideCountdownBubble() {
     cdCurrentTarget = null;
@@ -3276,8 +3287,8 @@ function updateCountdownBubble(diff, targetTs, type) {
     const totalSec = Math.floor(diff / 1000);
     cdBubbleTime.textContent  = padZ(Math.floor(totalSec / 60)) + ':' + padZ(totalSec % 60);
     cdBubbleEmoji.textContent = type === 'lunch' ? '🍜' : '🏃';
-    cdBubbleLabel.textContent = type === 'lunch' ? 'Lunch in' : 'Off work in';
-    cdBubbleAt.textContent    = 'at ' + formatClock(targetTs);
+    cdBubbleLabel.textContent = type === 'lunch' ? T('Lunch in') : T('Off work in');
+    cdBubbleAt.textContent    = T('at {time}', { time: formatClock(targetTs) });
     cdBubble.classList.toggle('urgent', diff <= 5 * 60 * 1000);   // turn time red in last 5 min
     cdBubble.classList.remove('hidden');
 }
@@ -3375,9 +3386,9 @@ function showCelebration(type) {
     if (fx) fx.innerHTML = '';
     document.getElementById('celebrationEmojis').innerHTML =
         d.emojis.map((e, i) => '<span style="--i:' + i + '">' + e + '</span>').join('');
-    document.getElementById('celebrationText').textContent = d.title;
-    document.getElementById('celebrationSub').textContent = d.sub;
-    celebrationClose.textContent = d.btn;
+    document.getElementById('celebrationText').textContent = T(d.title);
+    document.getElementById('celebrationSub').textContent = T(d.sub);
+    celebrationClose.textContent = T(d.btn);
     celebrationOverlay.className = 'celebration-overlay ' + type;   // reset classes + set theme
     void celebrationOverlay.offsetWidth;                           // restart entrance animations
     celebrationOverlay.classList.add('show');
@@ -3432,12 +3443,12 @@ function tickCountdown(targetTs, type) {
         hideCountdownBubble();
         hideCountdownFinal();
         if (type === 'lunch') {
-        countdownDigits.innerHTML = '<span class="countdown-done">🍽️ Lunch time! 🍽️</span>';
-        countdownLabel.textContent = 'Go eat & recharge!';
+        countdownDigits.innerHTML = '<span class="countdown-done">' + T('🍽️ Lunch time! 🍽️') + '</span>';
+        countdownLabel.textContent = T('Go eat & recharge!');
         showCelebration('lunch');
         } else {
-        countdownDigits.innerHTML = '<span class="countdown-done">🎉 Off work! 🎉</span>';
-        countdownLabel.textContent = 'Time to go home!';
+        countdownDigits.innerHTML = '<span class="countdown-done">' + T('🎉 Off work! 🎉') + '</span>';
+        countdownLabel.textContent = T('Time to go home!');
         showCelebration('offwork');
         }
         // Auto-clean expired custom countdown after showing celebration
@@ -3448,7 +3459,7 @@ function tickCountdown(targetTs, type) {
     const m = Math.floor((diff % 3600000) / 60000);
     const s = Math.floor((diff % 60000) / 1000);
     countdownDigits.textContent = padZ(h) + ':' + padZ(m) + ':' + padZ(s);
-    countdownLabel.textContent = type === 'lunch' ? 'until lunch 🍜' : 'until freedom 🏃';
+    countdownLabel.textContent = type === 'lunch' ? T('until lunch 🍜') : T('until freedom 🏃');
     updateCountdownBubble(diff, targetTs, type);
     updateCountdownFinal(diff);
     }
@@ -3468,9 +3479,9 @@ countdownSetBtn.addEventListener('click', async () => {
     }
     try {
     await countdownRef.set({ targetTs: target.getTime() });
-    showToast('Countdown set! ⏰', 'success');
+    showToast(T('Countdown set! ⏰'), 'success');
     } catch {
-    showToast('Failed to set countdown', 'error');
+    showToast(T('Failed to set countdown'), 'error');
     }
 });
 
@@ -3481,9 +3492,9 @@ countdownClear.addEventListener('click', async () => {
     clearInterval(countdownInterval);
     hideCountdownFinal();
     applyDefaultCountdown();
-    showToast('Countdown cleared — using default', 'success');
+    showToast(T('Countdown cleared — using default'), 'success');
     } catch {
-    showToast('Failed to clear', 'error');
+    showToast(T('Failed to clear'), 'error');
     }
 });
 
@@ -3498,16 +3509,16 @@ function applyDefaultCountdown() {
     const hm = now.getHours() * 60 + now.getMinutes();
     if (day === 0 || day === 6) {
         countdownDigits.textContent = '--:--:--';
-        countdownLabel.textContent = 'It\u2019s the weekend! Enjoy \ud83c\udf1f';
+        countdownLabel.textContent = T('It\u2019s the weekend! Enjoy \ud83c\udf1f');
     } else if (hm < 540) {
         countdownDigits.textContent = '--:--:--';
-        countdownLabel.textContent = 'Work starts at 9:00 AM \u2615';
+        countdownLabel.textContent = T('Work starts at 9:00 AM \u2615');
     } else if (result && result.type === 'lunchbreak') {
         countdownDigits.textContent = '--:--:--';
-        countdownLabel.textContent = 'Lunch break! Back at 2:00 PM \ud83c\udf5c';
+        countdownLabel.textContent = T('Lunch break! Back at 2:00 PM \ud83c\udf5c');
     } else {
-        countdownDigits.innerHTML = '<span class="countdown-done">\ud83c\udf89 Off work! \ud83c\udf89</span>';
-        countdownLabel.textContent = 'Enjoy your evening!';
+        countdownDigits.innerHTML = '<span class="countdown-done">' + T('\ud83c\udf89 Off work! \ud83c\udf89') + '</span>';
+        countdownLabel.textContent = T('Enjoy your evening!');
     }
     }
 }
@@ -3593,9 +3604,9 @@ countdownRef.onSnapshot((snap) => {
     function renderChecked(mood) {
     moodFab.classList.add('has-checked');
     moodFab.textContent = { great: '😄', good: '🙂', meh: '😐', bad: '😢', fire: '🔥' }[mood] || '✅';
-    checkinArea.innerHTML = '<div class="mood-checked-msg">You picked ' +
-        { great: '😄', good: '🙂', meh: '😐', bad: '😢', fire: '🔥' }[mood] +
-        ' today!</div>';
+    checkinArea.innerHTML = '<div class="mood-checked-msg">' +
+        T('You picked {emoji} today!', { emoji: { great: '😄', good: '🙂', meh: '😐', bad: '😢', fire: '🔥' }[mood] }) +
+        '</div>';
     }
 
     // Update chart bars
@@ -3614,7 +3625,7 @@ countdownRef.onSnapshot((snap) => {
     // Submit mood — 1 vote per Google account per day
     async function submitMood(mood) {
     const uid = getUid();
-    if (!uid) { showToast('Please sign in first', 'error'); return; }
+    if (!uid) { showToast(T('Please sign in first'), 'error'); return; }
 
     setLocalMood(mood);
     renderChecked(mood);
@@ -3647,7 +3658,7 @@ countdownRef.onSnapshot((snap) => {
         await votersRef.set({ mood, ts: Date.now() });
     } catch (err) {
         console.error('Mood submit error:', err, 'code:', err.code, 'msg:', err.message);
-        showToast('Mood fail: ' + (err.code || '') + ' ' + (err.message || 'unknown'), 'error');
+        showToast(T('Mood fail: {code} {msg}', { code: err.code || '', msg: err.message || 'unknown' }), 'error');
     }
     }
 
@@ -3740,12 +3751,12 @@ countdownRef.onSnapshot((snap) => {
             const ov = document.createElement('div');
             ov.className = 'chess-invite-overlay';
             ov.innerHTML = '<div class="chess-invite-box">' +
-            '<h3>♟️ Chess Challenge!</h3>' +
-            '<div class="ci-from">' + (inv.fromName||'Someone') + ' invites you</div>' +
-            '<div class="ci-bet">🪙 ' + inv.bet + ' coins</div>' +
+            '<h3>' + T('♟️ Chess Challenge!') + '</h3>' +
+            '<div class="ci-from">' + T('{name} invites you', { name: inv.fromName || T('Someone') }) + '</div>' +
+            '<div class="ci-bet">' + T('🪙 {n} coins', { n: inv.bet }) + '</div>' +
             '<div class="ci-buttons">' +
-                '<button class="ci-reject">Reject</button>' +
-                '<button class="ci-accept">Accept</button>' +
+                '<button class="ci-reject">' + T('Reject') + '</button>' +
+                '<button class="ci-accept">' + T('Accept') + '</button>' +
             '</div></div>';
             document.body.appendChild(ov);
             ov.querySelector('.ci-accept').addEventListener('click', () => {
@@ -3782,3 +3793,41 @@ countdownRef.onSnapshot((snap) => {
     }
     });
 })();
+
+/* ── Repaint when the language changes ──
+   The board is drawn once and then PATCHED in place: render() returns early for
+   a bubble that is already in the DOM, so its footer, buttons and tooltips keep
+   whatever language they were built in. Dropping those nodes makes render()
+   rebuild them.
+
+   But not underneath someone who is mid-reply. A bubble with an open thread
+   keeps its node and goes through render()'s existing-bubble path, which calls
+   updateReplies() — that already stashes typed text, pending images and open
+   nested drafts and puts them back. Its own footer catches up the next time the
+   thread closes and a snapshot rebuilds it. Losing a half-typed reply to a
+   settings change would be a far worse bug than a footer that lags.
+
+   The switch can be thrown on another page or another device, so this listens
+   rather than being called by the toggle. Each repaint is guarded on its own:
+   whatever is closed simply does nothing. */
+if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('langchange', function () {
+    try {
+    wrap.querySelectorAll('.bubble').forEach(function (el) {
+        if (!el.querySelector('.replies-container')) el.remove();
+    });
+    render(_lastItems);
+    } catch (e) {}
+    try { if (typeof renderVoteList === 'function') renderVoteList(); } catch (e) {}
+    try { if (typeof updateRestoreBtn === 'function') updateRestoreBtn(); } catch (e) {}
+    try { if (typeof refreshSettingsUI === 'function') refreshSettingsUI(); } catch (e) {}
+    try { if (typeof updateGifFavBtn === 'function') updateGifFavBtn(); } catch (e) {}
+    try { if (typeof updateNewContentPill === 'function') updateNewContentPill(); } catch (e) {}
+    // Only the default line — a "votes were just reset" message is about a real
+    // event and re-rendering it would need the date it was written with.
+    try {
+    if (resetInfoEl && resetInfoEl.getAttribute('data-default')) {
+        resetInfoEl.textContent = T('Votes reset daily at 12:00 AM');
+    }
+    } catch (e) {}
+    // The countdown redraws on its own 1s tick, so it needs no help here.
+});

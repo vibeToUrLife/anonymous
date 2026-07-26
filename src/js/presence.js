@@ -156,12 +156,14 @@
   }
 
   /* ── Render from the live collection ─────────────────────── */
+  let lastDocs = [];
   function renderPresence(docs) {
+    lastDocs = docs;
     const now = Date.now();
     const online = Math.max(1, L.countOnline(docs, now)); // I'm always ≥ 1
     if (countEl) countEl.textContent = online;
     bumpPeak(online);
-    if (presenceWrap) presenceWrap.title = online + ' viewing the board right now';
+    if (presenceWrap) presenceWrap.title = T('{n} viewing the board right now', { n: online });
     if (typingEl) typingEl.hidden = !L.someoneElseTyping(docs, now, myUid);
   }
 
@@ -205,5 +207,13 @@
   // Re-announce promptly when the user comes back to the tab.
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && myUid) writeHeartbeat();
+  });
+
+  /* The viewer-count tooltip carries a number, so this module owns the title
+     attribute outright — index.html deliberately no longer marks it for the
+     static sweep. Without this listener a language switch would leave the old
+     wording until the next heartbeat, up to HEARTBEAT_MS away. */
+  window.addEventListener('langchange', () => {
+    try { renderPresence(lastDocs); } catch (e) {}
   });
 })();

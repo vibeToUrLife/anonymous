@@ -47,13 +47,13 @@ const UpcomingEvents = (() => {
   /** "in 2d 3h" / "in 5h 12m" / "in 42m" / live / started */
   function _fmtCountdown(eventAt) {
     const dt = eventAt - _now();
-    if (dt <= 0) return (_now() - eventAt < HOUR_MS) ? '🔴 happening now' : '✅ started';
+    if (dt <= 0) return (_now() - eventAt < HOUR_MS) ? T('🔴 happening now') : T('✅ started');
     const d = Math.floor(dt / DAY_MS);
     const h = Math.floor((dt % DAY_MS) / HOUR_MS);
     const m = Math.floor((dt % HOUR_MS) / 60000);
-    if (d > 0) return `in ${d}d ${h}h`;
-    if (h > 0) return `in ${h}h ${m}m`;
-    return `in ${Math.max(1, m)}m`;
+    if (d > 0) return T('in {d}d {h}h', { d: d, h: h });
+    if (h > 0) return T('in {h}h {m}m', { h: h, m: m });
+    return T('in {n}m', { n: Math.max(1, m) });
   }
 
   /** Local "YYYY-MM-DDTHH:mm" for a datetime-local input. */
@@ -104,11 +104,11 @@ const UpcomingEvents = (() => {
 
     const title = titleEl.value.trim();
     const when = whenEl.value;
-    if (!title) { _toast('Add a title'); return; }
-    if (!when) { _toast('Pick a date & time'); return; }
+    if (!title) { _toast(T('Add a title')); return; }
+    if (!when) { _toast(T('Pick a date & time')); return; }
     const eventAt = new Date(when).getTime();
-    if (isNaN(eventAt)) { _toast('Invalid date'); return; }
-    if (!auth.currentUser) { _toast('Please sign in'); return; }
+    if (isNaN(eventAt)) { _toast(T('Invalid date')); return; }
+    if (!auth.currentUser) { _toast(T('Please sign in')); return; }
 
     if (btn) btn.disabled = true;
     try {
@@ -121,10 +121,10 @@ const UpcomingEvents = (() => {
       });
       titleEl.value = '';
       _toggleForm(false);
-      _toast('📌 Event pinned!');
+      _toast(T('📌 Event pinned!'));
     } catch (err) {
       console.error('Failed to pin event:', err);
-      _toast('Failed to pin event');
+      _toast(T('Failed to pin event'));
     } finally {
       if (btn) btn.disabled = false;
     }
@@ -132,7 +132,7 @@ const UpcomingEvents = (() => {
 
   async function _delete(id) {
     try { await _ref().doc(id).delete(); }
-    catch (err) { console.error('Delete event failed:', err); _toast('Delete failed'); }
+    catch (err) { console.error('Delete event failed:', err); _toast(T('Delete failed')); }
   }
 
   /* ── Sticky-note rendering ──────────────────────────────────── */
@@ -142,7 +142,7 @@ const UpcomingEvents = (() => {
     if (!wrap) return;
 
     if (!_events.length) {
-      wrap.innerHTML = '<div class="ue-empty">No upcoming events pinned yet.</div>';
+      wrap.innerHTML = '<div class="ue-empty">' + T('No upcoming events pinned yet.') + '</div>';
       return;
     }
 
@@ -174,7 +174,7 @@ const UpcomingEvents = (() => {
 
       const by = document.createElement('div');
       by.className = 'ue-note-by';
-      by.textContent = '— ' + (ev.displayName || 'Someone');
+      by.textContent = '— ' + (ev.displayName || T('Someone'));
 
       note.appendChild(pin);
       note.appendChild(title);
@@ -185,7 +185,7 @@ const UpcomingEvents = (() => {
       if (uid && (ev.uid === uid || isDev)) {
         const del = document.createElement('button');
         del.className = 'ue-note-del';
-        del.title = 'Remove';
+        del.title = T('Remove');
         del.textContent = '✕';
         del.addEventListener('click', () => _delete(ev.id));
         note.appendChild(del);
@@ -266,7 +266,7 @@ const UpcomingEvents = (() => {
     const when = document.getElementById('ueReminderWhen');
     const title = document.getElementById('ueReminderTitle');
     const time = document.getElementById('ueReminderTime');
-    if (when) when.textContent = (tag === '1h') ? '>> IN ABOUT 1 HOUR <<' : '>> COMING UP IN 1 DAY <<';
+    if (when) when.textContent = (tag === '1h') ? T('>> IN ABOUT 1 HOUR <<') : T('>> COMING UP IN 1 DAY <<');
     if (title) title.textContent = ev.title;
     if (time) time.textContent = (_fmtDate(ev.eventAt) + ' · ' + _fmtCountdown(ev.eventAt)).toUpperCase();
 
@@ -344,6 +344,9 @@ const UpcomingEvents = (() => {
     if (ov) ov.addEventListener('click', _hideReminder);
     // Rotating the phone / resizing the window changes what fits.
     window.addEventListener('resize', () => { if (_reminderOpen) _fitReminder(ov); });
+    // The notes are redrawn on the 60s tick, so without this the countdowns and
+    // the empty state stay in the old language for up to a minute after a switch.
+    window.addEventListener('langchange', () => _render());
 
     auth.onAuthStateChanged(user => { if (user) { _subscribe(); _startTick(); } });
   }

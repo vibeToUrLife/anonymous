@@ -17,6 +17,17 @@ window.SITE_MAINTENANCE = false;
 (function () {
   'use strict';
 
+  // This screen loads from <head> on EVERY page, and most of them (the
+  // mini-games, Pet World, the previews) never load i18n.js — a bare T() would
+  // throw there, and because showMaintenance hides the page BEFORE it builds
+  // the notice, the reader would be left staring at a blank screen instead of
+  // an explanation. So look T up at call time and fall back to the key, which
+  // is the English source anyway.
+  function _t(s) { return (typeof T === 'function') ? T(s) : s; }
+
+  // Kept as the KEY, not translated here: this is module scope, and the
+  // dictionaries register in a later script. It goes through _t() below, at the
+  // moment it reaches the screen.
   var DEFAULT_MSG =
     "We're doing some upgrades right now. Please check back again a little later. Thanks for your patience! 🙏";
 
@@ -37,10 +48,10 @@ window.SITE_MAINTENANCE = false;
       d.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#0b0e14;color:#e8eaf0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;font-family:system-ui,-apple-system,sans-serif';
       var p = document.createElement('p');
       p.style.cssText = 'margin:0;max-width:340px;font-size:14px;color:#9aa0ad;line-height:1.6';
-      p.textContent = message || DEFAULT_MSG;   // textContent → no HTML injection from the custom message
+      p.textContent = message || _t(DEFAULT_MSG);   // textContent → no HTML injection from the custom message
       d.innerHTML =
         '<div style="font-size:64px">🛠️</div>' +
-        '<h1 style="margin:0;font-size:22px">Under Maintenance</h1>';
+        '<h1 style="margin:0;font-size:22px">' + _t('Under Maintenance') + '</h1>';
       d.appendChild(p);
       document.body.appendChild(d);
     };

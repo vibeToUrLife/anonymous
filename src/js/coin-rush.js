@@ -60,8 +60,9 @@
   /* ── time formatting helpers (UI only) ────────────────────── */
   function clockAt(ts) {
     const d = new Date(ts); let h = d.getHours(); const m = d.getMinutes();
-    const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
-    return h + ':' + String(m).padStart(2, '0') + ' ' + ap;
+    const pm = h >= 12; h = h % 12 || 12;
+    const v = { h: h, m: String(m).padStart(2, '0') };
+    return pm ? T('{h}:{m} PM', v) : T('{h}:{m} AM', v);   // one key: zh can front the 上午/下午
   }
   function fmtDur(ms) {
     ms = Math.max(0, ms); const s = Math.floor(ms / 1000);
@@ -135,18 +136,18 @@
     };
     switch (ph.phase) {
       case 'scheduled':
-        show('💰', 'Coin Rush at ' + clockAt(sched.startMs), 'starts in ' + fmtDur(ph.msUntilStart), null);
+        show('💰', T('Coin Rush at {time}', { time: clockAt(sched.startMs) }), T('starts in {t}', { t: fmtDur(ph.msUntilStart) }), null);
         break;
       case 'imminent':
-        show('⚡', 'Coin Rush starting!', 'in ' + fmtDur(ph.msUntilStart), null);
+        show('⚡', T('Coin Rush starting!'), T('in {t}', { t: fmtDur(ph.msUntilStart) }), null);
         banner.classList.add('urgent');
         break;
       case 'live':
-        show('💰', 'Coin Rush is LIVE!', fmtDur(ph.msUntilEnd) + ' left', 'Tap to Join');
+        show('💰', T('Coin Rush is LIVE!'), T('{t} left', { t: fmtDur(ph.msUntilEnd) }), T('Tap to Join'));
         banner.classList.add('live');
         break;
       case 'results':
-        show('🏆', 'Coin Rush results', 'tap to view the ranking', 'View');
+        show('🏆', T('Coin Rush results'), T('tap to view the ranking'), T('View'));
         break;
       default: // idle / none
         banner.classList.add('hidden');
@@ -166,9 +167,9 @@
       countdownEl = document.createElement('div');
       countdownEl.id = 'crCountdown';
       countdownEl.innerHTML =
-        '<div class="cr-cd-label">💰 Coin Rush starts in</div>' +
+        '<div class="cr-cd-label">' + T('💰 Coin Rush starts in') + '</div>' +
         '<div class="cr-cd-num" id="crCdNum"></div>' +
-        '<div class="cr-cd-hint">Get ready to tap! 💰</div>';
+        '<div class="cr-cd-hint">' + T('Get ready to tap! 💰') + '</div>';
       document.body.appendChild(countdownEl);
     }
     const secs = String(Math.ceil(ph.msUntilStart / 1000));
@@ -194,10 +195,10 @@
     overlay.id = 'crOverlay';
     overlay.innerHTML =
       '<div class="pg-header">' +
-        '<span class="pg-title">💰 Coin Rush</span>' +
+        '<span class="pg-title">💰 ' + T('Coin Rush') + '</span>' +
         '<span class="cr-timer" id="crTimer"></span>' +
-        '<span class="pg-coins" id="crScore">Score 0</span>' +
-        '<button class="pg-close" id="crClose" title="Close">✕</button>' +
+        '<span class="pg-coins" id="crScore">' + T('Score {n}', { n: 0 }) + '</span>' +
+        '<button class="pg-close" id="crClose" title="' + T('Close') + '">✕</button>' +
       '</div>' +
       '<div class="cr-body" id="crBody"></div>';
     document.body.appendChild(overlay);
@@ -209,7 +210,7 @@
     ensureOverlay();
     const body = overlay.querySelector('#crBody');
     body.innerHTML = '<div class="pg-hint">' +
-      (robbingOn ? 'Grab the coins before others do! 💰' : 'Tap the coins as fast as you can! 💰') +
+      (robbingOn ? T('Grab the coins before others do! 💰') : T('Tap the coins as fast as you can! 💰')) +
       '</div><div class="pg-field" id="crField"></div>';
     field = body.querySelector('#crField');
     updateScoreLabel();
@@ -245,7 +246,7 @@
   }
   function updateScoreLabel() {
     const s = overlay && overlay.querySelector('#crScore');
-    if (s) s.textContent = 'Score ' + (robbingOn ? myRobScore : sessionScore);
+    if (s) s.textContent = T('Score {n}', { n: (robbingOn ? myRobScore : sessionScore) });
   }
 
   /* ── coin-bubble spawn + physics (gold reskin of the Playground) ── */
@@ -430,8 +431,8 @@
     spawning = false;
     flushScore(); flushWallet();
     if (overlay) {
-      const t = overlay.querySelector('#crTimer'); if (t) { t.textContent = 'Ended'; t.classList.add('urgent'); }
-      const h = overlay.querySelector('.pg-hint'); if (h) h.textContent = 'Tallying the results… 🏆';
+      const t = overlay.querySelector('#crTimer'); if (t) { t.textContent = T('Ended'); t.classList.add('urgent'); }
+      const h = overlay.querySelector('.pg-hint'); if (h) h.textContent = T('Tallying the results… 🏆');
     }
     setTimeout(finalize, CR.SETTLE_MS);
   }
@@ -472,10 +473,10 @@
     field = null; balls = [];                     // stop animating the (now removed) field
     const t = overlay.querySelector('#crTimer'); if (t) t.textContent = '';
     const myScoreNow = robbingOn ? myRobScore : sessionScore;
-    const sc = overlay.querySelector('#crScore'); if (sc) sc.textContent = participated ? ('Score ' + myScoreNow) : '🏆';
+    const sc = overlay.querySelector('#crScore'); if (sc) sc.textContent = participated ? T('Score {n}', { n: myScoreNow }) : '🏆';
     let rows = '';
     if (!ranked.length) {
-      rows = '<div class="cr-empty">No one joined this rush 😴</div>';
+      rows = '<div class="cr-empty">' + T('No one joined this rush 😴') + '</div>';
     } else {
       ranked.slice(0, 20).forEach((r) => {
         const rankCls = r.rank <= 3 ? ' cr-rank-' + r.rank : '';
@@ -483,18 +484,21 @@
         const me = (r.uid === myUid) ? ' me' : '';
         rows += '<div class="cr-row' + me + '">' +
           '<span class="cr-rank' + rankCls + '">' + r.rank + '</span>' +
-          '<span class="cr-name">' + escapeHtml(r.name || 'Anonymous') + '</span>' +
+          // currentName() and the robbing tally both write the literal 'Anonymous'
+          // for a nameless player, so it has to be treated as "unnamed" here.
+          '<span class="cr-name">' + escapeHtml(
+            (!r.name || r.name === 'Anonymous') ? T('Anonymous') : r.name) + '</span>' +
           '<span class="cr-score">' + (r.score || 0) + '</span>' +
           (bonus ? '<span class="cr-bonus">+' + bonus + ' 💰</span>' : '<span class="cr-bonus"></span>') +
           '</div>';
       });
     }
-    const title = opts && opts.mock ? '🏆 Results preview (mock)' : '🏆 Today\'s Coin Rush ranking';
+    const title = opts && opts.mock ? '🏆 ' + T('Results preview (mock)') : '🏆 ' + T('Today\'s Coin Rush ranking');
     overlay.querySelector('#crBody').innerHTML =
       '<div class="cr-results">' +
         '<div class="cr-results-title">' + title + '</div>' +
         '<div class="cr-rows">' + rows + '</div>' +
-        '<button class="cr-results-close" id="crResultsClose">Close</button>' +
+        '<button class="cr-results-close" id="crResultsClose">' + T('Close') + '</button>' +
       '</div>';
     overlay.querySelector('#crResultsClose').addEventListener('click', closeOverlay);
   }
@@ -517,7 +521,7 @@
         tx.set(roomRef, { coins: FieldValue.increment(bonus) }, { merge: true });
         return true;
       })
-    ).then((paid) => { if (paid) toast('🏆 You placed #' + rank + '! +' + bonus + ' 💰 bonus'); })
+    ).then((paid) => { if (paid) toast(T('🏆 You placed #{rank}! +{bonus} 💰 bonus', { rank: rank, bonus: bonus })); })
      .catch(() => {});
   }
 
@@ -537,12 +541,9 @@
     ov.id = 'crInfoOverlay'; ov.className = 'cr-info-overlay';
     ov.innerHTML =
       '<div class="cr-info-card">' +
-        '<div class="cr-info-title">💰 Coin Rush</div>' +
-        '<p class="cr-info-text">Once each weekday a coin rush starts at a surprise time. ' +
-        'Race your coworkers to grab the coins before they\'re gone — every coin is money in ' +
-        'your wallet. The top 3 grabbers win bonus coins (1st 1000 / 2nd 500 / 3rd 300). ' +
-        'Watch the countdown!</p>' +
-        '<button class="cr-info-close" id="crInfoClose" type="button">Got it</button>' +
+        '<div class="cr-info-title">💰 ' + T('Coin Rush') + '</div>' +
+        '<p class="cr-info-text">' + T('Once each weekday a coin rush starts at a surprise time. Race your coworkers to grab the coins before they\'re gone — every coin is money in your wallet. The top 3 grabbers win bonus coins (1st 1000 / 2nd 500 / 3rd 300). Watch the countdown!') + '</p>' +
+        '<button class="cr-info-close" id="crInfoClose" type="button">' + T('Got it') + '</button>' +
       '</div>';
     document.body.appendChild(ov);
     const close = () => ov.remove();

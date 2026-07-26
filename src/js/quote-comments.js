@@ -15,6 +15,7 @@ const QuoteComments = (() => {
 
   let _unsubscribe = null; // onSnapshot listener
   let _expanded = false;
+  let _lastSnapshot = null; // last snapshot drawn — repainted on a language switch
 
   /**
    * Get today's date string used as the Firestore doc key.
@@ -37,11 +38,12 @@ const QuoteComments = (() => {
    * Render the comment list from a Firestore snapshot.
    */
   function _renderComments(snapshot) {
+    _lastSnapshot = snapshot;
     const list = document.getElementById('quoteCommentList');
     if (!list) return;
 
     if (snapshot.empty) {
-      list.innerHTML = '<div class="qc-empty">还没有评论，来抢沙发吧！</div>';
+      list.innerHTML = '<div class="qc-empty">' + T('还没有评论，来抢沙发吧！') + '</div>';
       return;
     }
 
@@ -53,7 +55,10 @@ const QuoteComments = (() => {
 
       const name = document.createElement('span');
       name.className = 'qc-name';
-      name.textContent = d.displayName || 'Anonymous';
+      // post() stores ANONYMOUS_LABEL for a nameless poster, so the field is
+      // truthy and a plain `||` fallback would show every reader the Chinese.
+      name.textContent = (!d.displayName || d.displayName === ANONYMOUS_LABEL)
+        ? T('Anonymous') : d.displayName;
 
       const time = document.createElement('span');
       time.className = 'qc-time';
@@ -68,7 +73,7 @@ const QuoteComments = (() => {
       if (currentUid && d.uid === currentUid) {
         const del = document.createElement('button');
         del.className = 'qc-delete';
-        del.title = '删除';
+        del.title = T('删除');
         del.textContent = '✕';
         del.addEventListener('click', () => _deleteComment(doc.id));
         el.appendChild(del);
@@ -138,13 +143,13 @@ const QuoteComments = (() => {
     const text = input.value.trim();
     if (!text) return;
     if (text.length > MAX_COMMENT_LENGTH) {
-      _showToast('评论不能超过 ' + MAX_COMMENT_LENGTH + ' 字');
+      _showToast(T('评论不能超过 {n} 字', { n: MAX_COMMENT_LENGTH }));
       return;
     }
 
     const user = auth.currentUser;
     if (!user) {
-      _showToast('请先登录');
+      _showToast(T('请先登录'));
       return;
     }
 
@@ -174,7 +179,7 @@ const QuoteComments = (() => {
       input.value = '';
     } catch (err) {
       console.error('Failed to post quote comment:', err);
-      _showToast('发送失败，请重试');
+      _showToast(T('发送失败，请重试'));
     } finally {
       if (btn) btn.disabled = false;
     }
@@ -186,7 +191,7 @@ const QuoteComments = (() => {
       await _commentsRef().doc(commentId).delete();
     } catch (err) {
       console.error('Failed to delete comment:', err);
-      _showToast('删除失败');
+      _showToast(T('删除失败'));
     }
   }
 
@@ -211,6 +216,13 @@ const QuoteComments = (() => {
 
     const sendBtn = document.getElementById('quoteCommentSendBtn');
     if (sendBtn) sendBtn.addEventListener('click', post);
+
+    // The list is drawn once per snapshot, so the empty state, the Anonymous
+    // fallback and the delete tooltip would keep the language that drew them
+    // until Firestore happened to push again. Repaint the last snapshot.
+    window.addEventListener('langchange', () => {
+      if (_lastSnapshot) _renderComments(_lastSnapshot);
+    });
 
     // Allow Enter key to send
     const input = document.getElementById('quoteCommentInput');

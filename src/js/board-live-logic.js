@@ -219,10 +219,10 @@
     const d = Math.floor(sec / 86400);
     const h = Math.floor((sec % 86400) / 3600);
     const m = Math.floor((sec % 3600) / 60);
-    if (d > 0) return d + '天' + (h > 0 ? h + '小时' : '');
-    if (h > 0) return h + '小时' + (m > 0 ? m + '分' : '');
-    if (m > 0) return m + '分钟';
-    return '不到1分钟';
+    if (d > 0) return h > 0 ? T('{d}天{h}小时', { d: d, h: h }) : T('{d}天', { d: d });
+    if (h > 0) return m > 0 ? T('{h}小时{m}分', { h: h, m: m }) : T('{h}小时', { h: h });
+    if (m > 0) return T('{m}分钟', { m: m });
+    return T('不到1分钟');
   };
 
   // Export for both browser (window.BoardLive) and Node/CommonJS.

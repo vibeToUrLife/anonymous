@@ -78,7 +78,7 @@
   function renderPrompt() {
     input.disabled = false;
     btn.disabled = false;
-    btn.textContent = 'Enter';
+    btn.textContent = T('Enter');
     errorEl.textContent = '';
   }
 
@@ -87,8 +87,8 @@
   function renderLocked() {
     input.disabled = true;
     input.value = '';
-    errorEl.textContent = 'Too many incorrect attempts. This account is locked — please contact the admin.';
-    btn.textContent = 'Sign out';
+    errorEl.textContent = T('Too many incorrect attempts. This account is locked — please contact the admin.');
+    btn.textContent = T('Sign out');
     btn.disabled = false;
   }
 
@@ -100,6 +100,10 @@
     var payload = {
       uid: u.uid,
       email: u.email || null,
+      // Not T('Anonymous'): this is written to Firestore for the admin panel,
+      // so it is stored data read by ONE admin, not a label on this reader's
+      // screen. Translating it would file the same person under a different
+      // name depending on the language they happened to be using.
       displayName: u.displayName || (u.email ? u.email.split('@')[0] : 'Anonymous'),
       failedCount: state.failedCount,
       verified: !!state.verified,
@@ -120,10 +124,10 @@
     if (state && state.locked) { auth.signOut(); return; }
 
     var entered = (input.value || '').trim();
-    if (!entered) { errorEl.textContent = 'Please enter the access code.'; return; }
+    if (!entered) { errorEl.textContent = T('Please enter the access code.'); return; }
 
     getAccessCode().then(function (code) {
-      if (code === null) { errorEl.textContent = 'Could not load the gate. Please try again.'; return; }
+      if (code === null) { errorEl.textContent = T('Could not load the gate. Please try again.'); return; }
 
       if (entered === code) {
         // Correct — remember it and let them through.
@@ -149,7 +153,8 @@
       } else {
         persist();
         var left = remainingAttempts();
-        errorEl.textContent = 'Incorrect code. ' + left + ' attempt' + (left === 1 ? '' : 's') + ' left.';
+        errorEl.textContent = I18N.plural(left,
+          'Incorrect code. 1 attempt left.', 'Incorrect code. {n} attempts left.');
         try { input.focus(); } catch (e) {}
       }
     });

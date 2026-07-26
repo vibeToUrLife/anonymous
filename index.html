@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="src/js/maintenance.js"></script>
+  <script src="src/js/maintenance.js?v=1"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Anonymous Bubble Answers</title>
@@ -945,7 +945,7 @@
       <h2 data-i18n>Enter Access Code</h2>
       <p data-i18n>This site requires an access code to enter.</p>
       <input type="password" class="access-code-input" id="accessCodeInput" data-i18n-placeholder placeholder="Enter code…" autocomplete="off">
-      <button class="access-enter-btn" id="accessEnterBtn" data-i18n>Enter</button>
+      <button class="access-enter-btn" id="accessEnterBtn">Enter</button>
       <div class="access-error" id="accessError"></div>
     </div>
   </div>
@@ -1306,7 +1306,7 @@
        Count driven by presence.js; the 摸鱼 clock ticks in stay-ranking.js. -->
   <div class="live-bar" id="liveBar">
     <span class="live-score" id="liveScore">
-      <span class="live-score-seg" id="livePresence" data-i18n-title title="现在在线人数">
+      <span class="live-score-seg" id="livePresence">
         <span class="live-score-blink" aria-hidden="true"></span>
         <span class="live-score-lb" data-i18n>在线</span>
         <b class="live-score-val" id="liveOnlineCount">1</b>
@@ -1368,7 +1368,7 @@
     <div class="daily-quote-text" id="dailyQuoteText"></div>
     <!-- Comment toggle -->
     <button class="qc-toggle" id="quoteCommentToggle">
-      💬 评论 <span id="quoteCommentArrow">▼</span>
+      <span data-i18n>💬 评论</span> <span id="quoteCommentArrow">▼</span>
     </button>
     <!-- Expandable comment section -->
     <div class="qc-section" id="quoteCommentSection">
@@ -1391,10 +1391,10 @@
   <div class="cr-banner hidden" id="crBanner" role="status" aria-live="polite">
     <span class="cr-banner-emoji" id="crBannerEmoji">💰</span>
     <span class="cr-banner-body">
-      <span class="cr-banner-line1" id="crBannerLabel" data-i18n>Coin Rush</span>
+      <span class="cr-banner-line1" id="crBannerLabel">Coin Rush</span>
       <span class="cr-banner-sub" id="crBannerSub"></span>
     </span>
-    <button class="cr-banner-btn hidden" id="crBannerBtn" type="button" data-i18n>Join</button>
+    <button class="cr-banner-btn hidden" id="crBannerBtn" type="button">Join</button>
     <button class="cr-banner-info" id="crBannerInfo" type="button" data-i18n-title title="How to play" data-i18n-aria-label aria-label="How to play">i</button>
   </div>
 
@@ -1640,35 +1640,35 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="./src/js/i18n.js?v=3"></script>
-  <script src="./src/js/i18n-zh-app.js?v=4"></script>
+  <script src="./src/js/i18n-zh-app.js?v=5"></script>
   <script src="./src/js/i18n-en-more.js?v=5"></script>
   <script defer src="./src/js/i18n-ui.js?v=3"></script>
   <script src="./src/js/firebase-config.js"></script>
   <script src="./src/js/daily-quotes.js?v=2"></script>
-  <script src="./src/js/quote-comments.js"></script>
-  <script src="./src/js/upcoming-events.js?v=3"></script>
+  <script src="./src/js/quote-comments.js?v=1"></script>
+  <script src="./src/js/upcoming-events.js?v=4"></script>
   <!-- Clay design system theme controller (must load before app.js wires the toggle) -->
   <script src="./src/js/theme.js?v=2"></script>
   <!-- Shared-space link helper (defines window.ShareToBoard for the board render). -->
   <script src="./src/js/share-to-board.js?v=1"></script>
-  <script src="./src/js/app.js?v=32"></script>
+  <script src="./src/js/app.js?v=33"></script>
   <!-- Access code gate — must load after app.js (uses its shared auth/db). Shows after Google login. -->
-  <script src="./src/js/access-code-gate.js?v=1"></script>
+  <script src="./src/js/access-code-gate.js?v=2"></script>
   <script src="./src/js/feature-flags.js"></script>
   <!-- Live, interactive board features (load after app.js for shared db/auth) -->
-  <script src="./src/js/board-live-logic.js?v=2"></script>
-  <script src="./src/js/presence.js?v=5"></script>
+  <script src="./src/js/board-live-logic.js?v=3"></script>
+  <script src="./src/js/presence.js?v=6"></script>
   <script src="./src/js/bubble-knock.js?v=1"></script>
   <script src="./src/js/live-reactions.js?v=3"></script>
-  <script src="./src/js/campfire.js?v=10"></script>
+  <script src="./src/js/campfire.js?v=11"></script>
   <!-- 泡泡罐 · 涂鸦 · 涂鸦墙 (jar/doodle are client-side; the wall shares strokes via RTDB) -->
-  <script src="./src/js/jar-logic.js?v=3"></script>
+  <script src="./src/js/jar-logic.js?v=4"></script>
   <script src="./src/js/bubble-jar.js?v=8"></script>
-  <script src="./src/js/doodle.js?v=1"></script>
+  <script src="./src/js/doodle.js?v=2"></script>
   <script src="./src/js/wall-logic.js?v=6"></script>
   <script src="./src/js/graffiti-wall.js?v=8"></script>
   <script src="./src/js/coin-rush-logic.js"></script>
-  <script src="./src/js/coin-rush.js"></script>
+  <script src="./src/js/coin-rush.js?v=1"></script>
   <!-- Daily brain-teaser (脑筋急转弯) -->
   <script src="./src/js/riddles-data.js?v=2"></script>
   <script src="./src/js/daily-riddle.js?v=5"></script>
