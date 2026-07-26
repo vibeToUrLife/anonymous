@@ -1048,7 +1048,7 @@
           _applyOfflinePlan(off);
           if (off.awayMs >= FARM_OFFLINE_MODAL_MS) {
             const _n = off.total;
-            setTimeout(function () { showToast('🤖 Auto-Collector banked ' + _n + ' produce while you were away!', 'success'); }, 600);
+            setTimeout(function () { showToast('🤖 ' + T('Auto-Collector banked {n} produce while you were away!', { n: _n }), 'success'); }, 600);
           }
         }
         saveRoom();
@@ -1168,7 +1168,7 @@
       _hideFarmAway();
       await saveRoom();
       checkAchievements();
-      if (n > 0) showToast('📦 Collected ' + n + ' produce from your animals!', 'success');
+      if (n > 0) showToast('📦 ' + T('Collected {n} produce from your animals!', { n: n }), 'success');
       _startFarmLive();
       renderAll();
     }
@@ -1409,7 +1409,8 @@
             ? ''
             : '<button class="farm-shop-buy" onclick="addFarmPlot()"' + (roomData.coins < FARM_PLOT_COST ? ' disabled' : '') + '>+ Plot · ' + FARM_PLOT_COST + '🪙</button>') +
         '</div>' +
-        '<div class="farm-panel-empty" style="padding-bottom:2px">' + usedPlots + '/' + plots.length + ' planted · ' + ripePlots + ' ripe</div>' +
+        '<div class="farm-panel-empty" style="padding-bottom:2px">' +
+          T('{used}/{total} planted · {ripe} ripe', { used: usedPlots, total: plots.length, ripe: ripePlots }) + '</div>' +
         '<div class="farm-howto">' +
           '🪧 Tap a row\'s <b>signboard</b> to plant that whole row.<br>' +
           '⏳ Tap a ripe row to harvest <b>everything that\'s ready</b>.' +
@@ -1423,7 +1424,7 @@
         FARM_MACHINES.map(mc => {
           const owned = _bm[mc.id] && _bm[mc.id].owned;
           const makes = mc.recipes.map(rc => (meta[rc.out.id] ? meta[rc.out.id].emoji : '?')).join(' ');
-          const note = mc.id === 'butcher' ? ' · needs meat' : '';
+          const note = mc.id === 'butcher' ? ' · ' + T('needs meat') : '';
           return '<div class="farm-shop-row">' +
             '<span class="farm-shop-animal">' + mc.emoji + ' ' + mc.name + ' <small>makes ' + makes + note + '</small></span>' +
             (owned
@@ -1545,16 +1546,16 @@
       if (viewingUid !== currentUid) return;
       const food = roomData.farmFood || 0, max = farmFoodMax();
       const gap = max - food;
-      if (gap < 0.5) return showToast('Trough is already full!', '');
+      if (gap < 0.5) return showToast(T('Trough is already full!'), '');
       const affordable = Math.floor(roomData.coins / FARM_FOOD_COST);
-      if (affordable <= 0) return showToast('Not enough coins!', 'error');
+      if (affordable <= 0) return showToast(T('Not enough coins!'), 'error');
       const units = Math.min(Math.ceil(gap), affordable);          // whole units toward the brim
       roomData.coins -= units * FARM_FOOD_COST;
-      logCoin(-(units * FARM_FOOD_COST), 'Farm food refill');
+      logCoin(-(units * FARM_FOOD_COST), T('Farm food refill'));
       roomData.farmFood = Math.min(max, food + units);             // clamp so it reaches exactly max
       roomData.farmFoodAt = roomData.farmFoodAt || Date.now();
       await saveRoom();
-      showToast('🌾 Filled the trough! (+' + units + ')', 'success');
+      showToast('🌾 ' + T('Refilled the trough with {n} feed · −{cost}', { n: units, cost: units * FARM_FOOD_COST + '🪙' }), 'success');
       renderFarmPanel();
       renderAll(); // refresh coin counter
     }
@@ -1564,8 +1565,8 @@
       const def = FARM_ANIMALS.find(f => f.id === typeId);
       if (!def) return;
       roomData.farmAnimals = roomData.farmAnimals || [];
-      if (roomData.farmAnimals.length >= farmAnimalCap()) return showToast('Farm is full! (' + farmAnimalCap() + ' max) — expand it for more.', 'error');
-      if (roomData.coins < def.cost) return showToast('Not enough coins!', 'error');
+      if (roomData.farmAnimals.length >= farmAnimalCap()) return showToast(T('Your pasture is full — expand it first.'), 'error');
+      if (roomData.coins < def.cost) return showToast(T('Not enough coins!'), 'error');
       roomData.coins -= def.cost;
       logCoin(-def.cost, 'Bought ' + def.name);
       const now = Date.now();
@@ -1593,7 +1594,11 @@
       roomData.farmVariants[def.id + '_' + (variant.id || 'default')] = true;
       if (!roomData.farmFoodAt) roomData.farmFoodAt = now; // start the feeding clock
       await saveRoom();
-      showToast((variant.rgb ? '🌈 RGB ' : variant.rare ? '✨ Rare ' + variant.name + ' ' : def.emoji + ' ') + def.name + (variant.rgb ? ' — jackpot!' : ' joined your farm!'), 'success');
+      showToast(variant.rgb
+        ? '🌈 ' + T('RGB {name} — jackpot!', { name: T(def.name) })
+        : variant.rare
+        ? '✨ ' + T('Rare {variant} {name} joined your farm!', { variant: T(variant.name), name: T(def.name) })
+        : def.emoji + ' ' + T('{name} joined your farm!', { name: T(def.name) }), 'success');
       checkAchievements();
       renderFarmPanel();
       renderAll(); // refresh coin counter
@@ -1608,14 +1613,14 @@
       return (FARM_MEAT_YIELD[a.type] || 1) + Math.max(0, animalLevel(a.collected, FARM_LEVELS) - 1);
     }
     function askButcher(id) {
-      if (!_ownsButcher()) { showToast('🔪 Build the Butcher first — Garden tab → Build Machines.', 'error'); switchFarmTab('garden'); return; }
+      if (!_ownsButcher()) { showToast('🔪 ' + T('Build the Butcher first — Garden tab → Build Machines.'), 'error'); switchFarmTab('garden'); return; }
       _farmButcherConfirmId = id; renderFarmPanel();
     }
     function cancelButcher() { _farmButcherConfirmId = null; renderFarmPanel(); }
     async function butcherAnimal(id) {
       if (viewingUid !== currentUid) return;
       _farmButcherConfirmId = null;
-      if (!_ownsButcher()) { renderFarmPanel(); return showToast('🔪 Build the Butcher first — Garden tab → Build Machines.', 'error'); }
+      if (!_ownsButcher()) { renderFarmPanel(); return showToast('🔪 ' + T('Build the Butcher first — Garden tab → Build Machines.'), 'error'); }
       const animals = roomData.farmAnimals || [];
       const a = animals.find(x => x.id === id);
       if (!a) { renderFarmPanel(); return; }
@@ -1627,7 +1632,7 @@
       roomData.farmStock.meat = (roomData.farmStock.meat || 0) + yield_;
       await saveRoom();
       const def = FARM_ANIMALS.find(f => f.id === a.type);
-      showToast('🔪 Butchered ' + (def ? def.name : 'animal') + ' → 🥩 ×' + yield_ + ' meat', 'success');
+      showToast('🔪 ' + T('Butchered {name} → 🥩 ×{n} meat', { name: def ? T(def.name) : T('animal'), n: yield_ }), 'success');
       renderFarmPanel();
       renderAll();
     }
@@ -1635,14 +1640,14 @@
     async function expandFarm() {
       if (viewingUid !== currentUid) return;
       const lvl = roomData.farmCapLevel || 0;
-      if (lvl >= FARM_EXPAND_COSTS.length) return showToast('Farm is fully expanded!', '');
+      if (lvl >= FARM_EXPAND_COSTS.length) return showToast(T('Farm is fully expanded!'), '');
       const cost = FARM_EXPAND_COSTS[lvl];
-      if (roomData.coins < cost) return showToast('Not enough coins!', 'error');
+      if (roomData.coins < cost) return showToast(T('Not enough coins!'), 'error');
       roomData.coins -= cost;
-      logCoin(-cost, 'Farm expansion');
+      logCoin(-cost, T('Farm expansion'));
       roomData.farmCapLevel = lvl + 1;
       await saveRoom();
-      showToast('🏞️ Farm expanded — now holds ' + farmAnimalCap() + ' animals!', 'success');
+      showToast('🏞️ ' + T('Pasture expanded — it now holds {n} animals!', { n: farmAnimalCap() }), 'success');
       checkAchievements();
       renderFarmPanel();
       renderAll();
@@ -1651,14 +1656,14 @@
     async function buyFarmTrough() {
       if (viewingUid !== currentUid) return;
       const lvl = roomData.farmTroughLevel || 0;
-      if (lvl >= FARM_TROUGH_COSTS.length) return showToast('Trough is fully upgraded!', '');
+      if (lvl >= FARM_TROUGH_COSTS.length) return showToast(T('Trough is fully upgraded!'), '');
       const cost = FARM_TROUGH_COSTS[lvl];
-      if (roomData.coins < cost) return showToast('Not enough coins!', 'error');
+      if (roomData.coins < cost) return showToast(T('Not enough coins!'), 'error');
       roomData.coins -= cost;
-      logCoin(-cost, 'Trough upgrade');
+      logCoin(-cost, T('Trough upgrade'));
       roomData.farmTroughLevel = lvl + 1;
       await saveRoom();
-      showToast('🪣 Bigger trough — now holds ' + farmFoodMax() + ' food!', 'success');
+      showToast('🪣 ' + T('Bigger trough — it now holds {n} feed!', { n: farmFoodMax() }), 'success');
       checkAchievements();
       renderFarmPanel();
       renderAll();
@@ -1669,7 +1674,7 @@
     async function buyFarmAutoFeed() {
       if (viewingUid !== currentUid) return;
       if (roomData.farmAutoFeed) return;
-      if ((roomData.coins || 0) < FARM_AUTOFEED_COST) return showToast(T('Not enough coins!'), 'error');
+      if ((roomData.coins || 0) < FARM_AUTOFEED_COST) return showToast(T(T('Not enough coins!')), 'error');
       roomData.coins -= FARM_AUTOFEED_COST;
       logCoin(-FARM_AUTOFEED_COST, '🤖 ' + T('Auto-Feeder'));
       roomData.farmAutoFeed = true;
@@ -1700,7 +1705,7 @@
       const lvl = roomData.farmColdLevel || 0;
       if (lvl >= FARM_COLD_COSTS.length) return;
       const cost = FARM_COLD_COSTS[lvl];
-      if ((roomData.coins || 0) < cost) return showToast(T('Not enough coins!'), 'error');
+      if ((roomData.coins || 0) < cost) return showToast(T(T('Not enough coins!')), 'error');
       roomData.coins -= cost;
       logCoin(-cost, '❄️ ' + T('Cold Store') + ' ' + T('Lv {n}', { n: lvl + 1 }));
       roomData.farmColdLevel = lvl + 1;
@@ -1712,13 +1717,13 @@
     async function buyFarmAutoCollect() {
       if (viewingUid !== currentUid) return;
       if (roomData.farmAutoCollect) return;
-      if (roomData.coins < FARM_AUTOCOLLECT_COST) return showToast('Not enough coins!', 'error');
+      if (roomData.coins < FARM_AUTOCOLLECT_COST) return showToast(T('Not enough coins!'), 'error');
       roomData.coins -= FARM_AUTOCOLLECT_COST;
-      logCoin(-FARM_AUTOCOLLECT_COST, 'Auto-collector');
+      logCoin(-FARM_AUTOCOLLECT_COST, T('Auto-collector'));
       roomData.farmAutoCollect = true;
       if (runFarmProduction() >= 0) { /* sweep any drops already on the ground */ }
       await saveRoom();
-      showToast('🤖 Auto-Collector installed — produce goes straight to your stock!', 'success');
+      showToast('🤖 ' + T('Auto-Collector installed — produce goes straight to your stock!'), 'success');
       renderFarmPanel();
       renderAll();
     }
@@ -1727,7 +1732,7 @@
       if (viewingUid !== currentUid) return;
       const def = FARM_DECORS.find(f => f.id === typeId);
       if (!def) return;
-      if (roomData.coins < def.cost) return showToast('Not enough coins!', 'error');
+      if (roomData.coins < def.cost) return showToast(T('Not enough coins!'), 'error');
       roomData.coins -= def.cost;
       logCoin(-def.cost, 'Bought ' + def.name);
       roomData.farmDecors = roomData.farmDecors || [];
@@ -1738,7 +1743,7 @@
         y: 0.50 + Math.random() * 0.38,
       });
       await saveRoom();
-      showToast(def.emoji + ' ' + def.name + ' placed — drag it anywhere!', 'success');
+      showToast(def.emoji + ' ' + T('{name} placed — drag it anywhere!', { name: T(def.name) }), 'success');
       renderFarmPanel();
       renderAll(); // refresh coin counter
     }
@@ -1785,12 +1790,12 @@
       if (!mc) return;
       roomData.farmMachines = roomData.farmMachines || {};
       if (roomData.farmMachines[id] && roomData.farmMachines[id].owned) return;
-      if (roomData.coins < mc.cost) return showToast('Not enough coins!', 'error');
+      if (roomData.coins < mc.cost) return showToast(T('Not enough coins!'), 'error');
       roomData.coins -= mc.cost;
       logCoin(-mc.cost, 'Built ' + mc.name);
       roomData.farmMachines[id] = { owned: true, slots: 1, jobs: [0] };
       await saveRoom();
-      showToast(mc.emoji + ' ' + mc.name + ' built! Tap it on your farm to make goods.', 'success');
+      showToast(mc.emoji + ' ' + T('{name} built! Tap it on your farm to make goods.', { name: T(mc.name) }), 'success');
       renderFarmPanel();
       renderAll();
     }
@@ -1799,14 +1804,14 @@
       if (viewingUid !== currentUid) return;
       const m = _machineState(id);
       if (!m) return;
-      if (m.slots >= FARM_MAX_SLOTS) return showToast('Max ' + FARM_MAX_SLOTS + ' slots reached!', '');
-      if (roomData.coins < FARM_SLOT_COST) return showToast('Not enough coins! (' + FARM_SLOT_COST + '🪙)', 'error');
+      if (m.slots >= FARM_MAX_SLOTS) return showToast(T('All {n} slots are open already.', { n: FARM_MAX_SLOTS }), '');
+      if (roomData.coins < FARM_SLOT_COST) return showToast(T('Not enough coins!') + ' (' + FARM_SLOT_COST + '🪙)', 'error');
       roomData.coins -= FARM_SLOT_COST;
-      logCoin(-FARM_SLOT_COST, 'Machine slot');
+      logCoin(-FARM_SLOT_COST, T('Machine slot'));
       m.slots += 1; m.jobs.push(0);
       _slotConfirm = false;
       await saveRoom();
-      showToast('🧰 New production slot opened!', 'success');
+      showToast('🧰 ' + T('New production slot opened!'), 'success');
       renderWorkshopModal(); renderFarmPanel(); renderAll();
     }
 
@@ -1816,7 +1821,7 @@
       if (!mc || !m || m.jobs[slot]) return;
       const recipe = mc.recipes[r]; if (!recipe) return;
       const stockNow = roomData.farmStock || {};
-      if (!Object.keys(recipe.in).every(k => (stockNow[k] || 0) >= recipe.in[k])) return showToast('Not enough ingredients!', 'error');
+      if (!Object.keys(recipe.in).every(k => (stockNow[k] || 0) >= recipe.in[k])) return showToast(T('Not enough ingredients!'), 'error');
       Object.keys(recipe.in).forEach(k => { stockNow[k] -= recipe.in[k]; });
       roomData.farmStock = stockNow;
       m.jobs[slot] = { at: Date.now(), r: r };
@@ -1832,7 +1837,7 @@
       const mc = FARM_MACHINES.find(m => m.id === id), m = _machineState(id);
       if (!mc || !m || !m.jobs[slot]) return;
       const job = m.jobs[slot], recipe = mc.recipes[job.r] || mc.recipes[0];
-      if (cropProgress(job.at, Date.now(), recipe.timeMs) < 1) return showToast('Still processing…', '');
+      if (cropProgress(job.at, Date.now(), recipe.timeMs) < 1) return showToast(T('Still processing…'), '');
       // Apply locally, then persist. If the save fails, roll back — otherwise the
       // collected item silently disappears when the next snapshot overwrites it.
       roomData.farmStock = roomData.farmStock || {};
@@ -1842,7 +1847,7 @@
       if (!ok) {
         roomData.farmStock[recipe.out.id] -= recipe.out.qty;
         m.jobs[slot] = job;
-        return showToast('Could not collect — save failed. Check your connection and try again.', 'error');
+        return showToast(T('Could not collect — save failed. Check your connection and try again.'), 'error');
       }
       const outM = farmProductMeta()[recipe.out.id];
       showToast('Collected ' + recipe.out.qty + ' ' + (outM ? outM.emoji + ' ' + outM.name : recipe.out.id) + '!', 'success');
@@ -1856,14 +1861,14 @@
       const o = _farmOrders()[idx];
       if (!o || (roomData.farmOrdersDone || []).includes(idx)) return;
       const stockNow = roomData.farmStock || {};
-      if (!o.items.every(it => (stockNow[it.id] || 0) >= it.qty)) return showToast('Not enough produce for this order.', 'error');
+      if (!o.items.every(it => (stockNow[it.id] || 0) >= it.qty)) return showToast(T('Not enough produce for this order.'), 'error');
       o.items.forEach(it => { stockNow[it.id] -= it.qty; });
       roomData.farmStock = stockNow;
       roomData.coins += o.reward;
-      logCoin(o.reward, 'Farm order reward');
+      logCoin(o.reward, T('Farm order reward'));
       roomData.farmOrdersDone = [...(roomData.farmOrdersDone || []), idx];
       await saveRoom();
-      showToast('📦 Order delivered! +' + o.reward + '🪙', 'success');
+      showToast('📦 ' + T('Order delivered!') + ' +' + o.reward + '🪙', 'success');
       checkAchievements();
       renderFarmPanel();
       renderAll();
@@ -1873,13 +1878,13 @@
     async function addFarmPlot() {
       if (viewingUid !== currentUid) return;
       roomData.farmPlots = roomData.farmPlots || [];
-      if (roomData.farmPlots.length >= FARM_PLOT_MAX) return showToast('Max plots reached!', '');
-      if (roomData.coins < FARM_PLOT_COST) return showToast('Not enough coins!', 'error');
+      if (roomData.farmPlots.length >= FARM_PLOT_MAX) return showToast(T('Max plots reached!'), '');
+      if (roomData.coins < FARM_PLOT_COST) return showToast(T('Not enough coins!'), 'error');
       roomData.coins -= FARM_PLOT_COST;
-      logCoin(-FARM_PLOT_COST, 'Bought plot');
+      logCoin(-FARM_PLOT_COST, T('Bought plot'));
       roomData.farmPlots.push({ id: 'fp' + Date.now() + '_' + Math.floor(Math.random() * 1e4), crop: null, plantedAt: 0 });
       await saveRoom();
-      showToast('🌱 New garden plot added!', 'success');
+      showToast('🌱 ' + T('New garden plot added!'), 'success');
       renderFarmPanel();
       renderAll();
     }
@@ -1928,10 +1933,10 @@
         }
         plot.crop = null; plot.plantedAt = 0; n++;
       }
-      if (!n) return showToast('Nothing ripe to harvest yet.', '');
+      if (!n) return showToast(T('Nothing ripe to harvest yet.'), '');
       _farmWeekAddProduce(n);
       saveRoom(); renderFarmPanel(); renderAll();
-      showToast('🧺 Harvested ' + n + ' plot' + (n > 1 ? 's' : ''), 'success');
+      showToast('🧺 ' + I18N.plural(n, 'Harvested 1 bed', 'Harvested {n} beds'), 'success');
     }
 
     // Tap in the garden → ripe harvests every ready crop on the farm, an empty
@@ -1950,7 +1955,8 @@
       const tapped = plotIdx != null ? plots[plotIdx] : null;
       if (st.state === 'growing' && (!tapped || tapped.crop)) {
         const crop = FARM_CROPS.find(c => c.id === st.cropId);
-        return showToast((crop ? crop.emoji + ' ' + crop.name : 'Crop') + ' growing — ' + _fmtFarmTime(st.msLeft) + ' left', '');
+        return showToast(T('{crop} growing — {time} left',
+          { crop: crop ? crop.emoji + ' ' + T(crop.name) : T('Crop'), time: _fmtFarmTime(st.msLeft) }), '');
       }
       openCropPicker(row, plotIdx);
     }
@@ -2012,7 +2018,7 @@
                        row: _farmPlantIdxs('row').length,
                        all: _farmPlantIdxs('all').length };
       const empties = counts[_plantScope];
-      const SCOPES = [['one', '1 bed'], ['row', 'This row'], ['all', 'All empty']];
+      const SCOPES = [['one', '1 bed'], ['row', T('This row')], ['all', T('All empty')]];
       picker.innerHTML =
         '<div class="cp-head">🌱 Plant</div>' +
         '<div class="cp-scope">' +
@@ -2043,7 +2049,7 @@
       const crop = FARM_CROPS.find(c => c.id === cropId);
       if (!crop || !emptyIdxs.length) { closeCropPicker(); return; }
       const affordable = farmAffordableCount(roomData.coins, crop.seedCost, emptyIdxs.length);
-      if (affordable <= 0) { closeCropPicker(); return showToast('Not enough coins for ' + crop.name + ' seed!', 'error'); }
+      if (affordable <= 0) { closeCropPicker(); return showToast(T('Not enough coins for {crop} seed!', { crop: T(crop.name) }), 'error'); }
       if (affordable >= emptyIdxs.length) return _doPlant(cropId, emptyIdxs);
       _pendingPlant = { cropId: cropId, count: affordable, total: emptyIdxs.length };
       _renderPlantConfirm(crop, emptyIdxs.length, affordable);
@@ -2068,7 +2074,7 @@
       closeCropPicker();
       if (planted) {
         saveRoom(); renderFarmPanel(); renderAll();
-        showToast('🌱 Planted ' + planted + ' ' + crop.name + (planted > 1 ? 's' : ''), 'success');
+        showToast('🌱 ' + I18N.plural(planted, 'Planted 1 {crop}', 'Planted {n} {crop}', { crop: T(crop.name) }), 'success');
       }
     }
 
@@ -2076,7 +2082,7 @@
     function _renderPlantConfirm(crop, total, affordable) {
       const picker = document.getElementById('cropPicker');
       if (!picker) return;
-      const what = _plantScope === 'all' ? 'Every empty bed' : _plantScope === 'one' ? 'That bed' : 'A full row';
+      const what = _plantScope === 'all' ? T('Every empty bed') : _plantScope === 'one' ? T('That bed') : T('A full row');
       picker.innerHTML =
         '<div class="cp-head">🪙 Not enough coins</div>' +
         '<div class="cp-bulk-info" style="line-height:1.5">' + what + ' of <b>' + crop.emoji + ' ' + crop.name + '</b> costs <b>' + (crop.seedCost * total) + '🪙</b> (' + total + ' plot' + (total === 1 ? '' : 's') + ').<br>' +
@@ -2136,7 +2142,7 @@
       if (qty <= 0) return;
       const price = farmProductPrices()[prodId] || 0;
       roomData.coins += qty * price;
-      logCoin((qty * price), 'Sold produce');
+      logCoin((qty * price), T('Sold produce'));
       roomData.farmStock[prodId] = 0;
       await saveRoom();
       const m = farmProductMeta()[prodId];
@@ -2149,12 +2155,12 @@
     async function sellAllFarm() {
       if (viewingUid !== currentUid) return;
       const total = farmSellAllValue(roomData.farmStock || {}, farmProductPrices());
-      if (total <= 0) return showToast('No produce to sell.', '');
+      if (total <= 0) return showToast(T('No produce to sell.'), '');
       roomData.coins += total;
-      logCoin(total, 'Sold all produce');
+      logCoin(total, T('Sold all produce'));
       roomData.farmStock = {};
       await saveRoom();
-      showToast('Sold all produce for ' + total + '🪙!', 'success');
+      showToast(T('Sold everything for {coins}!', { coins: total + '🪙' }), 'success');
       checkAchievements();
       renderFarmPanel();
       renderAll();
@@ -2252,7 +2258,7 @@
       if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(bnX, bnY + flap, bnW, bnH, bnH * 0.28); ctx.fill(); }
       else ctx.fillRect(bnX, bnY + flap, bnW, bnH);
       ctx.font = '800 ' + Math.round(Math.max(9, s * 0.15)) + 'px sans-serif'; ctx.fillStyle = '#fff';
-      ctx.fillText('Tap to sell!', bnX + bnW / 2, bnY + bnH / 2 + flap);
+      ctx.fillText(T('Tap to sell!'), bnX + bnW / 2, bnY + bnH / 2 + flap);
       // Tail fin (rear-left)
       ctx.fillStyle = '#c2402f';
       ctx.beginPath(); ctx.moveTo(cx - s * 0.38, cy + s * 0.02); ctx.lineTo(cx - s * 0.6, cy - s * 0.32); ctx.lineTo(cx - s * 0.28, cy - s * 0.05); ctx.closePath(); ctx.fill();
@@ -2461,7 +2467,7 @@
     }
     async function dismissCart() {
       if (viewingUid !== currentUid) return;
-      showToast('🛒 Sent the cart off — back in 4h with new wants.', '');
+      showToast('🛒 ' + T('Sent the cart off — back in {time} with a new list.', { time: _fmtFarmTime(FARM_CART_COOLDOWN_MS) }), '');
       _departCart(true);
     }
     // Units still sellable for a wanted item: min(stock, quota − sold-this-visit).
@@ -2508,7 +2514,7 @@
           // Don't have it yet — send them to the workshop that makes it rather
           // than leaving a dead square that only says "make".
           squares += mk
-            ? '<button class="cart-sq make" onclick="goMakeForCart(\'' + mk.id + '\')" title="Make ' + m.name + ' in the ' + mk.name + '">' +
+            ? '<button class="cart-sq make" onclick="goMakeForCart(\'' + mk.id + '\')" title="' + T('Make {product} in the {machine}', { product: T(m.name), machine: T(mk.name) }) + '">' +
                 '<span class="cart-sq-icon">' + m.emoji + '</span><span class="cart-sq-cap">' + mk.emoji + ' make</span></button>'
             : '<div class="cart-sq locked" title="Make this in the workshop, then sell it">' +
                 '<span class="cart-sq-icon">' + m.emoji + '</span><span class="cart-sq-cap">make</span></div>';
@@ -2532,19 +2538,19 @@
     async function sellOneToCart(prodId) {
       if (viewingUid !== currentUid) return;
       const cart = _farmCart();
-      if (!cart.present) { closeCartSheet(); return showToast('The cart has left — it\'ll be back later.', ''); }
+      if (!cart.present) { closeCartSheet(); return showToast(T("The cart has left — it'll be back later."), ''); }
       const want = cart.wanted.find(w => w.id === prodId);
-      if (!want) return showToast('The cart isn\'t buying that this visit.', '');
-      if (_cartSellable(want, roomData.farmStock || {}) <= 0) return showToast('The cart has had enough of that.', '');
+      if (!want) return showToast(T("The cart isn't buying that this visit."), '');
+      if (_cartSellable(want, roomData.farmStock || {}) <= 0) return showToast(T('The cart has had enough of that.'), '');
       const price = farmProductPrices()[prodId] || 0;
       roomData.coins += price;
-      logCoin(price, 'Sold to cart');
+      logCoin(price, T('Sold to cart'));
       roomData.farmStock[prodId] = (roomData.farmStock[prodId] || 0) - 1;
       _cartSold[prodId] = (_cartSold[prodId] || 0) + 1;
       roomData.farmCartSold = { visitStart: cart.visitStart, sold: _cartSold };
       await saveRoom();
       const m = farmProductMeta()[prodId];
-      showToast('Sold 1 ' + (m ? m.emoji + ' ' + m.name : prodId) + ' for ' + price + '🪙', 'success');
+      showToast(T('Sold 1 {item} for {coins}', { item: m ? m.emoji + ' ' + T(m.name) : prodId, coins: price + '🪙' }), 'success');
       checkAchievements();
       renderFarmPanel(); renderAll();
       // Sold everything it wanted → the plane flies off (new one in 4h);
@@ -2555,28 +2561,28 @@
     async function sellAllToCart() {
       if (viewingUid !== currentUid) return;
       const cart = _farmCart();
-      if (!cart.present) { closeCartSheet(); return showToast('The cart has left — it\'ll be back later.', ''); }
+      if (!cart.present) { closeCartSheet(); return showToast(T("The cart has left — it'll be back later."), ''); }
       const stock = roomData.farmStock || {}, prices = farmProductPrices();
       let total = 0, sold = 0;
       for (const w of cart.wanted) {
         const n = _cartSellable(w, stock);
         if (n > 0) { total += n * (prices[w.id] || 0); sold += n; stock[w.id] = (stock[w.id] || 0) - n; _cartSold[w.id] = (_cartSold[w.id] || 0) + n; }
       }
-      if (!sold) return showToast('Nothing the cart wants right now.', '');
+      if (!sold) return showToast(T('Nothing the cart wants right now.'), '');
       roomData.coins += total;
-      logCoin(total, 'Sold to cart');
+      logCoin(total, T('Sold to cart'));
       roomData.farmStock = stock;
       roomData.farmCartSold = { visitStart: cart.visitStart, sold: _cartSold };
       checkAchievements();
       // Fully fulfilled → the plane flies off (new one in 4h); otherwise it stays
       // so you can finish the rest (or tap "Send it off").
       if (cart.wanted.every(w => (w.qty - (_cartSold[w.id] || 0)) <= 0)) {
-        showToast('🛒 Sold ' + sold + ' items for ' + total + '🪙! Off it goes.', 'success');
+        showToast('🛒 ' + T('Sold {n} items for {coins} — off it goes.', { n: sold, coins: total + '🪙' }), 'success');
         renderFarmPanel(); renderAll();
         return _departCart(true);
       }
       await saveRoom();
-      showToast('🛒 Sold ' + sold + ' items for ' + total + '🪙.', 'success');
+      showToast('🛒 ' + T('Sold {n} items for {coins}.', { n: sold, coins: total + '🪙' }), 'success');
       renderCartSheet(); renderFarmPanel(); renderAll();
     }
 
@@ -2640,14 +2646,19 @@
       // Production: current cycle (faster when happy / higher level) + next-drop countdown.
       const cycleMs = farmCycleMs(a.happiness, FARM_CYCLE_SLOW_MS, FARM_CYCLE_FAST_MS) / (1 + FARM_LEVEL_SPEEDUP * (lvl - 1));
       const next = Math.max(0, (a.lastDropTime || Date.now()) + cycleMs - Date.now());
-      const prodLine = 'Makes ' + def.drop.emoji + ' ' + def.drop.name + ' every ~' + _fmtFarmTime(cycleMs) +
-        ' · next in ' + (next <= 0 ? 'soon' : _fmtFarmTime(next)) +
-        (waiting ? ' · ' + waiting + ' waiting' : '');
+      const prodLine = T('Makes {item} every ~{cycle} · next in {next}',
+          { item: def.drop.emoji + ' ' + T(def.drop.name), cycle: _fmtFarmTime(cycleMs),
+            next: next <= 0 ? T('soon') : _fmtFarmTime(next) }) +
+        (waiting ? ' · ' + T('{n} waiting', { n: waiting }) : '');
       const nextThresh = FARM_LEVELS[lvl];                                  // threshold for next level
-      const lvlInfo = nextThresh != null ? ((a.collected || 0) + '/' + nextThresh + ' to Lv' + (lvl + 1)) : 'max level';
+      const lvlInfo = nextThresh != null
+        ? T('{have}/{need} to Lv{lvl}', { have: a.collected || 0, need: nextThresh, lvl: lvl + 1 })
+        : T('max level');
       let actions;
       if (_animalButcherConfirm) {
-        actions = '<div class="ws-status">Butcher ' + def.name + '? You get 🥩×' + meat + ' (tier ' + meatBase + ' + Lv bonus ' + (meat - meatBase) + ') — gone for good.</div>' +
+        actions = '<div class="ws-status">' +
+          T('Butcher {name}? You get 🥩×{n} (tier {base} + Lv bonus {bonus}) — gone for good.',
+            { name: T(def.name), n: meat, base: meatBase, bonus: meat - meatBase }) + '</div>' +
           '<button class="cp-crop" style="justify-content:center;font-weight:800;background:var(--g-danger);color:#fff" onclick="confirmButcherAnimal()">✓ Butcher</button>' +
           '<button class="cp-crop" style="justify-content:center" onclick="cancelAnimalButcher()">✗ Keep it</button>';
       } else if (_ownsButcher()) {
@@ -2693,7 +2704,7 @@
       const n = _autoCollectAll();   // every drop → stock (+XP)
       if (!n) return;
       await saveRoom();
-      showToast('Collected ' + n + ' produce!', 'success');
+      showToast(T('Collected {n} produce!', { n: n }), 'success');
       checkAchievements(); renderProduceModal(); renderFarmPanel(); renderAll();
     }
     function renderProduceModal() {
@@ -3199,7 +3210,7 @@
       if (st.state === 'empty') {
         ctx.fillStyle = 'rgba(255,243,214,.5)';
         ctx.font = '600 9px system-ui,sans-serif';
-        ctx.fillText('tap to', cx, cy - 1);
+        ctx.fillText(T('tap to'), cx, cy - 1);
         ctx.fillText('plant', cx, cy + 9);
         return;
       }
