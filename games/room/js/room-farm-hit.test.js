@@ -183,6 +183,48 @@ test('a tap between two huts picks the nearer one', () => {
 
 /* ── The mailbox ── */
 
+// Every piece of the mailbox a player can see, in canvas px, traced from
+// _drawFarmMailbox. The box, badge and flag hang 1.4–1.8 sprite-heights ABOVE
+// the ground anchor the position function returns, which is exactly what a
+// point-and-radius target used to miss.
+function mailParts(sb, W, H) {
+  const p = sb._farmMailPos(W, H);
+  const gx = p.x * W, gy = p.y * H;
+  const s = sb._farmMailSize(W, H);
+  const bh = s * 0.60, by = gy - s * 0.80 - bh;
+  const r = Math.max(8, s * 0.22);
+  return {
+    'count badge': [gx - s * 0.42, by - r * 0.15],
+    'box top edge': [gx, by],
+    'box centre': [gx, by + bh / 2],
+    'box bottom': [gx, by + bh],
+    'raised flag': [gx + s * 0.52 + s * 0.15, by - bh * 0.25 + s * 0.1],
+    'post middle': [gx, gy - s * 0.4],
+    'ground anchor': [gx, gy],
+  };
+}
+
+test('every visible part of the mailbox opens the mailbox', () => {
+  for (const st of [PHONE, NARROW, WIDE, { W: 400, H: 700 }]) {
+    const sb = farmSandbox(ALL);
+    vm.runInContext("_farmInbox = [{id:'a',kind:'cheer',day:'d',at:1}];", sb);   // flag up, badge showing
+    const parts = mailParts(sb, st.W, st.H);
+    for (const label in parts) {
+      const [x, y] = parts[label];
+      assert.equal(sb._farmSkyTarget(x / st.W, y / st.H, st.W, st.H), '#mail',
+        label + ' at ' + st.W + 'x' + st.H);
+    }
+  }
+});
+
+test('the mailbox is big enough to aim at', () => {
+  // 26px was the old floor: a box narrower than half a fingertip.
+  for (const st of [PHONE, NARROW, WIDE, { W: 400, H: 700 }]) {
+    const sb = farmSandbox(ALL);
+    assert.ok(sb._farmMailSize(st.W, st.H) >= 34, 'sprite at ' + st.W + 'x' + st.H);
+  }
+});
+
 test('the mailbox answers its own tap and does not steal the plane', () => {
   for (const st of [PHONE, NARROW, WIDE]) {
     const sb = farmSandbox(ALL);

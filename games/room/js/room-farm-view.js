@@ -127,6 +127,9 @@
     // the mail. Own farm only: a visitor has no mail here to read.
     const FARM_MAIL_X = 0.90;
     function _farmMailPos(W, H) { return { x: FARM_MAIL_X, y: _farmTroughY(W, H) }; }
+    // Sprite size. The old 26px floor drew a box 26px WIDE and 16px tall — under
+    // half a finger, and hard to even spot against the tree behind it.
+    function _farmMailSize(W, H) { return Math.max(34, Math.min(W, H) * 0.078); }
     // How far a finger may miss any fixed farm target and still hit it, in REAL
     // pixels — see farmPickTarget in room-farm.js for why not normalized units.
     const FARM_TAP_REACH_PX = 44;
@@ -2102,10 +2105,13 @@
     function _farmSkyTarget(cx, cy, W, H) {
       const targets = [];
       if (viewingUid === currentUid) {
+        // Mail first: on a wide stage the plane's rect clips the mailbox's badge
+        // corner, and an exact tie goes to whoever is listed first. The mailbox
+        // is drawn on top there, so it should win there too.
+        targets.push(Object.assign({ id: '#mail' },
+          farmMailTapRect(_farmMailPos(W, H), _farmMailSize(W, H), W, H)));
         targets.push(Object.assign({ id: '#cart' },
           farmCartTapRect(_farmCartPos(W, H), _farmCartSize(W, H), W, H, _farmCart().present)));
-        const mp = _farmMailPos(W, H);
-        targets.push({ id: '#mail', x: mp.x, y: mp.y });
       }
       const owned = roomData.farmMachines || {};
       FARM_MACHINES.forEach(function (m, slot) {
@@ -2914,7 +2920,7 @@
     function _drawFarmMailbox(ctx, W, H, t, night) {
       const p = _farmMailPos(W, H);
       const gx = p.x * W, gy = p.y * H;
-      const s = Math.max(26, Math.min(W, H) * 0.062);      // box width, and the unit for everything else
+      const s = _farmMailSize(W, H);                       // box width, and the unit for everything else
       const n = _farmInboxCount();
       const bob = n ? Math.sin(t / 260) * (s * 0.06) : 0;  // a gentle nudge while mail is waiting
 

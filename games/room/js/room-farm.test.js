@@ -331,6 +331,26 @@ test('farmCartTapRect is much smaller while the plane is away (no banner)', () =
   assert.equal(F.farmPickTarget(pos, SW, SH, [Object.assign({ id: 'cart' }, gone)], 0), 'cart');
 });
 
+/* ── farmMailTapRect ── */
+
+test('farmMailTapRect covers the art ABOVE the ground anchor it is given', () => {
+  const s = 40, pos = { x: 0.9, y: 0.32 };
+  const r = F.farmMailTapRect(pos, s, SW, SH);
+  const gx = pos.x * SW, gy = pos.y * SH;
+  // The box sits 1.4 sprite-heights up and the badge a little above that; the
+  // rect has to reach them, or the visible mailbox is not the target.
+  assert.ok(r.y0 * SH <= gy - s * 1.65, 'rect top must clear the badge');
+  assert.ok(r.y1 * SH >= gy, 'rect must still include the ground anchor');
+  assert.ok(r.x0 * SW <= gx - s * 0.64, 'rect must reach the badge on the left');
+  assert.ok(r.x1 * SW >= gx + s * 0.82, 'rect must reach the flag on the right');
+});
+
+test('farmMailTapRect keeps the anchor itself inside the target', () => {
+  const s = 40, pos = { x: 0.9, y: 0.32 };
+  const r = Object.assign({ id: 'mail' }, F.farmMailTapRect(pos, s, SW, SH));
+  assert.equal(F.farmPickTarget(pos, SW, SH, [r], 0), 'mail');
+});
+
 /* ── Social layer: day / week keys ── */
 
 test('farmDayKey is the local YYYY-MM-DD, zero-padded', () => {

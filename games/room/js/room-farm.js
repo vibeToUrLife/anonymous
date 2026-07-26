@@ -219,6 +219,23 @@
     return { x0: (cx - left) / W, x1: (cx + right) / W, y0: (cy - up) / H, y1: (cy + down) / H };
   }
 
+  // The mailbox's tap target, as a normalized rect covering what it DRAWS.
+  //   pos : {x, y} normalized GROUND anchor — the foot of the post
+  //   s   : sprite size in px
+  // Everything a player actually looks at — the box, the red count badge, the
+  // flag — is painted between 1.4 and 1.8 sprite-heights ABOVE that anchor, so a
+  // circle around the anchor leaves the whole visible mailbox outside the
+  // target. The multipliers below trace _drawFarmMailbox: badge centre at
+  // -0.42s with radius ~0.22s, flag tip at +0.82s, box top at -1.4s less the
+  // badge and the bob, ground shadow at +0.11s.
+  function farmMailTapRect(pos, s, W, H) {
+    const gx = pos.x * W, gy = pos.y * H;
+    return {
+      x0: (gx - s * 0.72) / W, x1: (gx + s * 0.88) / W,
+      y0: (gy - s * 1.80) / H, y1: (gy + s * 0.18) / H,
+    };
+  }
+
   /* ── Social layer: visitor inbox + weekly boards ──
      Visitors drop items into the farm owner's inbox (a cheer, a watering, a
      scoop of feed, a gift). The owner claims the batch when they next open the
@@ -324,6 +341,6 @@
   }
 
   return { farmCycleMs, animalLevel, cropProgress, generateFarmOrders, farmSellAllValue, planFarmTick, farmRefillUnits, farmRowCount, farmRowIndices, farmRowState, farmAffordableCount,
-           farmPickTarget, farmCartTapRect,
+           farmPickTarget, farmCartTapRect, farmMailTapRect,
            farmDayKey, farmWeekIdFor, farmHelpAllowance, farmInboxEffects, farmWeekBump, farmWeekScore, farmWeekWinners };
 });
