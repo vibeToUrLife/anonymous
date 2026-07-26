@@ -69,11 +69,11 @@ service cloud.firestore {
     //          (board + every mini-game + room/farm/aquarium). Accrued client-side by
     //          stay-time.js and folded in via increment(); owner-only write (covered by isOwner).
     //          Powers the 停留榜 leaderboard via orderBy('totalStaySec').
-    //    NOTE: Farm automation & storage — farmSiloLevel (int) raises how much
-    //          uncollected produce each animal TYPE holds before those animals stop
-    //          producing; farmColdLevel (int) extends how long an absence is banked;
-    //          farmAutoFeed (bool, bought) + farmAutoFeedOn (bool, toggle) let the
-    //          trough refill itself out of the owner's coins. Owner-only writes.
+    //    NOTE: Farm automation & storage — farmColdLevel (int) extends how long an
+    //          absence is banked; farmAutoFeed (bool, bought) + farmAutoFeedOn (bool,
+    //          toggle) let the trough refill itself out of the owner's coins.
+    //          Owner-only writes. Production itself is uncapped — an uncollected
+    //          pile never stops an animal, only elapsed time bounds a catch-up.
     //    NOTE: Farm social layer — farmCheersTotal (number, lifetime 👍 received),
     //          farmWeekId (string, the Sunday YYYY-MM-DD that starts the week) with
     //          farmWeekCheers / farmWeekProduce, and the farmWeekPrev* triple holding

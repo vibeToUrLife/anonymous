@@ -161,12 +161,10 @@
     function runFarmProduction() {
       if (viewingUid !== currentUid || !(roomData.farmAnimals || []).length) return 0;
       roomData.farmDrops = roomData.farmDrops || [];
-      // Produce is pooled PER ANIMAL TYPE and capped by the silo. Feed the
-      // type pool to planFarmTick (per-animal) so a type's animals stop at the cap.
+      // Production is uncapped: an animal never stops because nobody came to
+      // collect. What bounds a catch-up is TIME (capMs), not a pile size.
       const typeCount = {};
       for (const d of roomData.farmDrops) typeCount[d.type] = (typeCount[d.type] || 0) + 1;
-      const dropCounts = {};
-      for (const a of roomData.farmAnimals) dropCounts[a.id] = typeCount[a.type] || 0;
       // The feeder tops the trough up BEFORE the herd eats from it, so a tick
       // never starts the animals on an empty trough it was about to refill.
       // Bill the same window planFarmTick will account for, never the raw gap:
@@ -182,13 +180,13 @@
       }
       const plan = planFarmTick({
         animals: roomData.farmAnimals,
-        dropCounts: dropCounts,
+        dropCounts: {},
         foodStock: fed.foodStock,
         foodAt: roomData.farmFoodAt || 0,
         now: _now,
         slowMs: FARM_CYCLE_SLOW_MS,
         fastMs: FARM_CYCLE_FAST_MS,
-        dropCap: farmProduceCap(),
+        dropCap: Infinity,        // never pause production on an uncollected pile
         foodPerDay: FARM_FOOD_PER_DAY,
         gainPerDay: FARM_HAPPY_GAIN_PER_DAY,
         decayPerDay: FARM_HAPPY_DECAY_PER_DAY,
@@ -200,10 +198,8 @@
       roomData.farmFood = plan.foodStock;
       roomData.farmFoodAt = plan.foodAt;
       let added = 0;
-      const live = Object.assign({}, typeCount);
       for (const s of plan.spawns) {
-        if ((live[s.type] || 0) >= farmProduceCap()) continue;   // this type's pool is full
-        live[s.type] = (live[s.type] || 0) + 1; added++;
+        added++;
         const a = plan.animals.find(an => an.id === s.animalId);
         roomData.farmDrops.push({
           id: 'fd' + Date.now() + '_' + (_farmDropSeq++),
@@ -225,11 +221,6 @@
     // Current animal cap (base + expansions).
     function farmAnimalCap() {
       return FARM_MAX_ANIMALS + 10 * (roomData.farmCapLevel || 0);
-    }
-    // Uncollected produce a single ANIMAL TYPE may hold before its animals stop
-    // producing. The silo raises it — without one, a full pool is a hard stop.
-    function farmProduceCap() {
-      return FARM_PRODUCE_CAP + (roomData.farmSiloLevel || 0) * FARM_SILO_STEP;
     }
     // How much of an absence the farm banks. The cold store extends it.
     function farmOfflineCapMs() {
@@ -1464,17 +1455,6 @@
         '</div>' +
         '<div class="farm-panel-empty" style="padding:2px 0 4px">从你的金币里买饲料 — 钱不够就停手，不会透支。</div>' +
         (function () {
-          const lvl = roomData.farmSiloLevel || 0;
-          const cost = lvl < FARM_SILO_COSTS.length ? FARM_SILO_COSTS[lvl] : null;
-          return '<div class="farm-shop-row">' +
-            '<span class="farm-shop-animal">🏚️ 粮仓 <small>Lv ' + lvl + '/' + FARM_SILO_COSTS.length + ' · 每类存 ' + farmProduceCap() + '</small></span>' +
-            (cost == null
-              ? '<span class="farm-shop-drop">MAX</span>'
-              : '<button class="farm-shop-buy" onclick="buyFarmSilo()"' + (roomData.coins < cost ? ' disabled' : '') + '>+' + FARM_SILO_STEP + ' · ' + cost + '🪙</button>') +
-          '</div>' +
-          '<div class="farm-panel-empty" style="padding:2px 0 4px">存满的那类产物会<b>停产</b>，直到你来收 — 粮仓越大越经放。</div>';
-        })() +
-        (function () {
           const lvl = roomData.farmColdLevel || 0;
           const cost = lvl < FARM_COLD_COSTS.length ? FARM_COLD_COSTS[lvl] : null;
           return '<div class="farm-shop-row">' +
@@ -1680,22 +1660,6 @@
       await saveRoom();
       renderFarmPanel(); renderAll();
       showToast(roomData.farmAutoFeedOn ? '🤖 自动喂食已开启' : '🤖 自动喂食已关闭 — 记得自己添料', '');
-    }
-
-    // 🏚️ Silo — raises how much uncollected produce each animal TYPE may hold.
-    // Without it a full pool stops those animals producing entirely.
-    async function buyFarmSilo() {
-      if (viewingUid !== currentUid) return;
-      const lvl = roomData.farmSiloLevel || 0;
-      if (lvl >= FARM_SILO_COSTS.length) return;
-      const cost = FARM_SILO_COSTS[lvl];
-      if ((roomData.coins || 0) < cost) return showToast('金币不够！', 'error');
-      roomData.coins -= cost;
-      logCoin(-cost, '🏚️ 粮仓 Lv' + (lvl + 1));
-      roomData.farmSiloLevel = lvl + 1;
-      await saveRoom();
-      renderFarmPanel(); renderAll();
-      showToast('🏚️ 粮仓扩建 — 每类产物现在能存 ' + farmProduceCap() + ' 个！', 'success');
     }
 
     // ❄️ Cold store — how much of an absence the farm banks.
@@ -2643,14 +2607,10 @@
       const meat = _meatYield(a);   // tier base + (level − 1)
       // Production: current cycle (faster when happy / higher level) + next-drop countdown.
       const cycleMs = farmCycleMs(a.happiness, FARM_CYCLE_SLOW_MS, FARM_CYCLE_FAST_MS) / (1 + FARM_LEVEL_SPEEDUP * (lvl - 1));
-      let prodLine;
-      if (waiting >= farmProduceCap()) {
-        prodLine = def.drop.emoji + ' ' + def.drop.name + ' — full (' + waiting + '/' + farmProduceCap() + ') · collect to resume';
-      } else {
-        const next = Math.max(0, (a.lastDropTime || Date.now()) + cycleMs - Date.now());
-        prodLine = 'Makes ' + def.drop.emoji + ' ' + def.drop.name + ' every ~' + _fmtFarmTime(cycleMs) +
-          ' · next in ' + (next <= 0 ? 'soon' : _fmtFarmTime(next)) + ' · ' + waiting + '/' + farmProduceCap() + ' waiting';
-      }
+      const next = Math.max(0, (a.lastDropTime || Date.now()) + cycleMs - Date.now());
+      const prodLine = 'Makes ' + def.drop.emoji + ' ' + def.drop.name + ' every ~' + _fmtFarmTime(cycleMs) +
+        ' · next in ' + (next <= 0 ? 'soon' : _fmtFarmTime(next)) +
+        (waiting ? ' · ' + waiting + ' waiting' : '');
       const nextThresh = FARM_LEVELS[lvl];                                  // threshold for next level
       const lvlInfo = nextThresh != null ? ((a.collected || 0) + '/' + nextThresh + ' to Lv' + (lvl + 1)) : 'max level';
       let actions;
@@ -2718,7 +2678,7 @@
         const n = counts[type] || 0;
         return '<div class="ws-slot">' +
           '<span class="ws-slot-no">' + def.drop.emoji + ' ' + def.drop.name + '</span>' +
-          '<span class="ws-slot-state">' + n + '/' + farmProduceCap() + (n >= farmProduceCap() ? ' · full!' : '') + '</span>' +
+          '<span class="ws-slot-state">×' + n + '</span>' +
           '<button class="farm-shop-buy" onclick="collectProduceType(\'' + type + '\')"' + (n > 0 ? '' : ' disabled') + '>Collect</button>' +
           '</div>';
       }).join('') : '<div class="ws-status">No animals yet — buy one in the Animals tab.</div>';
@@ -2726,7 +2686,7 @@
       el.innerHTML =
         '<div class="ws-box">' +
           '<div class="ws-head">🧺 Produce</div>' +
-          '<div class="ws-sub">Each animal type holds up to ' + farmProduceCap() + ' — collect to keep them producing.</div>' +
+          '<div class="ws-sub">Your animals keep producing whether you collect or not.</div>' +
           rows +
           (total > 0 ? '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="collectAllProduce()">📦 Collect all (' + total + ')</button>' : '') +
           '<button class="cp-close" onclick="closeProduceModal()">Close</button>' +

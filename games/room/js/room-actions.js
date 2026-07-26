@@ -940,7 +940,6 @@
       roomData.farmOrdersDay = d.farmOrdersDay || '';
       roomData.farmOrdersDone = Array.isArray(d.farmOrdersDone) ? d.farmOrdersDone : [];
       roomData.farmMachines = d.farmMachines || {};
-      roomData.farmSiloLevel = d.farmSiloLevel || 0;
       roomData.farmColdLevel = d.farmColdLevel || 0;
       roomData.farmAutoFeed = d.farmAutoFeed || false;
       roomData.farmAutoFeedOn = d.farmAutoFeedOn || false;
