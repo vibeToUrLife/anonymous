@@ -381,49 +381,48 @@ test('farmHelpAllowance spends down today, and resets on a new day', () => {
   assert.equal(F.farmHelpAllowance('', '2026-07-26', 0, 5), 5);            // never helped
 });
 
-/* ── farmHelpedKinds / farmHelpedAdd ── */
+/* ── farmSentKinds ── */
 
-test('farmHelpedKinds reports what was sent to one host today', () => {
-  const rec = { alice: ['cheer', 'gift:milk'], bob: ['water'] };
-  assert.deepEqual(F.farmHelpedKinds(rec, '2026-07-26', '2026-07-26', 'alice'), ['cheer', 'gift:milk']);
-  assert.deepEqual(F.farmHelpedKinds(rec, '2026-07-26', '2026-07-26', 'bob'), ['water']);
-  assert.deepEqual(F.farmHelpedKinds(rec, '2026-07-26', '2026-07-26', 'carol'), []);
+// These are the farm's OWN inbox docs, read back by their author — the same
+// records the rules check, so what the panel greys out can't drift from what
+// the server will accept.
+test('farmSentKinds lists what this visitor sent that farm today', () => {
+  const items = [
+    { kind: 'cheer', day: '2026-07-26' },
+    { kind: 'water', day: '2026-07-26' },
+    { kind: 'gift', prod: 'milk', day: '2026-07-26' },
+  ];
+  assert.deepEqual(F.farmSentKinds(items, '2026-07-26'), ['cheer', 'water', 'gift:milk']);
 });
 
-test('farmHelpedKinds treats yesterday\'s record as nothing', () => {
-  const rec = { alice: ['cheer'] };
-  assert.deepEqual(F.farmHelpedKinds(rec, '2026-07-25', '2026-07-26', 'alice'), []);
-  assert.deepEqual(F.farmHelpedKinds(null, '2026-07-26', '2026-07-26', 'alice'), []);
-  assert.deepEqual(F.farmHelpedKinds({ alice: 'junk' }, '2026-07-26', '2026-07-26', 'alice'), []);
+test('farmSentKinds ignores items from other days', () => {
+  const items = [
+    { kind: 'cheer', day: '2026-07-25' },
+    { kind: 'feed', day: '2026-07-26' },
+    { kind: 'gift', prod: 'cake', day: '2026-07-24' },
+  ];
+  assert.deepEqual(F.farmSentKinds(items, '2026-07-26'), ['feed']);
 });
 
-test('farmHelpedAdd accumulates within a day, per host', () => {
-  let rec = F.farmHelpedAdd(null, '', '2026-07-26', 'alice', 'cheer');
-  assert.deepEqual(rec, { alice: ['cheer'] });
-  rec = F.farmHelpedAdd(rec, '2026-07-26', '2026-07-26', 'alice', 'water');
-  rec = F.farmHelpedAdd(rec, '2026-07-26', '2026-07-26', 'bob', 'cheer');
-  assert.deepEqual(rec, { alice: ['cheer', 'water'], bob: ['cheer'] });
-});
-
-test('farmHelpedAdd wipes the whole map on a new day', () => {
-  const yesterday = { alice: ['cheer'], bob: ['feed'] };
-  const rec = F.farmHelpedAdd(yesterday, '2026-07-25', '2026-07-26', 'carol', 'cheer');
-  assert.deepEqual(rec, { carol: ['cheer'] }, 'a new day must not inherit yesterday\'s farms');
-});
-
-test('farmHelpedAdd never duplicates and never mutates its input', () => {
-  const rec = { alice: ['cheer'] };
-  const next = F.farmHelpedAdd(rec, '2026-07-26', '2026-07-26', 'alice', 'cheer');
-  assert.deepEqual(next, { alice: ['cheer'] });
-  next.alice.push('water');
-  assert.deepEqual(rec, { alice: ['cheer'] }, 'the original record was mutated');
-});
-
-test('gifts are recorded per product, so a second product is still allowed', () => {
-  let rec = F.farmHelpedAdd(null, '', '2026-07-26', 'alice', 'gift:milk');
-  const sent = F.farmHelpedKinds(rec, '2026-07-26', '2026-07-26', 'alice');
+test('farmSentKinds keys gifts per product, so another product stays available', () => {
+  const sent = F.farmSentKinds([{ kind: 'gift', prod: 'milk', day: 'D' }], 'D');
   assert.ok(sent.indexOf('gift:milk') >= 0);
-  assert.ok(sent.indexOf('gift:cheese') < 0, 'a different product must still be giftable');
+  assert.ok(sent.indexOf('gift:cheese') < 0);
+});
+
+test('farmSentKinds de-duplicates and survives junk', () => {
+  const items = [
+    { kind: 'cheer', day: 'D' }, { kind: 'cheer', day: 'D' },
+    null,
+    { kind: 'gift', day: 'D' },            // a gift with no product is not a target
+    { day: 'D' },                          // no kind at all
+  ];
+  assert.deepEqual(F.farmSentKinds(items, 'D'), ['cheer']);
+});
+
+test('farmSentKinds on an empty or missing list means nothing sent', () => {
+  assert.deepEqual(F.farmSentKinds([], 'D'), []);
+  assert.deepEqual(F.farmSentKinds(null, 'D'), []);
 });
 
 /* ── farmInboxEffects ── */

@@ -52,8 +52,8 @@
     let _farmInboxUnsub = null;       // live listener on my own inbox (while the farm is open)
     let _farmInboxOpen = false;       // mailbox modal visible?
     let _farmInboxBusy = false;       // a claim is in flight (blocks a double-tap double-claim)
-    let _myHelped = null;             // { hostUid: [kind, …] } I have already sent (null = not fetched)
-    let _myHelpedDay = '';            // the day _myHelped belongs to — a page left open past midnight must not keep it
+    let _sentHere = null;             // kinds I've already sent the farm I'm VISITING today (null = not read yet)
+    let _sentHereUid = '';            // whose farm _sentHere describes, so a stale answer can't leak across a hop
     let _myHelpLeft = null;           // rewarded helps I have left today (null = not fetched yet)
     let _myStock = null;              // MY produce, fetched when the gift picker opens (roomData holds the HOST's)
     let _giftOpen = false;            // gift picker modal visible?
@@ -434,7 +434,8 @@
     async function visitFarm(uid) {
       if (typeof visitRoom !== 'function') return;
       await visitRoom(uid);
-      _myHelpLeft = null;   // allowance is read from MY doc; re-read it for the farm we land on
+      _myHelpLeft = null;   // allowance is mine; what I've sent is per-farm — re-read both on landing
+      _sentHere = null; _sentHereUid = '';
       _myStock = null;
       _unsubFarmInbox();    // my mailbox listener doesn't follow me to someone else's farm
       closeFarmInbox();
@@ -478,30 +479,48 @@
 
     /* ── Visitor side ── */
 
-    // My remaining REWARDED helps today, and which farms I have already helped.
-    // Both come from my OWN doc, not roomData: while visiting, roomData holds the
-    // HOST's farm. Reading it from the server is what makes the spent buttons
-    // show up as spent on a second device (and after a refresh) — the record is
-    // account state, not a page-session flag.
-    let _helpLeftFetching = false;
+    // Two things the visit panel needs, both read fresh when a farm is opened:
+    //   • how many REWARDED helps I have left today — my own counter, on my own
+    //     doc (roomData holds the HOST's farm while visiting, so never that);
+    //   • what I have already sent THIS farm today — read back from the farm's
+    //     own inbox, which is the record the server itself checks. Asking the
+    //     source means a second device, a refresh, or anything that happened
+    //     before this code shipped all read correctly; a mirror kept on my own
+    //     doc would only be as good as the last write that touched it.
+    // The rules let me read only the items whose fromUid is me, which is exactly
+    // what the query pins, so this never exposes anyone else's mail.
+    let _helpStateFetching = false;
     async function _refreshMyHelpLeft() {
-      if (_myHelpLeft != null || _helpLeftFetching || typeof db === 'undefined' || !currentUid) return;
-      _helpLeftFetching = true;
+      const host = viewingUid;
+      if (typeof db === 'undefined' || !currentUid || host === currentUid) return;
+      if (_helpStateFetching) return;
+      if (_myHelpLeft != null && _sentHere != null && _sentHereUid === host) return;
+      _helpStateFetching = true;
+      const today = _farmToday();
       try {
-        const snap = await userDocRef(currentUid).get();
-        const d = snap.exists ? snap.data() : {};
-        const today = _farmToday();
+        const [mine, sent] = await Promise.all([
+          userDocRef(currentUid).get(),
+          _inboxCol(host).where('fromUid', '==', currentUid).limit(FARM_INBOX_MAX).get(),
+        ]);
+        const d = mine.exists ? mine.data() : {};
         _myHelpLeft = farmHelpAllowance(d.farmHelpDay, today, d.farmHelpCount, FARM_HELP_DAILY_CAP);
-        _myHelped = d.farmHelped || {};
-        _myHelpedDay = d.farmHelpDay || '';
-      } catch (e) { _myHelpLeft = FARM_HELP_DAILY_CAP; _myHelped = {}; _myHelpedDay = _farmToday(); }
-      _helpLeftFetching = false;
+        const items = [];
+        sent.forEach(function (doc) { items.push(doc.data()); });
+        _sentHere = farmSentKinds(items, today);
+      } catch (e) {
+        // Can't tell — leave the buttons live rather than locking someone out of
+        // helping. A repeat is refused by the rules anyway.
+        if (_myHelpLeft == null) _myHelpLeft = FARM_HELP_DAILY_CAP;
+        if (_sentHere == null) _sentHere = [];
+      }
+      _sentHereUid = host;
+      _helpStateFetching = false;
       if (isFarmView && viewingUid !== currentUid) renderFarmPanel();
     }
 
     // What I have already sent this host today (kinds, plus 'gift:<product>').
     function _sentToHost(hostUid) {
-      return farmHelpedKinds(_myHelped, _myHelpedDay, _farmToday(), hostUid || viewingUid);
+      return (_sentHereUid === (hostUid || viewingUid) && _sentHere) ? _sentHere : [];
     }
 
     // Post the help AND settle my side of it in one transaction: the host's
@@ -525,22 +544,19 @@
         tx.set(ref, {
           farmHelpDay: today,
           farmHelpCount: (d.farmHelpDay === today ? (d.farmHelpCount || 0) : 0) + 1,
-          farmHelped: farmHelpedAdd(d.farmHelped, d.farmHelpDay, today, hostUid, kind),
           coins: firebase.firestore.FieldValue.increment(pay),
         }, { merge: true });
         return pay;
       });
     }
 
-    // Mirror a landed interaction locally so the button greys out immediately,
-    // without waiting for the next read of my own doc.
+    // Grey the button out at once, rather than waiting for the next read. This is
+    // only the on-screen echo of what just landed — the next visit re-reads the
+    // inbox, so it can't be what the answer depends on.
     function _noteHelped(hostUid, kind) {
-      _myHelped = farmHelpedAdd(_myHelped, _myHelpedDay, _farmToday(), hostUid, kind);
-      _myHelpedDay = _farmToday();
-      // roomData is the HOST's for farm fields while visiting, but never for
-      // these — visitRoom deliberately leaves them alone (see room-actions.js).
-      roomData.farmHelped = _myHelped;
-      roomData.farmHelpDay = _myHelpedDay;
+      if (_sentHereUid !== hostUid) { _sentHereUid = hostUid; _sentHere = []; }
+      if (!_sentHere) _sentHere = [];
+      if (_sentHere.indexOf(kind) < 0) _sentHere.push(kind);
     }
 
     // 👍 / 💧 / 🌾 — post one item to the host's inbox, spend one of today's
@@ -688,14 +704,7 @@
           next[prod] -= qty;
           if (next[prod] <= 0) delete next[prod];
           const today = _farmToday();
-          tx.set(meRef, {
-            farmStock: next,
-            // Recorded per PRODUCT: the server allows one of each a day, not one
-            // gift a day, so only that product greys out in the picker.
-            farmHelpDay: today,
-            farmHelpCount: d.farmHelpDay === today ? (d.farmHelpCount || 0) : 0,   // a gift costs no allowance, but the day must roll as one
-            farmHelped: farmHelpedAdd(d.farmHelped, d.farmHelpDay, today, host, 'gift:' + prod),
-          }, { merge: true });
+          tx.set(meRef, { farmStock: next }, { merge: true });   // a gift costs no daily allowance
           tx.set(inboxRef, {                       // create-only: a repeat today is denied by the rules
             kind: 'gift', prod: prod, qty: qty,
             fromUid: currentUid, fromName: getPlayerName(), day: today, at: Date.now(),

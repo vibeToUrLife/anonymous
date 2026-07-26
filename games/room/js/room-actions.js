@@ -941,10 +941,9 @@
       roomData.farmOrdersDone = Array.isArray(d.farmOrdersDone) ? d.farmOrdersDone : [];
       roomData.farmMachines = d.farmMachines || {};
       // Popularity + weekly board numbers follow whoever's farm we're looking at
-      // (the visitor panel shows the host's 🔥 count). farmHelpDay/farmHelpCount/
-      // farmHelped are deliberately NOT mirrored — those are the VISITOR's own
-      // daily allowance and record of who they've helped, and a visit must never
-      // overwrite them with the host's.
+      // (the visitor panel shows the host's 🔥 count). farmHelpDay/farmHelpCount
+      // are deliberately NOT mirrored — those are the VISITOR's own daily
+      // allowance, and a visit must never overwrite them with the host's.
       roomData.farmCheersTotal = d.farmCheersTotal || 0;
       roomData.farmWeekId = d.farmWeekId || '';
       roomData.farmWeekCheers = d.farmWeekCheers || 0;

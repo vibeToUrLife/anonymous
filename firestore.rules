@@ -74,9 +74,12 @@ service cloud.firestore {
     //          farmWeekCheers / farmWeekProduce, and the farmWeekPrev* triple holding
     //          the week that just ended (settlement reads it after a rollover).
     //          farmHelpDay / farmHelpCount cap how many helps a VISITOR is paid for
-    //          per day, and farmHelped ({hostUid: [kind, …]}, same day key) records
-    //          which farms they have already helped so the buttons read as spent on
-    //          every device rather than only the one that sent them.
+    //          per day. They are written ONLY by that transaction, which reads the
+    //          server value first, so saveRoom deliberately leaves them out — a
+    //          stale local copy would hand back helps that were already spent.
+    //          Which farms a visitor has already helped today is NOT stored: it is
+    //          read back from that farm's farm_inbox (below), the same record the
+    //          rules check, so it cannot drift.
     //          All owner-only writes (covered by the isOwner update rule): a visitor
     //          never writes farm state, they post to farm_inbox (below) and the owner
     //          folds it in when they claim. See §16d for the boards.
@@ -117,8 +120,14 @@ service cloud.firestore {
       // A gift is moved out of the sender's own farmStock in the SAME
       // transaction that creates the doc, so it can't be duplicated.
       match /farm_inbox/{itemId} {
-        // Only the farm's owner reads their mail; a visitor just posts and goes.
-        allow read: if isOwner(uid);
+        // The farm's owner reads all their mail. A visitor may read back ONLY
+        // the items they wrote themselves — that's how the visit panel knows
+        // which buttons are already spent today, straight from the authoritative
+        // record instead of a mirror that could drift. A LIST is allowed only
+        // when the query pins fromUid to the caller
+        //   (.where('fromUid', '==', uid)), so nobody can read anyone else's
+        // mail, and the host's inbox stays private until they claim it.
+        allow read: if isOwner(uid) || resource.data.fromUid == request.auth.uid;
         allow create: if isAuth()
                       && !isBanned(request.auth.uid)
                       && request.auth.uid != uid                     // no posting to your own inbox

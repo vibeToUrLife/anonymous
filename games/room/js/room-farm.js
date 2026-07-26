@@ -267,26 +267,21 @@
     return Math.max(0, (max || 0) - used);
   }
 
-  // What the visitor has already sent to `hostUid` today. `record` is their
-  // stored {hostUid: [kind, …]} map and `day` the day it belongs to — a record
-  // from an earlier day is stale, so it counts as nothing. Gifts are recorded
-  // per product ('gift:milk') because the server allows one of EACH product a
-  // day, not one gift a day.
-  function farmHelpedKinds(record, day, today, hostUid) {
-    if (!record || day !== today) return [];
-    const list = record[hostUid];
-    return Array.isArray(list) ? list : [];
-  }
-
-  // Add `kind` to that record, rolling the WHOLE map over when the stored day
-  // isn't today — that's what keeps it from growing without bound. Returns a new
-  // map; never mutates the one passed in.
-  function farmHelpedAdd(record, day, today, hostUid, kind) {
-    const next = day === today ? Object.assign({}, record || {}) : {};
-    const list = (next[hostUid] || []).slice();
-    if (list.indexOf(kind) < 0) list.push(kind);
-    next[hostUid] = list;
-    return next;
+  // What a visitor has already sent to one farm today, read back from that
+  // farm's OWN inbox items — the same docs the server checks, so this can't
+  // drift the way a mirror kept on the visitor's doc would.
+  //   items : the inbox docs authored by this visitor (any day)
+  //   today : local YYYY-MM-DD
+  // Gifts collapse to 'gift:<product>' because the server allows one of EACH
+  // product a day, not one gift a day.
+  function farmSentKinds(items, today) {
+    const out = [];
+    for (const it of (items || [])) {
+      if (!it || it.day !== today) continue;
+      const k = it.kind === 'gift' ? (it.prod ? 'gift:' + it.prod : '') : it.kind;
+      if (k && out.indexOf(k) < 0) out.push(k);
+    }
+    return out;
   }
 
   // Fold a claimed batch of inbox items into one settlement.
@@ -364,5 +359,5 @@
 
   return { farmCycleMs, animalLevel, cropProgress, generateFarmOrders, farmSellAllValue, planFarmTick, farmRefillUnits, farmRowCount, farmRowIndices, farmRowState, farmAffordableCount,
            farmPickTarget, farmCartTapRect, farmMailTapRect,
-           farmDayKey, farmWeekIdFor, farmHelpAllowance, farmHelpedKinds, farmHelpedAdd, farmInboxEffects, farmWeekBump, farmWeekScore, farmWeekWinners };
+           farmDayKey, farmWeekIdFor, farmHelpAllowance, farmSentKinds, farmInboxEffects, farmWeekBump, farmWeekScore, farmWeekWinners };
 });
