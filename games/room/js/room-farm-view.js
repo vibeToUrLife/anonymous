@@ -82,6 +82,12 @@
     // leaves ~0.04 of clear grass between the hut bases and the pen rails.
     const FARM_HUT_Y      = 0.29;   // workshop huts sit above the pen band
     const FARM_PEN_TOP    = 0.38;   // animal pen band top
+    // Grass between the pens' bottom rail and the dividing fence. At 0.02 the
+    // two rails nearly touched (13px on a laptop) and the pasture read as one
+    // crowded band. Every 0.01 here costs the pen band 0.01 of height, so this
+    // is the point where the gap is clearly visible and the animals give up
+    // about a tenth of their size rather than a fifth.
+    const FARM_PEN_GAP    = 0.04;
 
     /* ── Farm tick (shared by load catch-up, farm open, live tick) ──
        Herd eats from the trough (happiness up/down), production clocks
@@ -156,7 +162,7 @@
     // the band. Everything that places something on the pasture — pens, animal
     // spawns, produce drops — derives from this.
     function _farmPenBand() {
-      return { top: FARM_PEN_TOP, bot: Math.max(FARM_PEN_TOP + 0.10, _farmDivY() - 0.02) };
+      return { top: FARM_PEN_TOP, bot: Math.max(FARM_PEN_TOP + 0.10, _farmDivY() - FARM_PEN_GAP) };
     }
 
     // The soil band the garden plots live in: below the dividing fence, split
