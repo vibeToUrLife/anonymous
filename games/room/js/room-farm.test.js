@@ -252,6 +252,85 @@ test('farmAffordableCount = min(empty plots, coins / seedCost), floored, >= 0', 
   assert.equal(F.farmAffordableCount(50, 0, 7), 7);   // free seed → all empties
 });
 
+/* ── farmPickTarget ── */
+
+// A phone-shaped stage: 0.1 of the width is 36px but 0.1 of the height is 52px,
+// which is exactly the distortion normalized hit-testing gets wrong.
+const SW = 360, SH = 520;
+
+test('farmPickTarget measures in real pixels, not normalized units', () => {
+  // Two targets the same normalized distance (0.1) from the tap — one across,
+  // one down. In real pixels the horizontal one is much closer, and it wins.
+  const t = [{ id: 'across', x: 0.6, y: 0.5 }, { id: 'down', x: 0.5, y: 0.6 }];
+  assert.equal(F.farmPickTarget({ x: 0.5, y: 0.5 }, SW, SH, t, 99), 'across');
+  // On a stage that IS square, the two are genuinely tied — first listed wins.
+  assert.equal(F.farmPickTarget({ x: 0.5, y: 0.5 }, 500, 500, t, 99), 'across');
+});
+
+test('farmPickTarget returns null when everything is out of reach', () => {
+  const t = [{ id: 'far', x: 0.9, y: 0.9 }];
+  assert.equal(F.farmPickTarget({ x: 0.1, y: 0.1 }, SW, SH, t, 44), null);
+  assert.equal(F.farmPickTarget({ x: 0.1, y: 0.1 }, SW, SH, t, 99999), 'far');
+});
+
+test('farmPickTarget treats a rect as zero distance anywhere inside it', () => {
+  const t = [{ id: 'dot', x: 0.9, y: 0.9 }, { id: 'box', x0: 0.2, y0: 0.2, x1: 0.6, y1: 0.4 }];
+  // A reach of 0 only lets a genuine zero distance through, so every one of
+  // these passing means "inside the rect" really is distance 0.
+  for (const p of [{ x: 0.2, y: 0.2 }, { x: 0.6, y: 0.4 }, { x: 0.2, y: 0.4 },
+                   { x: 0.6, y: 0.2 }, { x: 0.4, y: 0.3 }, { x: 0.31, y: 0.27 }]) {
+    assert.equal(F.farmPickTarget(p, SW, SH, t, 0), 'box', JSON.stringify(p));
+  }
+});
+
+test('farmPickTarget breaks an exact tie by list order', () => {
+  // A point target dead centre of a rect is 0 away, and so is the rect.
+  const t = [{ id: 'box', x0: 0.2, y0: 0.2, x1: 0.6, y1: 0.4 }, { id: 'dot', x: 0.4, y: 0.3 }];
+  assert.equal(F.farmPickTarget({ x: 0.4, y: 0.3 }, SW, SH, t, 44), 'box');
+  assert.equal(F.farmPickTarget({ x: 0.4, y: 0.3 }, SW, SH, t.slice().reverse(), 44), 'dot');
+});
+
+test('farmPickTarget measures a rect from its edge once outside', () => {
+  const t = [{ id: 'box', x0: 0.2, y0: 0.2, x1: 0.6, y1: 0.4 }];
+  // 0.05 of the width past the right edge = 18px — inside a 44px reach.
+  assert.equal(F.farmPickTarget({ x: 0.65, y: 0.3 }, SW, SH, t, 44), 'box');
+  // 0.2 of the width past it = 72px — out of reach.
+  assert.equal(F.farmPickTarget({ x: 0.8, y: 0.3 }, SW, SH, t, 44), null);
+});
+
+test('farmPickTarget is nearest-wins, not first-listed-wins', () => {
+  const t = [{ id: 'first', x: 0.5, y: 0.5 }, { id: 'second', x: 0.31, y: 0.5 }];
+  assert.equal(F.farmPickTarget({ x: 0.3, y: 0.5 }, SW, SH, t, 99), 'second');
+});
+
+test('farmPickTarget copes with no targets and junk entries', () => {
+  assert.equal(F.farmPickTarget({ x: 0.5, y: 0.5 }, SW, SH, [], 44), null);
+  assert.equal(F.farmPickTarget({ x: 0.5, y: 0.5 }, SW, SH, null, 44), null);
+  assert.equal(F.farmPickTarget({ x: 0.5, y: 0.5 }, SW, SH, [null, { id: 'ok', x: 0.5, y: 0.5 }], 44), 'ok');
+});
+
+/* ── farmCartTapRect ── */
+
+test('farmCartTapRect reaches left far enough to cover the banner', () => {
+  const s = 58, pos = { x: 0.7, y: 0.19 };
+  const r = F.farmCartTapRect(pos, s, SW, SH, true);
+  // The banner _drawMerchantCart paints: bnW = s*1.1 starting at cx - s*0.62 - bnW.
+  const cx = pos.x * SW, bnW = s * 1.1, bnX = cx - s * 0.62 - bnW;
+  assert.ok(r.x0 * SW <= bnX + 0.001, 'rect left ' + (r.x0 * SW) + ' must reach the banner at ' + bnX);
+  assert.ok(r.x1 * SW >= cx + s * 0.73, 'rect right must reach the propeller');
+  const mid = { x: (bnX + bnW / 2) / SW, y: pos.y };
+  assert.equal(F.farmPickTarget(mid, SW, SH, [Object.assign({ id: 'cart' }, r)], 0), 'cart');
+});
+
+test('farmCartTapRect is much smaller while the plane is away (no banner)', () => {
+  const s = 58, pos = { x: 0.7, y: 0.19 };
+  const here = F.farmCartTapRect(pos, s, SW, SH, true);
+  const gone = F.farmCartTapRect(pos, s, SW, SH, false);
+  assert.ok((gone.x1 - gone.x0) < (here.x1 - here.x0) / 2, 'the away cloud must not keep the banner space');
+  // Still centred on the same spot, so the cloud itself stays tappable.
+  assert.equal(F.farmPickTarget(pos, SW, SH, [Object.assign({ id: 'cart' }, gone)], 0), 'cart');
+});
+
 /* ── Social layer: day / week keys ── */
 
 test('farmDayKey is the local YYYY-MM-DD, zero-padded', () => {

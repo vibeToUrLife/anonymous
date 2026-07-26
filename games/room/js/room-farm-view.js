@@ -105,10 +105,9 @@
     // the mail. Own farm only: a visitor has no mail here to read.
     const FARM_MAIL_X = 0.90;
     function _farmMailPos(W, H) { return { x: FARM_MAIL_X, y: _farmTroughY(W, H) }; }
-    // Tap radius. The plane's zone (0.18 around ~0.84,0.19) overlaps this on a
-    // wide stage, so the mailbox is hit-tested FIRST — same rule the machine huts
-    // already follow, where a specific target beats the plane's catch-all.
-    const FARM_MAIL_R = 0.12;
+    // How far a finger may miss any fixed farm target and still hit it, in REAL
+    // pixels — see farmPickTarget in room-farm.js for why not normalized units.
+    const FARM_TAP_REACH_PX = 44;
 
     /* ── Scene vertical budget (fractions of canvas height) ──
        Single source of truth for the horizon and the animal band. The whole
@@ -2069,6 +2068,33 @@
     // first so any overlap resolves to the hut.
     function _workshopPos(slot) { return { x: 0.22 + slot * 0.11, y: FARM_HUT_Y }; }
 
+    // Which fixed target a tap in the farm's upper half lands on: an owned
+    // machine hut's id, '#cart' for the merchant plane, '#mail' for the mailbox,
+    // or null. Split out of the click handler so the geometry is testable —
+    // see room-farm-hit.test.js.
+    //
+    // One nearest-wins pass in real pixels, NOT a priority chain of normalized
+    // circles. The chain used to check huts first with a 0.13 "radius" which on
+    // a phone is a 47×68px ellipse — tall enough to reach up into the sky and
+    // swallow every tap meant for the plane, banner included.
+    function _farmSkyTarget(cx, cy, W, H) {
+      const targets = [];
+      if (viewingUid === currentUid) {
+        targets.push(Object.assign({ id: '#cart' },
+          farmCartTapRect(_farmCartPos(W), _farmCartSize(W, H), W, H, _farmCart().present)));
+        const mp = _farmMailPos(W, H);
+        targets.push({ id: '#mail', x: mp.x, y: mp.y });
+      }
+      const owned = roomData.farmMachines || {};
+      FARM_MACHINES.forEach(function (m, slot) {
+        if (owned[m.id] && owned[m.id].owned) {
+          const p = _workshopPos(slot);
+          targets.push({ id: m.id, x: p.x, y: p.y });
+        }
+      });
+      return farmPickTarget({ x: cx, y: cy }, W, H, targets, FARM_TAP_REACH_PX);
+    }
+
     // Zones animals must not walk into: owned machine huts. (The merchant is now
     // an aeroplane that hovers in the sky, so it no longer blocks the pasture.)
     function _farmBlockedZones() {
@@ -3321,10 +3347,11 @@
           const p = pos(e);
           let tip = '';
           const _twh = _farmWH();
-          const _mpH = _farmMailPos(_twh.W, _twh.H);
           if (Math.hypot(p.x - FARM_TROUGH_X, p.y - _farmTroughY(_twh.W, _twh.H)) < 0.08) {
             tip = '🌾 Food  ' + Math.floor(roomData.farmFood || 0) + ' / ' + farmFoodMax();
-          } else if (Math.hypot(p.x - _mpH.x, p.y - _mpH.y) < FARM_MAIL_R) {
+            // Ask the same resolver the tap uses, so the cursor never promises a
+            // mailbox that a click would hand to a hut (or the plane).
+          } else if (_farmSkyTarget(p.x, p.y, _twh.W, _twh.H) === '#mail') {
             const _mn = _farmInboxCount();
             tip = _mn ? '📮 信箱 — ' + _mn + ' 份未领取' : '📮 信箱 — 空的';
           } else {
@@ -3396,31 +3423,11 @@
         const cx = (e.clientX - rect.left) / rect.width;
         const cy = (e.clientY - rect.top) / rect.height;
 
-        // Machine huts FIRST (their specific targets must win over the cart's big
-        // zone) — nearest owned hut within a finger-friendly radius. Picks the
-        // NEAREST owned hut, so a generous radius can't cause mis-selection.
-        const _wm = roomData.farmMachines || {};
-        let _hi = -1, _hd = 0.13;
-        for (let _s = 0; _s < FARM_MACHINES.length; _s++) {
-          const _mm = FARM_MACHINES[_s];
-          if (_wm[_mm.id] && _wm[_mm.id].owned) {
-            const _p = _workshopPos(_s);
-            const _d = Math.hypot(_p.x - cx, _p.y - cy);
-            if (_d < _hd) { _hd = _d; _hi = _s; }
-          }
-        }
-        if (_hi >= 0) { openMachineModal(FARM_MACHINES[_hi].id); return; }
-
-        // 📮 Mailbox — also before the plane, whose 0.18 catch-all zone reaches
-        // it on a wide stage. Its own radius is tight, so the plane still gets
-        // every tap that isn't actually on the mailbox.
-        const _mp = _farmMailPos(rect.width, rect.height);
-        if (Math.hypot(_mp.x - cx, _mp.y - cy) < FARM_MAIL_R) { openFarmInbox(); return; }
-
-        // Sky plane / away cloud: big tap zone covering the plane AND its trailing
-        // "Tap to sell!" banner (which streams out to the left of the body).
-        const _cartAt = _farmCartPos(rect.width);
-        if (Math.hypot(_cartAt.x - cx, _cartAt.y - cy) < 0.18) { openCartSheet(); return; }
+        // Everything fixed in the upper half of the farm — huts, mailbox, plane.
+        const _hit = _farmSkyTarget(cx, cy, rect.width, rect.height);
+        if (_hit === '#cart') { openCartSheet(); return; }
+        if (_hit === '#mail') { openFarmInbox(); return; }
+        if (_hit) { openMachineModal(_hit); return; }
         closeCartSheet();   // tapping elsewhere on the farm dismisses the sheet
 
         // Garden strip: any tap picks the nearest plot OR signboard, then acts on

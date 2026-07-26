@@ -169,6 +169,56 @@
     return Math.max(0, Math.min(Math.floor(foodMax - foodStock), Math.floor(coins / costPerUnit)));
   }
 
+  /* ── Canvas hit-testing ──
+     Normalized distance is meaningless on a canvas that isn't square: on a
+     360×520 phone stage, 0.13 of the width is 47px but 0.13 of the height is
+     68px, so a "circular" zone is really an ellipse half again as tall as it
+     is wide. Every fixed farm target is therefore measured in REAL PIXELS. */
+
+  // Nearest fixed target to a tap.
+  //   tap     : {x, y} normalized (0..1) canvas coords
+  //   W, H    : canvas size in px
+  //   targets : [{ id, x, y }] point targets, and/or [{ id, x0, y0, x1, y1 }]
+  //             rect targets (distance 0 anywhere inside)
+  //   reachPx : how far a finger may miss and still count
+  // NEAREST wins rather than first-listed, so a generous reach can never let
+  // one target quietly swallow a tap that plainly belongs to its neighbour.
+  function farmPickTarget(tap, W, H, targets, reachPx) {
+    let best = null, bestD = Infinity;
+    for (const t of targets || []) {
+      if (!t) continue;
+      let dx, dy;
+      if (t.x0 != null) {                              // rect: 0 inside, edge distance outside
+        dx = Math.max(t.x0 - tap.x, 0, tap.x - t.x1) * W;
+        dy = Math.max(t.y0 - tap.y, 0, tap.y - t.y1) * H;
+      } else {
+        dx = (t.x - tap.x) * W;
+        dy = (t.y - tap.y) * H;
+      }
+      const d = Math.hypot(dx, dy);
+      if (d < bestD) { bestD = d; best = t; }
+    }
+    return best && bestD <= (reachPx != null ? reachPx : Infinity) ? best.id : null;
+  }
+
+  // The merchant plane's tap target, as a normalized rect covering what it
+  // actually DRAWS. Its "Tap to sell!" banner streams out to the LEFT of the
+  // body — as far as 1.72 sprite widths — so a circle around the body leaves
+  // the one element that says "tap me" outside the target, and on a narrow
+  // stage that gap sits right on top of the workshop huts.
+  //   pos     : {x, y} normalized centre        s : sprite size in px
+  //   present : the plane (banner + body) vs the smaller "away" cloud
+  // The vertical padding also absorbs the hover bob (±0.08 s) and banner flap.
+  function farmCartTapRect(pos, s, W, H, present) {
+    const cx = pos.x * W, cy = pos.y * H;
+    const a = present ? s : s * 0.84;
+    const left = present ? s * 1.72 : a * 0.62;   // banner tail ← → propeller tip
+    const right = present ? s * 0.75 : a * 0.62;
+    const up = present ? s * 0.45 : a * 0.5;
+    const down = present ? s * 0.45 : a * 0.6;
+    return { x0: (cx - left) / W, x1: (cx + right) / W, y0: (cy - up) / H, y1: (cy + down) / H };
+  }
+
   /* ── Social layer: visitor inbox + weekly boards ──
      Visitors drop items into the farm owner's inbox (a cheer, a watering, a
      scoop of feed, a gift). The owner claims the batch when they next open the
@@ -274,5 +324,6 @@
   }
 
   return { farmCycleMs, animalLevel, cropProgress, generateFarmOrders, farmSellAllValue, planFarmTick, farmRefillUnits, farmRowCount, farmRowIndices, farmRowState, farmAffordableCount,
+           farmPickTarget, farmCartTapRect,
            farmDayKey, farmWeekIdFor, farmHelpAllowance, farmInboxEffects, farmWeekBump, farmWeekScore, farmWeekWinners };
 });
