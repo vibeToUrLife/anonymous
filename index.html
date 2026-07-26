@@ -4,7 +4,7 @@
   <script src="src/js/maintenance.js"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Anonymous Bubble Answers</title>
+  <title data-i18n>Anonymous Bubble Answers</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
   <link rel="stylesheet" href="./src/css/style.css?v=16">
   <link rel="stylesheet" href="./src/css/interactive.css?v=33">
@@ -931,7 +931,7 @@
     }
   </style>
 </head>
-<body>
+<body data-i18n>
   <!-- Apply theme before first paint (default = light) to avoid a flash.
        Sets data-theme on <html> for the token system; keeps body.light-theme
        in sync for legacy corkboard rules still present during the migration. -->
@@ -942,9 +942,9 @@
   <div class="access-gate hidden" id="accessGate">
     <div class="access-gate-box">
       <div class="access-gate-icon">🔑</div>
-      <h2>Enter Access Code</h2>
-      <p>This site requires an access code to enter.</p>
-      <input type="password" class="access-code-input" id="accessCodeInput" placeholder="Enter code…" autocomplete="off">
+      <h2 data-i18n>Enter Access Code</h2>
+      <p data-i18n>This site requires an access code to enter.</p>
+      <input type="password" class="access-code-input" id="accessCodeInput" data-i18n-placeholder placeholder="Enter code…" autocomplete="off">
       <button class="access-enter-btn" id="accessEnterBtn">Enter</button>
       <div class="access-error" id="accessError"></div>
     </div>
@@ -954,8 +954,8 @@
   <div class="login-overlay loading" id="loginOverlay">
     <div class="login-box">
       <div class="login-icon">🔒</div>
-      <h2>Welcome</h2>
-      <p>Sign in with Google to continue.<br>Everything stays anonymous — your identity is never shown.</p>
+      <h2 data-i18n>Welcome</h2>
+      <p data-i18n>Sign in with Google to continue.<br>Everything stays anonymous — your identity is never shown.</p>
       <button class="google-login-btn" id="googleLoginBtn">
         <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59a14.5 14.5 0 0 1 0-9.18l-7.98-6.19a24.0 24.0 0 0 0 0 21.56l7.98-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
         Sign in with Google
@@ -968,10 +968,10 @@
   <div class="app-content" id="appContent">
 
   <!-- Sidebar toggle -->
-  <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle menu">&#9776;</button>
+  <button class="sidebar-toggle" id="sidebarToggle" data-i18n-aria-label aria-label="Toggle menu">&#9776;</button>
 
   <!-- Settings gear -->
-  <button class="settings-btn" id="settingsBtn" title="Settings">
+  <button class="settings-btn" id="settingsBtn" data-i18n-title title="Settings">
     ⚙️
     <span class="notif-badge" id="notifBadge">0</span>
   </button>
@@ -983,8 +983,8 @@
       <div class="settings-section">
         <div class="settings-label" data-i18n>Minigame Display Name</div>
         <div class="settings-name-row">
-          <input type="text" id="settingsNameInput" placeholder="Your name" maxlength="20">
-          <button id="settingsNameSaveBtn">Save</button>
+          <input type="text" id="settingsNameInput" data-i18n-placeholder placeholder="Your name" maxlength="20">
+          <button id="settingsNameSaveBtn" data-i18n>Save</button>
         </div>
         <div class="settings-status" id="settingsNameStatus"></div>
       </div>
@@ -1028,8 +1028,8 @@
         <div class="settings-label" data-i18n>Font Size</div>
         <div class="settings-select" id="fontSizeSelect">
           <button data-size="small">Small</button>
-          <button data-size="medium">Medium</button>
-          <button data-size="large">Large</button>
+          <button data-size="medium" data-i18n>Medium</button>
+          <button data-size="large" data-i18n>Large</button>
         </div>
       </div>
       <hr class="settings-divider">
@@ -1066,30 +1066,30 @@
       <hr class="settings-divider">
       <div class="settings-section">
         <div class="settings-label" data-i18n>Data</div>
-        <button class="settings-cache-btn" id="clearCacheBtn">🗑️ Clear Local Cache</button>
+        <button class="settings-cache-btn" id="clearCacheBtn" data-i18n>🗑️ Clear Local Cache</button>
       </div>
 
       <!-- Developer-only: What's New editor (hidden for regular users) -->
       <hr class="settings-divider" id="wnEditorDivider" style="display:none">
       <div class="settings-section" id="wnEditorSection" style="display:none">
-        <div class="settings-label">📣 What's New Editor <span style="font-size:10px;opacity:0.5">(dev only)</span></div>
+        <div class="settings-label" data-i18n>📣 What's New Editor <span style="font-size:10px;opacity:0.5">(dev only)</span></div>
         <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
-          <input type="text" class="wn-editor-input" id="wnVersionInput" placeholder="Version key e.g. v3" maxlength="20">
-          <div class="wn-editor-hint">Bump the version to make all users see the popup again.</div>
-          <input type="text" class="wn-editor-input" id="wnBadgeInput" placeholder="Badge text e.g. 🆕 What's New" maxlength="60">
-          <textarea class="wn-editor-textarea" id="wnItemsInput" placeholder="One update item per line (plain text or HTML)&#10;e.g. 💬 &lt;strong&gt;New feature&lt;/strong&gt; — description here."></textarea>
-          <div class="wn-editor-hint">Each line becomes one bullet in the popup.</div>
-          <input type="text" class="wn-editor-input" id="wnUrlInput" placeholder="可选：介绍页 URL（如 ./whats-new/2026-07.html）">
+          <input type="text" class="wn-editor-input" id="wnVersionInput" data-i18n-placeholder placeholder="Version key e.g. v3" maxlength="20">
+          <div class="wn-editor-hint" data-i18n>Bump the version to make all users see the popup again.</div>
+          <input type="text" class="wn-editor-input" id="wnBadgeInput" data-i18n-placeholder placeholder="Badge text e.g. 🆕 What's New" maxlength="60">
+          <textarea class="wn-editor-textarea" id="wnItemsInput" data-i18n-placeholder placeholder="One update item per line (plain text or HTML)&#10;e.g. 💬 &lt;strong&gt;New feature&lt;/strong&gt; — description here."></textarea>
+          <div class="wn-editor-hint" data-i18n>Each line becomes one bullet in the popup.</div>
+          <input type="text" class="wn-editor-input" id="wnUrlInput" data-i18n-placeholder placeholder="可选：介绍页 URL（如 ./whats-new/2026-07.html）">
           <div class="wn-editor-hint">填了 URL 就改为「首次访问弹出这个 HTML 页面」（用 iframe，一次性）；留空则用上面的条目列表。</div>
-          <button class="wn-editor-save" id="wnSaveBtn">💾 Save &amp; Publish</button>
+          <button class="wn-editor-save" id="wnSaveBtn" data-i18n>💾 Save &amp; Publish</button>
           <div class="wn-editor-status" id="wnEditorStatus"></div>
         </div>
       </div>
 
       <hr class="settings-divider">
       <button class="settings-logout-btn" id="settingsLogoutBtn">🚶 Sign Out</button>
-      <button class="settings-close-btn" id="settingsCloseBtn">Close</button>
-      <div class="settings-about">
+      <button class="settings-close-btn" id="settingsCloseBtn" data-i18n>Close</button>
+      <div class="settings-about" data-i18n>
         Anonymous Bubble Answers v1.0<br>Made with MIS team
       </div>
     </div>
@@ -1106,39 +1106,39 @@
 
     <!-- Countdown timer -->
     <div class="sidebar-section">
-      <h3>&#9203; Countdown to Off Work</h3>
+      <h3 data-i18n>&#9203; Countdown to Off Work</h3>
       <div class="countdown-input-row">
         <input type="time" id="countdownTime" value="18:00">
-        <button id="countdownSetBtn">Set</button>
+        <button id="countdownSetBtn" data-i18n>Set</button>
       </div>
       <div class="countdown-display" id="countdownDisplay">
         <div class="countdown-digits" id="countdownDigits">--:--:--</div>
         <div class="countdown-label" id="countdownLabel">Loading…</div>
       </div>
-      <button class="countdown-clear" id="countdownClear">&#128260; Clear countdown</button>
-      <div class="countdown-schedule">Default: Mon–Fri, 9 AM → 12:30 PM | 2 PM → 6 PM</div>
+      <button class="countdown-clear" id="countdownClear" data-i18n>&#128260; Clear countdown</button>
+      <div class="countdown-schedule" data-i18n>Default: Mon–Fri, 9 AM → 12:30 PM | 2 PM → 6 PM</div>
     </div>
 
     <!-- Food & Vote section (combined, collapsible) -->
     <div class="sidebar-section">
       <h3 class="collapse-toggle" id="foodVoteToggle" style="cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;margin:-16px -18px 12px;border-radius:12px;background:rgba(255,255,255,0.06);transition:background 0.2s">
-        <span>&#127860; Food &amp; Vote</span>
+        <span data-i18n>&#127860; Food &amp; Vote</span>
         <span class="collapse-arrow" id="foodVoteArrow" style="font-size:10px;transition:transform 0.25s;color:rgba(255,255,255,0.5)">&#9660;</span>
       </h3>
       <div id="foodVoteBody">
         <!-- Add food -->
         <div class="food-input-row" style="margin-bottom:12px">
-          <input type="text" id="foodInput" placeholder="e.g. Nasi Lemak" maxlength="100">
+          <input type="text" id="foodInput" data-i18n-placeholder placeholder="e.g. Nasi Lemak" maxlength="100">
           <button id="addFoodBtn">+</button>
         </div>
 
         <!-- Random pick -->
-        <button class="random-btn" id="randomBtn" style="margin-bottom:8px">&#127922; Spin &amp; Decide!</button>
-        <div class="random-result" id="randomResult">Press the button!</div>
+        <button class="random-btn" id="randomBtn" style="margin-bottom:8px" data-i18n>&#127922; Spin &amp; Decide!</button>
+        <div class="random-result" id="randomResult" data-i18n>Press the button!</div>
         <div class="spin-actions" id="spinActions">
           <button class="remove-btn" id="spinRemoveBtn">&#10060; Remove from spin</button>
         </div>
-        <button class="restore-btn" id="restoreBtn">&#128260; Restore removed food</button>
+        <button class="restore-btn" id="restoreBtn" data-i18n>&#128260; Restore removed food</button>
 
         <!-- Vote list -->
         <div class="reset-info" id="resetInfo" style="margin-top:12px"></div>
@@ -1155,21 +1155,21 @@
           <span class="game-card-emoji">🏠</span>
           <div>
             <div class="game-card-title">My Room</div>
-            <div class="game-card-sub">Pets, plants & decor</div>
+            <div class="game-card-sub" data-i18n>Pets, plants & decor</div>
           </div>
         </a>
         <a href="./games/room.html?view=farm" class="game-card">
           <span class="game-card-emoji">🚜</span>
           <div>
             <div class="game-card-title">My Farm</div>
-            <div class="game-card-sub">Animals, crops & coins</div>
+            <div class="game-card-sub" data-i18n>Animals, crops & coins</div>
           </div>
         </a>
         <a href="./games/room.html?view=aquarium" class="game-card">
           <span class="game-card-emoji" style="background:var(--primary-tint)">🐠</span>
           <div>
             <div class="game-card-title">My Aquarium</div>
-            <div class="game-card-sub">Your Fishing collection</div>
+            <div class="game-card-sub" data-i18n>Your Fishing collection</div>
           </div>
         </a>
       </div>
@@ -1178,7 +1178,7 @@
     <!-- Mini Games section (collapsible) -->
     <div class="sidebar-section">
       <h3 class="collapse-toggle" id="miniGamesToggle" style="cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;margin:-16px -18px 12px;border-radius:12px;background:rgba(255,255,255,0.06);transition:background 0.2s">
-        <span>&#127918; Mini Games</span>
+        <span data-i18n>&#127918; Mini Games</span>
         <span class="collapse-arrow" id="miniGamesArrow" style="font-size:10px;transition:transform 0.25s;color:rgba(255,255,255,0.5)">&#9660;</span>
       </h3>
       <div id="miniGamesBody">
@@ -1187,63 +1187,63 @@
             <span class="game-card-emoji">🐦</span>
             <div>
               <div class="game-card-title">Flappy Bird</div>
-              <div class="game-card-sub">Tap to fly — beat the high score!</div>
+              <div class="game-card-sub" data-i18n>Tap to fly — beat the high score!</div>
             </div>
           </a>
           <a href="./games/tetris.html" class="game-card">
             <span class="game-card-emoji">🧱</span>
             <div>
               <div class="game-card-title">Tetris</div>
-              <div class="game-card-sub">Clear lines, earn coins, chain combos!</div>
+              <div class="game-card-sub" data-i18n>Clear lines, earn coins, chain combos!</div>
             </div>
           </a>
           <a href="./games/chinese-chess.html" class="game-card">
             <span class="game-card-emoji">♟️</span>
             <div>
               <div class="game-card-title">中國象棋</div>
-              <div class="game-card-sub">Challenge friends — bet coins & play!</div>
+              <div class="game-card-sub" data-i18n>Challenge friends — bet coins & play!</div>
             </div>
           </a>
           <a href="./games/snake.html" class="game-card">
             <span class="game-card-emoji">🐍</span>
             <div>
               <div class="game-card-title">贪吃蛇</div>
-              <div class="game-card-sub">Eat, grow, survive — earn coins!</div>
+              <div class="game-card-sub" data-i18n>Eat, grow, survive — earn coins!</div>
             </div>
           </a>
           <a href="./games/block-blast.html" class="game-card">
             <span class="game-card-emoji">🧩</span>
             <div>
               <div class="game-card-title">Block Blast</div>
-              <div class="game-card-sub">Fill rows & columns — combo for coins!</div>
+              <div class="game-card-sub" data-i18n>Fill rows & columns — combo for coins!</div>
             </div>
           </a>
           <a href="./games/2048.html" class="game-card">
             <span class="game-card-emoji">🔢</span>
             <div>
               <div class="game-card-title">2048</div>
-              <div class="game-card-sub">Swipe & merge tiles to 2048!</div>
+              <div class="game-card-sub" data-i18n>Swipe & merge tiles to 2048!</div>
             </div>
           </a>
           <a href="./games/fishing.html" class="game-card">
             <span class="game-card-emoji">🎣</span>
             <div>
               <div class="game-card-title">Fishing</div>
-              <div class="game-card-sub">Cast your line — catch fish for coins!</div>
+              <div class="game-card-sub" data-i18n>Cast your line — catch fish for coins!</div>
             </div>
           </a>
           <a href="./games/toto.html" class="game-card">
             <span class="game-card-emoji">🎱</span>
             <div>
               <div class="game-card-title">TOTO Lottery</div>
-              <div class="game-card-sub">Daily 4-digit draw — bet coins, win big!</div>
+              <div class="game-card-sub" data-i18n>Daily 4-digit draw — bet coins, win big!</div>
             </div>
           </a>
           <a href="./games/subway-dash.html" class="game-card">
             <span class="game-card-emoji">🚇</span>
             <div>
               <div class="game-card-title">Subway Dash</div>
-              <div class="game-card-sub">Run, jump &amp; roll — dodge the trains!</div>
+              <div class="game-card-sub" data-i18n>Run, jump &amp; roll — dodge the trains!</div>
             </div>
           </a>
         </div>
@@ -1257,10 +1257,10 @@
   <div class="cd-bubble hidden" id="countdownBubble" role="status" aria-live="polite">
     <span class="cd-bubble-emoji" id="cdBubbleEmoji">🏃</span>
     <span class="cd-bubble-body">
-      <span class="cd-bubble-line1"><span id="cdBubbleLabel">Off work in</span> <b class="cd-bubble-time" id="cdBubbleTime">29:45</b></span>
-      <span class="cd-bubble-at" id="cdBubbleAt">at 6:00 PM</span>
+      <span class="cd-bubble-line1"><span id="cdBubbleLabel" data-i18n>Off work in</span> <b class="cd-bubble-time" id="cdBubbleTime">29:45</b></span>
+      <span class="cd-bubble-at" id="cdBubbleAt" data-i18n>at 6:00 PM</span>
     </span>
-    <button class="cd-bubble-close" id="cdBubbleClose" aria-label="Dismiss">✕</button>
+    <button class="cd-bubble-close" id="cdBubbleClose" data-i18n-aria-label aria-label="Dismiss">✕</button>
   </div>
 
   <!-- Floating "N new" pill — points you to new bubbles/replies that arrive while you're looking -->
@@ -1280,23 +1280,23 @@
       <rect class="logo-dot" x="16" y="12" width="4" height="4" fill="#7b5ea7"/>
       <rect class="logo-dot" x="24" y="12" width="4" height="4" fill="#7b5ea7"/>
     </svg>
-    <h1 class="page-title">Anonymous Bubble Answers</h1>
+    <h1 class="page-title" data-i18n>Anonymous Bubble Answers</h1>
   </div>
-  <p class="page-subtitle">Answers disappear after 6 hours &#8987;</p>
+  <p class="page-subtitle" data-i18n>Answers disappear after 6 hours &#8987;</p>
 
   <!-- Pinned upcoming-event sticky notes (便利贴). Anyone signed in can pin an
        event; a note auto-disappears 8h after its time. (upcoming-events.js) -->
   <div class="ue-board" id="ueBoard">
     <div class="ue-head">
-      <span class="ue-head-title">📌 Upcoming Events</span>
-      <button class="ue-add-btn" id="ueAddBtn" type="button">+ Pin event</button>
+      <span class="ue-head-title" data-i18n>📌 Upcoming Events</span>
+      <button class="ue-add-btn" id="ueAddBtn" type="button" data-i18n>+ Pin event</button>
     </div>
     <div class="ue-form hidden" id="ueForm">
-      <textarea class="ue-input ue-textarea" id="ueTitle" placeholder="Type your message — press Enter for a new line&#10;e.g.&#10;25/07/2026 6.30pm&#10;Marjorie Hotel, Penang&#10;Birthday Event" maxlength="300" rows="3"></textarea>
+      <textarea class="ue-input ue-textarea" id="ueTitle" data-i18n-placeholder placeholder="Type your message — press Enter for a new line&#10;e.g.&#10;25/07/2026 6.30pm&#10;Marjorie Hotel, Penang&#10;Birthday Event" maxlength="300" rows="3"></textarea>
       <input type="datetime-local" class="ue-input ue-datetime" id="ueWhen">
       <div class="ue-form-actions">
-        <button class="ue-pin-btn" id="ueSaveBtn" type="button">📌 Pin it</button>
-        <button class="ue-cancel-btn" id="ueCancelBtn" type="button">Cancel</button>
+        <button class="ue-pin-btn" id="ueSaveBtn" type="button" data-i18n>📌 Pin it</button>
+        <button class="ue-cancel-btn" id="ueCancelBtn" type="button" data-i18n>Cancel</button>
       </div>
     </div>
     <div class="ue-notes" id="ueNotes"></div>
@@ -1306,24 +1306,24 @@
        Count driven by presence.js; the 摸鱼 clock ticks in stay-ranking.js. -->
   <div class="live-bar" id="liveBar">
     <span class="live-score" id="liveScore">
-      <span class="live-score-seg" id="livePresence" title="现在在线人数">
+      <span class="live-score-seg" id="livePresence" data-i18n-title title="现在在线人数">
         <span class="live-score-blink" aria-hidden="true"></span>
-        <span class="live-score-lb">在线</span>
+        <span class="live-score-lb" data-i18n>在线</span>
         <b class="live-score-val" id="liveOnlineCount">1</b>
       </span>
-      <span class="live-score-seg fish" id="myStayTime" title="你在本站的总摸鱼时长（聊天板 + 游戏 + 房间 + 农场 + 水族馆 + Pet World）" hidden>
+      <span class="live-score-seg fish" id="myStayTime" data-i18n-title title="你在本站的总摸鱼时长（聊天板 + 游戏 + 房间 + 农场 + 水族馆 + Pet World）" hidden>
         <span class="live-score-lb" id="myStayLbl">摸鱼</span>
         <span class="live-score-val" id="myStayTimeVal">…</span>
       </span>
-      <span class="live-score-seg rank" id="myRankSeg" title="你在摸鱼榜的名次" hidden>
+      <span class="live-score-seg rank" id="myRankSeg" data-i18n-title title="你在摸鱼榜的名次" hidden>
         <span class="live-score-lb">排名</span>
         <span class="live-score-val" id="myRankVal">#—</span>
       </span>
-      <span class="live-score-seg today" id="todaySeg" title="全站今天新发的泡泡数">
+      <span class="live-score-seg today" id="todaySeg" data-i18n-title title="全站今天新发的泡泡数">
         <span class="live-score-lb">今日</span>
         <span class="live-score-val" id="todayVal">…</span>
       </span>
-      <span class="live-score-seg peak" id="peakSeg" title="今天你看到的最高同时在线人数">
+      <span class="live-score-seg peak" id="peakSeg" data-i18n-title title="今天你看到的最高同时在线人数">
         <span class="live-score-lb">峰值</span>
         <span class="live-score-val" id="peakVal">1</span>
       </span>
@@ -1336,28 +1336,28 @@
   <!-- Feature launcher: surfaces the mini-features as labelled tiles so users can see they
        exist. Buttons keep their original ids/handlers; feature-flags.js still hides by id. -->
   <div class="feature-launcher" id="featureLauncher">
-    <div class="feature-launcher-hd">✨ 更多玩法 <span class="rule"></span><span class="hint">点开试试</span></div>
+    <div class="feature-launcher-hd">✨ 更多玩法 <span class="rule"></span><span class="hint" data-i18n>点开试试</span></div>
     <div class="feat-grid">
-      <button class="feat-tile" id="jarToggle" type="button" title="泡泡罐 — 收藏过的留言" style="--tint: rgba(94,234,212,.18)">
-        <span class="feat-ic">🏺</span><span class="feat-lb">泡泡罐</span><span class="feat-sub">收藏的留言</span>
+      <button class="feat-tile" id="jarToggle" type="button" data-i18n-title title="泡泡罐 — 收藏过的留言" style="--tint: rgba(94,234,212,.18)">
+        <span class="feat-ic">🏺</span><span class="feat-lb" data-i18n>泡泡罐</span><span class="feat-sub" data-i18n>收藏的留言</span>
       </button>
-      <button class="feat-tile" id="wallToggle" type="button" title="涂鸦墙 — 在留言板背景上画画，大家都看得到" style="--tint: rgba(249,168,212,.20)">
-        <span class="feat-new">NEW</span><span class="feat-ic">✏️</span><span class="feat-lb">涂鸦墙</span><span class="feat-sub">一起画画</span>
+      <button class="feat-tile" id="wallToggle" type="button" data-i18n-title title="涂鸦墙 — 在留言板背景上画画，大家都看得到" style="--tint: rgba(249,168,212,.20)">
+        <span class="feat-new">NEW</span><span class="feat-ic">✏️</span><span class="feat-lb" data-i18n>涂鸦墙</span><span class="feat-sub" data-i18n>一起画画</span>
       </button>
-      <button class="feat-tile" id="coinCenterBtn" type="button" title="金币乐园 — 商店 / 扭蛋 / 老虎机" style="--tint: rgba(252,211,77,.20)">
-        <span class="feat-ic">🎰</span><span class="feat-lb">金币乐园</span><span class="feat-sub">商店/扭蛋</span>
+      <button class="feat-tile" id="coinCenterBtn" type="button" data-i18n-title title="金币乐园 — 商店 / 扭蛋 / 老虎机" style="--tint: rgba(252,211,77,.20)">
+        <span class="feat-ic">🎰</span><span class="feat-lb" data-i18n>金币乐园</span><span class="feat-sub" data-i18n>商店/扭蛋</span>
       </button>
-      <button class="feat-tile" id="coinRankBtn" type="button" title="富豪榜 — 按当前金币排名" style="--tint: rgba(251,191,36,.20)">
-        <span class="feat-ic">🏆</span><span class="feat-lb">富豪榜</span><span class="feat-sub">金币排名</span>
+      <button class="feat-tile" id="coinRankBtn" type="button" data-i18n-title title="富豪榜 — 按当前金币排名" style="--tint: rgba(251,191,36,.20)">
+        <span class="feat-ic">🏆</span><span class="feat-lb" data-i18n>富豪榜</span><span class="feat-sub" data-i18n>金币排名</span>
       </button>
-      <button class="feat-tile" id="stayRankBtn" type="button" title="摸鱼榜 — 按总摸鱼时长排名" style="--tint: rgba(125,211,252,.20)">
-        <span class="feat-ic">🐟</span><span class="feat-lb">摸鱼榜</span><span class="feat-sub">时长排名</span>
+      <button class="feat-tile" id="stayRankBtn" type="button" data-i18n-title title="摸鱼榜 — 按总摸鱼时长排名" style="--tint: rgba(125,211,252,.20)">
+        <span class="feat-ic">🐟</span><span class="feat-lb" data-i18n>摸鱼榜</span><span class="feat-sub" data-i18n>时长排名</span>
       </button>
-      <button class="feat-tile" id="holidayListBtn" type="button" title="假期列表 — 法定节假日放假倒数，摸鱼必备" style="--tint: rgba(251,146,60,.20)">
-        <span class="feat-new">NEW</span><span class="feat-ic">🏖️</span><span class="feat-lb">假期列表</span><span class="feat-sub">放假倒数</span>
+      <button class="feat-tile" id="holidayListBtn" type="button" data-i18n-title title="假期列表 — 法定节假日放假倒数，摸鱼必备" style="--tint: rgba(251,146,60,.20)">
+        <span class="feat-new">NEW</span><span class="feat-ic">🏖️</span><span class="feat-lb" data-i18n>假期列表</span><span class="feat-sub" data-i18n>放假倒数</span>
       </button>
-      <button class="feat-tile" id="horseRaceBtn" type="button" title="赛马 — 写下选项让马来决定，全站实时一起围观" style="--tint: rgba(134,239,172,.20)">
-        <span class="feat-new">NEW</span><span class="feat-ic">🏇</span><span class="feat-lb">赛马</span><span class="feat-sub">万能决策</span>
+      <button class="feat-tile" id="horseRaceBtn" type="button" data-i18n-title title="赛马 — 写下选项让马来决定，全站实时一起围观" style="--tint: rgba(134,239,172,.20)">
+        <span class="feat-new">NEW</span><span class="feat-ic">🏇</span><span class="feat-lb" data-i18n>赛马</span><span class="feat-sub" data-i18n>万能决策</span>
       </button>
     </div>
   </div>
@@ -1367,21 +1367,21 @@
     <div class="daily-quote-label">🌟 每日正能量</div>
     <div class="daily-quote-text" id="dailyQuoteText"></div>
     <!-- Comment toggle -->
-    <button class="qc-toggle" id="quoteCommentToggle">
+    <button class="qc-toggle" id="quoteCommentToggle" data-i18n>
       💬 评论 <span id="quoteCommentArrow">▼</span>
     </button>
     <!-- Expandable comment section -->
     <div class="qc-section" id="quoteCommentSection">
       <div class="qc-list" id="quoteCommentList">
-        <div class="qc-empty">还没有评论，来抢沙发吧！</div>
+        <div class="qc-empty" data-i18n>还没有评论，来抢沙发吧！</div>
       </div>
       <div class="qc-input-row">
-        <input type="text" class="qc-input" id="quoteCommentInput" placeholder="说点什么…" maxlength="200" autocomplete="off">
-        <button class="qc-send" id="quoteCommentSendBtn">发送</button>
+        <input type="text" class="qc-input" id="quoteCommentInput" data-i18n-placeholder placeholder="说点什么…" maxlength="200" autocomplete="off">
+        <button class="qc-send" id="quoteCommentSendBtn" data-i18n>发送</button>
       </div>
       <label class="qc-anon-toggle" id="quoteCommentAnonLabel">
         <input type="checkbox" id="quoteCommentAnon" checked>
-        <span class="qc-anon-text">🕶️ 匿名</span>
+        <span class="qc-anon-text" data-i18n>🕶️ 匿名</span>
       </label>
       <div class="qc-toast" id="quoteCommentToast"></div>
     </div>
@@ -1394,15 +1394,15 @@
       <span class="cr-banner-line1" id="crBannerLabel">Coin Rush</span>
       <span class="cr-banner-sub" id="crBannerSub"></span>
     </span>
-    <button class="cr-banner-btn hidden" id="crBannerBtn" type="button">Join</button>
-    <button class="cr-banner-info" id="crBannerInfo" type="button" title="How to play" aria-label="How to play">i</button>
+    <button class="cr-banner-btn hidden" id="crBannerBtn" type="button" data-i18n>Join</button>
+    <button class="cr-banner-info" id="crBannerInfo" type="button" data-i18n-title title="How to play" data-i18n-aria-label aria-label="How to play">i</button>
   </div>
 
   <div class="bubble-wrap" id="bubbleWrap"></div>
 
   <div class="img-preview-strip" id="imgPreviewStrip">
     <img id="imgPreviewThumb" src="" alt="preview">
-    <button class="remove-preview" id="removePreview" title="Remove image">✕</button>
+    <button class="remove-preview" id="removePreview" data-i18n-title title="Remove image">✕</button>
   </div>
 
   <!-- Decorative walking pet (view-only). Animal is chosen in Settings → Walking Pet;
@@ -1412,17 +1412,17 @@
   </div>
 
   <div class="input-area">
-    <button class="attach-btn input-tool-toggle" id="inputToolToggle" type="button" title="Hide tools" aria-label="Toggle tools">&#8722;</button>
-    <button class="attach-btn" id="attachBtn" title="Attach image">📷</button>
-    <button class="gif-btn" id="gifBtn" title="Search GIFs">GIF</button>
+    <button class="attach-btn input-tool-toggle" id="inputToolToggle" type="button" data-i18n-title title="Hide tools" data-i18n-aria-label aria-label="Toggle tools">&#8722;</button>
+    <button class="attach-btn" id="attachBtn" data-i18n-title title="Attach image">📷</button>
+    <button class="gif-btn" id="gifBtn" data-i18n-title title="Search GIFs">GIF</button>
     <button class="poll-btn" id="pollBtn" title="Create a poll">📊</button>
-    <button class="poll-btn" id="doodleBtn" title="画个涂鸦">🎨</button>
+    <button class="poll-btn" id="doodleBtn" data-i18n-title title="画个涂鸦">🎨</button>
     <input type="file" id="imageInput" accept="image/*" style="display:none">
-    <textarea id="answerInput" placeholder="Type your anonymous answer…" maxlength="500"></textarea>
-    <button id="sendBtn">Send</button>
+    <textarea id="answerInput" data-i18n-placeholder placeholder="Type your anonymous answer…" maxlength="500"></textarea>
+    <button id="sendBtn" data-i18n>Send</button>
     <div class="ans-anon-toggle" id="ansCommentAnonLabel">
       <input type="checkbox" id="ansCommentAnon">
-      <span class="ans-anon-text">🕶️ 匿名</span>
+      <span class="ans-anon-text" data-i18n>🕶️ 匿名</span>
     </div>
   </div>
   <script>
@@ -1457,20 +1457,20 @@
       <input type="text" class="poll-option-input" placeholder="Option 1" maxlength="100">
       <input type="text" class="poll-option-input" placeholder="Option 2" maxlength="100">
     </div>
-    <button class="poll-add-option-btn" id="pollAddOptionBtn">+ Add option</button>
-    <button class="poll-submit-btn" id="pollSubmitBtn">📊 Post Poll</button>
+    <button class="poll-add-option-btn" id="pollAddOptionBtn" data-i18n>+ Add option</button>
+    <button class="poll-submit-btn" id="pollSubmitBtn" data-i18n>📊 Post Poll</button>
   </div>
 
   <div class="gif-picker" id="gifPicker">
     <div class="gif-picker-header">
-      <input type="text" id="gifSearchInput" placeholder="Search GIFs…">
-      <button class="gif-fav-btn" id="gifFavBtn" type="button" title="收藏的 GIF">⭐</button>
+      <input type="text" id="gifSearchInput" data-i18n-placeholder placeholder="Search GIFs…">
+      <button class="gif-fav-btn" id="gifFavBtn" type="button" data-i18n-title title="收藏的 GIF">⭐</button>
       <button class="gif-picker-close" id="gifPickerClose">✕</button>
     </div>
     <div class="gif-grid" id="gifGrid">
       <div class="gif-loading">Search for a GIF above</div>
     </div>
-    <div class="gif-attribution">Powered by GIPHY</div>
+    <div class="gif-attribution" data-i18n>Powered by GIPHY</div>
   </div>
 
   <div class="lightbox" id="lightbox">
@@ -1482,48 +1482,48 @@
   <div class="toast" id="toast"></div>
 
   <!-- Feedback Corner FAB -->
-  <a class="feedback-fab" id="feedbackFab" href="./games/feedback.html" title="Feedback Corner">💬</a>
+  <a class="feedback-fab" id="feedbackFab" href="./games/feedback.html" data-i18n-title title="Feedback Corner">💬</a>
 
   <!-- Daily 脑筋急转弯 (brain teaser) — button stacked above the feedback button -->
-  <button class="riddle-fab" id="riddleFab" title="每日脑筋急转弯 · 答对得100金币">🧠</button>
+  <button class="riddle-fab" id="riddleFab" data-i18n-title title="每日脑筋急转弯 · 答对得100金币">🧠</button>
   <div class="riddle-overlay" id="riddleOverlay">
     <div class="riddle-card">
-      <button class="riddle-close" id="riddleClose" title="关闭">✕</button>
-      <div class="riddle-head">🧠 每日脑筋急转弯</div>
+      <button class="riddle-close" id="riddleClose" data-i18n-title title="关闭">✕</button>
+      <div class="riddle-head" data-i18n>🧠 每日脑筋急转弯</div>
       <div class="riddle-q" id="riddleQ"></div>
       <div class="riddle-len" id="riddleLen"></div>
       <div class="riddle-hint" id="riddleHint" hidden></div>
-      <input class="riddle-input" id="riddleInput" type="text" maxlength="40" placeholder="输入你的答案…" autocomplete="off">
+      <input class="riddle-input" id="riddleInput" type="text" maxlength="40" data-i18n-placeholder placeholder="输入你的答案…" autocomplete="off">
       <div class="riddle-actions">
-        <button class="riddle-btn primary" id="riddleSubmit">提交</button>
-        <button class="riddle-btn" id="riddleHintBtn">💡 提示</button>
-        <button class="riddle-btn ghost" id="riddleRevealBtn">查看答案</button>
-        <button class="riddle-btn ghost" id="riddleRevealCancel" hidden>取消</button>
+        <button class="riddle-btn primary" id="riddleSubmit" data-i18n>提交</button>
+        <button class="riddle-btn" id="riddleHintBtn" data-i18n>💡 提示</button>
+        <button class="riddle-btn ghost" id="riddleRevealBtn" data-i18n>查看答案</button>
+        <button class="riddle-btn ghost" id="riddleRevealCancel" hidden data-i18n>取消</button>
       </div>
-      <div class="riddle-warn" id="riddleWarn" hidden>⚠️ 看答案会用掉今天的作答机会，拿不到 100 金币。</div>
+      <div class="riddle-warn" id="riddleWarn" hidden data-i18n>⚠️ 看答案会用掉今天的作答机会，拿不到 100 金币。</div>
       <div class="riddle-feedback" id="riddleFeedback"></div>
       <div class="riddle-answer" id="riddleAnswer" hidden></div>
-      <div class="riddle-reward" id="riddleReward">🪙 答对奖励 100 金币（每天一次）</div>
+      <div class="riddle-reward" id="riddleReward" data-i18n>🪙 答对奖励 100 金币（每天一次）</div>
       <div class="riddle-solvers" id="riddleSolvers" hidden></div>
       <div class="riddle-rank" id="riddleRank" hidden></div>
     </div>
   </div>
 
   <!-- Daily 成语接龙 (idiom chain) — button stacked above the riddle button -->
-  <button class="chengyu-fab" id="cjFab" title="每日成语接龙 · 答对一个得20金币">🐉</button>
+  <button class="chengyu-fab" id="cjFab" data-i18n-title title="每日成语接龙 · 答对一个得20金币">🐉</button>
   <div class="cj-overlay" id="cjOverlay">
     <div class="cj-card">
-      <button class="cj-close" id="cjClose" title="关闭">✕</button>
-      <div class="cj-head">🐉 每日成语接龙</div>
+      <button class="cj-close" id="cjClose" data-i18n-title title="关闭">✕</button>
+      <div class="cj-head" data-i18n>🐉 每日成语接龙</div>
       <div class="cj-next" id="cjNext"></div>
       <div class="cj-chain" id="cjChain"></div>
-      <input class="cj-input" id="cjInput" type="text" maxlength="8" placeholder="输入成语接龙…" autocomplete="off">
+      <input class="cj-input" id="cjInput" type="text" maxlength="8" data-i18n-placeholder placeholder="输入成语接龙…" autocomplete="off">
       <div class="cj-actions">
-        <button class="cj-btn primary" id="cjSubmit">接龙</button>
-        <button class="cj-btn ghost" id="cjReseed">卡住了，换开头</button>
+        <button class="cj-btn primary" id="cjSubmit" data-i18n>接龙</button>
+        <button class="cj-btn ghost" id="cjReseed" data-i18n>卡住了，换开头</button>
       </div>
       <div class="cj-feedback" id="cjFeedback"></div>
-      <div class="cj-reward">💰 答对一个成语 +20 金币</div>
+      <div class="cj-reward" data-i18n>💰 答对一个成语 +20 金币</div>
       <div class="cj-board" id="cjBoard"></div>
       <div class="cj-lb" id="cjRank"></div>
       <div class="cj-wrong" id="cjWrong"></div>
@@ -1531,10 +1531,10 @@
   </div>
 
   <!-- Mood Check-in Widget -->
-  <button class="mood-fab" id="moodFab" title="How are you feeling today?">😊</button>
+  <button class="mood-fab" id="moodFab" data-i18n-title title="How are you feeling today?">😊</button>
 
   <!-- Collapse / expand the corner action buttons (all themes) -->
-  <button class="fab-toggle" id="fabToggle" type="button" title="Collapse buttons" aria-label="Collapse buttons">&#709;</button>
+  <button class="fab-toggle" id="fabToggle" type="button" data-i18n-title title="Collapse buttons" data-i18n-aria-label aria-label="Collapse buttons">&#709;</button>
   <script>
     (function () {
       var t = document.getElementById('fabToggle');
@@ -1556,8 +1556,8 @@
     })();
   </script>
   <div class="mood-panel" id="moodPanel">
-    <button class="mood-panel-close" id="moodPanelClose" type="button" aria-label="Close">✕</button>
-    <h4>How are you feeling today?</h4>
+    <button class="mood-panel-close" id="moodPanelClose" type="button" data-i18n-aria-label aria-label="Close">✕</button>
+    <h4 data-i18n>How are you feeling today?</h4>
     <div id="moodCheckinArea">
       <div class="mood-emoji-row" id="moodEmojiRow">
         <button class="mood-emoji-btn" data-mood="great">😄</button>
@@ -1583,8 +1583,8 @@
     <div class="celebration-fx" id="celebrationFx"></div>
     <div class="celebration-card">
       <div class="celebration-emojis" id="celebrationEmojis"><span style="--i:0">🎉</span><span style="--i:1">🥳</span><span style="--i:2">🎊</span></div>
-      <div class="celebration-text" id="celebrationText">OFF WORK!</div>
-      <div class="celebration-sub" id="celebrationSub">Time to go home! You did great today 💪</div>
+      <div class="celebration-text" id="celebrationText" data-i18n>OFF WORK!</div>
+      <div class="celebration-sub" id="celebrationSub" data-i18n>Time to go home! You did great today 💪</div>
       <button class="celebration-close" id="celebrationClose">Let's go! 🎉</button>
     </div>
   </div>
@@ -1594,26 +1594,26 @@
     <div class="whats-new-box">
       <div class="whats-new-badge" id="whatsNewBadge"></div>
       <ul class="whats-new-list" id="whatsNewList"></ul>
-      <button class="whats-new-close" id="whatsNewClose">Got it! 👍</button>
+      <button class="whats-new-close" id="whatsNewClose" data-i18n>Got it! 👍</button>
     </div>
   </div>
 
   <!-- What's New (URL mode): a full HTML intro page shown once in an iframe -->
   <div class="wn-frame-overlay hidden" id="whatsNewFrame">
     <div class="wn-frame-box">
-      <button class="wn-frame-close" id="whatsNewFrameClose">✕ 关闭</button>
-      <iframe id="whatsNewIframe" title="有什么更新了" src="about:blank" referrerpolicy="no-referrer"></iframe>
+      <button class="wn-frame-close" id="whatsNewFrameClose" data-i18n>✕ 关闭</button>
+      <iframe id="whatsNewIframe" data-i18n-title title="有什么更新了" src="about:blank" referrerpolicy="no-referrer"></iframe>
     </div>
   </div>
 
   <!-- Full-page 8-bit pixel event reminder (filled & toggled by upcoming-events.js) -->
-  <div class="ue-reminder hidden" id="ueReminder" role="alertdialog" aria-live="assertive" title="Tap to close">
+  <div class="ue-reminder hidden" id="ueReminder" role="alertdialog" aria-live="assertive" data-i18n-title title="Tap to close">
     <div class="ue-reminder-box">
-      <div class="ue-reminder-flag">!! UPCOMING EVENT !!</div>
+      <div class="ue-reminder-flag" data-i18n>!! UPCOMING EVENT !!</div>
       <div class="ue-reminder-when" id="ueReminderWhen"></div>
       <div class="ue-reminder-title" id="ueReminderTitle"></div>
       <div class="ue-reminder-time" id="ueReminderTime"></div>
-      <div class="ue-reminder-press">&#9654; PRESS ANYWHERE TO CLOSE &#9664;</div>
+      <div class="ue-reminder-press" data-i18n>&#9654; PRESS ANYWHERE TO CLOSE &#9664;</div>
     </div>
   </div>
 
@@ -1628,7 +1628,7 @@
   <div class="spin-result-overlay hidden" id="spinResultOverlay">
     <div class="spin-result-box">
       <div class="spin-result-emoji">🎉</div>
-      <div class="spin-result-title">You got:</div>
+      <div class="spin-result-title" data-i18n>You got:</div>
       <div class="spin-result-food" id="spinResultFood"></div>
       <button class="spin-result-close" id="spinResultClose">OK!</button>
     </div>
@@ -1639,9 +1639,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-  <script src="./src/js/i18n.js?v=1"></script>
-  <script src="./src/js/i18n-zh-app.js?v=1"></script>
-  <script defer src="./src/js/i18n-ui.js?v=1"></script>
+  <script src="./src/js/i18n.js?v=2"></script>
+  <script src="./src/js/i18n-zh-app.js?v=2"></script>
+  <script defer src="./src/js/i18n-ui.js?v=2"></script>
   <script src="./src/js/firebase-config.js"></script>
   <script src="./src/js/daily-quotes.js?v=2"></script>
   <script src="./src/js/quote-comments.js"></script>

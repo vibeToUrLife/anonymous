@@ -81,6 +81,33 @@ test('Chinese ignores the plural distinction, as it should', () => {
   });
 });
 
+/* ── keys written in Chinese ── */
+
+// Some pages were authored in Chinese. There the KEY is Chinese: zh finds no
+// entry and returns it unchanged (right), and en translates it (also right).
+I.register('en', { '摸鱼': 'Slacking', '泡泡罐': 'Bubble Jar' });
+
+test('a Chinese key passes through untouched under zh', () => {
+  withLang('zh', () => {
+    assert.equal(I.t('摸鱼'), '摸鱼');
+    assert.equal(I.t('泡泡罐'), '泡泡罐');
+  });
+});
+
+test('a Chinese key is translated under en', () => {
+  withLang('en', () => {
+    assert.equal(I.t('摸鱼'), 'Slacking');
+    assert.equal(I.t('泡泡罐'), 'Bubble Jar');
+  });
+});
+
+test('an English key still returns itself under en, dictionary or not', () => {
+  withLang('en', () => {
+    assert.equal(I.t('Bigger pasture'), 'Bigger pasture');
+    assert.equal(I.t('Never translated anywhere'), 'Never translated anywhere');
+  });
+});
+
 /* ── the default ── */
 
 test('the default is Chinese, not the browser language', () => {

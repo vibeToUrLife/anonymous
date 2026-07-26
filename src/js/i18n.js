@@ -27,7 +27,12 @@
 
   const LANGS = ['en', 'zh'];
   const STORE_KEY = 'app_lang';
-  const dicts = { en: null, zh: {} };     // en: null — the key IS the English
+  // The key is normally the English source, so `en` needs no entries. It gets a
+  // dictionary anyway for the pages whose markup was WRITTEN in Chinese: there
+  // the key is Chinese, zh finds nothing and correctly returns it unchanged,
+  // while en looks it up and translates. So a key may be in either language and
+  // each dictionary only carries what isn't already in its own.
+  const dicts = { en: {}, zh: {} };
   let lang = null;
 
   // Chinese unless the reader has said otherwise. This app's readers are

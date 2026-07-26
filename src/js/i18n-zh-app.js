@@ -1,26 +1,202 @@
 /* ============================================================
-   Chinese for the board pages (index.html).
+   The board pages (index.html), both directions.
 
-   Keys are the English source text — see i18n.js. Only the settings
-   panel is covered so far; everything else on the board still renders
-   its own text and will fall back to English (or stay as the Chinese
-   it is already hardcoded in) until it is converted.
+   Most of this app's markup is English, so the key is the English and
+   the zh block translates it. But parts of index.html were WRITTEN in
+   Chinese — there the key is Chinese, zh finds nothing and correctly
+   returns it as-is, and the en block translates it. See src/js/i18n.js.
    ============================================================ */
 (function () {
   if (typeof I18N === 'undefined') return;
-  I18N.register('zh', {
 
-    /* ── Settings panel ── */
+  /* ── English keys → Chinese ── */
+  I18N.register('zh', {
+    // Gate & sign-in
+    'Anonymous Bubble Answers': '匿名泡泡留言板',
+    'Anonymous Bubble Answers v1.0': '匿名泡泡留言板 v1.0',
+    'Enter Access Code': '输入访问码',
+    'This site requires an access code to enter.': '进入本站需要访问码。',
+    'Enter code…': '输入访问码…',
+    'Enter': '进入',
+    'Welcome': '欢迎',
+    'Sign in with Google to continue.': '用 Google 账号登录后继续。',
+
+    // Settings
+    'Settings': '设置',
     'Language': '语言',
     'Minigame Display Name': '小游戏昵称',
+    'Your name': '你的名字',
+    'Save': '保存',
     'Notifications': '通知',
     '🔔 Push Notifications': '🔔 推送通知',
     '🔊 Notification Sound': '🔊 提示音',
     'Appearance — Theme': '外观 — 主题',
     'Font Size': '字号',
+    'Small': '小',
+    'Medium': '中',
+    'Large': '大',
     '💬 Bubble Animations': '💬 气泡动画',
     '🐾 Walking Pet': '🐾 走动的宠物',
     'Data': '数据',
+    '🗑️ Clear Local Cache': '🗑️ 清除本地缓存',
+    '📣 What\'s New Editor': '📣 更新公告编辑器',
+    'Version key e.g. v3': '版本号，例如 v3',
+    'Bump the version to make all users see the popup again.': '改版本号可以让所有人重新看到弹窗。',
+    'Badge text e.g. 🆕 What\'s New': '角标文字，例如 🆕 有更新',
+    'Each line becomes one bullet in the popup.': '每一行会变成弹窗里的一条。',
+    '💾 Save & Publish': '💾 保存并发布',
     '🚶 Sign Out': '🚶 退出登录',
+    'Close': '关闭',
+    'Cancel': '取消',
+    'Toggle menu': '展开/收起菜单',
+    'Dismiss': '关掉',
+
+    // Off-work countdown & food
+    '⏳ Countdown to Off Work': '⏳ 下班倒计时',
+    'Set': '设定',
+    '🔄 Clear countdown': '🔄 清除倒计时',
+    'Default: Mon–Fri, 9 AM → 12:30 PM | 2 PM → 6 PM': '默认：周一至周五 9:00 → 12:30 ｜ 14:00 → 18:00',
+    'What to Eat?': '吃什么？',
+    '🍴 Food & Vote': '🍔 美食投票',
+    'e.g. Nasi Lemak': '例如：椰浆饭',
+    '🎲 Spin & Decide!': '🎲 转一转，帮你决定！',
+    'Press the button!': '按下按钮！',
+    '❌ Remove from spin': '❌ 从转盘移除',
+    '🔄 Restore removed food': '🔄 恢复已移除的选项',
+    'No suggestions yet': '还没有人推荐',
+    'Off work in': '距离下班',
+    'at 6:00 PM': '18:00 下班',
+    'OFF WORK!': '下班啦！',
+    'Time to go home! You did great today 💪': '可以回家了！今天辛苦了 💪',
+    'Got it! 👍': '知道啦！👍',
+
+    // My spaces
+    'My Room': '我的房间',
+    'Pets, plants & decor': '宠物、植物与装饰',
+    'My Farm': '我的农场',
+    'Animals, crops & coins': '动物、作物与金币',
+    'My Aquarium': '我的水族馆',
+    'Your Fishing collection': '你钓上来的收藏',
+
+    // Minigames
+    '🎮 Mini Games': '🎮 小游戏',
+    'Flappy Bird': 'Flappy Bird',
+    'Tap to fly — beat the high score!': '点击起飞 — 冲高分！',
+    'Tetris': '俄罗斯方块',
+    'Clear lines, earn coins, chain combos!': '消行赚币，连击更爽！',
+    'Challenge friends — bet coins & play!': '和朋友对战 — 押金币开局！',
+    'Eat, grow, survive — earn coins!': '吃、变长、活下去 — 还能赚币！',
+    'Block Blast': '方块爆破',
+    'Fill rows & columns — combo for coins!': '填满行列 — 连击换金币！',
+    'Swipe & merge tiles to 2048!': '滑动合并，冲到 2048！',
+    'Fishing': '钓鱼',
+    'Cast your line — catch fish for coins!': '抛竿下钩 — 钓鱼换金币！',
+    'TOTO Lottery': 'TOTO 彩票',
+    'Daily 4-digit draw — bet coins, win big!': '每日四位数开奖 — 押金币，博大奖！',
+    'Subway Dash': '地铁跑酷',
+    'Run, jump & roll — dodge the trains!': '跑跳翻滚 — 躲开列车！',
+
+    // Board
+    'Answers disappear after 6 hours ⌛': '留言 6 小时后消失 ⌛',
+    '📌 Upcoming Events': '📌 近期活动',
+    '+ Pin event': '+ 钉一个活动',
+    '📌 Pin it': '📌 钉住',
+    'Type your anonymous answer…': '匿名说点什么…',
+    'Send': '发送',
+    'Attach image': '添加图片',
+    'Search GIFs': '搜索 GIF',
+    'Search GIFs…': '搜索 GIF…',
+    'Search for a GIF above': '在上面搜一个 GIF',
+    'Powered by GIPHY': '由 GIPHY 提供',
+    'Remove image': '移除图片',
+    'Hide tools': '收起工具',
+    'Toggle tools': '展开/收起工具',
+    '+ Add option': '+ 加一个选项',
+    '📊 Post Poll': '📊 发起投票',
+    'Scroll to zoom · Drag to pan · Tap outside to close': '滚轮缩放 · 拖动平移 · 点外面关闭',
+    'Feedback Corner': '意见箱',
+    'Coin Rush': '金币狂潮',
+    'Join': '参加',
+    'How to play': '玩法说明',
+    'How are you feeling today?': '今天心情如何？',
+    'Collapse buttons': '收起按钮',
+    'Tap to close': '点击关闭',
+    '!! UPCOMING EVENT !!': '!! 活动预告 !!',
+    '▶ PRESS ANYWHERE TO CLOSE ◀': '▶ 点任意处关闭 ◀',
+    'You got:': '你获得了：',
+    'One update item per line (plain text or HTML)\ne.g. 💬 <strong>New feature</strong> — description here.': '每行一条更新（纯文本或 HTML）\n例如 💬 <strong>新功能</strong> — 这里写说明。',
+    'Type your message — press Enter for a new line\ne.g.\n25/07/2026 6.30pm\nMarjorie Hotel, Penang\nBirthday Event': '写点什么 — 回车换行\n例如：\n25/07/2026 晚上 6:30\n槟城 Marjorie 酒店\n生日会',
+  });
+
+  /* ── Chinese keys → English ── */
+  I18N.register('en', {
+    '在线': 'Online',
+    '现在在线人数': 'People online right now',
+    '摸鱼': 'Slacking',
+    '你在本站的总摸鱼时长（聊天板 + 游戏 + 房间 + 农场 + 水族馆 + Pet World）':
+      'Your total time here (board + games + room + farm + aquarium + Pet World)',
+    '排名': 'Rank',
+    '你在摸鱼榜的名次': 'Your place on the slacking board',
+    '今日': 'Today',
+    '全站今天新发的泡泡数': 'Bubbles posted site-wide today',
+    '峰值': 'Peak',
+    '今天你看到的最高同时在线人数': 'The most people you saw online at once today',
+
+    '✨ 更多玩法': '✨ More to play',
+    '点开试试': 'Tap to try',
+    '泡泡罐': 'Bubble Jar',
+    '收藏的留言': 'Saved messages',
+    '泡泡罐 — 收藏过的留言': 'Bubble Jar — messages you saved',
+    '涂鸦墙': 'Graffiti Wall',
+    '一起画画': 'Draw together',
+    '涂鸦墙 — 在留言板背景上画画，大家都看得到': 'Graffiti Wall — draw on the board background for everyone to see',
+    '金币乐园': 'Coin Park',
+    '商店/扭蛋': 'Shop / gacha',
+    '金币乐园 — 商店 / 扭蛋 / 老虎机': 'Coin Park — shop / gacha / slots',
+    '富豪榜': 'Rich List',
+    '金币排名': 'By coins',
+    '富豪榜 — 按当前金币排名': 'Rich List — ranked by coins held',
+    '摸鱼榜': 'Slacking Board',
+    '时长排名': 'By time',
+    '摸鱼榜 — 按总摸鱼时长排名': 'Slacking Board — ranked by total time here',
+    '假期列表': 'Holidays',
+    '放假倒数': 'Countdowns',
+    '假期列表 — 法定节假日放假倒数，摸鱼必备': 'Holidays — public holiday countdowns',
+    '赛马': 'Horse Race',
+    '万能决策': 'Decide anything',
+    '赛马 — 写下选项让马来决定，全站实时一起围观': 'Horse Race — write the options, let the horses decide, everyone watches live',
+
+    '🌟 每日正能量': '🌟 Daily lift',
+    '💬 评论': '💬 Comments',
+    '还没有评论，来抢沙发吧！': 'No comments yet — be the first!',
+    '说点什么…': 'Say something…',
+    '发送': 'Send',
+    '🕶️ 匿名': '🕶️ Anonymous',
+    '画个涂鸦': 'Draw something',
+    '收藏的 GIF': 'Saved GIFs',
+
+    '🧠 每日脑筋急转弯': '🧠 Daily Brain Teaser',
+    '每日脑筋急转弯 · 答对得100金币': 'Daily brain teaser · 100 coins for a right answer',
+    '输入你的答案…': 'Type your answer…',
+    '提交': 'Submit',
+    '💡 提示': '💡 Hint',
+    '查看答案': 'Reveal answer',
+    '取消': 'Cancel',
+    '⚠️ 看答案会用掉今天的作答机会，拿不到 100 金币。': '⚠️ Revealing uses up today\'s attempt — no 100 coins.',
+    '🪙 答对奖励 100 金币（每天一次）': '🪙 100 coins for a right answer (once a day)',
+
+    '🐉 每日成语接龙': '🐉 Daily Idiom Chain',
+    '每日成语接龙 · 答对一个得20金币': 'Daily idiom chain · 20 coins each',
+    '输入成语接龙…': 'Type the next idiom…',
+    '接龙': 'Chain it',
+    '卡住了，换开头': 'Stuck — new start',
+    '💰 答对一个成语 +20 金币': '💰 +20 coins per correct idiom',
+
+    '关闭': 'Close',
+    '✕ 关闭': '✕ Close',
+    '有什么更新了': 'What\'s new',
+    '可选：介绍页 URL（如 ./whats-new/2026-07.html）': 'Optional: intro page URL (e.g. ./whats-new/2026-07.html)',
+    '填了 URL 就改为「首次访问弹出这个 HTML 页面」（用 iframe，一次性）；留空则用上面的条目列表。':
+      'With a URL, first visit opens that page in an iframe once; leave it blank to use the list above.',
   });
 })();
