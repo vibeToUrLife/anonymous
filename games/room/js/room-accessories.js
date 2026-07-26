@@ -45,8 +45,8 @@
       st.actionDur = 3000;
       st.actionEnd = Date.now() + 3000;
       st.actionCooldown = st.actionEnd + 2000; // don't override with a random idle action
-      const petName = pet ? pet.name : '';
-      showToast('🎪 ' + (petName || 'Pet') + ' does a trick!', 'success');
+      const petName = petDisplayName(pet);
+      showToast('🎪 ' + T('{name} does a trick!', { name: petName || T('Pet') }), 'success');
     }
 
     /* ═══════════════════════════════
@@ -68,23 +68,23 @@
         let cls = isEquipped ? 'equipped' : isOwned ? 'owned' : '';
         html += '<div class="acc-card ' + cls + '">' +
           '<canvas class="acc-preview-cvs" data-acc="' + acc.id + '" width="60" height="60" style="display:block;margin:0 auto 4px"></canvas>' +
-          '<div class="acc-name">' + acc.name + '</div>';
+          '<div class="acc-name">' + T(acc.name) + '</div>';
         if (isOwned) {
-          html += '<div class="acc-price" style="color:#34d399">Owned</div>';
+          html += '<div class="acc-price" style="color:#34d399">' + T('Owned') + '</div>';
           if (activePets.length) {
             html += '<div style="margin-top:6px;display:flex;flex-direction:column;gap:3px">';
             activePets.forEach(pet => {
               const equipped = pet.accessory === acc.id;
               if (equipped) {
-                html += '<button class="food-btn" style="font-size:11px;padding:8px 6px;background:rgba(239,68,68,.2);color:#f87171;width:100%;position:relative;z-index:5" onclick="window.removePetAcc(\'' + pet.id + '\');return false;">✕ ' + pet.name + '</button>';
+                html += '<button class="food-btn" style="font-size:11px;padding:8px 6px;background:rgba(239,68,68,.2);color:#f87171;width:100%;position:relative;z-index:5" onclick="window.removePetAcc(\'' + pet.id + '\');return false;">✕ ' + petDisplayName(pet) + '</button>';
               } else {
-                html += '<button class="food-btn" style="font-size:11px;padding:8px 6px;width:100%;position:relative;z-index:5" onclick="window.equipPetAcc(\'' + pet.id + '\',\'' + acc.id + '\');return false;">' + pet.name + '</button>';
+                html += '<button class="food-btn" style="font-size:11px;padding:8px 6px;width:100%;position:relative;z-index:5" onclick="window.equipPetAcc(\'' + pet.id + '\',\'' + acc.id + '\');return false;">' + petDisplayName(pet) + '</button>';
               }
             });
             html += '</div>';
           }
         } else {
-          html += '<div class="acc-price" style="color:rgba(255,255,255,.35);font-size:11px">🎰 Gacha Only</div>';
+          html += '<div class="acc-price" style="color:rgba(255,255,255,.35);font-size:11px">🎰 ' + T('Gacha Only') + '</div>';
         }
         html += '</div>';
       });
@@ -92,20 +92,20 @@
 
       // Pet Tricks section
       if (activePets.length) {
-        html += '<div class="shop-section-title" style="margin-top:20px">🎪 Pet Tricks</div>';
-        html += '<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:10px;text-align:center">Pets learn tricks as affection grows!</div>';
+        html += '<div class="shop-section-title" style="margin-top:20px">🎪 ' + T('Pet Tricks') + '</div>';
+        html += '<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:10px;text-align:center">' + T('Pets learn tricks as affection grows!') + '</div>';
         activePets.forEach(pet => {
           const petDef = PETS.find(p => p.id === pet.type);
           const affection = pet.affection || 0;
           const tricks = PET_TRICKS[pet.type] || [];
           if (!tricks.length) return;
-          html += '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.7);margin-bottom:6px">' + (petDef?.emoji || '') + ' ' + pet.name + ' (❤️ ' + affection + ')</div>';
+          html += '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.7);margin-bottom:6px">' + (petDef?.emoji || '') + ' ' + petDisplayName(pet) + ' (❤️ ' + affection + ')</div>';
           html += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
           tricks.forEach(tr => {
             const unlocked = affection >= tr.minAffection;
             html += '<button class="food-btn" style="font-size:10px;' + (unlocked ? '' : 'opacity:.4;cursor:not-allowed') + '" ' +
               (unlocked ? 'onclick="window.triggerPetTrick(\'' + pet.id + '\',\'' + tr.id + '\');return false;"' : 'disabled') +
-              '>' + tr.name + (unlocked ? '' : ' (❤️' + tr.minAffection + ')') + '</button>';
+              '>' + T(tr.name) + (unlocked ? '' : ' (❤️' + tr.minAffection + ')') + '</button>';
           });
           html += '</div></div>';
         });
@@ -141,7 +141,7 @@
     }
 
     async function buyAccessory(accId) {
-      return showToast('Accessories can only be obtained from Gacha!', 'error');
+      return showToast(T('Accessories can only be obtained from Gacha!'), 'error');
     }
 
     async function equipPetAcc(petId, accId) {
@@ -170,7 +170,7 @@
       await saveRoom();
       renderAccessoryShop();
       if (panelInner) panelInner.scrollTop = scrollTop;
-      showToast('Accessory removed!', 'success');
+      showToast(T('Accessory removed!'), 'success');
     }
 
     // Expose accessory functions to window for onclick handlers

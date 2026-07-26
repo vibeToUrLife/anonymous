@@ -191,6 +191,31 @@
       return colors.find(c => c.key === colorKey) || colors[0];
     }
 
+    /* What to print for a pet, in the reader's language.
+
+       pet.name is user data — the player may have typed it — so it can never be
+       fed to T() blindly. But a pet nobody has renamed doesn't hold a name the
+       player chose: adoption seeds it with the catalog's English name, and the
+       old save format did the same. So "the name still equals the catalog name"
+       is exactly what "un-renamed" means here, and only then is it safe to look
+       it up. A player who genuinely types "Cat" gets 猫, which is the same thing
+       they asked for. */
+    function petDisplayName(pet) {
+      if (!pet) return '';
+      const def = PETS.find(p => p.id === pet.type);
+      if (!pet.name || (def && pet.name === def.name)) return T(def ? def.name : pet.type);
+      return pet.name;
+    }
+
+    // True while the pet still carries its catalog name, i.e. the player has
+    // not named it. The rename box uses this to stay empty instead of offering
+    // an English word for them to edit.
+    function petIsUnnamed(pet) {
+      if (!pet || !pet.name) return true;
+      const def = PETS.find(p => p.id === pet.type);
+      return !!def && pet.name === def.name;
+    }
+
     const FOODS = [
       { id: 'cookie',   emoji: '🍪', name: 'Cookie',   cost: 30,  restore: 10 },
       { id: 'apple',    emoji: '🍎', name: 'Apple',     cost: 50,  restore: 20 },

@@ -180,8 +180,8 @@
       const dr = drops[i];
       drops.splice(i, 1);
       roomData.coins = (roomData.coins || 0) + (dr.coins || 0);
-      logCoin((dr.coins || 0), 'Pet drop 🐾');
-      let msg = '💰 +' + (dr.coins || 0) + ' coins';
+      logCoin((dr.coins || 0), T('Pet drop') + ' 🐾');
+      let msg = '💰 ' + T('+{n} coins', { n: (dr.coins || 0) });
       if (dr.kind === 'piece') {
         roomData.petCollections = roomData.petCollections || {};
         let arr = roomData.petCollections[dr.petType];
@@ -189,14 +189,15 @@
         arr[dr.pieceIdx] = true;
         roomData.petCollections[dr.petType] = arr;
         const piece = PET_COLLECTIBLES[dr.petType] && PET_COLLECTIBLES[dr.petType][dr.pieceIdx];
-        msg = (piece ? piece.emoji + ' ' + piece.name : 'New piece') + ' collected!  +' + (dr.coins || 0) + ' coins';
+        msg = T('{item} collected! +{n} coins', { item: piece ? piece.emoji + ' ' + T(piece.name) : T('New piece'), n: (dr.coins || 0) });
         if (arr.every(Boolean)) {
           const decorId = PET_COLLECTION_DECOR[dr.petType];
           roomData.ownedDecors = roomData.ownedDecors || [];
           if (decorId && !roomData.ownedDecors.includes(decorId)) {
             roomData.ownedDecors.push(decorId);
             const ddef = DECORATIONS.find(d => d.id === decorId);
-            showToast('🎉 ' + dr.petType + ' collection complete! Unlocked ' + (ddef ? ddef.emoji + ' ' + ddef.name : 'a special decoration') + '! Place it from 🪑 Decor → 🪑 Furniture.', 'success');
+            const pdef = PETS.find(p => p.id === dr.petType);
+            showToast('🎉 ' + T('{pet} collection complete! Unlocked {decor}! Place it from 🪑 Decor → 🪑 Furniture.', { pet: T((pdef || {}).name || dr.petType), decor: ddef ? ddef.emoji + ' ' + T(ddef.name) : T('a special decoration') }), 'success');
           }
         }
       }
@@ -724,7 +725,7 @@
           ctx.fillText(Math.round(hunger) + '%', px, barY + barH + 10 * depthScale);
 
           // Pet name (from instance)
-          const petName = petInst ? petInst.name : (PETS.find(x => x.id === p.type)?.name || 'Pet');
+          const petName = petInst ? petDisplayName(petInst) : T(PETS.find(x => x.id === p.type)?.name || 'Pet');
           ctx.fillStyle = 'rgba(255,255,255,0.85)';
           ctx.font = 'bold ' + Math.round(10 * depthScale) + 'px sans-serif';
           ctx.textAlign = 'center';
@@ -735,7 +736,7 @@
           const affTitle = getAffectionTitle(aff);
           ctx.fillStyle = 'rgba(255,150,180,0.9)';
           ctx.font = Math.round(7 * depthScale) + 'px sans-serif';
-          ctx.fillText('♥ ' + aff + '  ' + affTitle.title, px, barY - 2 * depthScale);
+          ctx.fillText('♥ ' + aff + '  ' + T(affTitle.title), px, barY - 2 * depthScale);
 
           // Selection highlight
           if (_selectedPetId === p.id) {
@@ -778,7 +779,11 @@
       if (!pet) { closePetStatus(); return; }
 
       const nameInput = document.getElementById('petStatusName');
-      nameInput.value = pet.name || '';
+      // Un-renamed pets hold the catalog's English name. Showing that in the box
+      // would hand a Chinese reader an English word to edit, so leave it empty
+      // and let the placeholder carry the translated species name.
+      nameInput.value = petIsUnnamed(pet) ? '' : pet.name;
+      nameInput.placeholder = petDisplayName(pet);
       nameInput.readOnly = viewingUid !== currentUid;
 
       const hunger = pet.hunger ?? 100;
@@ -797,7 +802,7 @@
       const ms = getAffectionTitle(aff);
       const maxAff = AFFECTION_MILESTONES[AFFECTION_MILESTONES.length - 1].min * 1.5 || 500;
       document.getElementById('petStatusAffection').style.width = Math.min(100, (aff / maxAff) * 100) + '%';
-      document.getElementById('petStatusAffectionVal').textContent = '♥' + aff + ' ' + ms.title;
+      document.getElementById('petStatusAffectionVal').textContent = '♥' + aff + ' ' + T(ms.title);
 
       // Color dots (owner only)
       const colorsEl = document.getElementById('petStatusColors');
@@ -807,7 +812,7 @@
         const colors = PET_COLORS[pet.type];
         if (colors && colors.length) {
           colorsEl.innerHTML = colors.map(c =>
-            '<div onclick="setPetColor(\'' + pet.id + '\',\'' + c.key + '\')" title="' + c.name + '" style="' +
+            '<div onclick="setPetColor(\'' + pet.id + '\',\'' + c.key + '\')" title="' + T(c.name) + '" style="' +
             'width:20px;height:20px;border-radius:50%;background:' + (c.body || c.key) + ';cursor:pointer;' +
             'border:2px solid ' + (c.key === pet.color ? '#fff' : 'rgba(255,255,255,0.2)') + ';' +
             'box-shadow:' + (c.key === pet.color ? '0 0 6px rgba(255,255,255,0.5)' : 'none') +
@@ -832,7 +837,7 @@
               (unlocked ? 'pointer' : 'not-allowed') + ';border:1px solid rgba(255,255,255,0.15);' +
               'background:' + (unlocked ? 'rgba(255,138,171,0.18)' : 'rgba(255,255,255,0.05)') + ';' +
               'color:' + (unlocked ? '#ff8aab' : 'rgba(255,255,255,0.35)') + '">' +
-              tr.name + (unlocked ? '' : ' ♥' + tr.minAffection) + '</button>';
+              T(tr.name) + (unlocked ? '' : ' ♥' + tr.minAffection) + '</button>';
           }).join('');
         } else {
           tricksWrap.style.display = 'none';
@@ -844,7 +849,7 @@
       if (cbtn) {
         const col = (roomData.petCollections && roomData.petCollections[pet.type]) || [];
         const have = col.filter(Boolean).length;
-        cbtn.textContent = '🎁 Collection (' + have + '/9)';
+        cbtn.textContent = '🎁 ' + T('Collection ({n}/9)', { n: have });
       }
     }
 
@@ -867,9 +872,9 @@
       const pieces = PET_COLLECTIBLES[type] || [];
       const collected = (roomData.petCollections && roomData.petCollections[type]) || [];
       const have = pieces.reduce((n, _, i) => n + (collected[i] ? 1 : 0), 0);
-      const petName = (PETS.find(p => p.id === type) || {}).name || type;
+      const petName = T((PETS.find(p => p.id === type) || {}).name || type);
       const titleEl = document.getElementById('petCollectionTitle');
-      if (titleEl) titleEl.textContent = '🎁 ' + petName + ' Collection (' + have + '/9)';
+      if (titleEl) titleEl.textContent = '🎁 ' + T('{pet} Collection ({n}/9)', { pet: petName, n: have });
       const gridEl = document.getElementById('petCollectionGrid');
       if (gridEl) {
         gridEl.innerHTML = pieces.map((pc, i) => {
@@ -879,19 +884,19 @@
             + 'border:1px solid ' + border + ';'
             + 'background:' + (got ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.25)') + '">'
             + '<div style="font-size:22px;' + (got ? '' : 'filter:grayscale(1);opacity:0.25') + '">' + (got ? pc.emoji : '❔') + '</div>'
-            + '<div style="font-size:8px;margin-top:2px;color:' + (got ? '#ddd' : '#666') + '">' + (got ? pc.name : '???') + '</div>'
+            + '<div style="font-size:8px;margin-top:2px;color:' + (got ? '#ddd' : '#666') + '">' + (got ? T(pc.name) : '???') + '</div>'
             + '</div>';
         }).join('');
       }
       const decorId = PET_COLLECTION_DECOR[type];
       const ddef = DECORATIONS.find(d => d.id === decorId);
-      const decorLabel = ddef ? ddef.emoji + ' ' + ddef.name : 'a special decoration';
+      const decorLabel = ddef ? ddef.emoji + ' ' + T(ddef.name) : T('a special decoration');
       const complete = pieces.length === 9 && pieces.every((_, i) => collected[i]);
       const rewardEl = document.getElementById('petCollectionReward');
       if (rewardEl) {
         rewardEl.innerHTML = complete
-          ? '✨ Unlocked: ' + decorLabel + ' — place it from 🪑 Decor → 🪑 Furniture.'
-          : 'Complete all 9 to unlock: ' + decorLabel + ' (placed from 🪑 Decor → 🪑 Furniture).';
+          ? '✨ ' + T('Unlocked: {decor} — place it from 🪑 Decor → 🪑 Furniture.', { decor: decorLabel })
+          : T('Complete all 9 to unlock: {decor} (placed from 🪑 Decor → 🪑 Furniture).', { decor: decorLabel });
       }
     }
 

@@ -391,7 +391,7 @@
         ctx.font = (rw * 0.028) + 'px "Segoe UI", sans-serif';
         ctx.fillStyle = 'rgba(255,110,199,' + glow + ')';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('HELLO', nx, ny);
+        ctx.fillText(T('HELLO'), nx, ny);
         ctx.shadowBlur = 0;
         ctx.restore();
       }
@@ -789,7 +789,7 @@
         ctx.fillStyle = '#fff';
         ctx.font = 'bold ' + Math.round(cw * 0.11) + 'px sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(months[now.getMonth()], cx, top + headerH * 0.35);
+        ctx.fillText(T(months[now.getMonth()]), cx, top + headerH * 0.35);
         ctx.font = Math.round(cw * 0.08) + 'px sans-serif';
         ctx.fillStyle = 'rgba(255,255,255,0.7)';
         ctx.fillText(String(now.getFullYear()), cx, top + headerH * 0.72);
@@ -1328,7 +1328,7 @@
         ctx.fillStyle = '#333';
         ctx.font = Math.round(pw * 0.1) + 'px serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('DIPLOMA', px, py - ph * 0.25);
+        ctx.fillText(T('DIPLOMA'), px, py - ph * 0.25);
         ctx.fillStyle = '#888';
         ctx.font = Math.round(pw * 0.06) + 'px sans-serif';
         // Decorative lines

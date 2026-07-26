@@ -103,13 +103,13 @@ function renderAquariumPanel() {
     const vtheme = AQUARIUM_THEMES.find(t => t.id === (roomData.aquariumTheme || 'tropical'));
     const liked = _aqLikedUids.has(viewingUid);
     panel.innerHTML =
-      '<div class="farm-panel-head">🐠 ' + escapeHtml(roomData.displayName || 'Their') + '\'s Aquarium <span class="farm-panel-cap">❤️ ' + (roomData.aquariumLikes || 0) + '</span></div>' +
+      '<div class="farm-panel-head">🐠 ' + T("{name}'s Aquarium", { name: escapeHtml(roomData.displayName || T('Their')) }) + ' <span class="farm-panel-cap">❤️ ' + (roomData.aquariumLikes || 0) + '</span></div>' +
       '<section class="farm-card">' +
-        '<div class="farm-section-title">Tank <span class="farm-panel-cap">' + vplaced.length + ' fish · ' + vcomp.pct + '%</span></div>' +
-        '<div class="farm-panel-empty">🎨 ' + (vtheme ? vtheme.name : 'Tropical') + ' · 🪙 ' + aquariumCoinsPerHour(vplaced, FISH_TYPES, AQUARIUM_IDLE_RATES) + ' / hr</div>' +
+        '<div class="farm-section-title">' + T('Tank') + ' <span class="farm-panel-cap">' + T('{n} fish · {pct}%', { n: vplaced.length, pct: vcomp.pct }) + '</span></div>' +
+        '<div class="farm-panel-empty">🎨 ' + T((vtheme || AQUARIUM_THEMES[0]).name) + ' · 🪙 ' + T('{n} / hr', { n: aquariumCoinsPerHour(vplaced, FISH_TYPES, AQUARIUM_IDLE_RATES) }) + '</div>' +
       '</section>' +
-      '<button class="farm-shop-buy" style="width:100%;padding:9px" onclick="likeAquarium()"' + (liked ? ' disabled' : '') + '>❤️ ' + (liked ? 'Liked!' : 'Like this tank') + '</button>' +
-      '<button class="farm-visit-home" onclick="visitAquarium(\'' + currentUid + '\')">🏠 Back to my aquarium</button>';
+      '<button class="farm-shop-buy" style="width:100%;padding:9px" onclick="likeAquarium()"' + (liked ? ' disabled' : '') + '>❤️ ' + (liked ? T('Liked!') : T('Like this tank')) + '</button>' +
+      '<button class="farm-visit-home" onclick="visitAquarium(\'' + currentUid + '\')">🏠 ' + T('Back to my aquarium') + '</button>';
     return;
   }
 
@@ -125,7 +125,7 @@ function renderAquariumPanel() {
     const pct = t.total ? Math.round((t.placed / t.total) * 100) : 0;
     const color = RARITY_COLORS_DOM[r] || 'var(--g-accent)';
     return '<div class="aq-bar-row">' +
-      '<span class="aq-bar-label" style="color:' + color + '">' + RARITY_LABEL[r] + ' ' + t.placed + '/' + t.total + '</span>' +
+      '<span class="aq-bar-label" style="color:' + color + '">' + T(RARITY_LABEL[r]) + ' ' + t.placed + '/' + t.total + '</span>' +
       '<span class="farm-herd-bar"><span style="width:' + pct + '%;background:' + color + '"></span></span>' +
     '</div>';
   }).join('');
@@ -139,47 +139,47 @@ function renderAquariumPanel() {
       : '';
     return '<div class="' + cls + '"' + (onclick ? ' onclick="' + onclick + '"' : '') + '>' +
       '<canvas class="aq-fish-canvas" width="64" height="44" data-fish="' + f.name + '" data-sil="' + (isCaught ? '0' : '1') + '"></canvas>' +
-      '<div class="aq-fish-name">' + (isCaught ? f.name : '???') + '</div>' +
-      '<div class="aq-fish-tag">' + (isPlaced ? '✓ in tank' : isCaught ? 'tap to add' : f.rarity) + '</div>' +
+      '<div class="aq-fish-name">' + (isCaught ? T(f.name) : '???') + '</div>' +
+      '<div class="aq-fish-tag">' + (isPlaced ? '✓ ' + T('in tank') : isCaught ? T('tap to add') : T(RARITY_LABEL[f.rarity] || f.rarity)) + '</div>' +
     '</div>';
   }).join('');
 
   panel.innerHTML =
-    '<div class="farm-panel-head">🐠 My Aquarium <span class="farm-panel-cap">❤️ ' + (roomData.aquariumLikes || 0) + '</span></div>' +
+    '<div class="farm-panel-head">🐠 ' + T('My Aquarium') + ' <span class="farm-panel-cap">❤️ ' + (roomData.aquariumLikes || 0) + '</span></div>' +
     '<section class="farm-card">' +
-      '<div class="farm-section-title">Collection <span class="farm-panel-cap">' + comp.placed + '/' + comp.total + ' · ' + comp.pct + '%</span></div>' +
+      '<div class="farm-section-title">' + T('Collection') + ' <span class="farm-panel-cap">' + comp.placed + '/' + comp.total + ' · ' + comp.pct + '%</span></div>' +
       bars +
-      '<div class="farm-panel-empty">🪙 Earning ' + aquariumCoinsPerHour(placed, FISH_TYPES, AQUARIUM_IDLE_RATES) + ' / hr</div>' +
-      '<button class="farm-shop-buy" style="width:100%;margin-top:6px" onclick="openAquariumCollect()"' + (pending > 0 ? '' : ' disabled') + '>💰 Collect ' + pending + ' coin' + (pending === 1 ? '' : 's') + '</button>' +
+      '<div class="farm-panel-empty">🪙 ' + T('Earning {n} / hr', { n: aquariumCoinsPerHour(placed, FISH_TYPES, AQUARIUM_IDLE_RATES) }) + '</div>' +
+      '<button class="farm-shop-buy" style="width:100%;margin-top:6px" onclick="openAquariumCollect()"' + (pending > 0 ? '' : ' disabled') + '>💰 ' + I18N.plural(pending, 'Collect 1 coin', 'Collect {n} coins') + '</button>' +
     '</section>' +
     '<section class="farm-card">' +
-      '<div class="farm-section-title">🐟 Your Fish <span class="farm-panel-cap">tap to place</span></div>' +
+      '<div class="farm-section-title">🐟 ' + T('Your Fish') + ' <span class="farm-panel-cap">' + T('tap to place') + '</span></div>' +
       '<div class="aq-roster">' + roster + '</div>' +
     '</section>' +
     '<section class="farm-card">' +
-      '<div class="farm-section-title">🎮 Mini-Games</div>' +
+      '<div class="farm-section-title">🎮 ' + T('Mini-Games') + '</div>' +
       '<div class="aq-game-row">' +
-        '<button class="farm-shop-buy" style="flex:1" onclick="startFeedingFrenzy()">🍤 Feeding Frenzy</button>' +
-        '<button class="aq-info-btn" title="How to play" onclick="showAquariumTutorial(\'frenzy\')">ℹ️</button>' +
+        '<button class="farm-shop-buy" style="flex:1" onclick="startFeedingFrenzy()">🍤 ' + T('Feeding Frenzy') + '</button>' +
+        '<button class="aq-info-btn" title="' + T('How to play') + '" onclick="showAquariumTutorial(\'frenzy\')">ℹ️</button>' +
       '</div>' +
       '<div class="aq-game-row">' +
-        '<button class="farm-shop-buy" style="flex:1" onclick="startFishRace()">🏁 Fish Race &amp; Bet</button>' +
-        '<button class="aq-info-btn" title="How to play" onclick="showAquariumTutorial(\'race\')">ℹ️</button>' +
+        '<button class="farm-shop-buy" style="flex:1" onclick="startFishRace()">🏁 ' + T('Fish Race & Bet') + '</button>' +
+        '<button class="aq-info-btn" title="' + T('How to play') + '" onclick="showAquariumTutorial(\'race\')">ℹ️</button>' +
       '</div>' +
       '<div class="aq-game-row">' +
-        '<button class="farm-shop-buy" style="flex:1" onclick="startBubblePop()">🫧 Bubble Pop</button>' +
-        '<button class="aq-info-btn" title="How to play" onclick="showAquariumTutorial(\'bubble\')">ℹ️</button>' +
+        '<button class="farm-shop-buy" style="flex:1" onclick="startBubblePop()">🫧 ' + T('Bubble Pop') + '</button>' +
+        '<button class="aq-info-btn" title="' + T('How to play') + '" onclick="showAquariumTutorial(\'bubble\')">ℹ️</button>' +
       '</div>' +
     '</section>' +
     '<section class="farm-card">' +
-      '<div class="farm-section-title">🎨 Theme</div>' +
-      '<div class="aq-themes">' + AQUARIUM_THEMES.map(t => '<button class="aq-theme-btn' + (t.id === (roomData.aquariumTheme || 'tropical') ? ' active' : '') + '" onclick="setAquariumTheme(\'' + t.id + '\')">' + t.name + '</button>').join('') + '</div>' +
+      '<div class="farm-section-title">🎨 ' + T('Theme') + '</div>' +
+      '<div class="aq-themes">' + AQUARIUM_THEMES.map(t => '<button class="aq-theme-btn' + (t.id === (roomData.aquariumTheme || 'tropical') ? ' active' : '') + '" onclick="setAquariumTheme(\'' + t.id + '\')">' + T(t.name) + '</button>').join('') + '</div>' +
     '</section>' +
     '<section class="farm-card">' +
-      '<div class="farm-section-title">🐠 Visit Other Aquariums <span class="farm-panel-cap">live</span></div>' +
+      '<div class="farm-section-title">🐠 ' + T('Visit Other Aquariums') + ' <span class="farm-panel-cap">' + T('live') + '</span></div>' +
       _aqVisitListHtml() +
     '</section>' +
-    '<button class="farm-visit-home" onclick="closeAquarium()">🏠 Back to room</button>';
+    '<button class="farm-visit-home" onclick="closeAquarium()">🏠 ' + T('Back to room') + '</button>';
 
   // Draw each roster card's fish (full color, or grey silhouette if not yet unlocked).
   panel.querySelectorAll('.aq-fish-canvas').forEach(cv => {
@@ -312,7 +312,7 @@ function _openAquariumIdle() {
 function openAquariumCollect() {
   if (viewingUid !== currentUid) return;
   const earned = _aquariumPending();
-  if (earned <= 0) { showToast('No coins yet — your fish are still working! 🐠', ''); return; }
+  if (earned <= 0) { showToast(T('No coins yet — your fish are still working!') + ' 🐠', ''); return; }
   _showAquariumCollect(earned);
 }
 
@@ -325,14 +325,14 @@ function _showAquariumCollect(earned) {
   ov.style.cssText = 'position:fixed;inset:0;z-index:9600;display:flex;align-items:center;justify-content:center;background:var(--g-scrim);backdrop-filter:blur(6px)';
   ov.innerHTML =
     '<div class="ws-box">' +
-      '<div class="ws-head">🐠 Fish Earnings</div>' +
-      '<div class="ws-sub">Your fish have been busy! Here\'s what they earned:</div>' +
-      '<div class="ws-slot"><span class="ws-slot-no">🪙 Coins earned</span><span class="ws-slot-state">+' + earned + '</span></div>' +
-      '<button class="cp-crop" style="justify-content:center;font-weight:800">📦 Collect ' + earned + '</button>' +
+      '<div class="ws-head">🐠 ' + T('Fish Earnings') + '</div>' +
+      '<div class="ws-sub">' + T("Your fish have been busy! Here's what they earned:") + '</div>' +
+      '<div class="ws-slot"><span class="ws-slot-no">🪙 ' + T('Coins earned') + '</span><span class="ws-slot-state">+' + earned + '</span></div>' +
+      '<button class="cp-crop" style="justify-content:center;font-weight:800">📦 ' + T('Collect {n}', { n: earned }) + '</button>' +
     '</div>';
   const done = function () {
     roomData.coins += earned;
-    logCoin(earned, 'Aquarium 🐟');
+    logCoin(earned, T('Aquarium') + ' 🐟');
     roomData.aquariumLastCollect = Date.now();
     saveRoom();
     if (typeof renderAll === 'function') renderAll();
@@ -372,12 +372,12 @@ async function visitAquarium(uid) {
 
 function likeAquarium() {
   if (viewingUid === currentUid) return;                              // can't like your own tank
-  if (_aqLikedUids.has(viewingUid)) { showToast('You already liked this tank!', ''); return; }
+  if (_aqLikedUids.has(viewingUid)) { showToast(T('You already liked this tank!'), ''); return; }
   _aqLikedUids.add(viewingUid);                                       // per-session dedupe (client-side)
   roomData.aquariumLikes = (roomData.aquariumLikes || 0) + 1;         // optimistic local bump
   userDocRef(viewingUid).update({ aquariumLikes: firebase.firestore.FieldValue.increment(1) }).catch(function () {});
   _aqParticles.push({ text: '❤️', x: 0.2 + Math.random() * 0.6, y: 0.8, vy: -0.0013, life: 1600, born: performance.now() });
-  showToast('❤️ You liked ' + (roomData.displayName || 'this') + '\'s aquarium!', 'success');
+  showToast('❤️ ' + T("You liked {name}'s aquarium!", { name: roomData.displayName || T('this') }), 'success');
   renderAquariumPanel();
 }
 
@@ -403,14 +403,14 @@ function _unsubAqVisitList() {
 }
 function _aqVisitListHtml() {
   _subAqVisitList();
-  if (_aqVisitRooms == null) return '<div class="farm-panel-empty">Loading aquariums…</div>';
-  if (!_aqVisitRooms.length) return '<div class="farm-panel-empty">No other aquariums to visit yet.</div>';
+  if (_aqVisitRooms == null) return '<div class="farm-panel-empty">' + T('Loading aquariums…') + '</div>';
+  if (!_aqVisitRooms.length) return '<div class="farm-panel-empty">' + T('No other aquariums to visit yet.') + '</div>';
   return _aqVisitRooms.map(function (r) {
-    const peek = r.fish ? '🐠 ×' + r.fish : '<span style="opacity:.5">empty tank</span>';
+    const peek = r.fish ? '🐠 ×' + r.fish : '<span style="opacity:.5">' + T('empty tank') + '</span>';
     return '<div class="farm-visit-row" onclick="visitAquarium(\'' + r.uid + '\')">' +
       '<span class="farm-visit-emoji">🐠</span>' +
       '<span class="farm-visit-info">' +
-        '<span class="farm-visit-name">' + (r.online ? '🟢 ' : '') + escapeHtml(r.name || 'Anonymous') + '</span>' +
+        '<span class="farm-visit-name">' + (r.online ? '🟢 ' : '') + escapeHtml(r.name || T('Anonymous')) + '</span>' +
         '<span class="farm-visit-peek">' + peek + ' · ❤️ ' + r.likes + '</span>' +
       '</span>' +
       '<span class="farm-visit-go">›</span>' +

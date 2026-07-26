@@ -13,9 +13,9 @@
       document.getElementById('coinAmount').textContent = Math.floor(roomData.coins || 0);
 
       // Title
-      const name = roomData.displayName || 'Anonymous';
-      document.getElementById('pageTitle').textContent = isOwner ? 'My Room' : name + "'s Room";
-      document.getElementById('ownerName').textContent = isOwner ? ('Welcome, ' + name) : '';
+      const name = roomData.displayName || T('Anonymous');
+      document.getElementById('pageTitle').textContent = isOwner ? T('My Room') : T("{name}'s Room", { name: name });
+      document.getElementById('ownerName').textContent = isOwner ? T('Welcome, {name}', { name: name }) : '';
 
       // Tabs visibility (hidden while the farm or aquarium — each with its own
       // panel — is open; both views replace the room's tab bar)
@@ -64,10 +64,10 @@
     function _coinHistTime(ts) {
       if (!ts) return '';
       const diff = Date.now() - ts;
-      if (diff < 60000) return 'just now';
-      if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
-      if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
-      if (diff < 604800000) return Math.floor(diff / 86400000) + 'd ago';
+      if (diff < 60000) return T('just now');
+      if (diff < 3600000) return T('{n}m ago', { n: Math.floor(diff / 60000) });
+      if (diff < 86400000) return T('{n}h ago', { n: Math.floor(diff / 3600000) });
+      if (diff < 604800000) return T('{n}d ago', { n: Math.floor(diff / 86400000) });
       try {
         return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
       } catch (e) { return ''; }
@@ -79,7 +79,8 @@
       if (balEl) balEl.textContent = Math.floor(roomData.coins || 0).toLocaleString();
       const hist = Array.isArray(roomData.coinHistory) ? roomData.coinHistory : [];
       if (!hist.length) {
-        listEl.innerHTML = '<div class="coinhist-empty">No coin activity yet.<br>Earn or spend some coins and it\'ll show up here!</div>';
+        listEl.innerHTML = '<div class="coinhist-empty">' + T('No coin activity yet.') + '<br>' +
+          T('Earn or spend some coins and it\'ll show up here!') + '</div>';
         return;
       }
       let html = '';
@@ -91,7 +92,7 @@
         const bal = Math.floor(e.b || 0).toLocaleString();
         html += '<div class="coinhist-row">' +
           '<div class="chr-mid">' +
-            '<div class="chr-reason">' + _coinHistEscape(e.r || 'Coins') + '</div>' +
+            '<div class="chr-reason">' + _coinHistEscape(e.r || T('Coins')) + '</div>' +
             '<div class="chr-time">' + _coinHistEscape(_coinHistTime(e.t)) + '</div>' +
           '</div>' +
           '<div class="chr-delta ' + cls + '">' + deltaTxt + '</div>' +
@@ -171,7 +172,7 @@
           const lvl = PLANT_LEVELS[clampedLvl - 1];
           plantSlot.innerHTML =
             '<div class="plant-canvas-wrap"><canvas id="plantCanvas" width="120" height="140"></canvas></div>' +
-            '<div class="plant-level">Lv.' + plantLvl + ' ' + lvl.label + '</div>';
+            '<div class="plant-level">' + T('Lv.{n} {label}', { n: plantLvl, label: T(lvl.label) }) + '</div>';
           // Apply saved position or default
           const pos = roomData.plantPosition || { left: 80, bottom: 18 };
           plantSlot.style.left = pos.left + '%';
@@ -195,7 +196,8 @@
       // Pet shop — adopt only, no color/equip
       renderPetShop();
       renderShopSection('plantShop', PLANTS, roomData.ownedPlants, [roomData.plant], 'plant',
-        '<span style="display:block;font-size:10px;color:rgba(255,255,255,0.45);margin-top:4px">🌱 One unique plant per floor — every placed tree earns coins!</span>');
+        '<span style="display:block;font-size:10px;color:rgba(255,255,255,0.45);margin-top:4px">🌱 ' +
+        T('One unique plant per floor — every placed tree earns coins!') + '</span>');
       // Only render decor shop if its sub-panel is visible (avoids 99 canvas preview draws)
       const decorPanel = document.getElementById('decorShopWrap');
       if (decorPanel && decorPanel.classList.contains('active')) renderDecorShop();
@@ -222,7 +224,7 @@
       const titleEl = el.previousElementSibling;
       const petCount = roomData.pets.length;
       const layerPetCount = getPetsOnLayer(currentLayer).length;
-      if (titleEl) titleEl.innerHTML = '🐾 Pets <span class="slot-badge">' + petCount + ' adopted</span>';
+      if (titleEl) titleEl.innerHTML = '🐾 ' + T('Pets') + ' <span class="slot-badge">' + T('{n} adopted', { n: petCount }) + '</span>';
       el.innerHTML = PETS.map(item => {
         const ownedCount = roomData.pets.filter(p => p.type === item.id).length;
         const typeMaxed = ownedCount >= 2; // Max 2 of each type
@@ -234,8 +236,8 @@
         let placementInfo = '';
         if (ownedPetsOfType.length > 0) {
           placementInfo = ownedPetsOfType.map(p => {
-            if (p.layer && p.layer > 0) return '🏠 Floor ' + p.layer;
-            return '📦 Unplaced';
+            if (p.layer && p.layer > 0) return '🏠 ' + T('Floor {n}', { n: p.layer });
+            return '📦 ' + T('Unplaced');
           }).join(', ');
         }
 
@@ -244,32 +246,34 @@
 
         return '<div class="shop-card' + (ownedCount > 0 ? ' owned' : '') + '">' +
           '<canvas class="shop-preview" data-preview="pet" data-pid="' + item.id + '"></canvas>' +
-          '<div class="shop-name">' + item.name + '</div>' +
-          (ownedCount > 0 ? '<div style="font-size:11px;color:#34d399">Owned: ' + ownedCount + (typeMaxed ? ' (max)' : '') + '</div>' : '') +
+          '<div class="shop-name">' + T(item.name) + '</div>' +
+          (ownedCount > 0 ? '<div style="font-size:11px;color:#34d399">' +
+            (typeMaxed ? T('Owned: {n} (max)', { n: ownedCount }) : T('Owned: {n}', { n: ownedCount })) + '</div>' : '') +
           (placementInfo ? '<div style="font-size:10px;color:rgba(255,255,255,0.5);margin-top:2px">' + placementInfo + '</div>' : '') +
           '<div class="shop-price">' + coinSVG(14) + ' ' + item.cost + '</div>' +
           '<button class="shop-btn buy" onclick="buyItem(\'pet\',\'' + item.id + '\')" ' +
-            (canAfford && !typeMaxed ? '' : 'disabled') + '>🐾 Adopt</button>' +
+            (canAfford && !typeMaxed ? '' : 'disabled') + '>🐾 ' + T('Adopt') + '</button>' +
           (typeMaxed
-            ? '<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:4px">Max 2 ' + item.name + 's adopted</div>'
+            ? '<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:4px">' +
+              T('Max 2 {name}s adopted', { name: T(item.name) }) + '</div>'
             : '') +
           // Show "Place on Floor X" if there's an unplaced pet and current floor has space
           (hasUnplaced && !floorFull
             ? '<button class="shop-btn" style="margin-top:4px;background:rgba(52,211,153,0.2);color:#34d399;border:1px solid rgba(52,211,153,0.3)" ' +
-              ' onclick="placePetInRoom(\'' + item.id + '\')">📥 Place on Floor ' + currentLayer + '</button>'
+              ' onclick="placePetInRoom(\'' + item.id + '\')">📥 ' + T('Place on Floor {n}', { n: currentLayer }) + '</button>'
             : '') +
           // Show "Swap" if current floor is full and there's an unplaced pet
           (floorFull && hasUnplaced
             ? '<button class="shop-btn" style="margin-top:4px;background:rgba(99,102,241,0.2);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3)" ' +
-              ' onclick="swapPet(\''+item.id+'\')">\uD83D\uDD04 Swap on Floor ' + currentLayer + '</button>'
+              ' onclick="swapPet(\''+item.id+'\')">\uD83D\uDD04 ' + T('Swap on Floor {n}', { n: currentLayer }) + '</button>'
             : '') +
           // Show individual "Remove" buttons for each pet of this type on the current floor
           ownedPetsOfType.filter(p => p.layer === currentLayer).map((p, i) => {
-            const petLabel = p.name || item.name;
+            const petLabel = p.name || T(item.name);
             // Show index label only when multiple same-type pets are on this floor
             const label = ownedPetsOfType.filter(q => q.layer === currentLayer).length > 1
-              ? '📤 Remove ' + petLabel + ' #' + (i + 1)
-              : '📤 Remove from Floor ' + currentLayer;
+              ? '📤 ' + T('Remove {name} #{n}', { name: petLabel, n: i + 1 })
+              : '📤 ' + T('Remove from Floor {n}', { n: currentLayer });
             return '<button class="shop-btn" style="margin-top:4px;background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3)" ' +
               ' onclick="removePetById(\'' + p.id + '\')">' + label + '</button>';
           }).join('') +
@@ -282,7 +286,7 @@
       const el = document.getElementById(containerId);
       const titleEl = el.previousElementSibling;
       if (titleEl && slotHtml) {
-        titleEl.innerHTML = '🌱 Plants' + slotHtml;
+        titleEl.innerHTML = '🌱 ' + T('Plants') + slotHtml;
       }
       // Plants must be unique per floor — map each plant already on ANOTHER floor → its floor.
       const plantFloor = {};
@@ -295,22 +299,22 @@
         const canAfford = roomData.coins >= item.cost;
         let btnHtml = '';
         if (isEquipped) {
-          btnHtml = '<button class="shop-btn equipped-btn" disabled>✓ In Room</button>' +
-            '<button class="shop-btn" style="margin-top:4px;background:rgba(239,68,68,0.2);color:#f87171" onclick="unequipItem(\'' + type + '\',\'' + item.id + '\')">Remove</button>';
+          btnHtml = '<button class="shop-btn equipped-btn" disabled>✓ ' + T('In Room') + '</button>' +
+            '<button class="shop-btn" style="margin-top:4px;background:rgba(239,68,68,0.2);color:#f87171" onclick="unequipItem(\'' + type + '\',\'' + item.id + '\')">' + T('Remove') + '</button>';
         } else if (isOwned && plantFloor[item.id]) {
           // Already placed on another floor — can't duplicate it here.
-          btnHtml = '<button class="shop-btn" disabled>On Floor ' + plantFloor[item.id] + '</button>';
+          btnHtml = '<button class="shop-btn" disabled>' + T('On Floor {n}', { n: plantFloor[item.id] }) + '</button>';
         } else if (isOwned) {
-          btnHtml = '<button class="shop-btn equip" onclick="equipItem(\'' + type + '\',\'' + item.id + '\')">Place in Room</button>';
+          btnHtml = '<button class="shop-btn equip" onclick="equipItem(\'' + type + '\',\'' + item.id + '\')">' + T('Place in Room') + '</button>';
         } else {
           btnHtml = '<button class="shop-btn buy" onclick="buyItem(\'' + type + '\',\'' + item.id + '\')" ' +
-            (canAfford ? '' : 'disabled') + '>Buy</button>';
+            (canAfford ? '' : 'disabled') + '>' + T('Buy') + '</button>';
         }
         return '<div class="shop-card' + (isEquipped ? ' equipped' : isOwned ? ' owned' : '') + '">' +
           '<span class="shop-emoji">' + item.emoji + '</span>' +
-          '<div class="shop-name">' + item.name + '</div>' +
-          (item.coinRate ? '<div style="font-size:10px;color:#f7c97e;margin:2px 0">' + coinSVG(10) + ' ' + item.coinRate + '/5min × Lv</div>' : '') +
-          (isOwned ? '<div style="font-size:11px;color:#34d399">Owned ✓</div>' :
+          '<div class="shop-name">' + T(item.name) + '</div>' +
+          (item.coinRate ? '<div style="font-size:10px;color:#f7c97e;margin:2px 0">' + coinSVG(10) + ' ' + T('{n}/5min × Lv', { n: item.coinRate }) + '</div>' : '') +
+          (isOwned ? '<div style="font-size:11px;color:#34d399">' + T('Owned') + ' ✓</div>' :
             '<div class="shop-price">' + coinSVG(14) + ' ' + item.cost + '</div>') +
           btnHtml + '</div>';
       }).join('');
@@ -614,7 +618,7 @@
         ctx.shadowColor = '#ff6ec7'; ctx.shadowBlur = 8;
         ctx.fillStyle = 'rgba(255,110,199,0.8)';
         ctx.font = '12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('HELLO', cx, cy);
+        ctx.fillText(T('HELLO'), cx, cy);
         ctx.shadowBlur = 0;
       } else if (decorId === 'poster') {
         const pw = 22, ph = 30, px = cx - pw / 2, py = cy - ph / 2;
@@ -1206,7 +1210,7 @@
         ctx.fillStyle = '#B8960B'; ctx.fillRect(cx - pw / 2 - 1, cy - ph / 2 - 1, pw + 2, ph + 2);
         ctx.fillStyle = '#f5efe6'; ctx.fillRect(cx - pw / 2, cy - ph / 2, pw, ph);
         ctx.fillStyle = '#333'; ctx.font = '6px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('DIPLOMA', cx, cy - 5);
+        ctx.fillText(T('DIPLOMA'), cx, cy - 5);
         ctx.strokeStyle = '#ccc'; ctx.lineWidth = 0.4;
         for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(cx - 8, cy + i * 4); ctx.lineTo(cx + 8, cy + i * 4); ctx.stroke(); }
         ctx.fillStyle = '#c0392b'; ctx.beginPath(); ctx.arc(cx + 8, cy + 6, 2.5, 0, Math.PI * 2); ctx.fill();
@@ -1366,7 +1370,7 @@
         // Month text
         const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
         ctx.fillStyle = '#fff'; ctx.font = 'bold 5px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(months[new Date().getMonth()], cx, ct + hH * 0.5);
+        ctx.fillText(T(months[new Date().getMonth()]), cx, ct + hH * 0.5);
         // Spiral rings
         const spY = ct + hH + 2;
         for (let i = 0; i < 5; i++) {
@@ -1514,17 +1518,17 @@
         const canAfford = roomData.coins >= item.cost;
         let btnHtml = '';
         if (isActive) {
-          btnHtml = '<button class="shop-btn equipped-btn" disabled>✓ Active</button>';
+          btnHtml = '<button class="shop-btn equipped-btn" disabled>✓ ' + T('Active') + '</button>';
         } else if (isOwned || item.cost === 0) {
-          btnHtml = '<button class="shop-btn equip" onclick="equipWall(\'' + item.id + '\')">Use</button>';
+          btnHtml = '<button class="shop-btn equip" onclick="equipWall(\'' + item.id + '\')">' + T('Use') + '</button>';
         } else {
           btnHtml = '<button class="shop-btn buy" onclick="buyWall(\'' + item.id + '\')" ' +
-            (canAfford ? '' : 'disabled') + '>Buy</button>';
+            (canAfford ? '' : 'disabled') + '>' + T('Buy') + '</button>';
         }
         return '<div class="shop-card' + (isActive ? ' equipped' : isOwned ? ' owned' : '') + '">' +
           '<canvas class="shop-preview" data-preview="wall" data-pid="' + item.id + '"></canvas>' +
-          '<div class="shop-name">' + item.name + '</div>' +
-          (isOwned || item.cost === 0 ? '<div style="font-size:11px;color:#34d399">Owned ✓</div>' :
+          '<div class="shop-name">' + T(item.name) + '</div>' +
+          (isOwned || item.cost === 0 ? '<div style="font-size:11px;color:#34d399">' + T('Owned') + ' ✓</div>' :
             '<div class="shop-price">' + coinSVG(14) + ' ' + item.cost + '</div>') +
           btnHtml + '</div>';
       }).join('');
@@ -1540,17 +1544,17 @@
         const canAfford = roomData.coins >= item.cost;
         let btnHtml = '';
         if (isActive) {
-          btnHtml = '<button class="shop-btn equipped-btn" disabled>✓ Active</button>';
+          btnHtml = '<button class="shop-btn equipped-btn" disabled>✓ ' + T('Active') + '</button>';
         } else if (isOwned || item.cost === 0) {
-          btnHtml = '<button class="shop-btn equip" onclick="equipFloor(\'' + item.id + '\')">Use</button>';
+          btnHtml = '<button class="shop-btn equip" onclick="equipFloor(\'' + item.id + '\')">' + T('Use') + '</button>';
         } else {
           btnHtml = '<button class="shop-btn buy" onclick="buyFloor(\'' + item.id + '\')" ' +
-            (canAfford ? '' : 'disabled') + '>Buy</button>';
+            (canAfford ? '' : 'disabled') + '>' + T('Buy') + '</button>';
         }
         return '<div class="shop-card' + (isActive ? ' equipped' : isOwned ? ' owned' : '') + '">' +
           '<canvas class="shop-preview" data-preview="floor" data-pid="' + item.id + '"></canvas>' +
-          '<div class="shop-name">' + item.name + '</div>' +
-          (isOwned || item.cost === 0 ? '<div style="font-size:11px;color:#34d399">Owned ✓</div>' :
+          '<div class="shop-name">' + T(item.name) + '</div>' +
+          (isOwned || item.cost === 0 ? '<div style="font-size:11px;color:#34d399">' + T('Owned') + ' ✓</div>' :
             '<div class="shop-price">' + coinSVG(14) + ' ' + item.cost + '</div>') +
           btnHtml + '</div>';
       }).join('');
@@ -1565,17 +1569,17 @@
         const canAfford = roomData.coins >= item.cost;
         let btnHtml = '';
         if (isActive) {
-          btnHtml = '<button class="shop-btn equipped-btn" disabled>✓ Active</button>';
+          btnHtml = '<button class="shop-btn equipped-btn" disabled>✓ ' + T('Active') + '</button>';
         } else if (isOwned || item.cost === 0) {
-          btnHtml = '<button class="shop-btn equip" onclick="equipWindow(\'' + item.id + '\')">Use</button>';
+          btnHtml = '<button class="shop-btn equip" onclick="equipWindow(\'' + item.id + '\')">' + T('Use') + '</button>';
         } else {
           btnHtml = '<button class="shop-btn buy" onclick="buyWindow(\'' + item.id + '\')" ' +
-            (canAfford ? '' : 'disabled') + '>Buy</button>';
+            (canAfford ? '' : 'disabled') + '>' + T('Buy') + '</button>';
         }
         return '<div class="shop-card' + (isActive ? ' equipped' : isOwned ? ' owned' : '') + '">' +
           '<canvas class="shop-preview" data-preview="window" data-pid="' + item.id + '"></canvas>' +
-          '<div class="shop-name">' + item.name + '</div>' +
-          (isOwned || item.cost === 0 ? '<div style="font-size:11px;color:#34d399">Owned ✓</div>' :
+          '<div class="shop-name">' + T(item.name) + '</div>' +
+          (isOwned || item.cost === 0 ? '<div style="font-size:11px;color:#34d399">' + T('Owned') + ' ✓</div>' :
             '<div class="shop-price">' + coinSVG(14) + ' ' + item.cost + '</div>') +
           btnHtml + '</div>';
       }).join('');
@@ -1602,18 +1606,18 @@
           const canAfford = roomData.coins >= item.cost;
           let btnHtml = '';
           if (isPlaced) {
-            btnHtml = '<button class="shop-btn equipped-btn" disabled>✓ In Room</button>' +
-              '<button class="shop-btn" style="margin-top:4px;background:rgba(239,68,68,0.2);color:#f87171" onclick="removeDecor(\'' + item.id + '\')">Remove</button>';
+            btnHtml = '<button class="shop-btn equipped-btn" disabled>✓ ' + T('In Room') + '</button>' +
+              '<button class="shop-btn" style="margin-top:4px;background:rgba(239,68,68,0.2);color:#f87171" onclick="removeDecor(\'' + item.id + '\')">' + T('Remove') + '</button>';
           } else if (isOwned) {
-            btnHtml = '<button class="shop-btn equip" onclick="placeDecor(\'' + item.id + '\')">Place</button>';
+            btnHtml = '<button class="shop-btn equip" onclick="placeDecor(\'' + item.id + '\')">' + T('Place') + '</button>';
           } else {
             btnHtml = '<button class="shop-btn buy" onclick="buyDecor(\'' + item.id + '\')" ' +
-              (canAfford ? '' : 'disabled') + '>Buy</button>';
+              (canAfford ? '' : 'disabled') + '>' + T('Buy') + '</button>';
           }
           return '<div class="shop-card' + (isPlaced ? ' equipped' : isOwned ? ' owned' : '') + '">' +
             '<canvas class="shop-preview" data-preview="decor" data-pid="' + item.id + '" data-cat="' + item.category + '"></canvas>' +
-            '<div class="shop-name">' + item.name + '</div>' +
-            (isOwned ? '<div style="font-size:11px;color:#34d399">Owned ✓</div>' :
+            '<div class="shop-name">' + T(item.name) + '</div>' +
+            (isOwned ? '<div style="font-size:11px;color:#34d399">' + T('Owned') + ' ✓</div>' :
               '<div class="shop-price">' + coinSVG(14) + ' ' + item.cost + '</div>') +
             btnHtml + '</div>';
         }).join('');
@@ -1633,23 +1637,24 @@
         const _afOn = roomData.autoFeedOn;
         petHtml += '<div style="background:rgba(255,210,61,0.08);border:1px solid rgba(255,210,61,0.25);border-radius:12px;padding:10px 12px;margin-bottom:12px">';
         petHtml += '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">';
-        petHtml += '<div style="font-size:12px;font-weight:700;color:#ffd23d">🤖 Auto-Feeder</div>';
+        petHtml += '<div style="font-size:12px;font-weight:700;color:#ffd23d">🤖 ' + T('Auto-Feeder') + '</div>';
         if (!_afOwned) {
           const _afCan = roomData.coins >= AUTO_FEEDER_COST;
           petHtml += '<button onclick="buyAutoFeeder()" ' + (_afCan ? '' : 'disabled') +
             ' style="font-size:11px;padding:6px 12px;border-radius:8px;border:1px solid rgba(255,210,61,0.4);' +
             'background:' + (_afCan ? 'rgba(255,210,61,0.18)' : 'rgba(255,255,255,0.05)') + ';color:' +
             (_afCan ? '#ffd23d' : 'rgba(255,255,255,0.35)') + ';cursor:' + (_afCan ? 'pointer' : 'not-allowed') + '">' +
-            coinSVG(11) + ' ' + AUTO_FEEDER_COST + ' · Buy</button>';
+            coinSVG(11) + ' ' + AUTO_FEEDER_COST + ' · ' + T('Buy') + '</button>';
         } else {
           petHtml += '<button onclick="toggleAutoFeed()" style="font-size:11px;padding:6px 14px;border-radius:8px;border:1px solid ' +
             (_afOn ? 'rgba(52,211,153,0.5)' : 'rgba(255,255,255,0.2)') + ';background:' +
             (_afOn ? 'rgba(52,211,153,0.18)' : 'rgba(255,255,255,0.06)') + ';color:' +
             (_afOn ? '#34d399' : 'rgba(255,255,255,0.5)') + ';cursor:pointer;font-weight:700">' +
-            (_afOn ? 'ON' : 'OFF') + '</button>';
+            (_afOn ? T('ON') : T('OFF')) + '</button>';
         }
         petHtml += '</div>';
-        petHtml += '<div style="font-size:10px;color:rgba(255,255,255,0.45);margin-top:6px">Keeps every pet\'s hunger &amp; thirst topped up automatically — even while you\'re away. Spends your coins.</div>';
+        petHtml += '<div style="font-size:10px;color:rgba(255,255,255,0.45);margin-top:6px">' +
+          T('Keeps every pet\'s hunger & thirst topped up automatically — even while you\'re away. Spends your coins.') + '</div>';
         petHtml += '</div>';
         petHtml += '<div style="display:flex;justify-content:center;gap:16px;padding:6px 0 10px;flex-wrap:wrap">';
         activePets.forEach(pet => {
@@ -1659,19 +1664,20 @@
           const hColor = hunger > 50 ? '#34d399' : hunger > 20 ? '#fbbf24' : '#f87171';
           const tColor = thirst > 50 ? '#60a5fa' : thirst > 20 ? '#fbbf24' : '#f87171';
           petHtml += '<div style="text-align:center;font-size:11px;color:rgba(255,255,255,0.7)">' +
-            (petDef?.emoji || '🐾') + ' ' + pet.name +
+            (petDef?.emoji || '🐾') + ' ' + petDisplayName(pet) +
             ' <span style="color:' + hColor + '">🍖' + Math.round(hunger) + '%</span>' +
             ' <span style="color:' + tColor + '">💧' + Math.round(thirst) + '%</span></div>';
         });
         petHtml += '</div>';
-        petHtml += '<div class="shop-section-title">🍖 Drag food to your pet!</div>';
-        petHtml += '<div style="font-size:11px;color:rgba(255,255,255,0.4);padding:0 0 8px;text-align:center">Drag food to pet, or tap food then tap your pet</div>';
+        petHtml += '<div class="shop-section-title">🍖 ' + T('Drag food to your pet!') + '</div>';
+        petHtml += '<div style="font-size:11px;color:rgba(255,255,255,0.4);padding:0 0 8px;text-align:center">' +
+          T('Drag food to pet, or tap food then tap your pet') + '</div>';
         petHtml += '<div class="food-grid">';
         petHtml += FOODS.map(f => {
           const canAfford = roomData.coins >= f.cost;
           return '<div class="food-card' + (canAfford ? '' : ' disabled') + '" draggable="' + canAfford + '" ondragstart="onFoodDragStart(event,\'' + f.id + '\')" data-food="' + f.id + '">' +
             '<span class="food-emoji">' + f.emoji + '</span>' +
-            '<div class="food-name">' + f.name + '</div>' +
+            '<div class="food-name">' + T(f.name) + '</div>' +
             '<div class="food-restore">+' + f.restore + '%</div>' +
             '<div class="shop-price" style="margin-top:4px">' + coinSVG(11) + ' ' + f.cost + '</div>' +
             '</div>';
@@ -1679,21 +1685,22 @@
         petHtml += '</div>';
 
         // Drinks section (restores thirst)
-        petHtml += '<div class="shop-section-title" style="margin-top:12px">💧 Drinks — restore thirst!</div>';
-        petHtml += '<div style="font-size:11px;color:rgba(255,255,255,0.4);padding:0 0 8px;text-align:center">Tap drink then tap your pet to hydrate</div>';
+        petHtml += '<div class="shop-section-title" style="margin-top:12px">💧 ' + T('Drinks — restore thirst!') + '</div>';
+        petHtml += '<div style="font-size:11px;color:rgba(255,255,255,0.4);padding:0 0 8px;text-align:center">' +
+          T('Tap drink then tap your pet to hydrate') + '</div>';
         petHtml += '<div class="food-grid">';
         petHtml += DRINKS.map(d => {
           const canAfford = roomData.coins >= d.cost;
           return '<div class="food-card' + (canAfford ? '' : ' disabled') + '" data-drink="' + d.id + '">' +
             '<span class="food-emoji">' + d.emoji + '</span>' +
-            '<div class="food-name">' + d.name + '</div>' +
+            '<div class="food-name">' + T(d.name) + '</div>' +
             '<div class="food-restore" style="color:#60a5fa">+' + d.restore + '%</div>' +
             '<div class="shop-price" style="margin-top:4px">' + coinSVG(11) + ' ' + d.cost + '</div>' +
             '</div>';
         }).join('');
         petHtml += '</div></div>';
       } else {
-        petHtml = '<div class="visit-empty">Buy a pet first to feed it!</div>';
+        petHtml = '<div class="visit-empty">' + T('Buy a pet first to feed it!') + '</div>';
       }
       petEl.innerHTML = petHtml;
 
@@ -1708,26 +1715,27 @@
           const aff = pet.affection ?? 0;
           const ms = getAffectionTitle(aff);
           toyHtml += '<div style="text-align:center;font-size:11px;color:rgba(255,255,255,0.7)">' +
-            (petDef?.emoji || '🐾') + ' ' + pet.name +
+            (petDef?.emoji || '🐾') + ' ' + petDisplayName(pet) +
             ' <span style="color:#ff8aab">♥ ' + aff + '</span>' +
-            ' <span style="color:#fbbf24;font-size:10px">' + ms.title + '</span></div>';
+            ' <span style="color:#fbbf24;font-size:10px">' + T(ms.title) + '</span></div>';
         });
         toyHtml += '</div>';
-        toyHtml += '<div class="shop-section-title">🧸 Tap toy then tap your pet!</div>';
-        toyHtml += '<div style="font-size:11px;color:rgba(255,255,255,0.4);padding:0 0 8px;text-align:center">Toys increase your pet\'s affection</div>';
+        toyHtml += '<div class="shop-section-title">🧸 ' + T('Tap toy then tap your pet!') + '</div>';
+        toyHtml += '<div style="font-size:11px;color:rgba(255,255,255,0.4);padding:0 0 8px;text-align:center">' +
+          T('Toys increase your pet\'s affection') + '</div>';
         toyHtml += '<div class="food-grid">';
         toyHtml += TOYS.map(t => {
           const canAfford = roomData.coins >= t.cost;
           return '<div class="food-card' + (canAfford ? '' : ' disabled') + '" data-toy="' + t.id + '">' +
             '<span class="food-emoji">' + t.emoji + '</span>' +
-            '<div class="food-name">' + t.name + '</div>' +
+            '<div class="food-name">' + T(t.name) + '</div>' +
             '<div class="food-restore" style="color:#ff8aab">♥+' + t.affection + '</div>' +
             '<div class="shop-price" style="margin-top:4px">' + coinSVG(11) + ' ' + t.cost + '</div>' +
             '</div>';
         }).join('');
         toyHtml += '</div></div>';
       } else {
-        toyHtml = '<div class="visit-empty">Buy a pet first to play with it!</div>';
+        toyHtml = '<div class="visit-empty">' + T('Buy a pet first to play with it!') + '</div>';
       }
       toyEl.innerHTML = toyHtml;
 
@@ -1742,29 +1750,33 @@
         const scaledCost = getPlantUpgradeCost(roomData.plant, lvl);
         const coinsPerCycle = lvl * (plantDef ? plantDef.coinRate : 1);
         const income = getTotalPlantIncome();
-        plantHtml += '<div class="shop-section"><div class="shop-section-title">🌱 ' + (plantDef?.name || 'Plant') + ' — Lv.' + lvl + ' (Floor ' + currentLayer + ')</div>';
+        plantHtml += '<div class="shop-section"><div class="shop-section-title">🌱 ' +
+          T('{name} — Lv.{lvl} (Floor {floor})', { name: T(plantDef?.name || 'Your plant'), lvl: lvl, floor: currentLayer }) + '</div>';
         plantHtml += '<div style="text-align:center;font-size:11px;color:#98e4b0;padding:4px 0 4px">' +
-          '🌿 This tree produces ' + coinSVG(12) + ' ' + coinsPerCycle + ' / 5 min</div>';
+          '🌿 ' + T('This tree produces {coins} / 5 min', { coins: coinSVG(12) + ' ' + coinsPerCycle }) + '</div>';
         // Every tree on every floor earns — show the combined room total.
         plantHtml += '<div style="text-align:center;font-size:11px;padding:0 0 8px;color:#fbbf24">' +
           (income
-            ? '💰 ' + income.count + ' tree' + (income.count > 1 ? 's' : '') + ' across your floors earn ' + coinSVG(12) + ' ' + income.perCycle + ' / 5 min total'
+            ? '💰 ' + I18N.plural(income.count,
+                '1 tree across your floors earns {coins} / 5 min total',
+                '{n} trees across your floors earn {coins} / 5 min total',
+                { coins: coinSVG(12) + ' ' + income.perCycle })
             : '') + '</div>';
         if (nextDef && scaledCost !== null) {
           const nextCoins = nextDef.level * (plantDef ? plantDef.coinRate : 1);
           plantHtml += '<div class="shop-card" style="text-align:center">' +
             '<span class="shop-emoji">' + (plantDef?.emoji || '🌱') + '</span>' +
-            '<div class="shop-name">Upgrade to Lv.' + nextDef.level + ' (' + nextDef.label + ')</div>' +
-            '<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:4px">Earns ' + nextCoins + ' coins / 5 min</div>' +
+            '<div class="shop-name">' + T('Upgrade to Lv.{n} ({label})', { n: nextDef.level, label: T(nextDef.label) }) + '</div>' +
+            '<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:4px">' + T('Earns {n} coins / 5 min', { n: nextCoins }) + '</div>' +
             '<div class="shop-price">' + coinSVG(14) + ' ' + scaledCost + '</div>' +
             '<button class="shop-btn upgrade" onclick="upgradePlant()" ' +
-            (roomData.coins >= scaledCost ? '' : 'disabled') + '>Upgrade</button></div>';
+            (roomData.coins >= scaledCost ? '' : 'disabled') + '>' + T('Upgrade') + '</button></div>';
         } else {
-          plantHtml += '<div style="text-align:center;color:#98e4b0;padding:20px">★ Max Level! ★</div>';
+          plantHtml += '<div style="text-align:center;color:#98e4b0;padding:20px">★ ' + T('Max Level!') + ' ★</div>';
         }
         plantHtml += '</div>';
       } else {
-        plantHtml = '<div class="visit-empty">Buy a plant first to upgrade it!</div>';
+        plantHtml = '<div class="visit-empty">' + T('Buy a plant first to upgrade it!') + '</div>';
       }
       plantEl.innerHTML = plantHtml;
 
@@ -1774,54 +1786,54 @@
       const UNLOCK_COST = { 2: 10000, 3: 20000 };
       const unlockedLayers = roomData.unlockedLayers || 1;
       let layerHtml = '<div class="shop-section">';
-      layerHtml += '<div class="shop-section-title">🏠 Floors &amp; Layers</div>';
+      layerHtml += '<div class="shop-section-title">🏠 ' + T('Floors & Layers') + '</div>';
       layerHtml += '<div style="font-size:11px;color:rgba(255,255,255,0.4);padding:0 12px 12px;text-align:center">' +
-        'Unlock new floors for your home! Each floor has its own wall, window, and decor layout.</div>';
+        T('Unlock new floors for your home! Each floor has its own wall, window, and decor layout.') + '</div>';
       // Render cards for floors 1–3
       for (let i = 1; i <= 3; i++) {
         const unlocked  = i <= unlockedLayers;
         const isCurrent = i === currentLayer;
         const cost      = UNLOCK_COST[i];
-        const label     = i === 1 ? '🏡 Base Floor' : i === 2 ? '🏢 2nd Floor' : '🌟 Top Floor';
-        const defWall   = getLayerDefaultWall(i).replace('wall_', '');
+        const label     = i === 1 ? '🏡 ' + T('Base Floor') : i === 2 ? '🏢 ' + T('2nd Floor') : '🌟 ' + T('Top Floor');
+        const defWall   = WALL_PATTERNS.find(w => w.id === getLayerDefaultWall(i));
         layerHtml += '<div class="shop-card" style="text-align:center;' +
           (unlocked ? 'border-color:rgba(247,201,126,0.35)' : '') + '">';
         layerHtml += '<span class="shop-emoji">' + (i === 1 ? '🏡' : i === 2 ? '🏢' : '🌟') + '</span>';
         layerHtml += '<div class="shop-name">' + label + '</div>';
         if (i === 1) {
           // Base floor is always free and unlocked
-          layerHtml += '<div style="font-size:11px;color:#34d399;margin-bottom:6px">✓ Free — always unlocked</div>';
+          layerHtml += '<div style="font-size:11px;color:#34d399;margin-bottom:6px">✓ ' + T('Free — always unlocked') + '</div>';
           if (isCurrent) {
-            layerHtml += '<button class="shop-btn equipped-btn" disabled>✓ Here now</button>';
+            layerHtml += '<button class="shop-btn equipped-btn" disabled>✓ ' + T('Here now') + '</button>';
           } else {
-            layerHtml += '<button class="shop-btn equip" onclick="enterLayer(1)">Go to Floor 1</button>';
+            layerHtml += '<button class="shop-btn equip" onclick="enterLayer(1)">' + T('Go to Floor {n}', { n: 1 }) + '</button>';
           }
         } else if (unlocked) {
           layerHtml += '<div style="font-size:11px;color:#34d399;margin-bottom:6px">' +
-            '✓ Unlocked' + (isCurrent ? ' <span style="color:#f7c97e">(Current)</span>' : '') + '</div>';
+            '✓ ' + T('Unlocked') + (isCurrent ? ' <span style="color:#f7c97e">' + T('(Current)') + '</span>' : '') + '</div>';
           if (isCurrent) {
-            layerHtml += '<button class="shop-btn equipped-btn" disabled>✓ Here now</button>';
+            layerHtml += '<button class="shop-btn equipped-btn" disabled>✓ ' + T('Here now') + '</button>';
           } else {
-            layerHtml += '<button class="shop-btn equip" onclick="enterLayer(' + i + ')">Go to Floor ' + i + '</button>';
+            layerHtml += '<button class="shop-btn equip" onclick="enterLayer(' + i + ')">' + T('Go to Floor {n}', { n: i }) + '</button>';
           }
         } else {
           // Locked — show unlock requirements
           const prevOk = (i - 1) <= unlockedLayers;
           layerHtml += '<div style="font-size:10px;color:rgba(255,255,255,0.35);margin-bottom:4px">' +
-            'Unlocks with ' + defWall + ' wall</div>';
+            T('Unlocks with {wall}', { wall: defWall ? T(defWall.name) : '' }) + '</div>';
           layerHtml += '<div class="shop-price">' + coinSVG(14) + ' ' + cost + '</div>';
           if (prevOk) {
             layerHtml += '<button class="shop-btn buy" onclick="unlockLayer(' + i + ')" ' +
-              (roomData.coins >= cost ? '' : 'disabled') + '>🔓 Unlock Floor ' + i + '</button>';
+              (roomData.coins >= cost ? '' : 'disabled') + '>🔓 ' + T('Unlock Floor {n}', { n: i }) + '</button>';
           } else {
-            layerHtml += '<button class="shop-btn" disabled>Unlock Floor ' + (i - 1) + ' first</button>';
+            layerHtml += '<button class="shop-btn" disabled>' + T('Unlock Floor {n} first', { n: i - 1 }) + '</button>';
           }
         }
         layerHtml += '</div>';
       }
       // Outside view shortcut
       layerHtml += '<div style="text-align:center;margin-top:4px;padding:0 12px 8px">';
-      layerHtml += '<button class="shop-btn equip" style="width:100%" onclick="goOutside()">🌳 Outside View</button>';
+      layerHtml += '<button class="shop-btn equip" style="width:100%" onclick="goOutside()">🌳 ' + T('Outside View') + '</button>';
       layerHtml += '</div>';
       layerHtml += '</div>';
       layerEl.innerHTML = layerHtml;
@@ -1846,7 +1858,7 @@
         const onlineCount = rooms.filter(r => r.isOnline).length;
         document.getElementById('onlineCountNum').textContent = onlineCount;
         if (!rooms.length) {
-          el.innerHTML = '<div class="visit-empty">No other rooms yet. Invite friends!</div>';
+          el.innerHTML = '<div class="visit-empty">' + T('No other rooms yet. Invite friends!') + '</div>';
           return;
         }
         el.innerHTML = rooms.map(r => {
@@ -1863,16 +1875,30 @@
           return '<div class="visit-card" onclick="visitRoom(\'' + r.uid + '\')">' +
             '<span class="visit-avatar">🏠</span>' +
             '<div class="visit-info">' +
-            '<div class="visit-name">' + dot + escapeHtml(r.displayName || 'Anonymous') + '</div>' +
-            '<span class="visit-peek">' + (peekItems.length ? peekItems.join(' ') : '<span style="font-size:12px;opacity:0.4">Empty room</span>') + '</span>' +
+            '<div class="visit-name">' + dot + escapeHtml(r.displayName || T('Anonymous')) + '</div>' +
+            '<span class="visit-peek">' + (peekItems.length ? peekItems.join(' ') : '<span style="font-size:12px;opacity:0.4">' + T('Empty room') + '</span>') + '</span>' +
             '</div>' +
-            '<button class="food-btn" style="font-size:10px;padding:6px 10px;margin-right:6px" onclick="event.stopPropagation();showGiftModal(\'' + r.uid + '\',\'' + escapeHtml(r.displayName || 'Anonymous').replace(/'/g, "\\'") + '\')">🎁</button>' +
+            '<button class="food-btn" style="font-size:10px;padding:6px 10px;margin-right:6px" onclick="event.stopPropagation();showGiftModal(\'' + r.uid + '\',\'' + escapeHtml(r.displayName || T('Anonymous')).replace(/'/g, "\\'") + '\')">🎁</button>' +
             '<span class="visit-arrow">›</span></div>';
         }).join('');
       }, () => {
-        el.innerHTML = '<div class="visit-empty">Failed to load rooms</div>';
+        el.innerHTML = '<div class="visit-empty">' + T('Failed to load rooms') + '</div>';
       });
     }
+
+    /* ── Repaint the visit list when the language changes ──
+       Every other panel redraws through renderAll(), but this one bails out
+       while its snapshot listener is alive — so the 'Anonymous' fallback and
+       the empty / error states would keep the language that drew them until
+       Firestore happened to push again. Drop the listener and re-subscribe. */
+    if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('langchange', function () {
+      try {
+        if (!unsubVisitList) return;
+        unsubVisitList();
+        unsubVisitList = null;
+        renderVisitList();
+      } catch (e) {}
+    });
 
     function escapeHtml(s) {
       return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');

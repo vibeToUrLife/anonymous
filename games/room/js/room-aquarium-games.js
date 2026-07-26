@@ -61,7 +61,7 @@ function _aqGameEnd() {
   if (typeof isAquariumView !== 'undefined' && isAquariumView) drawAquariumCanvas();  // restore the swimming tank
 }
 function _aqAward(coins) {
-  if (coins > 0) { roomData.coins += coins; logCoin(coins, 'Aquarium game 🐟'); saveRoom(); if (typeof renderAll === 'function') renderAll(); }
+  if (coins > 0) { roomData.coins += coins; logCoin(coins, T('Aquarium game') + ' 🐟'); saveRoom(); if (typeof renderAll === 'function') renderAll(); }
 }
 function _aqResultModal(title, sub, coins) {
   const ov = document.createElement('div');
@@ -70,8 +70,8 @@ function _aqResultModal(title, sub, coins) {
     '<div class="ws-box">' +
       '<div class="ws-head">' + title + '</div>' +
       '<div class="ws-sub">' + sub + '</div>' +
-      (coins != null ? '<div class="ws-slot"><span class="ws-slot-no">🪙 Coins</span><span class="ws-slot-state">' + (coins >= 0 ? '+' : '') + coins + '</span></div>' : '') +
-      '<button class="cp-crop" style="justify-content:center;font-weight:800">OK</button>' +
+      (coins != null ? '<div class="ws-slot"><span class="ws-slot-no">🪙 ' + T('Coins') + '</span><span class="ws-slot-state">' + (coins >= 0 ? '+' : '') + coins + '</span></div>' : '') +
+      '<button class="cp-crop" style="justify-content:center;font-weight:800">' + T('OK') + '</button>' +
     '</div>';
   const close = function () { ov.remove(); };
   ov.querySelector('.cp-crop').addEventListener('click', close);
@@ -107,10 +107,10 @@ function showAquariumTutorial(type) {
   ov.style.cssText = 'position:fixed;inset:0;z-index:9650;display:flex;align-items:center;justify-content:center;background:var(--g-scrim);backdrop-filter:blur(6px)';
   ov.innerHTML =
     '<div class="ws-box">' +
-      '<div class="ws-head">' + t.title + '</div>' +
-      '<div class="ws-sub">How to play</div>' +
-      '<ul class="aq-tut-list">' + t.lines.map(function (l) { return '<li>' + l + '</li>'; }).join('') + '</ul>' +
-      '<button class="cp-crop" style="justify-content:center;font-weight:800">Got it!</button>' +
+      '<div class="ws-head">' + T(t.title) + '</div>' +
+      '<div class="ws-sub">' + T('How to play') + '</div>' +
+      '<ul class="aq-tut-list">' + t.lines.map(function (l) { return '<li>' + T(l) + '</li>'; }).join('') + '</ul>' +
+      '<button class="cp-crop" style="justify-content:center;font-weight:800">' + T('Got it!') + '</button>' +
     '</div>';
   const close = function () { ov.remove(); };
   ov.querySelector('.cp-crop').addEventListener('click', close);
@@ -124,9 +124,9 @@ function startFeedingFrenzy() {
   const now = Date.now();
   if (now - (roomData.aquariumFrenzyAt || 0) < AQUARIUM_FRENZY_COOLDOWN_MS) {
     const mins = Math.ceil((AQUARIUM_FRENZY_COOLDOWN_MS - (now - roomData.aquariumFrenzyAt)) / 60000);
-    showToast('🍤 Feeding Frenzy ready in ~' + mins + ' min', ''); return;
+    showToast('🍤 ' + T('Feeding Frenzy ready in ~{n} min', { n: mins }), ''); return;
   }
-  if (!(roomData.aquariumFish || []).length) { showToast('Place some fish first! 🐠', ''); return; }
+  if (!(roomData.aquariumFish || []).length) { showToast(T('Place some fish first!') + ' 🐠', ''); return; }
   roomData.aquariumFrenzyAt = now; saveRoom();
   const cvs = _aqGameBegin('frenzy'); if (!cvs) return;
   const ctx = cvs.getContext('2d');
@@ -166,11 +166,11 @@ function startFeedingFrenzy() {
     });
     ctx.fillStyle = '#ffcf6b';
     flakes.forEach(fl => { ctx.beginPath(); ctx.arc(fl.x, fl.y, 6, 0, 7); ctx.fill(); });
-    _aqHud(ctx, W, ['🍤 Feeding Frenzy — ' + (left / 1000).toFixed(1) + 's', 'Bites ' + bites + (combo > 1 ? '   🔥 x' + combo : '')]);
+    _aqHud(ctx, W, ['🍤 ' + T('Feeding Frenzy — {sec}s', { sec: (left / 1000).toFixed(1) }), T('Bites {n}', { n: bites }) + (combo > 1 ? '   🔥 x' + combo : '')]);
     if (left <= 0) {
       const coins = frenzyPayout(bites, maxCombo);
       _aqAward(coins); _aqGameEnd();
-      _aqResultModal('🍤 Feeding Frenzy!', bites + ' bites · best combo x' + maxCombo, coins);
+      _aqResultModal('🍤 ' + T('Feeding Frenzy!'), I18N.plural(bites, '1 bite · best combo x{combo}', '{n} bites · best combo x{combo}', { combo: maxCombo }), coins);
       return;
     }
     _aqGameRAF = requestAnimationFrame(frame);
@@ -181,8 +181,8 @@ function startFeedingFrenzy() {
 /* ── Bubble Pop ── */
 function startBubblePop() {
   if (viewingUid !== currentUid || _aqGame) return;
-  if ((roomData.aquariumBubbleDay || '') === _aqGameToday()) { showToast('🫧 Bubble Pop — come back tomorrow!', ''); return; }
-  if (!(roomData.aquariumFish || []).length) { showToast('Place some fish first! 🐠', ''); return; }
+  if ((roomData.aquariumBubbleDay || '') === _aqGameToday()) { showToast('🫧 ' + T('Bubble Pop — come back tomorrow!'), ''); return; }
+  if (!(roomData.aquariumFish || []).length) { showToast(T('Place some fish first!') + ' 🐠', ''); return; }
   roomData.aquariumBubbleDay = _aqGameToday(); saveRoom();
   const legendaries = (roomData.aquariumFish || []).filter(n => { const f = FISH_TYPES.find(x => x.name === n); return f && f.rarity === 'legendary'; }).length;
   const jackChance = bubbleJackpotChance(legendaries);
@@ -221,8 +221,8 @@ function startBubblePop() {
       ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1.5; ctx.stroke();
       if (b.value >= 100) { ctx.fillStyle = '#7a5a10'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('★', b.x, b.y + 4); }
     }
-    _aqHud(ctx, W, ['🫧 Bubble Pop — ' + (left / 1000).toFixed(1) + 's', '🪙 ' + coins]);
-    if (left <= 0) { _aqAward(coins); _aqGameEnd(); _aqResultModal('🫧 Bubble Pop!', 'Popped ' + popped + ' bubbles', coins); return; }
+    _aqHud(ctx, W, ['🫧 ' + T('Bubble Pop — {sec}s', { sec: (left / 1000).toFixed(1) }), '🪙 ' + coins]);
+    if (left <= 0) { _aqAward(coins); _aqGameEnd(); _aqResultModal('🫧 ' + T('Bubble Pop!'), I18N.plural(popped, 'Popped 1 bubble', 'Popped {n} bubbles'), coins); return; }
     _aqGameRAF = requestAnimationFrame(frame);
   }
   _aqGameRAF = requestAnimationFrame(frame);
@@ -231,9 +231,9 @@ function startBubblePop() {
 /* ── Fish Race & Bet ── */
 function startFishRace() {
   if (viewingUid !== currentUid || _aqGame) return;
-  if ((roomData.aquariumRaceDay || '') === _aqGameToday()) { showToast('🏁 Fish Race — once a day! Come back tomorrow.', ''); return; }
+  if ((roomData.aquariumRaceDay || '') === _aqGameToday()) { showToast('🏁 ' + T('Fish Race — once a day! Come back tomorrow.'), ''); return; }
   const placed = (roomData.aquariumFish || []);
-  if (placed.length < 3) { showToast('Need at least 3 fish in your tank to race!', ''); return; }
+  if (placed.length < 3) { showToast(T('Need at least 3 fish in your tank to race!'), ''); return; }
   const racers = placed.slice(0, 4);
   const odds = raceOdds(FISH_TYPES, racers);
   _aqShowRaceBet(racers, odds);
@@ -245,13 +245,13 @@ function _aqShowRaceBet(racers, odds) {
   function render() {
     ov.innerHTML =
       '<div class="ws-box">' +
-        '<div class="ws-head">🏁 Fish Race</div>' +
-        '<div class="ws-sub">Pick a stake, then tap a fish to bet &amp; start.</div>' +
+        '<div class="ws-head">🏁 ' + T('Fish Race') + '</div>' +
+        '<div class="ws-sub">' + T('Pick a stake, then tap a fish to bet & start.') + '</div>' +
         '<div class="aq-themes" style="margin-bottom:8px">' +
           AQUARIUM_RACE_STAKES.map(s => '<button class="aq-theme-btn' + (s === stake ? ' active' : '') + '" data-stake="' + s + '"' + (roomData.coins < s ? ' disabled' : '') + '>🪙 ' + s + '</button>').join('') +
         '</div>' +
-        odds.map((o, i) => '<div class="farm-shop-row"><span class="farm-shop-animal">' + o.name + '</span><span class="farm-shop-drop">x' + o.odds + '</span><button class="farm-shop-buy" data-pick="' + i + '"' + (roomData.coins < stake ? ' disabled' : '') + '>Bet</button></div>').join('') +
-        '<button class="cp-close" style="margin-top:8px">Cancel</button>' +
+        odds.map((o, i) => '<div class="farm-shop-row"><span class="farm-shop-animal">' + T(o.name) + '</span><span class="farm-shop-drop">x' + o.odds + '</span><button class="farm-shop-buy" data-pick="' + i + '"' + (roomData.coins < stake ? ' disabled' : '') + '>' + T('Bet') + '</button></div>').join('') +
+        '<button class="cp-close" style="margin-top:8px">' + T('Cancel') + '</button>' +
       '</div>';
     ov.querySelectorAll('[data-stake]').forEach(b => b.addEventListener('click', () => { stake = +b.dataset.stake; render(); }));
     ov.querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => {
@@ -267,7 +267,7 @@ function _aqShowRaceBet(racers, odds) {
 }
 function _aqRunRace(racers, odds, pickIdx, stake) {
   roomData.coins = Math.max(0, roomData.coins - stake);
-  logCoin(-stake, 'Game stake');
+  logCoin(-stake, T('Game stake'));
   roomData.aquariumRaceDay = _aqGameToday();
   saveRoom(); if (typeof renderAll === 'function') renderAll();
   const cvs = _aqGameBegin('race'); if (!cvs) return;
@@ -289,14 +289,16 @@ function _aqRunRace(racers, odds, pickIdx, stake) {
       if (winner < 0) { ln.x += ln.base * (0.8 + Math.random() * 1.6); if (ln.x >= finish) { ln.x = finish; winner = i; } }
       ln.wob += 0.2;
       ctx.save(); ctx.translate(ln.x, ln.y + Math.sin(ln.wob) * 4); drawFish(ctx, ln.type, ln.type.size || 20, { phase: ln.wob }); ctx.restore();
-      if (i === pickIdx) { ctx.fillStyle = 'rgba(255,214,106,0.95)'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('▼ you', ln.x, ln.y - (ln.type.size || 20)); }
+      if (i === pickIdx) { ctx.fillStyle = 'rgba(255,214,106,0.95)'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('▼ ' + T('you'), ln.x, ln.y - (ln.type.size || 20)); }
     });
-    _aqHud(ctx, W, ['🏁 Fish Race']);
+    _aqHud(ctx, W, ['🏁 ' + T('Fish Race')]);
     if (winner >= 0) {
       const won = winner === pickIdx;
       const payout = won ? Math.floor(stake * odds[pickIdx].odds) : 0;
       _aqAward(payout); _aqGameEnd();
-      _aqResultModal(won ? '🏆 You won!' : '🐟 ' + odds[winner].name + ' won', won ? 'Your ' + odds[pickIdx].name + ' finished first!' : 'Better luck next time!', won ? payout : -stake);
+      _aqResultModal(won ? '🏆 ' + T('You won!') : '🐟 ' + T('{name} won', { name: T(odds[winner].name) }),
+                     won ? T('Your {name} finished first!', { name: T(odds[pickIdx].name) }) : T('Better luck next time!'),
+                     won ? payout : -stake);
       return;
     }
     _aqGameRAF = requestAnimationFrame(frame);

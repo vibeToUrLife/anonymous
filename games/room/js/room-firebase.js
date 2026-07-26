@@ -281,7 +281,7 @@
         // Persist the unique-plant migration now that the full room is loaded.
         if (_plantDedupChanged) {
           saveRoom();
-          showToast('🌱 Floors with the same plant were tidied — duplicates are back in your inventory. Each floor needs a different plant now.', 'success');
+          showToast('🌱 ' + T('Floors with the same plant were tidied — duplicates are back in your inventory. Each floor needs a different plant now.'), 'success');
         }
         // Decay hunger based on elapsed time (1% per 10 min)
         const lastUpdate = d.updatedAt ?? Date.now();
@@ -321,16 +321,18 @@
             const earned = cycles * coinsPerCycle;
             const _top = incomeOffline.top;
             const _name = incomeOffline.count > 1
-              ? ('Your ' + incomeOffline.count + ' trees')
-              : ('Lv.' + _top.plantLvl + ' ' + (_top.plantDef ? _top.plantDef.name : 'plant'));
+              ? T('Your {n} trees', { n: incomeOffline.count })
+              : (_top.plantDef
+                  ? T('Lv.{lvl} {name}', { lvl: _top.plantLvl, name: T(_top.plantDef.name) })
+                  : T('Lv.{lvl} plant', { lvl: _top.plantLvl }));
             // Bank it straight away — no gating modal now that you're in the room.
             roomData.coins += earned;
-            logCoin(earned, 'Plant income 🌱');
+            logCoin(earned, T('Plant income') + ' 🌱');
             roomData.lastCoinCollect = Date.now();
             saveRoom();
             if (rawElapsed >= PLANT_OFFLINE_MODAL_MS) {
               // Away a while → pop a top notice so they know, without interrupting.
-              setTimeout(function () { showToast('🌱 ' + _name + ' earned ' + earned + ' coins while you were away!', 'success'); }, 800);
+              setTimeout(function () { showToast('🌱 ' + T('{name} earned {n} coins while you were away!', { name: _name, n: earned }), 'success'); }, 800);
             }
           } else {
             // No cycles earned but reset the timer on page load
@@ -356,10 +358,10 @@
           });
           if (_afPlan.coinsSpent > 0) {
             roomData.coins = Math.max(0, roomData.coins - _afPlan.coinsSpent);
-            logCoin(-_afPlan.coinsSpent, 'Auto-feeder 🤖');
+            logCoin(-_afPlan.coinsSpent, T('Auto-Feeder') + ' 🤖');
             const _afSpent = _afPlan.coinsSpent;
             setTimeout(function () {
-              showToast('🤖 Auto-Feeder kept your pets fed — spent ' + _afSpent + ' coins while you were away!', 'success');
+              showToast('🤖 ' + T('Auto-Feeder kept your pets fed — spent {n} coins while you were away!', { n: _afSpent }), 'success');
             }, 1000);
           }
           saveRoom();
@@ -442,7 +444,7 @@
         if (r.coinsSpent > 0) {
           pet.hunger = r.hunger; pet.thirst = r.thirst;
           roomData.coins = Math.max(0, roomData.coins - r.coinsSpent);
-          logCoin(-r.coinsSpent, 'Auto-feeder 🤖');
+          logCoin(-r.coinsSpent, T('Auto-Feeder') + ' 🤖');
           changed = true;
         }
       }
@@ -521,12 +523,14 @@
             if (cycles > 0) {
               const earned = cycles * coinsPerCycle;
               roomData.coins += earned;
-              logCoin(earned, 'Plant income 🌱');
+              logCoin(earned, T('Plant income') + ' 🌱');
               roomData.lastCoinCollect = Date.now();
               saveRoom();
-              const _label = incomeHidden.count > 1 ? ('Your ' + incomeHidden.count + ' trees') : (incomeHidden.top.plantDef ? incomeHidden.top.plantDef.name : 'Plant');
-              const _tail = rawElapsed >= PLANT_OFFLINE_MODAL_MS ? ' coins while you were away!' : ' coins while tab was hidden!';
-              showToast('🌱 ' + _label + ' earned ' + earned + _tail, 'success');
+              const _label = incomeHidden.count > 1 ? T('Your {n} trees', { n: incomeHidden.count }) : (incomeHidden.top.plantDef ? T(incomeHidden.top.plantDef.name) : T('Your plant'));
+              const _msg = rawElapsed >= PLANT_OFFLINE_MODAL_MS
+                ? T('{name} earned {n} coins while you were away!', { name: _label, n: earned })
+                : T('{name} earned {n} coins while tab was hidden!', { name: _label, n: earned });
+              showToast('🌱 ' + _msg, 'success');
             }
           }
           // Reattach room listener to resume real-time updates
@@ -546,12 +550,12 @@
         if (!incomeOnline) return;
         const earned = incomeOnline.perCycle;
         roomData.coins += earned;
-        logCoin(earned, 'Plant income 🌱');
+        logCoin(earned, T('Plant income') + ' 🌱');
         roomData.lastCoinCollect = Date.now();
         await saveRoom();
         renderAllDebounced();
-        const _label = incomeOnline.count > 1 ? ('Your ' + incomeOnline.count + ' trees') : (incomeOnline.top.plantDef ? incomeOnline.top.plantDef.name : 'Plant');
-        showToast('🌱 ' + _label + ' earned ' + earned + ' coins!', 'success');
+        const _label = incomeOnline.count > 1 ? T('Your {n} trees', { n: incomeOnline.count }) : (incomeOnline.top.plantDef ? T(incomeOnline.top.plantDef.name) : T('Your plant'));
+        showToast('🌱 ' + T('{name} earned {n} coins!', { name: _label, n: earned }), 'success');
       }, 5 * 60 * 1000);
 
       // Daily login reward & achievements now run from _handleRoomSnap once the room

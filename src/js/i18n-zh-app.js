@@ -83,7 +83,6 @@
 
     // Minigames
     '🎮 Mini Games': '🎮 小游戏',
-    'Flappy Bird': 'Flappy Bird',
     'Tap to fly — beat the high score!': '点击起飞 — 冲高分！',
     'Tetris': '俄罗斯方块',
     'Clear lines, earn coins, chain combos!': '消行赚币，连击更爽！',

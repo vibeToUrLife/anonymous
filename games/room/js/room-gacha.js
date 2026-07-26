@@ -11,9 +11,9 @@
       let html = '<div style="text-align:center;padding:10px 0">' +
         '<div class="gacha-reel-window" id="gachaReelWindow"><div class="gacha-reel-strip" id="gachaReelStrip">' +
         '<div class="gacha-reel-item" style="opacity:.3">🎲</div></div></div>' +
-        '<div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:14px">Cost: 💰 ' + GACHA_COST + ' per pull</div>' +
-        '<button class="gacha-pull-btn" id="gachaPullTabBtn" onclick="pullGacha()" ' + (canAfford ? '' : 'disabled') + '>🎲 Pull!</button>' +
-        '<button onclick="showGachaPrizeModal()" style="margin-top:10px;padding:8px 18px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:transparent;color:rgba(255,255,255,.5);font-size:12px;cursor:pointer">📋 View Prizes</button>' +
+        '<div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:14px">' + T('Cost: 💰 {n} per pull', { n: GACHA_COST }) + '</div>' +
+        '<button class="gacha-pull-btn" id="gachaPullTabBtn" onclick="pullGacha()" ' + (canAfford ? '' : 'disabled') + '>🎲 ' + T('Pull!') + '</button>' +
+        '<button onclick="showGachaPrizeModal()" style="margin-top:10px;padding:8px 18px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:transparent;color:rgba(255,255,255,.5);font-size:12px;cursor:pointer">📋 ' + T('View Prizes') + '</button>' +
         '<div id="gachaTabResult" style="margin-top:16px;min-height:80px"></div></div>';
       el.innerHTML = html;
     }
@@ -44,7 +44,7 @@
       const totalWeight = GACHA_POOL.reduce((s, i) => s + i.weight, 0);
       const owned = roomData.ownedAccessories || [];
       const rarityColors = { legendary: '#fbbf24', epic: '#c084fc', rare: '#60a5fa', uncommon: '#34d399', common: 'rgba(255,255,255,.5)' };
-      const rarityLabels = { legendary: '★ Legendary', epic: '✦ Epic', rare: '◆ Rare', uncommon: '● Uncommon', common: '○ Common' };
+      const rarityLabels = { legendary: '★ ' + T('Legendary'), epic: '✦ ' + T('Epic'), rare: '◆ ' + T('Rare'), uncommon: '● ' + T('Uncommon'), common: '○ ' + T('Common') };
       const order = ['legendary','epic','rare','uncommon','common'];
       let html = '';
 
@@ -70,7 +70,7 @@
           } else {
             html += '<div style="font-size:24px;line-height:36px;height:36px">' + item.emoji + '</div>';
           }
-          html += '<div style="font-size:9px;color:#fff;font-weight:600">' + item.name + '</div>';
+          html += '<div style="font-size:9px;color:#fff;font-weight:600">' + T(item.name) + '</div>';
           html += '<div style="font-size:8px;color:rgba(255,255,255,.3)">' + pct + '%</div>';
           if (isOwned) html += '<div style="font-size:8px;color:#34d399">✓</div>';
           if (isExcl) html += '<div style="font-size:8px;color:#c084fc">★</div>';
@@ -110,7 +110,7 @@
     async function pullGacha() {
       if (viewingUid !== currentUid) return;
       if (_gachaSpinning) return;
-      if (roomData.coins < GACHA_COST) return showToast('Not enough coins!', 'error');
+      if (roomData.coins < GACHA_COST) return showToast(T('Not enough coins!'), 'error');
       _gachaSpinning = true;
 
       // Disable button immediately
@@ -120,7 +120,7 @@
       if (resultEl) resultEl.innerHTML = '';
 
       roomData.coins -= GACHA_COST;
-      logCoin(-GACHA_COST, 'Gacha pull 🎰');
+      logCoin(-GACHA_COST, T('Gacha pull') + ' 🎰');
       roomData.gachaPulls = (roomData.gachaPulls || 0) + 1;
 
       // Show coin deduction immediately
@@ -175,19 +175,21 @@
       const revealEl = document.getElementById('gachaTabResult');
       if (!revealEl) return;
       const showRarity = prize.rarity !== 'common' && prize.rarity !== 'uncommon';
+      // The rarity doubles as a CSS class, so only the word on screen is translated.
+      const rarityWord = T({ legendary: 'Legendary', epic: 'Epic', rare: 'Rare', uncommon: 'Uncommon', common: 'Common' }[prize.rarity] || prize.rarity);
 
       if (prize.type === 'coins') {
         // Coin prize — add coins
         roomData.coins += prize.amount;
-        logCoin(prize.amount, 'Gacha prize');
+        logCoin(prize.amount, T('Gacha prize'));
         document.getElementById('coinAmount').textContent = roomData.coins;
         _lastLocalSaveTime = Date.now();
         saveRoom().then(() => checkAchievements());
         revealEl.innerHTML = '<div class="gacha-prize-reveal">' +
           '<div class="gacha-prize-emoji" style="font-size:48px">💰</div>' +
-          (showRarity ? '<div class="gacha-prize-rarity ' + prize.rarity + '">' + prize.rarity + '</div>' : '') +
-          '<div class="gacha-prize-name">' + prize.name + '</div>' +
-          '<div style="font-size:13px;color:#f7c97e;margin-top:6px">+' + prize.amount + ' coins!</div></div>';
+          (showRarity ? '<div class="gacha-prize-rarity ' + prize.rarity + '">' + rarityWord + '</div>' : '') +
+          '<div class="gacha-prize-name">' + T(prize.name) + '</div>' +
+          '<div style="font-size:13px;color:#f7c97e;margin-top:6px">' + T('+{n} coins!', { n: prize.amount }) + '</div></div>';
         spawnGachaConfetti(revealEl, prize.rarity);
 
       } else if (prize.type === 'accessory') {
@@ -198,15 +200,15 @@
           // Already owned — give coin consolation based on rarity
           const refund = { common: 25, uncommon: 50, rare: 100, epic: 200, legendary: 400 }[prize.rarity] || 25;
           roomData.coins += refund;
-          logCoin(refund, 'Gacha refund');
+          logCoin(refund, T('Gacha refund'));
           document.getElementById('coinAmount').textContent = roomData.coins;
           _lastLocalSaveTime = Date.now();
           saveRoom().then(() => checkAchievements());
           revealEl.innerHTML = '<div class="gacha-prize-reveal">' +
             '<canvas class="gacha-reveal-cvs" data-acc="' + prize.id + '" width="80" height="80" style="width:80px;height:80px;margin:0 auto 6px;display:block"></canvas>' +
-            (showRarity ? '<div class="gacha-prize-rarity ' + prize.rarity + '">' + prize.rarity + '</div>' : '') +
-            '<div class="gacha-prize-name">' + prize.name + '</div>' +
-            '<div style="font-size:12px;color:#f7c97e;margin-top:4px">Already owned — +' + refund + ' coins</div></div>';
+            (showRarity ? '<div class="gacha-prize-rarity ' + prize.rarity + '">' + rarityWord + '</div>' : '') +
+            '<div class="gacha-prize-name">' + T(prize.name) + '</div>' +
+            '<div style="font-size:12px;color:#f7c97e;margin-top:4px">' + T('Already owned — +{n} coins', { n: refund }) + '</div></div>';
           const rcvs = revealEl.querySelector('.gacha-reveal-cvs');
           if (rcvs) _drawAccPreviewOnCanvas(rcvs, prize.id);
         } else {
@@ -215,12 +217,12 @@
           _lastLocalSaveTime = Date.now();
           await saveRoom();
           checkAchievements();
-          showToast('🎉 Got ' + (acc ? acc.name : prize.id) + '!', 'success');
+          showToast('🎉 ' + T('Got {name}!', { name: acc ? T(acc.name) : prize.id }), 'success');
           revealEl.innerHTML = '<div class="gacha-prize-reveal">' +
             '<canvas class="gacha-reveal-cvs" data-acc="' + prize.id + '" width="80" height="80" style="width:80px;height:80px;margin:0 auto 6px;display:block;animation:gachaFloat 2s ease-in-out infinite"></canvas>' +
-            (showRarity ? '<div class="gacha-prize-rarity ' + prize.rarity + '">' + prize.rarity + '</div>' : '') +
-            '<div class="gacha-prize-name">' + (acc ? acc.name : prize.id) + '</div>' +
-            '<div style="font-size:12px;color:#34d399;margin-top:4px">Added to collection! Equip it on your pet in the Accessories tab.</div></div>';
+            (showRarity ? '<div class="gacha-prize-rarity ' + prize.rarity + '">' + rarityWord + '</div>' : '') +
+            '<div class="gacha-prize-name">' + (acc ? T(acc.name) : prize.id) + '</div>' +
+            '<div style="font-size:12px;color:#34d399;margin-top:4px">' + T('Added to collection! Equip it on your pet in the Accessories tab.') + '</div></div>';
           const rcvs = revealEl.querySelector('.gacha-reveal-cvs');
           if (rcvs) _drawAccPreviewOnCanvas(rcvs, prize.id);
           renderAccessoryShop();

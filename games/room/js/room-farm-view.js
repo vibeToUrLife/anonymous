@@ -65,7 +65,7 @@
     // The three things a visitor can do, in the order they're shown.
     const FARM_HELP_LABEL = {
       cheer: { emoji: '👍', name: 'Cheer', done: 'cheered', hint: 'Give them a boost' },
-      water: { emoji: '💧', name: 'Water', done: 'watered', hint: 'Crops finish 10 min sooner' },
+      water: { emoji: '💧', name: 'Water crops', done: 'watered', hint: 'Crops finish 10 min sooner' },
       feed:  { emoji: '🌾', name: 'Feed',  done: 'fed',     hint: 'Trough +5' },
     };
     const FARM_HELP_KINDS = ['cheer', 'water', 'feed'];
@@ -610,7 +610,7 @@
       if (_sentToHost(hostUid).indexOf(kind) >= 0) {
         return showToast(T('You already {action} this farm today!', { action: T(FARM_HELP_LABEL[kind].done) }), '');
       }
-      const host = roomData.displayName || 'this';
+      const host = roomData.displayName || T('this farmer');
       let paid = 0;
       try {
         paid = await _sendHelpTxn(hostUid, kind);
@@ -701,7 +701,7 @@
           return '<button class="farm-gift-item' + (id === _giftProd ? ' on' : '') + (spent ? ' done' : '') + '"' +
             (spent ? ' disabled' : ' onclick="pickGiftProd(\'' + id + '\')"') + '>' +
             '<span class="farm-gift-emoji">' + m.emoji + '</span>' +
-            '<span class="farm-gift-name">' + escapeHtml(m.name) + '</span>' +
+            '<span class="farm-gift-name">' + escapeHtml(T(m.name)) + '</span>' +
             '<span class="farm-gift-have">' + (spent ? T('Sent today') : '×' + stock[id]) + '</span>' +
           '</button>';
         }).join('') + '</div>' +
@@ -1143,7 +1143,7 @@
       const meta = farmProductMeta();
       const rows = Object.keys(off.batch).map(function (pid) {
         const m = meta[pid] || { emoji: '❓', name: pid };
-        return '<div class="ws-slot"><span class="ws-slot-no">' + m.emoji + ' ' + m.name + '</span>' +
+        return '<div class="ws-slot"><span class="ws-slot-no">' + m.emoji + ' ' + T(m.name) + '</span>' +
                '<span class="ws-slot-state">×' + off.batch[pid] + '</span></div>';
       }).join('');
       el.innerHTML =
@@ -1253,7 +1253,7 @@
           '</section>' +
           '<button class="farm-visit-home" onclick="visitFarm(\'' + currentUid + '\')">🏠 ' + T('Back to my farm') + '</button>' +
           '<section class="farm-card" style="margin-top:10px">' +
-            '<div class="farm-section-title">🚜 ' + T('Visit other farms') + ' <span class="farm-panel-cap">live</span></div>' +
+            '<div class="farm-section-title">🚜 ' + T('Visit other farms') + ' <span class="farm-panel-cap">' + T('live') + '</span></div>' +
             _farmVisitListHtml() +
           '</section>' +
           '<div class="farm-panel-hint">' + T("Lend a hand and you both gain — they're far likelier to visit you back.") + '</div>';
@@ -1343,7 +1343,7 @@
 
       const shopHtml =
         '<div class="farm-section-title">🛒 ' + T('Animal Shop') +
-          '<button class="farm-mini-btn" onclick="openRgbPreview()" title="' + T('Preview the rare rainbow coats') + '">🌈 RGB?</button>' +
+          '<button class="farm-mini-btn" onclick="openRgbPreview()" title="' + T('Preview the rare rainbow coats') + '">🌈 ' + T('RGB?') + '</button>' +
         '</div>' +
         '<div class="farm-panel-empty" style="padding:0 2px 6px">' + T('Every buy has a tiny chance to be a 🌈 rainbow (cosmetic).') + '</div>' +
         FARM_ANIMALS.map(def => {
@@ -1377,7 +1377,7 @@
               return '<div class="farm-herd-row">' +
                 '<span class="farm-herd-emoji">' + def.emoji + '</span>' +
                 '<span class="farm-herd-info">' +
-                  '<span class="farm-herd-name">' + T(def.name) + mark + ' <small>Lv' + lvl + '</small> · ' + h + '%</span>' +
+                  '<span class="farm-herd-name">' + T(def.name) + mark + ' <small>' + T('Lv {n}', { n: lvl }) + '</small> · ' + h + '%</span>' +
                   '<span class="farm-herd-bar"><span style="width:' + h + '%;background:' + color + '"></span></span>' +
                 '</span>' +
                 (waiting ? '<span class="farm-herd-drops">' + def.drop.emoji + ' ×' + waiting + '</span>' : '') +
@@ -1458,7 +1458,7 @@
         '<div class="farm-shop-row">' +
           '<span class="farm-shop-animal">🤖 ' + T('Auto-Collector') + ' <small>' + T('produce → stock') + '</small></span>' +
           (roomData.farmAutoCollect
-            ? '<span class="farm-shop-drop">✓ ON</span>'
+            ? '<span class="farm-shop-drop">✓ ' + T('ON') + '</span>'
             : '<button class="farm-shop-buy" onclick="buyFarmAutoCollect()"' + (roomData.coins < FARM_AUTOCOLLECT_COST ? ' disabled' : '') + '>' + FARM_AUTOCOLLECT_COST + '🪙</button>') +
         '</div>' +
         // ── automation & storage ──
@@ -1468,7 +1468,7 @@
               ? T('Refills at {pct}% · {cost} per feed', { pct: Math.round(FARM_AUTOFEED_AT * 100), cost: FARM_FOOD_COST + '🪙' })
               : T('Never top up the trough by hand again')) + '</small></span>' +
           (roomData.farmAutoFeed
-            ? '<button class="farm-shop-buy" onclick="toggleFarmAutoFeed()">' + (roomData.farmAutoFeedOn ? '✓ ON' : 'OFF') + '</button>'
+            ? '<button class="farm-shop-buy" onclick="toggleFarmAutoFeed()">' + (roomData.farmAutoFeedOn ? '✓ ' + T('ON') : T('OFF')) + '</button>'
             : '<button class="farm-shop-buy" onclick="buyFarmAutoFeed()"' + (roomData.coins < FARM_AUTOFEED_COST ? ' disabled' : '') + '>' + FARM_AUTOFEED_COST + '🪙</button>') +
         '</div>' +
         '<div class="farm-panel-empty" style="padding:2px 0 4px">' + T('Buys feed with your coins — it stops when they run out, and never overdraws.') + '</div>' +
@@ -1495,7 +1495,7 @@
       // Built (and subscribed) only when the Visit tab is active, so opening the
       // farm for normal play never spins up the rooms-list listener.
       const visitHtml = _farmTab === 'visit'
-        ? '<div class="farm-section-title">🚜 ' + T('Visit other farms') + ' <span class="farm-panel-cap">live</span></div>' +
+        ? '<div class="farm-section-title">🚜 ' + T('Visit other farms') + ' <span class="farm-panel-cap">' + T('live') + '</span></div>' +
           '<div class="farm-panel-empty" style="padding:0 2px 6px">' + T('Pick a farmer and lend a hand — cheer, water, feed or gift. You both gain.') + '</div>' +
           _farmVisitListHtml()
         : '';
@@ -1568,7 +1568,7 @@
       if (roomData.farmAnimals.length >= farmAnimalCap()) return showToast(T('Your pasture is full — expand it first.'), 'error');
       if (roomData.coins < def.cost) return showToast(T('Not enough coins!'), 'error');
       roomData.coins -= def.cost;
-      logCoin(-def.cost, 'Bought ' + def.name);
+      logCoin(-def.cost, T('Bought {name}', { name: T(def.name) }));
       const now = Date.now();
       // Roll a coat variant: rgb (rarest) → rare → common. Layered thresholds, so
       // FARM_RGB_CHANCE must stay below FARM_RARE_CHANCE.
@@ -1674,7 +1674,7 @@
     async function buyFarmAutoFeed() {
       if (viewingUid !== currentUid) return;
       if (roomData.farmAutoFeed) return;
-      if ((roomData.coins || 0) < FARM_AUTOFEED_COST) return showToast(T(T('Not enough coins!')), 'error');
+      if ((roomData.coins || 0) < FARM_AUTOFEED_COST) return showToast(T('Not enough coins!'), 'error');
       roomData.coins -= FARM_AUTOFEED_COST;
       logCoin(-FARM_AUTOFEED_COST, '🤖 ' + T('Auto-Feeder'));
       roomData.farmAutoFeed = true;
@@ -1705,7 +1705,7 @@
       const lvl = roomData.farmColdLevel || 0;
       if (lvl >= FARM_COLD_COSTS.length) return;
       const cost = FARM_COLD_COSTS[lvl];
-      if ((roomData.coins || 0) < cost) return showToast(T(T('Not enough coins!')), 'error');
+      if ((roomData.coins || 0) < cost) return showToast(T('Not enough coins!'), 'error');
       roomData.coins -= cost;
       logCoin(-cost, '❄️ ' + T('Cold Store') + ' ' + T('Lv {n}', { n: lvl + 1 }));
       roomData.farmColdLevel = lvl + 1;
@@ -1734,7 +1734,7 @@
       if (!def) return;
       if (roomData.coins < def.cost) return showToast(T('Not enough coins!'), 'error');
       roomData.coins -= def.cost;
-      logCoin(-def.cost, 'Bought ' + def.name);
+      logCoin(-def.cost, T('Bought {name}', { name: T(def.name) }));
       roomData.farmDecors = roomData.farmDecors || [];
       roomData.farmDecors.push({
         id: 'fdc' + Date.now() + '_' + Math.floor(Math.random() * 1e4),
@@ -1792,7 +1792,7 @@
       if (roomData.farmMachines[id] && roomData.farmMachines[id].owned) return;
       if (roomData.coins < mc.cost) return showToast(T('Not enough coins!'), 'error');
       roomData.coins -= mc.cost;
-      logCoin(-mc.cost, 'Built ' + mc.name);
+      logCoin(-mc.cost, T('Built {name}', { name: T(mc.name) }));
       roomData.farmMachines[id] = { owned: true, slots: 1, jobs: [0] };
       await saveRoom();
       showToast(mc.emoji + ' ' + T('{name} built! Tap it on your farm to make goods.', { name: T(mc.name) }), 'success');
@@ -1828,7 +1828,7 @@
       _makeChoiceSlot = null;
       await saveRoom();
       const outM = farmProductMeta()[recipe.out.id];
-      showToast(mc.emoji + ' making ' + (outM ? outM.emoji + ' ' + outM.name : recipe.out.id) + '…', 'success');
+      showToast(mc.emoji + ' ' + T('making {item}…', { item: outM ? outM.emoji + ' ' + T(outM.name) : recipe.out.id }), 'success');
       renderWorkshopModal(); renderFarmPanel(); renderAll();
     }
 
@@ -1850,7 +1850,7 @@
         return showToast(T('Could not collect — save failed. Check your connection and try again.'), 'error');
       }
       const outM = farmProductMeta()[recipe.out.id];
-      showToast('Collected ' + recipe.out.qty + ' ' + (outM ? outM.emoji + ' ' + outM.name : recipe.out.id) + '!', 'success');
+      showToast(T('Collected {n} {item}!', { n: recipe.out.qty, item: outM ? outM.emoji + ' ' + T(outM.name) : recipe.out.id }), 'success');
       renderWorkshopModal(); renderFarmPanel(); renderAll();
     }
 
@@ -1964,8 +1964,8 @@
     /* ── Crop picker (tap an empty plot) + plant helpers ── */
     function _fmtFarmTime(ms) {
       const m = Math.max(0, Math.ceil(ms / 60000));
-      if (m < 60) return m + 'm';
-      return Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
+      if (m < 60) return T('{n}m', { n: m });
+      return T('{h}h {m}m', { h: Math.floor(m / 60), m: m % 60 });
     }
 
     // Empty plot indices that `scope` would plant into, given the tapped bed.
@@ -2155,7 +2155,7 @@
       roomData.farmStock[prodId] = 0;
       await saveRoom();
       const m = farmProductMeta()[prodId];
-      showToast('Sold ' + qty + ' ' + (m ? m.emoji + ' ' + m.name : prodId) + ' for ' + (qty * price) + '🪙', 'success');
+      showToast(T('Sold {n} {item} for {coins}', { n: qty, item: m ? m.emoji + ' ' + T(m.name) : prodId, coins: (qty * price) + '🪙' }), 'success');
       checkAchievements();
       renderFarmPanel();
       renderAll();
@@ -2708,7 +2708,7 @@
       roomData.farmDrops = (roomData.farmDrops || []).filter(d => d.type !== type);
       _farmWeekAddProduce(drops.length);
       await saveRoom();
-      showToast('Collected ' + drops.length + ' ' + (def ? def.drop.emoji + ' ' + def.drop.name : type) + '!', 'success');
+      showToast(T('Collected {n} {item}!', { n: drops.length, item: def ? def.drop.emoji + ' ' + T(def.drop.name) : type }), 'success');
       checkAchievements(); renderProduceModal(); renderFarmPanel(); renderAll();
     }
     async function collectAllProduce() {
@@ -2732,7 +2732,7 @@
         const def = FARM_ANIMALS.find(f => f.id === type) || { drop: { emoji: '❓', name: type } };
         const n = counts[type] || 0;
         return '<div class="ws-slot">' +
-          '<span class="ws-slot-no">' + def.drop.emoji + ' ' + def.drop.name + '</span>' +
+          '<span class="ws-slot-no">' + def.drop.emoji + ' ' + T(def.drop.name) + '</span>' +
           '<span class="ws-slot-state">×' + n + '</span>' +
           '<button class="farm-shop-buy" onclick="collectProduceType(\'' + type + '\')"' + (n > 0 ? '' : ' disabled') + '>' + T('Collect') + '</button>' +
           '</div>';
@@ -2814,7 +2814,7 @@
                 '<span class="ws-cell-icon">' + oM.emoji + '</span><span class="ws-cell-cap">✅ ' + T('Collect') + '</span></button>';
             } else {
               cells += '<div class="ws-cell busy">' +
-                '<span class="ws-cell-icon">' + oM.emoji + '</span><span class="ws-cell-cap">⏳ ' + Math.ceil((recipe.timeMs - (now - job.at)) / 60000) + 'm</span></div>';
+                '<span class="ws-cell-icon">' + oM.emoji + '</span><span class="ws-cell-cap">⏳ ' + T('{n}m', { n: Math.ceil((recipe.timeMs - (now - job.at)) / 60000) }) + '</span></div>';
             }
           }
         }
@@ -2826,7 +2826,7 @@
             const oM = meta[rc.out.id] || { emoji: '❓', name: rc.out.id };
             const inStr = Object.keys(rc.in).map(k => (meta[k] ? meta[k].emoji : k) + '×' + rc.in[k]).join('+');
             const can = Object.keys(rc.in).every(k => (stock[k] || 0) >= rc.in[k]);
-            return '<button class="farm-shop-buy ws-recipe" onclick="startMachineSlot(\'' + mc.id + '\',' + _makeChoiceSlot + ',' + r + ')"' + (can ? '' : ' disabled') + '>' + oM.emoji + ' ' + T(oM.name) + ' <small>' + inStr + ' · ' + Math.round(rc.timeMs / 60000) + 'm</small></button>';
+            return '<button class="farm-shop-buy ws-recipe" onclick="startMachineSlot(\'' + mc.id + '\',' + _makeChoiceSlot + ',' + r + ')"' + (can ? '' : ' disabled') + '>' + oM.emoji + ' ' + T(oM.name) + ' <small>' + inStr + ' · ' + T('{n}m', { n: Math.round(rc.timeMs / 60000) }) + '</small></button>';
           }).join('');
           chooser = '<div class="ws-choose"><div class="ws-slot-no">' + T('Slot {n} — pick a product', { n: _makeChoiceSlot + 1 }) + ' <span class="ws-x" onclick="cancelMake()">✕</span></div>' + choices + '</div>';
         }
@@ -3223,7 +3223,7 @@
         ctx.fillStyle = 'rgba(255,243,214,.5)';
         ctx.font = '600 9px system-ui,sans-serif';
         ctx.fillText(T('tap to'), cx, cy - 1);
-        ctx.fillText('plant', cx, cy + 9);
+        ctx.fillText(T('plant'), cx, cy + 9);
         return;
       }
       const crop = FARM_CROPS.find(c => c.id === st.cropId);
@@ -3523,7 +3523,7 @@
           ctx.fillStyle = h > 60 ? '#6dd56d' : h > 30 ? '#f2c94c' : '#eb5757';
           ctx.fillRect(bx, byy, bw * (h / 100), 4);
           // Level badge above the bar
-          const lvTxt = 'Lv' + animalLevel(a.collected, FARM_LEVELS);
+          const lvTxt = T('Lv {n}', { n: animalLevel(a.collected, FARM_LEVELS) });
           ctx.font = '800 ' + Math.round(Math.max(9, size * 0.15)) + 'px sans-serif';
           ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
           const lw = ctx.measureText(lvTxt).width + size * 0.16, lh = Math.max(12, size * 0.2);
@@ -3746,4 +3746,17 @@
       try { if (_giftOpen) renderGiftPicker(); } catch (e) {}
       try { if (_cartSheetOpen) renderCartSheet(); } catch (e) {}
       try { if (typeof renderAquariumPanel === 'function' && typeof isAquariumView !== 'undefined' && isAquariumView) renderAquariumPanel(); } catch (e) {}
+      // The room's own tabs and overlays render through T() too. A tab panel is
+      // open while it carries .active; an overlay while it has NOT got .hidden.
+      const _tabOpen = function (id) { const el = document.getElementById(id); return !!el && el.classList.contains('active'); };
+      const _ovOpen = function (id) { const el = document.getElementById(id); return !!el && !el.classList.contains('hidden'); };
+      try { if (typeof renderShop === 'function' && _tabOpen('panel-shop')) renderShop(); } catch (e) {}
+      try { if (typeof renderJukebox === 'function' && _tabOpen('panel-extras')) renderJukebox(); } catch (e) {}
+      try { if (typeof renderGachaTab === 'function' && _tabOpen('panel-extras')) renderGachaTab(); } catch (e) {}
+      try { if (typeof showGachaPrizeModal === 'function' && _ovOpen('gachaPrizeOverlay')) showGachaPrizeModal(); } catch (e) {}
+      try { if (typeof updatePetStatusBar === 'function' && typeof _selectedPetId !== 'undefined' && _selectedPetId) updatePetStatusBar(); } catch (e) {}
+      try { if (typeof showAchievements === 'function' && _ovOpen('achieveOverlay')) showAchievements(); } catch (e) {}
+      try { if (typeof showDailyReward === 'function' && _ovOpen('dailyOverlay')) showDailyReward(); } catch (e) {}
+      try { if (typeof renderLeaderboardTabs === 'function' && _ovOpen('lbOverlay')) renderLeaderboardTabs(); } catch (e) {}
+      try { if (typeof renderCoinHistory === 'function' && _ovOpen('coinHistOverlay')) renderCoinHistory(); } catch (e) {}
     });

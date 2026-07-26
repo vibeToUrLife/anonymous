@@ -8,10 +8,10 @@
         const petDef = PETS.find(p => p.id === id);
         // Per-type limit: max 2 of each pet type (no total cap)
         const typeCount = roomData.pets.filter(p => p.type === id).length;
-        if (typeCount >= 2) return showToast('Already adopted 2 ' + (petDef ? petDef.name : id) + 's!', 'error');
-        if (!petDef || roomData.coins < petDef.cost) return showToast('Not enough coins!', 'error');
+        if (typeCount >= 2) return showToast(T('Already adopted 2 {name}s!', { name: petDef ? T(petDef.name) : id }), 'error');
+        if (!petDef || roomData.coins < petDef.cost) return showToast(T('Not enough coins!'), 'error');
         roomData.coins -= petDef.cost;
-        logCoin(-petDef.cost, 'Bought ' + petDef.name);
+        logCoin(-petDef.cost, T('Bought {name}', { name: T(petDef.name) }));
         const layerPetCount = getPetsOnLayer(currentLayer).length;
         const newPet = {
           id: makePetId(), type: id, name: petDef.name,
@@ -25,16 +25,16 @@
         roomData.pets.push(newPet);
         await saveRoom();
         renderAll();
-        showToast('Adopted ' + petDef.emoji + ' ' + petDef.name + '!' + (newPet.layer ? '' : ' Place it from the shop.'), 'success');
+        showToast(T('Adopted {emoji} {name}!', { emoji: petDef.emoji, name: T(petDef.name) }) + (newPet.layer ? '' : ' ' + T('Place it from the shop.')), 'success');
         return;
       }
       // Plant buying logic
       const item = PLANTS.find(i => i.id === id);
-      if (!item || roomData.coins < item.cost) return showToast('Not enough coins!', 'error');
+      if (!item || roomData.coins < item.cost) return showToast(T('Not enough coins!'), 'error');
       if (roomData.ownedPlants.includes(id)) return;
 
       roomData.coins -= item.cost;
-      logCoin(-item.cost, 'Bought ' + item.name);
+      logCoin(-item.cost, T('Bought {name}', { name: T(item.name) }));
       roomData.ownedPlants.push(id);
       // Inherit only from CHEAPER plants (prevent exploit loop)
       const newPlantCost = item.cost;
@@ -48,11 +48,11 @@
       }
       const inherited = totalInvest > 0 ? getInheritedLevel(id, totalInvest) : 1;
       roomData.plantLevels[id] = inherited;
-      if (inherited > 1) showToast('Inherited Lv.' + inherited + ' from previous upgrades!', 'success');
+      if (inherited > 1) showToast(T('Inherited Lv.{n} from previous upgrades!', { n: inherited }), 'success');
       if (!roomData.plant) roomData.plant = id;
       await saveRoom();
       renderAll();
-      showToast('Bought ' + item.emoji + ' ' + item.name + '!', 'success');
+      showToast(T('Bought {emoji} {name}!', { emoji: item.emoji, name: T(item.name) }), 'success');
     }
 
     async function equipItem(type, id) {
@@ -62,7 +62,7 @@
         const dup = getAllLayerPlants().find(p => p.plant === id && p.layer !== currentLayer);
         if (dup) {
           const def = PLANTS.find(p => p.id === id);
-          return showToast((def ? def.name : 'That plant') + ' is already on Floor ' + dup.layer + ' — each floor needs a different plant', 'error');
+          return showToast(T('{name} is already on Floor {n} — each floor needs a different plant', { name: def ? T(def.name) : T('That plant'), n: dup.layer }), 'error');
         }
         roomData.plant = id;
         const targetDef = PLANTS.find(p => p.id === id);
@@ -80,13 +80,13 @@
           const currentLvl = roomData.plantLevels[id] || 1;
           if (inherited > currentLvl) {
             roomData.plantLevels[id] = inherited;
-            showToast('Inherited Lv.' + inherited + ' from previous upgrades!', 'success');
+            showToast(T('Inherited Lv.{n} from previous upgrades!', { n: inherited }), 'success');
           }
         }
       }
       await saveRoom();
       renderAll();
-      showToast('Placed in room!', 'success');
+      showToast(T('Placed in room!'), 'success');
     }
 
     async function unequipItem(type, id) {
@@ -96,7 +96,7 @@
       }
       await saveRoom();
       renderAll();
-      showToast('Removed from room!', 'success');
+      showToast(T('Removed from room!'), 'success');
     }
 
     /* -- Pet Swap — swap an owned unplaced pet into the current floor by replacing one -- */
@@ -109,24 +109,24 @@
 
       // Find an unplaced pet of this type (not on any layer)
       const unplacedPet = roomData.pets.find(p => p.type === typeId && (!p.layer || p.layer === 0));
-      if (!unplacedPet) return showToast('No unplaced ' + petDef.name + ' to swap in!', 'error');
+      if (!unplacedPet) return showToast(T('No unplaced {name} to swap in!', { name: T(petDef.name) }), 'error');
 
       _swapNewTypeId = typeId;
       const overlay = document.getElementById('swapOverlay');
       const listEl = document.getElementById('swapPetList');
       document.getElementById('swapDesc').textContent =
-        'Move ' + petDef.emoji + ' ' + petDef.name + ' into Floor ' + currentLayer + '. Pick which pet to take out:';
+        T('Move {emoji} {name} into Floor {n}. Pick which pet to take out:', { emoji: petDef.emoji, name: T(petDef.name), n: currentLayer });
 
       // Show pets on the CURRENT layer to choose which to remove
       const layerPets = getPetsOnLayer(currentLayer);
       listEl.innerHTML = layerPets.map(p => {
         const def = PETS.find(d => d.id === p.type);
         const emoji = def ? def.emoji : '?';
-        const affTitle = getAffectionTitle(p.affection ?? 0).title;
+        const affTitle = T(getAffectionTitle(p.affection ?? 0).title);
         return '<div class="swap-pet-card" onclick="confirmSwap(\'' + p.id + '\')">' 
           + '<span class="swap-pet-emoji">' + emoji + '</span>'
           + '<div class="swap-pet-info">'
-          + '<div class="swap-pet-name">' + (p.name || def?.name || p.type) + '</div>'
+          + '<div class="swap-pet-name">' + petDisplayName(p) + '</div>'
           + '<div class="swap-pet-stats">❤ ' + (p.affection ?? 0) + ' (' + affTitle + ') · 🍖 ' + (p.hunger ?? 100) + '%</div>'
           + '</div>'
           + '<span class="swap-pet-arrow">➡</span>'
@@ -154,24 +154,24 @@
       await saveRoom();
       renderAll();
       const inDef = PETS.find(d => d.id === petIn?.type);
-      showToast('Swapped! ' + (inDef ? inDef.emoji + ' ' + inDef.name : 'Pet') + ' is now on Floor ' + currentLayer + '.', 'success');
+      showToast(T('Swapped! {pet} is now on Floor {n}.', { pet: inDef ? inDef.emoji + ' ' + T(inDef.name) : T('Pet'), n: currentLayer }), 'success');
     }
 
     /* -- Place / Remove pet from current floor -- */
     async function placePetInRoom(typeId) {
       if (viewingUid !== currentUid) return;
       if (getPetsOnLayer(currentLayer).length >= MAX_PETS_PER_LAYER) {
-        return showToast('Floor ' + currentLayer + ' is full! Remove a pet first or use Swap.', 'error');
+        return showToast(T('Floor {n} is full! Remove a pet first or use Swap.', { n: currentLayer }), 'error');
       }
       // Find an unplaced pet of this type that is NOT on any layer
       const pet = roomData.pets.find(p => p.type === typeId && (!p.layer || p.layer === 0));
-      if (!pet) return showToast('No unplaced pet of this type!', 'error');
+      if (!pet) return showToast(T('No unplaced pet of this type!'), 'error');
       pet.layer = currentLayer;
       _lastPetKey = ''; // Force pet canvas redraw
       await saveRoom();
       renderAll();
       const def = PETS.find(d => d.id === typeId);
-      showToast((def ? def.emoji + ' ' + def.name : 'Pet') + ' placed on Floor ' + currentLayer + '!', 'success');
+      showToast(T('{pet} placed on Floor {n}!', { pet: def ? def.emoji + ' ' + T(def.name) : T('Pet'), n: currentLayer }), 'success');
     }
 
     async function removePetFromRoom(typeId) {
@@ -184,7 +184,7 @@
       await saveRoom();
       renderAll();
       const def = PETS.find(d => d.id === typeId);
-      showToast((def ? def.emoji + ' ' + def.name : 'Pet') + ' removed from Floor ' + currentLayer + '.', 'success');
+      showToast(T('{pet} removed from Floor {n}.', { pet: def ? def.emoji + ' ' + T(def.name) : T('Pet'), n: currentLayer }), 'success');
     }
 
     /** Remove a specific pet instance by its unique ID (for when multiple same-type pets are on a floor). */
@@ -198,7 +198,7 @@
       await saveRoom();
       renderAll();
       const def = PETS.find(d => d.id === pet.type);
-      showToast((def ? def.emoji : '🐾') + ' ' + (pet.name || def?.name || pet.type) + ' removed from Floor ' + prevLayer + '.', 'success');
+      showToast(T('{pet} removed from Floor {n}.', { pet: (def ? def.emoji : '🐾') + ' ' + (pet.name || (def ? T(def.name) : pet.type)), n: prevLayer }), 'success');
     }
 
     // Close swap modal
@@ -227,10 +227,10 @@
     async function buyDecor(id) {
       if (viewingUid !== currentUid) return;
       const item = DECORATIONS.find(d => d.id === id);
-      if (!item || roomData.coins < item.cost) return showToast('Not enough coins!', 'error');
+      if (!item || roomData.coins < item.cost) return showToast(T('Not enough coins!'), 'error');
       if (roomData.ownedDecors.includes(id)) return;
       roomData.coins -= item.cost;
-      logCoin(-item.cost, 'Bought ' + item.name);
+      logCoin(-item.cost, T('Bought {name}', { name: T(item.name) }));
       roomData.ownedDecors.push(id);
       // Auto-place; if rug, replace any existing rug
       if (item.category === 'rug') {
@@ -242,7 +242,7 @@
       roomData.placedDecors.push({ id: id, x: item.dx, y: item.dy });
       await saveRoom();
       renderDecorShop();
-      showToast('Bought ' + item.emoji + ' ' + item.name + '!', 'success');
+      showToast(T('Bought {emoji} {name}!', { emoji: item.emoji, name: T(item.name) }), 'success');
     }
 
     async function placeDecor(id) {
@@ -260,7 +260,7 @@
       roomData.placedDecors.push({ id: id, x: item.dx, y: item.dy });
       await saveRoom();
       renderDecorShop();
-      showToast('Placed ' + item.emoji + ' in room!', 'success');
+      showToast(T('Placed {emoji} in room!', { emoji: item.emoji }), 'success');
     }
 
     async function removeDecor(id) {
@@ -268,22 +268,22 @@
       roomData.placedDecors = roomData.placedDecors.filter(d => d.id !== id);
       await saveRoom();
       renderDecorShop();
-      showToast('Removed from room!', 'success');
+      showToast(T('Removed from room!'), 'success');
     }
 
     async function buyWall(id) {
       if (viewingUid !== currentUid) return;
       const item = WALL_PATTERNS.find(w => w.id === id);
-      if (!item || roomData.coins < item.cost) return showToast('Not enough coins!', 'error');
+      if (!item || roomData.coins < item.cost) return showToast(T('Not enough coins!'), 'error');
       if (roomData.ownedWalls.includes(id)) return;
       roomData.coins -= item.cost;
-      logCoin(-item.cost, 'Bought ' + item.name);
+      logCoin(-item.cost, T('Bought {name}', { name: T(item.name) }));
       roomData.ownedWalls.push(id);
       roomData.wallPattern = id;
       _forceRedrawBg();
       await saveRoom();
       renderDecorShop();
-      showToast('Bought ' + item.emoji + ' ' + item.name + '!', 'success');
+      showToast(T('Bought {emoji} {name}!', { emoji: item.emoji, name: T(item.name) }), 'success');
     }
 
     async function equipWall(id) {
@@ -292,23 +292,23 @@
       _forceRedrawBg();
       await saveRoom();
       renderDecorShop();
-      showToast('Wall pattern changed!', 'success');
+      showToast(T('Wall pattern changed!'), 'success');
     }
 
     async function buyFloor(id) {
       if (viewingUid !== currentUid) return;
       const item = FLOOR_PATTERNS.find(f => f.id === id);
-      if (!item || roomData.coins < item.cost) return showToast('Not enough coins!', 'error');
+      if (!item || roomData.coins < item.cost) return showToast(T('Not enough coins!'), 'error');
       if (!Array.isArray(roomData.ownedFloors)) roomData.ownedFloors = ['floor_wood'];
       if (roomData.ownedFloors.includes(id)) return;
       roomData.coins -= item.cost;
-      logCoin(-item.cost, 'Bought ' + item.name);
+      logCoin(-item.cost, T('Bought {name}', { name: T(item.name) }));
       roomData.ownedFloors.push(id);
       roomData.floorStyle = id;
       _forceRedrawBg();
       await saveRoom();
       renderDecorShop();
-      showToast('Bought ' + item.emoji + ' ' + item.name + '!', 'success');
+      showToast(T('Bought {emoji} {name}!', { emoji: item.emoji, name: T(item.name) }), 'success');
     }
 
     async function equipFloor(id) {
@@ -317,22 +317,22 @@
       _forceRedrawBg();
       await saveRoom();
       renderDecorShop();
-      showToast('Floor changed!', 'success');
+      showToast(T('Floor changed!'), 'success');
     }
 
     async function buyWindow(id) {
       if (viewingUid !== currentUid) return;
       const item = WINDOWS.find(w => w.id === id);
-      if (!item || roomData.coins < item.cost) return showToast('Not enough coins!', 'error');
+      if (!item || roomData.coins < item.cost) return showToast(T('Not enough coins!'), 'error');
       if (roomData.ownedWindows.includes(id)) return;
       roomData.coins -= item.cost;
-      logCoin(-item.cost, 'Bought ' + item.name);
+      logCoin(-item.cost, T('Bought {name}', { name: T(item.name) }));
       roomData.ownedWindows.push(id);
       roomData.windowStyle = id;
       _forceRedrawBg();
       await saveRoom();
       renderDecorShop();
-      showToast('Bought ' + item.emoji + ' ' + item.name + '!', 'success');
+      showToast(T('Bought {emoji} {name}!', { emoji: item.emoji, name: T(item.name) }), 'success');
     }
 
     async function equipWindow(id) {
@@ -341,7 +341,7 @@
       _forceRedrawBg();
       await saveRoom();
       renderDecorShop();
-      showToast('Window changed!', 'success');
+      showToast(T('Window changed!'), 'success');
     }
 
     function _forceRedrawBg() {
@@ -358,12 +358,12 @@
       const pet = petInstanceId ? getPet(petInstanceId) : getActivePets()[0];
       if (!pet) return;
       const food = FOODS.find(f => f.id === foodId);
-      if (!food || roomData.coins < food.cost) return showToast('Not enough coins!', 'error');
+      if (!food || roomData.coins < food.cost) return showToast(T('Not enough coins!'), 'error');
       roomData.coins -= food.cost;
-      logCoin(-food.cost, 'Bought ' + food.name);
+      logCoin(-food.cost, T('Bought {name}', { name: T(food.name) }));
       pet.hunger = Math.min(100, (pet.hunger ?? 100) + food.restore);
       await saveRoom();
-      showToast(food.emoji + ' Fed ' + pet.name + '! +' + food.restore + '%', 'success');
+      showToast(T('{emoji} Fed {name}! +{n}%', { emoji: food.emoji, name: petDisplayName(pet), n: food.restore }), 'success');
       updatePetStatusBar();
     }
 
@@ -372,9 +372,9 @@
       const pet = petInstanceId ? getPet(petInstanceId) : getActivePets()[0];
       if (!pet) return;
       const toy = TOYS.find(t => t.id === toyId);
-      if (!toy || roomData.coins < toy.cost) return showToast('Not enough coins!', 'error');
+      if (!toy || roomData.coins < toy.cost) return showToast(T('Not enough coins!'), 'error');
       roomData.coins -= toy.cost;
-      logCoin(-toy.cost, 'Bought ' + toy.name);
+      logCoin(-toy.cost, T('Bought {name}', { name: T(toy.name) }));
       const curAff = pet.affection ?? 0;
       const oldMilestone = getAffectionTitle(curAff);
       pet.affection = curAff + toy.affection;
@@ -382,11 +382,11 @@
       await saveRoom();
       if (newMilestone.min > oldMilestone.min && newMilestone.reward > 0) {
         roomData.coins += newMilestone.reward;
-        logCoin(newMilestone.reward, 'Milestone reward 🏆');
+        logCoin(newMilestone.reward, T('Milestone reward') + ' 🏆');
         await saveRoom();
-        showToast('?? ' + pet.name + ' reached "' + newMilestone.title + '"! +' + newMilestone.reward + ' coins!', 'success');
+        showToast('?? ' + T('{name} reached "{title}"! +{n} coins!', { name: petDisplayName(pet), title: T(newMilestone.title), n: newMilestone.reward }), 'success');
       } else {
-        showToast(toy.emoji + ' Played with ' + pet.name + '! ?+' + toy.affection, 'success');
+        showToast(T('{emoji} Played with {name}!', { emoji: toy.emoji, name: petDisplayName(pet) }) + ' ?+' + toy.affection, 'success');
       }
       updatePetStatusBar();
     }
@@ -396,26 +396,26 @@
       const pet = petInstanceId ? getPet(petInstanceId) : getActivePets()[0];
       if (!pet) return;
       const drink = DRINKS.find(d => d.id === drinkId);
-      if (!drink || roomData.coins < drink.cost) return showToast('Not enough coins!', 'error');
+      if (!drink || roomData.coins < drink.cost) return showToast(T('Not enough coins!'), 'error');
       roomData.coins -= drink.cost;
-      logCoin(-drink.cost, 'Bought ' + drink.name);
+      logCoin(-drink.cost, T('Bought {name}', { name: T(drink.name) }));
       pet.thirst = Math.min(100, (pet.thirst ?? 100) + drink.restore);
       await saveRoom();
-      showToast(drink.emoji + ' Gave ' + pet.name + ' a drink! +' + drink.restore + '%', 'success');
+      showToast(T('{emoji} Gave {name} a drink! +{n}%', { emoji: drink.emoji, name: petDisplayName(pet), n: drink.restore }), 'success');
       updatePetStatusBar();
     }
 
     async function buyAutoFeeder() {
       if (viewingUid !== currentUid) return;
       if (roomData.autoFeeder) return;
-      if (roomData.coins < AUTO_FEEDER_COST) return showToast('Not enough coins!', 'error');
+      if (roomData.coins < AUTO_FEEDER_COST) return showToast(T('Not enough coins!'), 'error');
       roomData.coins -= AUTO_FEEDER_COST;
-      logCoin(-AUTO_FEEDER_COST, 'Auto-feeder');
+      logCoin(-AUTO_FEEDER_COST, T('Auto-Feeder'));
       roomData.autoFeeder = true;
       roomData.autoFeedOn = true;
       runLiveAutoFeed();   // top up any already-hungry pet the moment it's installed
       await saveRoom();
-      showToast('🤖 Auto-Feeder installed! Your pets will stay fed automatically.', 'success');
+      showToast('🤖 ' + T('Auto-Feeder installed! Your pets will stay fed automatically.'), 'success');
       renderAll();        // refresh coin counter
       renderUpgrade();    // refresh the Feed panel
     }
@@ -426,7 +426,7 @@
       roomData.autoFeedOn = !roomData.autoFeedOn;
       const _fed = roomData.autoFeedOn && runLiveAutoFeed();   // feed hungry pets the moment it's switched on
       await saveRoom();
-      showToast(roomData.autoFeedOn ? '🤖 Auto-Feeder ON' : '🤖 Auto-Feeder OFF', 'success');
+      showToast('🤖 ' + (roomData.autoFeedOn ? T('Auto-Feeder ON') : T('Auto-Feeder OFF')), 'success');
       renderUpgrade();
       if (_fed) renderAll();   // reflect refilled stats + spent coins
     }
@@ -451,14 +451,14 @@
           if (selectedFood === foodId) {
             selectedFood = null;
             document.querySelectorAll('.food-card').forEach(c => c.classList.remove('selected'));
-            showToast('Deselected food', '');
+            showToast(T('Deselected food'), '');
             return;
           }
           selectedFood = foodId; selectedToy = null; selectedDrink = null;
           document.querySelectorAll('.food-card').forEach(c => c.classList.remove('selected'));
           foodCard.classList.add('selected');
           const food = FOODS.find(f => f.id === foodId);
-          showToast(food.emoji + ' Selected! Tap your pet to feed', 'success');
+          showToast(T('{emoji} Selected! Tap your pet to feed', { emoji: food.emoji }), 'success');
           return;
         }
 
@@ -469,14 +469,14 @@
           if (selectedToy === toyId) {
             selectedToy = null;
             document.querySelectorAll('.food-card').forEach(c => c.classList.remove('selected'));
-            showToast('Deselected toy', '');
+            showToast(T('Deselected toy'), '');
             return;
           }
           selectedToy = toyId; selectedFood = null; selectedDrink = null;
           document.querySelectorAll('.food-card').forEach(c => c.classList.remove('selected'));
           toyCard.classList.add('selected');
           const toy = TOYS.find(t => t.id === toyId);
-          showToast(toy.emoji + ' Selected! Tap your pet to play', 'success');
+          showToast(T('{emoji} Selected! Tap your pet to play', { emoji: toy.emoji }), 'success');
           return;
         }
 
@@ -487,14 +487,14 @@
           if (selectedDrink === drinkId) {
             selectedDrink = null;
             document.querySelectorAll('.food-card').forEach(c => c.classList.remove('selected'));
-            showToast('Deselected drink', '');
+            showToast(T('Deselected drink'), '');
             return;
           }
           selectedDrink = drinkId; selectedFood = null; selectedToy = null;
           document.querySelectorAll('.food-card').forEach(c => c.classList.remove('selected'));
           drinkCard.classList.add('selected');
           const drink = DRINKS.find(d => d.id === drinkId);
-          showToast(drink.emoji + ' Selected! Tap your pet to hydrate', 'success');
+          showToast(T('{emoji} Selected! Tap your pet to hydrate', { emoji: drink.emoji }), 'success');
           return;
         }
 
@@ -894,24 +894,28 @@
       if (!plantId) return;
       const lvl = roomData.plantLevels[plantId] || 1;
       const cost = getPlantUpgradeCost(plantId, lvl);
-      if (cost === null || roomData.coins < cost) return showToast('Not enough coins!', 'error');
+      if (cost === null || roomData.coins < cost) return showToast(T('Not enough coins!'), 'error');
       roomData.coins -= cost;
-      logCoin(-cost, 'Plant upgrade');
+      logCoin(-cost, T('Plant upgrade'));
       roomData.plantLevels[plantId] = PLANT_LEVELS[lvl].level;
       await saveRoom();
-      showToast('Plant upgraded to Lv.' + PLANT_LEVELS[lvl].level + '!', 'success');
+      showToast(T('Plant upgraded to Lv.{n}!', { n: PLANT_LEVELS[lvl].level }), 'success');
     }
 
     async function visitRoom(uid) {
       viewingUid = uid;
       const snap = await userDocRef(uid).get();
-      if (!snap.exists) return showToast('Room not found', 'error');
+      if (!snap.exists) return showToast(T('Room not found'), 'error');
       const d = snap.data();
       // Migrate visited room's pet data to new format
       roomData.pets = migratePets(d);
       roomData.plant = d.plant ?? null;
       roomData.plantLevels = d.plantLevels ?? {};
-      roomData.displayName = d.displayName ?? 'Anonymous';
+      // Not T('Anonymous'): this value is state, not a label. It reaches
+      // ShareToBoard via room.html's ownerName fallback, and a translated
+      // default could be posted to the public board as the player's own
+      // name. Every render site supplies its own fallback already.
+      roomData.displayName = d.displayName ?? '';
       roomData.ownedWalls = d.ownedWalls ?? ['wall_default'];
       roomData.ownedWindows = d.ownedWindows ?? ['win_none','win_classic'];
       roomData.jukeboxTrack = d.jukeboxTrack ?? null;

@@ -101,7 +101,7 @@
       const today = getTodayStr();
       const alreadyClaimed = roomData.lastLoginDay === today;
       const streak = roomData.loginStreak || 0;
-      document.getElementById('dailyStreak').textContent = '🔥 Current streak: ' + streak + ' day' + (streak !== 1 ? 's' : '');
+      document.getElementById('dailyStreak').textContent = '🔥 ' + I18N.plural(streak, 'Current streak: 1 day', 'Current streak: {n} days');
       let daysHtml = '';
       DAILY_REWARDS.forEach((r, i) => {
         const dayNum = i + 1;
@@ -109,12 +109,12 @@
         if (dayNum <= streak && alreadyClaimed) cls = 'claimed';
         else if (dayNum === streak + 1 && !alreadyClaimed) cls = 'today';
         else if (dayNum <= streak) cls = 'claimed';
-        daysHtml += '<div class="daily-day ' + cls + '"><span class="dd-num">' + r.label + '</span><span class="dd-coins">💰' + r.coins + '</span></div>';
+        daysHtml += '<div class="daily-day ' + cls + '"><span class="dd-num">' + T(r.label) + '</span><span class="dd-coins">💰' + r.coins + '</span></div>';
       });
       document.getElementById('dailyDays').innerHTML = daysHtml;
       const btn = document.getElementById('dailyClaimBtn');
       btn.disabled = alreadyClaimed;
-      btn.textContent = alreadyClaimed ? '✓ Claimed Today' : 'Claim Today\'s Reward!';
+      btn.textContent = alreadyClaimed ? '✓ ' + T('Claimed Today') : T('Claim Today\'s Reward!');
     }
 
     document.getElementById('dailyClaimBtn').addEventListener('click', async () => {
@@ -129,9 +129,9 @@
       roomData.loginStreak = newStreak;
       roomData.lastLoginDay = today;
       roomData.coins += reward.coins;
-      logCoin(reward.coins, 'Daily reward 🎁');
+      logCoin(reward.coins, T('Daily reward') + ' 🎁');
       await saveRoom();
-      showToast('🎁 Claimed ' + reward.coins + ' coins! Streak: ' + newStreak, 'success');
+      showToast('🎁 ' + T('Claimed {coins} coins! Streak: {n}', { coins: reward.coins, n: newStreak }), 'success');
       checkAchievements();
       // Re-render so today's cell flips to "claimed" and the streak updates,
       // then auto-dismiss. Once the reward is claimed there's nothing left to do
@@ -166,8 +166,8 @@
         const isUnlocked = unlocked.includes(a.id);
         html += '<div class="achieve-item ' + (isUnlocked ? 'unlocked' : '') + '">' +
           '<div class="achieve-icon">' + a.icon + '</div>' +
-          '<div class="achieve-info"><div class="achieve-name">' + a.name + '</div><div class="achieve-desc">' + a.desc + '</div></div>' +
-          '<div class="achieve-status">' + (isUnlocked ? '✓ Unlocked' : '🔒') + '</div></div>';
+          '<div class="achieve-info"><div class="achieve-name">' + T(a.name) + '</div><div class="achieve-desc">' + T(a.desc) + '</div></div>' +
+          '<div class="achieve-status">' + (isUnlocked ? '✓ ' + T('Unlocked') : '🔒') + '</div></div>';
       });
       document.getElementById('achieveList').innerHTML = html;
     }
@@ -195,7 +195,7 @@
         await saveRoom();
         newUnlocks.forEach(id => {
           const a = ACHIEVEMENTS.find(x => x.id === id);
-          if (a) showToast('🏆 Achievement: ' + a.name + '!', 'success');
+          if (a) showToast('🏆 ' + T('Achievement: {name}!', { name: T(a.name) }), 'success');
         });
       }
     }
@@ -211,12 +211,12 @@
 
       // Build guestbook HTML
       let html = '<div class="gb-input-area">' +
-        '<textarea class="gb-textarea" id="gbText" placeholder="Leave a message..." maxlength="200" rows="2"></textarea>' +
+        '<textarea class="gb-textarea" id="gbText" placeholder="' + T('Leave a message...') + '" maxlength="200" rows="2"></textarea>' +
         '<div class="gb-sticker-row">' +
         GB_STICKERS.map(s => '<button class="gb-sticker-btn" onclick="selectGbSticker(this,\'' + s + '\')">' + s + '</button>').join('') +
         '</div>' +
-        '<button class="gb-send-btn" onclick="sendGuestbookMsg()">📝 Post</button></div>';
-      html += '<div class="guestbook-list gb-list-target"><div style="text-align:center;color:rgba(255,255,255,.3);font-size:12px;padding:20px">Loading...</div></div>';
+        '<button class="gb-send-btn" onclick="sendGuestbookMsg()">📝 ' + T('Post') + '</button></div>';
+      html += '<div class="guestbook-list gb-list-target"><div style="text-align:center;color:rgba(255,255,255,.3);font-size:12px;padding:20px">' + T('Loading...') + '</div></div>';
 
       // Owner sees guestbook in Extras tab
       const ownerEl = document.getElementById('guestbookContent');
@@ -251,8 +251,8 @@
 
     async function sendGuestbookMsg() {
       const text = (document.getElementById('gbText')?.value || '').trim();
-      if (!text && !_gbSelectedSticker) return showToast('Write something or pick a sticker!', 'error');
-      if (text.length > 200) return showToast('Message too long!', 'error');
+      if (!text && !_gbSelectedSticker) return showToast(T('Write something or pick a sticker!'), 'error');
+      if (text.length > 200) return showToast(T('Message too long!'), 'error');
       const targetUid = viewingUid;
       await db.collection('rooms').doc(targetUid).collection('guestbook').add({
         fromUid: currentUid,
@@ -265,7 +265,7 @@
       if (gbText) gbText.value = '';
       _gbSelectedSticker = null;
       document.querySelectorAll('.gb-sticker-btn').forEach(b => b.classList.remove('selected'));
-      showToast('📝 Message posted!', 'success');
+      showToast('📝 ' + T('Message posted!'), 'success');
       loadGuestbookEntries(targetUid);
     }
 
@@ -277,7 +277,7 @@
           .orderBy('createdAt', 'desc').limit(30).get();
         let html;
         if (snap.empty) {
-          html = '<div style="text-align:center;color:rgba(255,255,255,.3);font-size:12px;padding:20px">No messages yet. Be the first!</div>';
+          html = '<div style="text-align:center;color:rgba(255,255,255,.3);font-size:12px;padding:20px">' + T('No messages yet. Be the first!') + '</div>';
         } else {
           html = '';
           const docs = [];
@@ -293,7 +293,7 @@
             const timeAgo = getTimeAgo(e.createdAt);
             html += '<div class="gb-entry" data-gb-id="' + e.id + '">' +
               (e.sticker ? '<div class="gb-sticker">' + e.sticker + '</div>' : '') +
-              '<div class="gb-from">' + escapeHtml(e.fromName || 'Anonymous') + '</div>' +
+              '<div class="gb-from">' + escapeHtml(e.fromName || T('Anonymous')) + '</div>' +
               (e.text ? '<div class="gb-msg">' + escapeHtml(e.text) + '</div>' : '') +
               '<div class="gb-time">' + timeAgo + '</div>';
 
@@ -305,7 +305,7 @@
               html += '<div class="gb-replies">';
               replies.forEach(r => {
                 html += '<div class="gb-reply">' +
-                  '<div class="gb-from">' + escapeHtml(r.fromName || 'Anonymous') + '</div>' +
+                  '<div class="gb-from">' + escapeHtml(r.fromName || T('Anonymous')) + '</div>' +
                   '<div class="gb-msg">' + escapeHtml(r.text || '') + '</div>' +
                   '<div class="gb-time">' + getTimeAgo(r.createdAt) + '</div></div>';
               });
@@ -313,12 +313,12 @@
             }
 
             // Reply button
-            html += '<button class="gb-reply-btn" onclick="toggleGbReply(this,\'' + e.id + '\')">💬 Reply</button>';
+            html += '<button class="gb-reply-btn" onclick="toggleGbReply(this,\'' + e.id + '\')">💬 ' + T('Reply') + '</button>';
             html += '</div>';
           });
         }
         listEls.forEach(el => el.innerHTML = html);
-      } catch(e) { listEls.forEach(el => el.innerHTML = '<div style="color:rgba(255,255,255,.3);font-size:12px;padding:20px">Could not load guestbook</div>'); }
+      } catch(e) { listEls.forEach(el => el.innerHTML = '<div style="color:rgba(255,255,255,.3);font-size:12px;padding:20px">' + T('Could not load guestbook') + '</div>'); }
     }
 
     function toggleGbReply(btn, entryId) {
@@ -327,8 +327,8 @@
       if (existing) { existing.remove(); return; }
       const form = document.createElement('div');
       form.className = 'gb-reply-form';
-      form.innerHTML = '<input class="gb-reply-input" placeholder="Write a reply..." maxlength="150">' +
-        '<button class="gb-reply-send" onclick="sendGbReply(this,\'' + entryId + '\')">Send</button>';
+      form.innerHTML = '<input class="gb-reply-input" placeholder="' + T('Write a reply...') + '" maxlength="150">' +
+        '<button class="gb-reply-send" onclick="sendGbReply(this,\'' + entryId + '\')">' + T('Send') + '</button>';
       entry.appendChild(form);
       const input = form.querySelector('input');
       input.focus();
@@ -341,7 +341,7 @@
       const form = btn.closest('.gb-reply-form');
       const input = form.querySelector('input');
       const text = (input.value || '').trim();
-      if (!text) return showToast('Write something!', 'error');
+      if (!text) return showToast(T('Write something!'), 'error');
       btn.disabled = true;
       const targetUid = viewingUid;
       await db.collection('rooms').doc(targetUid).collection('guestbook').doc(entryId)
@@ -351,19 +351,19 @@
           text: text,
           createdAt: Date.now()
         });
-      showToast('💬 Reply sent!', 'success');
+      showToast('💬 ' + T('Reply sent!'), 'success');
       loadGuestbookEntries(targetUid);
     }
 
     function getTimeAgo(ts) {
       const diff = Date.now() - ts;
       const mins = Math.floor(diff / 60000);
-      if (mins < 1) return 'just now';
-      if (mins < 60) return mins + 'm ago';
+      if (mins < 1) return T('just now');
+      if (mins < 60) return T('{n}m ago', { n: mins });
       const hrs = Math.floor(mins / 60);
-      if (hrs < 24) return hrs + 'h ago';
+      if (hrs < 24) return T('{n}h ago', { n: hrs });
       const days = Math.floor(hrs / 24);
-      return days + 'd ago';
+      return T('{n}d ago', { n: days });
     }
 
     /* ═══════════════════════════════
@@ -376,7 +376,7 @@
     function showGiftModal(uid, name) {
       _giftTargetUid = uid;
       _giftAmount = 0;
-      document.getElementById('giftTarget').textContent = 'To: ' + (name || 'Anonymous');
+      document.getElementById('giftTarget').textContent = T('To: {name}', { name: name || T('Anonymous') });
       const el = document.getElementById('giftAmounts');
       el.innerHTML = GIFT_AMOUNTS.map(a =>
         '<div class="gift-amt" onclick="selectGiftAmount(this,' + a + ')">💰 ' + a + '</div>'
@@ -395,12 +395,12 @@
 
     document.getElementById('giftSendBtn').addEventListener('click', async () => {
       if (!_giftTargetUid || _giftAmount <= 0) return;
-      if (_giftTargetUid === currentUid) return showToast('Can\'t gift yourself!', 'error');
+      if (_giftTargetUid === currentUid) return showToast(T('Can\'t gift yourself!'), 'error');
 
       // Always read sender's own coins fresh to avoid visiting-room data confusion
       const senderSnap = await userDocRef(currentUid).get();
       const senderCoins = senderSnap.exists ? (senderSnap.data().coins ?? 0) : 0;
-      if (senderCoins < _giftAmount) return showToast('Not enough coins!', 'error');
+      if (senderCoins < _giftAmount) return showToast(T('Not enough coins!'), 'error');
 
       // Deduct from sender's own doc directly
       await userDocRef(currentUid).update({
@@ -411,7 +411,7 @@
       // Update local roomData only if viewing own room
       if (viewingUid === currentUid) {
         roomData.coins -= _giftAmount;
-        logCoin(-_giftAmount, 'Gift sent 🎁');
+        logCoin(-_giftAmount, T('Gift sent') + ' 🎁');
         roomData.giftsGiven = (roomData.giftsGiven || 0) + 1;
         document.getElementById('coinAmount').textContent = roomData.coins;
       }
@@ -424,11 +424,11 @@
       await db.collection('rooms').doc(_giftTargetUid).collection('guestbook').add({
         fromUid: currentUid,
         fromName: getPlayerName(),
-        text: 'Sent a gift of ' + _giftAmount + ' coins! 🎁',
+        text: T('Sent a gift of {n} coins!', { n: _giftAmount }) + ' 🎁',
         sticker: '🎁',
         createdAt: Date.now()
       });
-      showToast('🎁 Sent ' + _giftAmount + ' coins!', 'success');
+      showToast('🎁 ' + T('Sent {n} coins!', { n: _giftAmount }), 'success');
       checkAchievements();
       document.getElementById('giftOverlay').classList.add('hidden');
     });

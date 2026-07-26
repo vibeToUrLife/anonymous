@@ -45,7 +45,7 @@
       roomData.coinHistory.push({
         t: Date.now(),
         d: delta,
-        r: reason || 'Coins',
+        r: reason || T('Coins'),
         b: Math.floor(roomData.coins || 0)
       });
       const overflow = roomData.coinHistory.length - COIN_HISTORY_MAX;
@@ -57,7 +57,7 @@
       const bal = Math.floor(roomData.coins || 0);
       const h = roomData.coinHistory;
       if (!h.length) {                          // first time: anchor the baseline
-        h.push({ t: Date.now(), d: 0, r: 'Opening balance', b: bal });
+        h.push({ t: Date.now(), d: 0, r: T('Opening balance'), b: bal });
         return;
       }
       const diff = bal - h[h.length - 1].b;
@@ -65,7 +65,7 @@
         h.push({
           t: Date.now(),
           d: diff,
-          r: reason || (diff > 0 ? 'Other activity' : 'Spent elsewhere'),
+          r: reason || (diff > 0 ? T('Other activity') : T('Spent elsewhere')),
           b: bal
         });
         const overflow = h.length - COIN_HISTORY_MAX;

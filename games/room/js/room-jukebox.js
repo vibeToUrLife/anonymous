@@ -155,9 +155,9 @@
       if (!el) return;
       const current = JUKEBOX_TRACKS.find(t => t.id === _jukeboxPlaying);
       let html = '<div class="jukebox-now">' +
-        '<div class="jukebox-title">' + (current ? '♫ ' + current.name : 'No track playing') + '</div>' +
+        '<div class="jukebox-title">' + (current ? '♫ ' + T(current.name) : T('No track playing')) + '</div>' +
         '<div class="jukebox-controls">' +
-        '<button class="jukebox-btn" onclick="' + (_jukeboxPlaying ? 'stopJukebox();renderJukebox()' : '') + '" title="Stop">⏹</button>' +
+        '<button class="jukebox-btn" onclick="' + (_jukeboxPlaying ? 'stopJukebox();renderJukebox()' : '') + '" title="' + T('Stop') + '">⏹</button>' +
         '</div></div>';
       html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="font-size:11px;color:rgba(255,255,255,.5)">🔊</span>' +
         '<input type="range" class="jukebox-vol" min="0" max="100" value="' + Math.round((roomData.jukeboxVol ?? 0.5) * 100) + '" oninput="setJukeboxVol(this.value)">' +
@@ -166,7 +166,7 @@
       JUKEBOX_TRACKS.forEach(t => {
         const playing = _jukeboxPlaying === t.id;
         html += '<div class="jukebox-track ' + (playing ? 'playing' : '') + '" onclick="playJukeboxTrack(\'' + t.id + '\')">' +
-          (playing ? '▶ ' : '♪ ') + t.name + '</div>';
+          (playing ? '▶ ' : '♪ ') + T(t.name) + '</div>';
       });
       html += '</div>';
       el.innerHTML = html;

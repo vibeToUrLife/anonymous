@@ -6,7 +6,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>My Room — Virtual Pet & Garden</title>
-  <link rel="stylesheet" href="room/css/room.css?v=cb89">
+  <link rel="stylesheet" href="room/css/room.css?v=cb90">
   <link rel="stylesheet" href="theme.css">
 </head>
 <body>
@@ -14,40 +14,40 @@
   <!-- Login gate -->
   <div class="login-overlay loading" id="loginOverlay">
     <div class="login-box">
-      <h2 style="margin-bottom:8px">🏠 My Room</h2>
-      <p style="font-size:13px;color:var(--g-ink-soft);margin-bottom:28px">Sign in to access your room</p>
+      <h2 style="margin-bottom:8px" data-i18n>🏠 My Room</h2>
+      <p style="font-size:13px;color:var(--g-ink-soft);margin-bottom:28px" data-i18n>Sign in to access your room</p>
       <button class="google-login-btn" id="googleLoginBtn">
         <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-        Sign in with Google
+        <span data-i18n>Sign in with Google</span>
       </button>
       <div class="login-error" id="loginError"></div>
     </div>
   </div>
 
-  <a class="back-btn" href="../index.html">← Back</a>
-  <button class="settings-btn" id="settingsBtn" title="Settings">⚙️</button>
+  <a class="back-btn" href="../index.html" data-i18n>← Back</a>
+  <button class="settings-btn" id="settingsBtn" data-i18n-title title="Settings">⚙️</button>
   <!-- Share the space you're currently viewing (room/farm/aquarium) to the
        bubble board so others can visit. Hidden while visiting someone else. -->
-  <button class="share-board-btn hidden" id="shareBoardBtn" title="Share to bubble board">📢</button>
+  <button class="share-board-btn hidden" id="shareBoardBtn" data-i18n-title title="Share to bubble board">📢</button>
 
   <!-- Settings modal -->
   <div class="settings-overlay hidden" id="settingsOverlay">
     <div class="settings-box">
-      <h3>⚙️ Settings</h3>
+      <h3 data-i18n>⚙️ Settings</h3>
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
-        <button class="settings-close-btn" style="flex:1;min-width:120px;margin:0" onclick="showDailyReward()">🎁 Daily Reward</button>
-        <button class="settings-close-btn" style="flex:1;min-width:120px;margin:0" onclick="showAchievements()">🏆 Achievements</button>
+        <button class="settings-close-btn" style="flex:1;min-width:120px;margin:0" onclick="showDailyReward()" data-i18n>🎁 Daily Reward</button>
+        <button class="settings-close-btn" style="flex:1;min-width:120px;margin:0" onclick="showAchievements()" data-i18n>🏆 Achievements</button>
       </div>
       <!-- No language switch here on purpose: it lives in one place, the
            settings on index.html. This page still loads i18n so it RENDERS in
            whichever language was chosen there, and follows a change made while
            it is open (see i18n-ui.js). -->
       <button class="settings-logout-btn" id="settingsLogoutBtn" data-i18n>🚶 Sign Out</button>
-      <button class="settings-close-btn" id="settingsCloseBtn">Close</button>
+      <button class="settings-close-btn" id="settingsCloseBtn" data-i18n>Close</button>
     </div>
   </div>
 
-  <div class="coin-display" id="coinDisplay" role="button" tabindex="0" title="Tap to see your coin history">
+  <div class="coin-display" id="coinDisplay" role="button" tabindex="0" data-i18n-title title="Tap to see your coin history">
     <span class="coin-icon"><svg class="coin-svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#f7c97e" stroke="#c9952a" stroke-width="6"/><circle cx="50" cy="50" r="34" fill="none" stroke="#c9952a" stroke-width="3" opacity=".4"/><text x="50" y="58" text-anchor="middle" font-size="40" font-weight="bold" fill="#8a5e1f" font-family="sans-serif">$</text></svg></span>
     <span class="coin-amount" id="coinAmount">0</span>
   </div>
@@ -59,8 +59,8 @@
 
   <!-- Entry to the multiplayer Pet World. Hidden automatically if the `world`
        feature flag is turned off (feature-flags.js maps world → #worldEntry). -->
-  <a id="worldEntry" href="world/world.html?scene=pool" title="Enter the multiplayer Pet World"
-     style="display:flex;align-items:center;justify-content:center;gap:8px;max-width:340px;margin:8px auto 0;padding:10px 16px;border-radius:14px;font-weight:800;font-size:15px;text-decoration:none;color:#4a2f1c;background:linear-gradient(135deg,#ffd59e,#7ec8ff);box-shadow:0 4px 14px rgba(120,90,60,0.28)">🌍 Enter Pet World <span style="font-weight:600;font-size:12px;opacity:.85">· play with friends</span></a>
+  <a id="worldEntry" href="world/world.html?scene=pool" data-i18n-title title="Enter the multiplayer Pet World"
+     style="display:flex;align-items:center;justify-content:center;gap:8px;max-width:340px;margin:8px auto 0;padding:10px 16px;border-radius:14px;font-weight:800;font-size:15px;text-decoration:none;color:#4a2f1c;background:linear-gradient(135deg,#ffd59e,#7ec8ff);box-shadow:0 4px 14px rgba(120,90,60,0.28)"><span data-i18n>🌍 Enter Pet World</span> <span style="font-weight:600;font-size:12px;opacity:.85" data-i18n>· play with friends</span></a>
 
   <!-- Room view -->
   <div class="main-wrap">
@@ -68,7 +68,7 @@
       <div class="room" id="roomView">
         <div id="roomLoadingOverlay" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(8,10,14,0.85);z-index:50;border-radius:18px;flex-direction:column;gap:12px">
           <div style="width:36px;height:36px;border:3px solid var(--g-border);border-top-color:var(--g-accent);border-radius:50%;animation:roomSpin .7s linear infinite"></div>
-          <div style="color:var(--g-ink-soft);font-size:13px">Loading room...</div>
+          <div style="color:var(--g-ink-soft);font-size:13px" data-i18n>Loading room...</div>
         </div>
         <canvas id="roomBgCanvas"></canvas>
         <div class="pet-slot" id="petSlot"></div>
@@ -92,7 +92,7 @@
           </div>
           <div id="petStatusColors" style="display:flex;gap:5px;justify-content:center;margin-top:8px;flex-wrap:wrap"></div>
           <div id="petStatusTricks" style="display:none;margin-top:10px;padding-top:8px;border-top:1px solid var(--g-border)">
-            <div style="font-size:10px;color:var(--g-ink-soft);margin-bottom:6px;text-align:center">🎪 Tricks</div>
+            <div style="font-size:10px;color:var(--g-ink-soft);margin-bottom:6px;text-align:center" data-i18n>🎪 Tricks</div>
             <div id="petStatusTricksBtns" style="display:flex;gap:5px;justify-content:center;flex-wrap:wrap"></div>
           </div>
           <div id="petStatusCollectionWrap" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--g-border);text-align:center">
@@ -100,23 +100,23 @@
           </div>
         </div>
         <!-- Floor badge: click to view building exterior -->
-        <div id="layerBadge" class="layer-badge" onclick="goOutside()" title="Outside View">🏠 My Room</div>
+        <div id="layerBadge" class="layer-badge" onclick="goOutside()" data-i18n-title title="Outside View">🏠 My Room</div>
         <!-- Outside building view — full canvas + thin HTML header -->
         <div class="outside-view" id="outsideView">
           <!-- Canvas draws the entire scene (sky, building, trees, etc.) -->
           <canvas id="outsideCanvas" style="position:absolute;inset:0;width:100%;height:100%;cursor:pointer;border-radius:18px"></canvas>
           <!-- Overlaid controls -->
-          <div class="outside-title">🌳 Outside View</div>
-          <button class="outside-back-btn" onclick="enterLayer(currentLayer)">← Inside</button>
-          <div class="outside-hint">Tap a floor to enter it</div>
+          <div class="outside-title" data-i18n>🌳 Outside View</div>
+          <button class="outside-back-btn" onclick="enterLayer(currentLayer)" data-i18n>← Inside</button>
+          <div class="outside-hint" data-i18n>Tap a floor to enter it</div>
         </div>
         <!-- Farm view — pasture with animals that produce coin drops -->
         <div class="outside-view farm-view" id="farmView">
           <canvas id="farmCanvas" style="position:absolute;inset:0;width:100%;height:100%;cursor:pointer;border-radius:18px;touch-action:none"></canvas>
-          <div class="outside-title">🚜 My Farm</div>
-          <button class="outside-back-btn" onclick="farmBack()">← Back</button>
-          <button class="farm-produce-btn" id="farmProduceBtn" onclick="openProduceModal()" style="display:none">🧺 Collect <span id="farmProduceN">0</span></button>
-          <div class="outside-hint">Tap an empty bed to plant · tap ripe crops to harvest · tap an animal for status</div>
+          <div class="outside-title" data-i18n>🚜 My Farm</div>
+          <button class="outside-back-btn" onclick="farmBack()" data-i18n>← Back</button>
+          <button class="farm-produce-btn" id="farmProduceBtn" onclick="openProduceModal()" style="display:none"><span data-i18n>🧺 Collect</span> <span id="farmProduceN">0</span></button>
+          <div class="outside-hint" data-i18n>Tap an empty bed to plant · tap ripe crops to harvest · tap an animal for status</div>
           <div class="farm-tip" id="farmTip" style="display:none"></div>
           <div class="crop-picker" id="cropPicker" style="display:none"></div>
           <div class="crop-picker" id="cartSheet" style="display:none"></div>
@@ -128,14 +128,14 @@
     </div>
 
     <div class="panel-wrap" id="panelWrap">
-    <button class="panel-toggle" id="panelToggle" title="Toggle panel">❮</button>
+    <button class="panel-toggle" id="panelToggle" data-i18n-title title="Toggle panel">❮</button>
     <div class="panel-inner">
     <!-- Tabs -->
     <div class="tabs" id="tabsBar">
-      <button class="tab-btn active" data-tab="shop">🛒 Shop</button>
-      <button class="tab-btn" data-tab="upgrade">🍖 Feed</button>
-      <button class="tab-btn" data-tab="extras">✨ More</button>
-      <button class="tab-btn" data-tab="visit">👀 Visit</button>
+      <button class="tab-btn active" data-tab="shop" data-i18n>🛒 Shop</button>
+      <button class="tab-btn" data-tab="upgrade" data-i18n>🍖 Feed</button>
+      <button class="tab-btn" data-tab="extras" data-i18n>✨ More</button>
+      <button class="tab-btn" data-tab="visit" data-i18n>👀 Visit</button>
     </div>
 
   <!-- Farm panel — replaces the room tabs while the farm view is open (coins are shared) -->
@@ -145,69 +145,69 @@
   <!-- Shop panel -->
   <div class="tab-panel active" id="panel-shop">
     <div class="sub-tabs">
-      <button class="sub-tab active" data-sub="petShopWrap">🐾 Pet</button>
-      <button class="sub-tab" data-sub="plantShopWrap">🌱 Plant</button>
-      <button class="sub-tab" data-sub="decorShopWrap">🪑 Decor</button>
+      <button class="sub-tab active" data-sub="petShopWrap" data-i18n>🐾 Pet</button>
+      <button class="sub-tab" data-sub="plantShopWrap" data-i18n>🌱 Plant</button>
+      <button class="sub-tab" data-sub="decorShopWrap" data-i18n>🪑 Decor</button>
     </div>
     <div class="sub-panel active" id="petShopWrap">
       <div class="shop-section">
-        <div class="shop-section-title">🐾 Pets</div>
+        <div class="shop-section-title" data-i18n>🐾 Pets</div>
         <div class="shop-grid" id="petShop"></div>
       </div>
     </div>
     <div class="sub-panel" id="plantShopWrap">
       <div class="shop-section">
-        <div class="shop-section-title">🌱 Plants</div>
+        <div class="shop-section-title" data-i18n>🌱 Plants</div>
         <div class="shop-grid" id="plantShop"></div>
       </div>
     </div>
     <div class="sub-panel" id="decorShopWrap">
       <div class="decor-tabs">
-        <button class="decor-tab active" data-dcategory="wallpaper">🏠 Wall</button>
-        <button class="decor-tab" data-dcategory="floor">🪵 Floor</button>
-        <button class="decor-tab" data-dcategory="window">🪟 Window</button>
-        <button class="decor-tab" data-dcategory="wallart">🖼️ Art</button>
-        <button class="decor-tab" data-dcategory="furniture">🪑 Furniture</button>
-        <button class="decor-tab" data-dcategory="rug">🟣 Rugs</button>
+        <button class="decor-tab active" data-dcategory="wallpaper" data-i18n>🏠 Wall</button>
+        <button class="decor-tab" data-dcategory="floor" data-i18n>🪵 Floor</button>
+        <button class="decor-tab" data-dcategory="window" data-i18n>🪟 Window</button>
+        <button class="decor-tab" data-dcategory="wallart" data-i18n>🖼️ Art</button>
+        <button class="decor-tab" data-dcategory="furniture" data-i18n>🪑 Furniture</button>
+        <button class="decor-tab" data-dcategory="rug" data-i18n>🟣 Rugs</button>
       </div>
       <div class="decor-panel active" id="dp-wallpaper">
         <div class="shop-section">
-          <div class="shop-section-title">🏠 Wall Pattern</div>
-          <div style="font-size:11px;color:var(--g-ink-faint);padding:0 12px 8px;text-align:center">Change the look of your walls</div>
+          <div class="shop-section-title" data-i18n>🏠 Wall Pattern</div>
+          <div style="font-size:11px;color:var(--g-ink-faint);padding:0 12px 8px;text-align:center" data-i18n>Change the look of your walls</div>
           <div class="shop-grid" id="wallShop"></div>
         </div>
       </div>
       <div class="decor-panel" id="dp-floor">
         <div class="shop-section">
-          <div class="shop-section-title">🪵 Floor Pattern</div>
-          <div style="font-size:11px;color:var(--g-ink-faint);padding:0 12px 8px;text-align:center">Change the floor of this room</div>
+          <div class="shop-section-title" data-i18n>🪵 Floor Pattern</div>
+          <div style="font-size:11px;color:var(--g-ink-faint);padding:0 12px 8px;text-align:center" data-i18n>Change the floor of this room</div>
           <div class="shop-grid" id="floorShop"></div>
         </div>
       </div>
       <div class="decor-panel" id="dp-window">
         <div class="shop-section">
-          <div class="shop-section-title">🪟 Windows</div>
-          <div style="font-size:11px;color:var(--g-ink-faint);padding:0 12px 8px;text-align:center">Pick a window style</div>
+          <div class="shop-section-title" data-i18n>🪟 Windows</div>
+          <div style="font-size:11px;color:var(--g-ink-faint);padding:0 12px 8px;text-align:center" data-i18n>Pick a window style</div>
           <div class="shop-grid" id="windowShop"></div>
         </div>
       </div>
       <div class="decor-panel" id="dp-wallart">
         <div class="shop-section">
-          <div class="shop-section-title">🖼️ Wall Art &amp; Hangings</div>
-          <div style="font-size:11px;color:var(--g-ink-faint);padding:0 12px 8px;text-align:center">Drag to reposition on the wall</div>
+          <div class="shop-section-title" data-i18n>🖼️ Wall Art &amp; Hangings</div>
+          <div style="font-size:11px;color:var(--g-ink-faint);padding:0 12px 8px;text-align:center" data-i18n>Drag to reposition on the wall</div>
           <div class="shop-grid" id="wallDecorShop"></div>
         </div>
       </div>
       <div class="decor-panel" id="dp-furniture">
         <div class="shop-section">
-          <div class="shop-section-title">🪑 Furniture &amp; Floor Items</div>
-          <div style="font-size:11px;color:var(--g-ink-faint);padding:0 12px 8px;text-align:center">Drag to reposition on the floor</div>
+          <div class="shop-section-title" data-i18n>🪑 Furniture &amp; Floor Items</div>
+          <div style="font-size:11px;color:var(--g-ink-faint);padding:0 12px 8px;text-align:center" data-i18n>Drag to reposition on the floor</div>
           <div class="shop-grid" id="floorDecorShop"></div>
         </div>
       </div>
       <div class="decor-panel" id="dp-rug">
         <div class="shop-section">
-          <div class="shop-section-title">🟣 Rugs (1 at a time)</div>
+          <div class="shop-section-title" data-i18n>🟣 Rugs (1 at a time)</div>
           <div class="shop-grid" id="rugDecorShop"></div>
         </div>
       </div>
@@ -216,10 +216,10 @@
 
   <div class="tab-panel" id="panel-upgrade">
     <div class="sub-tabs">
-      <button class="sub-tab active" data-sub="feedPetWrap">🍖 Pet Food</button>
-      <button class="sub-tab" data-sub="feedToyWrap">🧸 Pet Toy</button>
-      <button class="sub-tab" data-sub="feedPlantWrap">🌱 Plant</button>
-      <button class="sub-tab" data-sub="feedLayerWrap">🏠 Floors</button>
+      <button class="sub-tab active" data-sub="feedPetWrap" data-i18n>🍖 Pet Food</button>
+      <button class="sub-tab" data-sub="feedToyWrap" data-i18n>🧸 Pet Toy</button>
+      <button class="sub-tab" data-sub="feedPlantWrap" data-i18n>🌱 Plant</button>
+      <button class="sub-tab" data-sub="feedLayerWrap" data-i18n>🏠 Floors</button>
     </div>
     <div class="sub-panel active" id="feedPetWrap">
       <div id="feedPetContent"></div>
@@ -239,34 +239,34 @@
   <!-- Extras panel -->
   <div class="tab-panel" id="panel-extras">
     <div class="sub-tabs">
-      <button class="sub-tab active" data-sub="accessoryWrap">🎩 Accessory</button>
-      <button class="sub-tab" data-sub="jukeboxWrap">🎵 Music</button>
-      <button class="sub-tab" data-sub="guestbookWrap">📝 Guestbook</button>
-      <button class="sub-tab" data-sub="gachaWrapTab">🎰 Gacha</button>
+      <button class="sub-tab active" data-sub="accessoryWrap" data-i18n>🎩 Accessory</button>
+      <button class="sub-tab" data-sub="jukeboxWrap" data-i18n>🎵 Music</button>
+      <button class="sub-tab" data-sub="guestbookWrap" data-i18n>📝 Guestbook</button>
+      <button class="sub-tab" data-sub="gachaWrapTab" data-i18n>🎰 Gacha</button>
     </div>
     <div class="sub-panel active" id="accessoryWrap">
       <div class="shop-section">
-        <div class="shop-section-title">🎩 Pet Accessories</div>
-        <div style="font-size:11px;color:var(--g-ink-faint);padding:0 12px 8px;text-align:center">Win accessories from Gacha! Equip them on your pets</div>
+        <div class="shop-section-title" data-i18n>🎩 Pet Accessories</div>
+        <div style="font-size:11px;color:var(--g-ink-faint);padding:0 12px 8px;text-align:center" data-i18n>Win accessories from Gacha! Equip them on your pets</div>
         <div id="accShop"></div>
       </div>
     </div>
     <div class="sub-panel" id="jukeboxWrap">
       <div class="shop-section">
-        <div class="shop-section-title">🎵 Jukebox</div>
+        <div class="shop-section-title" data-i18n>🎵 Jukebox</div>
         <div id="jukeboxContent"></div>
       </div>
     </div>
     <div class="sub-panel" id="guestbookWrap">
       <div class="shop-section">
-        <div class="shop-section-title">📝 Guestbook</div>
+        <div class="shop-section-title" data-i18n>📝 Guestbook</div>
         <div id="guestbookContent"></div>
       </div>
     </div>
     <div class="sub-panel" id="gachaWrapTab">
       <div class="shop-section">
-        <div class="shop-section-title">🎰 Lucky Draw</div>
-        <div style="font-size:11px;color:var(--g-ink-faint);padding:0 12px 8px;text-align:center">Spend coins for random rare items!</div>
+        <div class="shop-section-title" data-i18n>🎰 Lucky Draw</div>
+        <div style="font-size:11px;color:var(--g-ink-faint);padding:0 12px 8px;text-align:center" data-i18n>Spend coins for random rare items!</div>
         <div id="gachaTabContent"></div>
       </div>
     </div>
@@ -275,18 +275,18 @@
   <!-- Visit panel -->
   <div class="tab-panel" id="panel-visit">
     <div class="visit-header">
-      <h4>👀 Visit Rooms</h4>
-      <div class="online-count-badge" id="onlineCountBadge"><div class="pulse-dot"></div> <span id="onlineCountNum">0</span> online</div>
+      <h4 data-i18n>👀 Visit Rooms</h4>
+      <div class="online-count-badge" id="onlineCountBadge"><div class="pulse-dot"></div> <span id="onlineCountNum">0</span> <span data-i18n>online</span></div>
     </div>
     <!-- Visitor guestbook (shown when visiting another player) -->
     <div id="visitorGuestbook" style="display:none">
       <div class="shop-section" style="margin-bottom:12px">
-        <div class="shop-section-title">📝 Guestbook</div>
+        <div class="shop-section-title" data-i18n>📝 Guestbook</div>
         <div id="visitorGbContent"></div>
       </div>
     </div>
     <div class="visit-list" id="visitList">
-      <div class="visit-empty">Loading rooms…</div>
+      <div class="visit-empty" data-i18n>Loading rooms…</div>
     </div>
   </div>
 
@@ -309,11 +309,11 @@
   <!-- Daily Login Reward modal -->
   <div class="daily-overlay hidden" id="dailyOverlay">
     <div class="daily-box">
-      <h3>🎁 Daily Login Reward</h3>
+      <h3 data-i18n>🎁 Daily Login Reward</h3>
       <div class="daily-streak" id="dailyStreak"></div>
       <div class="daily-days" id="dailyDays"></div>
       <button class="daily-claim-btn" id="dailyClaimBtn">Claim Today's Reward!</button>
-      <button class="daily-close" id="dailyCloseBtn">Close</button>
+      <button class="daily-close" id="dailyCloseBtn" data-i18n>Close</button>
     </div>
   </div>
 
@@ -321,7 +321,7 @@
   <div class="achieve-overlay hidden" id="achieveOverlay">
     <div class="achieve-box">
       <div class="achieve-header">
-        <h3>🏆 Achievements</h3>
+        <h3 data-i18n>🏆 Achievements</h3>
         <button class="achieve-x-btn" id="achieveXBtn">✕</button>
       </div>
       <div class="achieve-list" id="achieveList"></div>
@@ -332,10 +332,10 @@
   <div class="coinhist-overlay hidden" id="coinHistOverlay" onclick="if(event.target===this)this.classList.add('hidden')">
     <div class="coinhist-box">
       <div class="coinhist-header">
-        <h3>🪙 Coin History</h3>
-        <button class="coinhist-x-btn" id="coinHistXBtn" aria-label="Close">✕</button>
+        <h3 data-i18n>🪙 Coin History</h3>
+        <button class="coinhist-x-btn" id="coinHistXBtn" data-i18n-aria-label aria-label="Close">✕</button>
       </div>
-      <div class="coinhist-balance">Balance: <b id="coinHistBalance">0</b></div>
+      <div class="coinhist-balance"><span data-i18n>Balance:</span> <b id="coinHistBalance">0</b></div>
       <div class="coinhist-list" id="coinHistList"></div>
     </div>
   </div>
@@ -343,41 +343,41 @@
   <!-- Gift modal -->
   <div class="gift-overlay hidden" id="giftOverlay">
     <div class="gift-box">
-      <h3>🎁 Send Gift</h3>
+      <h3 data-i18n>🎁 Send Gift</h3>
       <div id="giftTarget" style="font-size:13px;color:var(--g-ink-soft);margin-bottom:14px"></div>
       <div class="gift-amounts" id="giftAmounts"></div>
-      <button class="gift-send-btn" id="giftSendBtn" disabled>Send Gift</button>
-      <button class="gift-close" id="giftCloseBtn">Cancel</button>
+      <button class="gift-send-btn" id="giftSendBtn" disabled data-i18n>Send Gift</button>
+      <button class="gift-close" id="giftCloseBtn" data-i18n>Cancel</button>
     </div>
   </div>
 
   <!-- Gacha prize preview modal -->
   <div class="gacha-overlay hidden" id="gachaPrizeOverlay" onclick="if(event.target===this)this.classList.add('hidden')">
     <div class="gacha-box" style="max-height:80vh;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none">
-      <h3>📋 Prize Pool</h3>
-      <div class="gacha-desc">All possible prizes and their drop rates</div>
+      <h3 data-i18n>📋 Prize Pool</h3>
+      <div class="gacha-desc" data-i18n>All possible prizes and their drop rates</div>
       <div id="gachaPrizeModalList" style="text-align:left;margin-bottom:14px"></div>
-      <button class="gacha-close" onclick="document.getElementById('gachaPrizeOverlay').classList.add('hidden')">Close</button>
+      <button class="gacha-close" onclick="document.getElementById('gachaPrizeOverlay').classList.add('hidden')" data-i18n>Close</button>
     </div>
   </div>
 
   <!-- Leaderboard modal -->
   <div class="lb-overlay hidden" id="lbOverlay">
     <div class="lb-box">
-      <h3>🏅 Mini-Game Leaderboard</h3>
+      <h3 data-i18n>🏅 Mini-Game Leaderboard</h3>
       <div class="lb-tabs" id="lbTabs"></div>
       <div class="lb-list" id="lbList"></div>
-      <button class="lb-close" id="lbCloseBtn">Close</button>
+      <button class="lb-close" id="lbCloseBtn" data-i18n>Close</button>
     </div>
   </div>
 
   <!-- Pet Swap modal -->
   <div class="swap-overlay hidden" id="swapOverlay">
     <div class="swap-box">
-      <h3>🔄 Swap Pet</h3>
+      <h3 data-i18n>🔄 Swap Pet</h3>
       <div class="swap-desc" id="swapDesc">Choose which pet to replace:</div>
       <div class="swap-pet-list" id="swapPetList"></div>
-      <button class="swap-close" id="swapCloseBtn">Cancel</button>
+      <button class="swap-close" id="swapCloseBtn" data-i18n>Cancel</button>
     </div>
   </div>
 
@@ -391,49 +391,54 @@
   <script defer src="../src/js/stay-time.js"></script>
 
   <!-- Pet drawing modules -->
-  <script defer src="pets/shared.js?v=cb89"></script>
-  <script defer src="pets/cat.js?v=cb89"></script>
-  <script defer src="pets/dog.js?v=cb89"></script>
-  <script defer src="pets/bunny.js?v=cb89"></script>
-  <script defer src="pets/hamster.js?v=cb89"></script>
-  <script defer src="pets/fox.js?v=cb89"></script>
-  <script defer src="pets/panda.js?v=cb89"></script>
-  <script defer src="pets/goose.js?v=cb89"></script>
-  <script defer src="pets/tom.js?v=cb89"></script>
-  <script defer src="pets/jerry.js?v=cb89"></script>
-  <script defer src="pets/farm-animals.js?v=cb89"></script>
+  <script defer src="pets/shared.js?v=cb90"></script>
+  <script defer src="pets/cat.js?v=cb90"></script>
+  <script defer src="pets/dog.js?v=cb90"></script>
+  <script defer src="pets/bunny.js?v=cb90"></script>
+  <script defer src="pets/hamster.js?v=cb90"></script>
+  <script defer src="pets/fox.js?v=cb90"></script>
+  <script defer src="pets/panda.js?v=cb90"></script>
+  <script defer src="pets/goose.js?v=cb90"></script>
+  <script defer src="pets/tom.js?v=cb90"></script>
+  <script defer src="pets/jerry.js?v=cb90"></script>
+  <script defer src="pets/farm-animals.js?v=cb90"></script>
 
-  <!-- i18n first: every module below renders text through T(). -->
+  <!-- i18n first: every module below renders text through T(). The room's
+       dictionary has to register BEFORE i18n-ui.js, which sweeps the static
+       data-i18n markup the moment it runs (deferred scripts execute in order,
+       ahead of DOMContentLoaded). A dictionary loaded after that sweep would
+       leave every label on this page in English until the language is
+       toggled — which is how index.html orders its dictionaries too. -->
   <script src="../src/js/i18n.js?v=3"></script>
-  <script src="../src/js/i18n-zh-app.js?v=3"></script>
+  <script src="../src/js/i18n-zh-app.js?v=4"></script>
+  <script defer src="room/js/room-i18n-zh.js?v=cb90"></script>
   <script defer src="../src/js/i18n-ui.js?v=3"></script>
-  <script defer src="room/js/room-i18n-zh.js?v=cb89"></script>
 
   <!-- Room JS modules -->
-  <script defer src="room/js/room-base.js?v=cb89"></script>
-  <script defer src="room/js/room-drops.js?v=cb89"></script>
-  <script defer src="room/js/room-autofeed.js?v=cb89"></script>
-  <script defer src="room/js/room-farm.js?v=cb89"></script>
-  <script defer src="room/js/room-state.js?v=cb89"></script>
-  <script defer src="room/js/room-layers.js?v=cb89"></script>
-  <script defer src="room/js/room-farm-view.js?v=cb89"></script>
-  <script defer src="fish-render.js?v=cb89"></script>
-  <script defer src="room/js/room-aquarium.js?v=cb89"></script>
-  <script defer src="room/js/room-aquarium-view.js?v=cb89"></script>
-  <script defer src="room/js/room-aquarium-games.js?v=cb89"></script>
-  <script defer src="room/js/room-firebase.js?v=cb89"></script>
-  <script defer src="room/js/room-render.js?v=cb89"></script>
-  <script defer src="room/js/room-actions.js?v=cb89"></script>
-  <script defer src="room/js/room-plants.js?v=cb89"></script>
-  <script defer src="room/js/room-decorations.js?v=cb89"></script>
-  <script defer src="room/js/room-bg.js?v=cb89"></script>
-  <script defer src="room/js/room-pets.js?v=cb89"></script>
-  <script defer src="room/js/room-ui.js?v=cb89"></script>
-  <script defer src="room/js/room-accessories.js?v=cb89"></script>
-  <script defer src="room/js/room-jukebox.js?v=cb89"></script>
-  <script defer src="room/js/room-weather.js?v=cb89"></script>
-  <script defer src="room/js/room-gacha.js?v=cb89"></script>
-  <script defer src="room/js/room-leaderboard.js?v=cb89"></script>
+  <script defer src="room/js/room-base.js?v=cb90"></script>
+  <script defer src="room/js/room-drops.js?v=cb90"></script>
+  <script defer src="room/js/room-autofeed.js?v=cb90"></script>
+  <script defer src="room/js/room-farm.js?v=cb90"></script>
+  <script defer src="room/js/room-state.js?v=cb90"></script>
+  <script defer src="room/js/room-layers.js?v=cb90"></script>
+  <script defer src="room/js/room-farm-view.js?v=cb90"></script>
+  <script defer src="fish-render.js?v=cb90"></script>
+  <script defer src="room/js/room-aquarium.js?v=cb90"></script>
+  <script defer src="room/js/room-aquarium-view.js?v=cb90"></script>
+  <script defer src="room/js/room-aquarium-games.js?v=cb90"></script>
+  <script defer src="room/js/room-firebase.js?v=cb90"></script>
+  <script defer src="room/js/room-render.js?v=cb90"></script>
+  <script defer src="room/js/room-actions.js?v=cb90"></script>
+  <script defer src="room/js/room-plants.js?v=cb90"></script>
+  <script defer src="room/js/room-decorations.js?v=cb90"></script>
+  <script defer src="room/js/room-bg.js?v=cb90"></script>
+  <script defer src="room/js/room-pets.js?v=cb90"></script>
+  <script defer src="room/js/room-ui.js?v=cb90"></script>
+  <script defer src="room/js/room-accessories.js?v=cb90"></script>
+  <script defer src="room/js/room-jukebox.js?v=cb90"></script>
+  <script defer src="room/js/room-weather.js?v=cb90"></script>
+  <script defer src="room/js/room-gacha.js?v=cb90"></script>
+  <script defer src="room/js/room-leaderboard.js?v=cb90"></script>
   <!-- Share-to-board helper + wiring for the 📢 button. -->
   <script defer src="../src/js/share-to-board.js?v=1"></script>
   <script>
@@ -465,13 +470,13 @@
           || localStorage.getItem('flappy_custom_name_' + currentUid) || 'Someone';
         ShareToBoard.postSpace(db, auth.currentUser, { kind: kind, uid: currentUid, ownerName: ownerName })
           .then(function () {
-            if (typeof showToast === 'function') showToast('📢 Shared your ' + kind + ' to the board!', 'success');
+            if (typeof showToast === 'function') showToast(T('📢 Shared your {kind} to the board!', { kind: T(kind) }), 'success');
           })
           .catch(function (e) {
             if (e && e.code === 'cooldown') {
-              if (typeof showToast === 'function') showToast('You just shared that — give it a moment.', 'error');
+              if (typeof showToast === 'function') showToast(T('You just shared that — give it a moment.'), 'error');
             } else if (typeof showToast === 'function') {
-              showToast('Could not share. Try again.', 'error');
+              showToast(T('Could not share. Try again.'), 'error');
             }
           });
       });

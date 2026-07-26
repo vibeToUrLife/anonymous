@@ -40,7 +40,7 @@
       if (n < 1 || n > 3) return;
       const total = roomData.unlockedLayers || 1;
       if (n > total) {
-        showToast('Floor ' + n + ' is locked! Unlock it from ⬆ Feed > 🏠 Floors.', 'error');
+        showToast(T('Floor {n} is locked! Unlock it from ⬆ Feed > 🏠 Floors.', { n: n }), 'error');
         return;
       }
       // Persist current layer before switching
@@ -89,11 +89,11 @@
       if (!badge) return;
       const total = roomData.unlockedLayers || 1;
       if (isOutsideView) {
-        badge.textContent = '🌳 Outside';
+        badge.textContent = '🌳 ' + T('Outside');
       } else if (total > 1) {
-        badge.textContent = '🏠 Floor ' + currentLayer + ' / ' + total;
+        badge.textContent = '🏠 ' + T('Floor {n} / {total}', { n: currentLayer, total: total });
       } else {
-        badge.textContent = '🏠 My Room';
+        badge.textContent = '🏠 ' + T('My Room');
       }
     }
 
@@ -891,12 +891,12 @@
         if (unlocked) {
           ctx.fillStyle = isCurrent ? '#f7c97e' : 'rgba(0,0,0,0.55)';
           ctx.font = 'bold 11px sans-serif';
-          ctx.fillText(isCurrent ? '\u2605 Floor ' + i : 'Floor ' + i, bX + bW / 2, fy + floorH - 16);
+          ctx.fillText((isCurrent ? '\u2605 ' : '') + T('Floor {n}', { n: i }), bX + bW / 2, fy + floorH - 16);
         } else {
           ctx.fillStyle = 'rgba(180,150,220,0.75)';
           ctx.font = '10px sans-serif';
           const UNLOCK_COST = { 2: 10000, 3: 20000 };
-          ctx.fillText('\uD83D\uDD12 ' + (UNLOCK_COST[i] || '') + ' coins', bX + bW / 2, fy + floorH - 16);
+          ctx.fillText('\uD83D\uDD12 ' + T('{n} coins', { n: UNLOCK_COST[i] || '' }), bX + bW / 2, fy + floorH - 16);
         }
         ctx.textBaseline = 'alphabetic';
         _outsideFloorRects[i] = { x: bX, y: fy, w: bW, h: floorH, unlocked };
@@ -1087,8 +1087,8 @@
 
       // Tooltip label above the hovered floor
       const label = r.unlocked
-        ? 'Floor ' + _outsideHoveredFloor + ' (click to enter)'
-        : 'Floor ' + _outsideHoveredFloor + ' (locked)';
+        ? T('Floor {n} (click to enter)', { n: _outsideHoveredFloor })
+        : T('Floor {n} (locked)', { n: _outsideHoveredFloor });
       ctx.font = 'bold 11px sans-serif';
       const tw = ctx.measureText(label).width;
       const tx = r.x + (r.w - tw) / 2 - 6;
@@ -1212,7 +1212,7 @@
       ctx.textAlign = 'center';
       ctx.fillStyle = '#fff';
       ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 4;
-      ctx.fillText('🚜 Farm', bx + bw / 2, by - roofH - ddy - 6);
+      ctx.fillText('🚜 ' + T('Farm'), bx + bw / 2, by - roofH - ddy - 6);
       ctx.shadowBlur = 0;
       // Hover glow
       if (_farmGateHover) {
@@ -1280,7 +1280,7 @@
           enterLayer(floor);
         } else {
           const ownRoom = viewingUid === currentUid;
-          showToast(ownRoom ? 'Unlock from ⬆ Feed → 🏠 Floors' : 'Floor is locked.', 'error');
+          showToast(ownRoom ? T('Unlock from ⬆ Feed → 🏠 Floors') : T('Floor is locked.'), 'error');
         }
       };
     }
@@ -1467,13 +1467,13 @@
       const UNLOCK_COST = { 2: 10000, 3: 20000 };
       const cost = UNLOCK_COST[n];
       if (!cost) return;
-      if ((roomData.unlockedLayers || 1) >= n) return showToast('Floor ' + n + ' already unlocked!', 'error');
+      if ((roomData.unlockedLayers || 1) >= n) return showToast(T('Floor {n} already unlocked!', { n: n }), 'error');
       if ((roomData.unlockedLayers || 1) < n - 1)
-        return showToast('Unlock Floor ' + (n - 1) + ' first!', 'error');
+        return showToast(T('Unlock Floor {n} first!', { n: n - 1 }), 'error');
       if (roomData.coins < cost)
-        return showToast('Not enough coins! Need ' + cost + ' 🪙', 'error');
+        return showToast(T('Not enough coins! Need {cost}', { cost: cost + ' 🪙' }), 'error');
       roomData.coins -= cost;
-      logCoin(-cost, 'Unlock floor ' + n);
+      logCoin(-cost, T('Unlock floor {n}', { n: n }));
       roomData.unlockedLayers = n;
       // Initialise the new floor with its default wall/window and empty decors
       if (!roomData.layerData) roomData.layerData = {};
@@ -1488,7 +1488,7 @@
       if (!roomData.ownedWindows.includes(defWin)) roomData.ownedWindows.push(defWin);
       await saveRoom();
       renderAll();
-      showToast('🏠 Floor ' + n + ' unlocked! Tap it to enter.', 'success');
+      showToast('🏠 ' + T('Floor {n} unlocked! Tap it to enter.', { n: n }), 'success');
     }
 
     function getPlayerName() {
