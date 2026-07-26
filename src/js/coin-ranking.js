@@ -28,10 +28,10 @@
     overlay.className = 'cc-overlay';
     overlay.innerHTML =
       '<div class="cc-card cc-boost" style="max-width:360px">'
-      + '<button class="cc-close" title="关闭">✕</button>'
-      + '<div class="cc-title">🏆 富豪榜</div>'
-      + '<div class="cc-hint">按当前金币余额排名 · 金币越多越靠前 👑</div>'
-      + '<div class="cc-lb" id="crkList">加载中…</div>'
+      + '<button class="cc-close" title="' + T('关闭') + '">✕</button>'
+      + '<div class="cc-title">🏆 ' + T('富豪榜') + '</div>'
+      + '<div class="cc-hint">' + T('按当前金币余额排名 · 金币越多越靠前 👑') + '</div>'
+      + '<div class="cc-lb" id="crkList">' + T('加载中…') + '</div>'
       + '</div>';
     document.body.appendChild(overlay);
     listEl = overlay.querySelector('#crkList');
@@ -42,7 +42,7 @@
   function hide() { if (overlay) overlay.classList.remove('show'); }
 
   async function load() {
-    listEl.innerHTML = '<div class="cc-hint">加载中…</div>';
+    listEl.innerHTML = '<div class="cc-hint">' + T('加载中…') + '</div>';
     try {
       const snap = await db.collection('rooms').orderBy('coins', 'desc').limit(RANK_LIMIT).get();
       const me = auth.currentUser && auth.currentUser.uid;
@@ -51,26 +51,34 @@
         const x = doc.data(); const coins = x.coins || 0;
         if (coins <= 0) return;
         rank++;
-        rows.push({ rank: rank, name: x.displayName || 'Anonymous', coins: coins, me: doc.id === me });
+        rows.push({ rank: rank, name: x.displayName || T('匿名'), coins: coins, me: doc.id === me });
       });
       if (!rows.length) {
-        listEl.innerHTML = '<div class="cc-hint">还没有人有金币，快去赚第一桶金！</div>';
+        listEl.innerHTML = '<div class="cc-hint">' + T('还没有人有金币，快去赚第一桶金！') + '</div>';
         return;
       }
       const medal = ['🥇', '🥈', '🥉'];
       listEl.innerHTML = rows.map(function (r) {
         return '<div class="cc-lb-row' + (r.me ? ' me' : '') + '">'
           + '<span class="cc-lb-rank">' + (medal[r.rank - 1] || r.rank) + '</span>'
-          + '<span class="cc-lb-name">' + esc(r.name) + (r.me ? ' (你)' : '') + '</span>'
+          + '<span class="cc-lb-name">' + esc(r.name) + (r.me ? ' (' + T('你') + ')' : '') + '</span>'
           + '<span class="cc-lb-spent">🪙 ' + r.coins.toLocaleString() + '</span></div>';
       }).join('');
     } catch (e) {
-      listEl.innerHTML = '<div class="cc-hint">排行榜加载失败</div>';
+      listEl.innerHTML = '<div class="cc-hint">' + T('排行榜加载失败') + '</div>';
     }
   }
 
   function open() { build(); overlay.classList.add('show'); load(); }
   window.openCoinRanking = open;
+  // Rebuilt chrome + a re-read of the list, so an open board follows the switch.
+  window.addEventListener('langchange', function () {
+    if (!built) return;
+    overlay.querySelector('.cc-title').textContent = '🏆 ' + T('富豪榜');
+    overlay.querySelector('.cc-hint').textContent = T('按当前金币余额排名 · 金币越多越靠前 👑');
+    overlay.querySelector('.cc-close').title = T('关闭');
+    if (overlay.classList.contains('show')) load();
+  });
 
   // The 🏆 button sits earlier in the page, so it exists when this script runs.
   const btn = document.getElementById('coinRankBtn');

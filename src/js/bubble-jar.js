@@ -101,9 +101,9 @@
     const pill = overlay.querySelector('.jar-sync');
     if (!pill) return;
     pill.dataset.state = s;
-    pill.textContent = s === 'syncing' ? '☁️ 同步中…'
-                     : s === 'synced' ? '☁️ 已同步'
-                     : s === 'error' ? '⚠️ 未同步'
+    pill.textContent = s === 'syncing' ? T('☁️ 同步中…')
+                     : s === 'synced' ? T('☁️ 已同步')
+                     : s === 'error' ? T('⚠️ 未同步')
                      : '';
     pill.style.display = (s === 'idle' || s === 'local') ? 'none' : '';
   }
@@ -176,14 +176,14 @@
     const entry = Jar.snapshot(a, Date.now());
     const res = Jar.add(items, entry);
     if (!res.added) {
-      toast(res.reason === 'dup' ? '已经在泡泡罐里啦 🏺' : '无法收藏这条留言');
+      toast(res.reason === 'dup' ? T('已经在泡泡罐里啦 🏺') : T('无法收藏这条留言'));
       return;
     }
     items = res.list;
     const okLocal = saveLocal(items);
     if (!okLocal && !(canCloud && myUid)) {        // no durable store at all → don't lie
       items = Jar.remove(items, entry.id);
-      toast('保存失败 —— 存储空间不够了', 'error');
+      toast(T('保存失败 —— 存储空间不够了'), 'error');
       return;
     }
     // A base64 photo → keep it on THIS device so the card can show it (hosted
@@ -196,7 +196,7 @@
     pruneLocalImgs();   // a full jar just evicted its oldest entry — reclaim its photo now
                         // (runs every catch, so anon/local-only users don't leak either)
     flyToJar(bubbleEl);
-    toast('🏺 收进泡泡罐了！');
+    toast(T('🏺 收进泡泡罐了！'));
     if (listEl) renderList();
     ensureHydrated().then(scheduleCloudSave);      // merge cloud first, then push
   };
@@ -206,7 +206,7 @@
     // entries when we push `items` back up.
     ensureHydrated().then((ok) => {
       if (canCloud && myUid && !ok) {              // cloud expected but not merged:
-        toast('同步暂时不可用，稍后再删', 'error');   // deleting now would resurrect on next sync
+        toast(T('同步暂时不可用，稍后再删'), 'error');   // deleting now would resurrect on next sync
         return;
       }
       items = Jar.remove(items, id);
@@ -265,7 +265,7 @@
     const del = document.createElement('button');
     del.className = 'jar-card-del';
     del.type = 'button';
-    del.title = '移出泡泡罐';
+    del.title = T('移出泡泡罐');
     del.textContent = '✕';
     del.addEventListener('click', () => removeEntry(e.id));
     el.appendChild(del);
@@ -278,7 +278,7 @@
       media.src = src;
       media.loading = 'lazy';
       media.alt = '';
-      media.title = '点击放大';
+      media.title = T('点击放大');
       media.addEventListener('click', (ev) => { ev.stopPropagation(); openJarImage(src); });
       el.appendChild(media);
     }
@@ -294,19 +294,19 @@
     foot.className = 'jar-card-foot';
     const who = document.createElement('span');
     who.className = 'jar-card-who';
-    who.textContent = e.n ? e.n : '匿名';
+    who.textContent = e.n ? e.n : T('匿名');
     const when = document.createElement('span');
     when.className = 'jar-card-when';
-    when.textContent = '收于 ' + Jar.relTime(e.at, now);
+    when.textContent = T('收于 {when}', { when: Jar.relTime(e.at, now) });
     const copy = document.createElement('button');
     copy.className = 'jar-card-copy';
     copy.type = 'button';
-    copy.title = '复制文字';
+    copy.title = T('复制文字');
     copy.textContent = '⧉';
     copy.addEventListener('click', () => {
       const text = e.t || '';
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(() => toast('已复制 ✓')).catch(() => {});
+        navigator.clipboard.writeText(text).then(() => toast(T('已复制 ✓'))).catch(() => {});
       }
     });
     foot.appendChild(who);
@@ -332,10 +332,9 @@
     if (!items.length) {
       listEl.innerHTML =
         '<div class="jar-empty"><div class="jar-empty-icon">🏺</div>' +
-        '<div class="jar-empty-title">罐子还是空的</div>' +
-        '<div class="jar-empty-text">在任意留言下点 <b>🏺 收藏</b>，' +
-        '留言过期消失后也能在这里回味。</div>' +
-        '<div class="jar-empty-note">☁️ 现在会跟着你的账号跨设备同步</div></div>';
+        '<div class="jar-empty-title">' + T('罐子还是空的') + '</div>' +
+        '<div class="jar-empty-text">' + T('在任意留言下点 <b>🏺 收藏</b>，留言过期消失后也能在这里回味。') + '</div>' +
+        '<div class="jar-empty-note">' + T('☁️ 现在会跟着你的账号跨设备同步') + '</div></div>';
       return;
     }
     const q = searchQ.trim().toLowerCase();
@@ -347,7 +346,7 @@
     if (!shown.length) {
       const none = document.createElement('div');
       none.className = 'jar-empty jar-empty-sm';
-      none.textContent = '没有匹配的收藏';
+      none.textContent = T('没有匹配的收藏');
       listEl.appendChild(none);
       return;
     }
@@ -362,13 +361,13 @@
     overlay.innerHTML =
       '<div class="jar-panel">' +
         '<div class="jar-head">' +
-          '<span class="jar-title">🏺 泡泡罐</span>' +
+          '<span class="jar-title">🏺 ' + T('泡泡罐') + '</span>' +
           '<span class="jar-count"></span>' +
           '<span class="jar-sync" data-state="idle"></span>' +
           '<button class="jar-close" type="button" title="Close (Esc)">✕</button>' +
         '</div>' +
-        '<div class="jar-sub">收藏过的留言 · 跨设备同步</div>' +
-        '<input class="jar-search" type="text" placeholder="🔍 搜索收藏…" />' +
+        '<div class="jar-sub">' + T('收藏过的留言 · 跨设备同步') + '</div>' +
+        '<input class="jar-search" type="text" placeholder="' + T('🔍 搜索收藏…') + '" />' +
         '<div class="jar-list"></div>' +
       '</div>';
     document.body.appendChild(overlay);

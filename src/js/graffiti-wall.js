@@ -203,7 +203,7 @@
     if (unavailableToasted || !myUid) return;
     unavailableToasted = true;
     if (typeof showToast === 'function') {
-      showToast('涂鸦墙暂时不可用（数据库规则还没更新）', 'error');
+      showToast(T('涂鸦墙暂时不可用（数据库规则还没更新）'), 'error');
     }
   }
 
@@ -248,9 +248,9 @@
   const HINT_FILL  = '🪣 点一下封闭区域填色 · 区域要整个在屏幕里';
   function updateHint() {
     if (!hintEl) return;
-    hintEl.textContent = panning ? HINT_MOVE
+    hintEl.textContent = T(panning ? HINT_MOVE
       : (erasing ? HINT_ERASE
-        : (filling ? HINT_FILL : (shapeKind ? HINT_SHAPE : HINT_PEN)));
+        : (filling ? HINT_FILL : (shapeKind ? HINT_SHAPE : HINT_PEN))));
   }
 
   function toast(msg) {
@@ -410,8 +410,8 @@
     }
 
     const res = WL.floodRegion((i) => cell[i] === 1, W, H, sx, sy);
-    if (res.touchedEdge) { toast('这块区域没封闭 · 先把它围起来'); return; }
-    if (res.count < WL.FILL_MIN_CELLS) { toast('这块太小了，换个地方点'); return; }
+    if (res.touchedEdge) { toast(T('这块区域没封闭 · 先把它围起来')); return; }
+    if (res.count < WL.FILL_MIN_CELLS) { toast(T('这块太小了，换个地方点')); return; }
 
     // dilate → unpinch → trace: unpinch is what stops the contour closing early
     // at a diagonal touch and leaving half the region unfilled.
@@ -459,7 +459,7 @@
     // Custom RGB picker — a rainbow chip wrapping a native colour input.
     const custom = document.createElement('label');
     custom.className = 'wall-swatch wall-custom';
-    custom.title = '自定义颜色';
+    custom.title = T('自定义颜色');
     const picker = document.createElement('input');
     picker.type = 'color';
     picker.value = /^#[0-9a-fA-F]{6}$/.test(colorHex) ? colorHex : '#ffffff';
@@ -477,7 +477,8 @@
      ['rect', '▭', '矩形'],
      ['circle', '◯', '圆形'],
      ['triangle', '△', '三角形'],
-     ['fill', '🪣', '填色 — 点一下封闭区域，用当前颜色填满']].forEach(([k, glyph, title]) => {
+     ['fill', '🪣', '填色 — 点一下封闭区域，用当前颜色填满']].forEach(([k, glyph, titleKey]) => {
+      const title = T(titleKey);
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'wall-shape' + (currentToolKey() === k ? ' sel' : '');
@@ -511,28 +512,28 @@
     moveBtn = document.createElement('button');
     moveBtn.type = 'button';
     moveBtn.className = 'wall-tool wall-move' + (panning ? ' sel' : '');
-    moveBtn.title = '移动 — 拖动屏幕上下浏览画布';
+    moveBtn.title = T('移动 — 拖动屏幕上下浏览画布');
     moveBtn.textContent = '✋';
     moveBtn.addEventListener('click', () => setPanning(!panning));
     row2.appendChild(moveBtn);
     eraserBtn = document.createElement('button');
     eraserBtn.type = 'button';
     eraserBtn.className = 'wall-tool wall-eraser';
-    eraserBtn.title = '橡皮擦 — 擦掉我自己画的';
+    eraserBtn.title = T('橡皮擦 — 擦掉我自己画的');
     eraserBtn.textContent = '🧽';
     eraserBtn.addEventListener('click', () => { setPanning(false); setErasing(!erasing); });
     row2.appendChild(eraserBtn);
     const undoBt = document.createElement('button');
     undoBt.type = 'button';
     undoBt.className = 'wall-tool';
-    undoBt.title = '撤销我画的上一笔';
+    undoBt.title = T('撤销我画的上一笔');
     undoBt.textContent = '↩️';
     undoBt.addEventListener('click', undoMine);
     row2.appendChild(undoBt);
     const doneBt = document.createElement('button');
     doneBt.type = 'button';
     doneBt.className = 'wall-done';
-    doneBt.textContent = '✓ 完成';
+    doneBt.textContent = '✓ ' + T('完成');
     doneBt.addEventListener('click', exitDraw);
     row2.appendChild(doneBt);
     toolbar.appendChild(row2);
@@ -569,7 +570,7 @@
   function undoMine() {
     const m = myKeys.pop();
     if (!m) {
-      if (typeof showToast === 'function') showToast('没有可以撤销的笔画了');
+      if (typeof showToast === 'function') showToast(T('没有可以撤销的笔画了'));
       return;
     }
     // Each entry remembers its own day, so undo still works right after
