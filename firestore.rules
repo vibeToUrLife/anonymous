@@ -74,9 +74,12 @@ service cloud.firestore {
     //          farmWeekCheers / farmWeekProduce, and the farmWeekPrev* triple holding
     //          the week that just ended (settlement reads it after a rollover).
     //          farmHelpDay / farmHelpCount cap how many helps a VISITOR is paid for
-    //          per day. All owner-only writes (covered by the isOwner update rule):
-    //          a visitor never writes farm state, they post to farm_inbox (below) and
-    //          the owner folds it in when they claim. See §16d for the boards.
+    //          per day, and farmHelped ({hostUid: [kind, …]}, same day key) records
+    //          which farms they have already helped so the buttons read as spent on
+    //          every device rather than only the one that sent them.
+    //          All owner-only writes (covered by the isOwner update rule): a visitor
+    //          never writes farm state, they post to farm_inbox (below) and the owner
+    //          folds it in when they claim. See §16d for the boards.
     //    NOTE: Pet World (multiplayer) — worldPet (string type), worldColor (string key),
     //          worldOutfit (string accessory id|null): the player's chosen World avatar,
     //          persisted so it follows them across devices. Owner-only write (covered by

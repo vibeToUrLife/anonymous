@@ -52,7 +52,8 @@
     let _farmInboxUnsub = null;       // live listener on my own inbox (while the farm is open)
     let _farmInboxOpen = false;       // mailbox modal visible?
     let _farmInboxBusy = false;       // a claim is in flight (blocks a double-tap double-claim)
-    let _farmSent = {};               // 'uid|kind' → true for actions sent this session (instant UI)
+    let _myHelped = null;             // { hostUid: [kind, …] } I have already sent (null = not fetched)
+    let _myHelpedDay = '';            // the day _myHelped belongs to — a page left open past midnight must not keep it
     let _myHelpLeft = null;           // rewarded helps I have left today (null = not fetched yet)
     let _myStock = null;              // MY produce, fetched when the gift picker opens (roomData holds the HOST's)
     let _giftOpen = false;            // gift picker modal visible?
@@ -477,8 +478,11 @@
 
     /* ── Visitor side ── */
 
-    // My remaining REWARDED helps today. Read from my OWN doc, not roomData:
-    // while visiting, roomData holds the HOST's farm.
+    // My remaining REWARDED helps today, and which farms I have already helped.
+    // Both come from my OWN doc, not roomData: while visiting, roomData holds the
+    // HOST's farm. Reading it from the server is what makes the spent buttons
+    // show up as spent on a second device (and after a refresh) — the record is
+    // account state, not a page-session flag.
     let _helpLeftFetching = false;
     async function _refreshMyHelpLeft() {
       if (_myHelpLeft != null || _helpLeftFetching || typeof db === 'undefined' || !currentUid) return;
@@ -486,58 +490,86 @@
       try {
         const snap = await userDocRef(currentUid).get();
         const d = snap.exists ? snap.data() : {};
-        _myHelpLeft = farmHelpAllowance(d.farmHelpDay, _farmToday(), d.farmHelpCount, FARM_HELP_DAILY_CAP);
-      } catch (e) { _myHelpLeft = FARM_HELP_DAILY_CAP; }
+        const today = _farmToday();
+        _myHelpLeft = farmHelpAllowance(d.farmHelpDay, today, d.farmHelpCount, FARM_HELP_DAILY_CAP);
+        _myHelped = d.farmHelped || {};
+        _myHelpedDay = d.farmHelpDay || '';
+      } catch (e) { _myHelpLeft = FARM_HELP_DAILY_CAP; _myHelped = {}; _myHelpedDay = _farmToday(); }
       _helpLeftFetching = false;
       if (isFarmView && viewingUid !== currentUid) renderFarmPanel();
     }
 
-    // Pay me for a helpful action and spend one of today's allowance — one
-    // transaction on my own doc so two farms helped at once can't both pay from
-    // the same slot. Returns the coins actually paid (0 once the cap is used up).
-    async function _payVisitorHelp() {
+    // What I have already sent this host today (kinds, plus 'gift:<product>').
+    function _sentToHost(hostUid) {
+      return farmHelpedKinds(_myHelped, _myHelpedDay, _farmToday(), hostUid || viewingUid);
+    }
+
+    // Post the help AND settle my side of it in one transaction: the host's
+    // inbox item, my daily allowance, my record of having helped this farm, and
+    // the coins. Two farms helped at once can't both pay from the same slot —
+    // Firestore retries the loser — and the rules reject a same-day repeat at
+    // commit, which rolls the whole thing back. Returns the coins actually paid
+    // (0 once the daily cap is spent; helping still works, it just stops paying).
+    async function _sendHelpTxn(hostUid, kind) {
       const today = _farmToday();
       const ref = userDocRef(currentUid);
+      const inboxRef = _inboxCol(hostUid).doc(_inboxId(kind));
       return await db.runTransaction(async function (tx) {
-        const snap = await tx.get(ref);
+        const snap = await tx.get(ref);                   // all reads before writes
         const d = snap.exists ? snap.data() : {};
         const left = farmHelpAllowance(d.farmHelpDay, today, d.farmHelpCount, FARM_HELP_DAILY_CAP);
         const pay = left > 0 ? FARM_HELP_REWARD : 0;
+        tx.set(inboxRef, {                                // create-only: the rules forbid update
+          kind: kind, fromUid: currentUid, fromName: getPlayerName(), day: today, at: Date.now(),
+        });
         tx.set(ref, {
           farmHelpDay: today,
           farmHelpCount: (d.farmHelpDay === today ? (d.farmHelpCount || 0) : 0) + 1,
+          farmHelped: farmHelpedAdd(d.farmHelped, d.farmHelpDay, today, hostUid, kind),
           coins: firebase.firestore.FieldValue.increment(pay),
         }, { merge: true });
         return pay;
       });
     }
 
-    // 👍 / 💧 / 🌾 — drop one item in the host's inbox, then pay myself. The
-    // inbox write goes first: if it's rejected (already sent today) nothing is
-    // paid, and if the payment fails afterwards the host still gets the help.
+    // Mirror a landed interaction locally so the button greys out immediately,
+    // without waiting for the next read of my own doc.
+    function _noteHelped(hostUid, kind) {
+      _myHelped = farmHelpedAdd(_myHelped, _myHelpedDay, _farmToday(), hostUid, kind);
+      _myHelpedDay = _farmToday();
+      // roomData is the HOST's for farm fields while visiting, but never for
+      // these — visitRoom deliberately leaves them alone (see room-actions.js).
+      roomData.farmHelped = _myHelped;
+      roomData.farmHelpDay = _myHelpedDay;
+    }
+
+    // 👍 / 💧 / 🌾 — post one item to the host's inbox, spend one of today's
+    // rewarded helps and record that this farm has now been helped. All three in
+    // ONE transaction: if the rules reject the post (already sent today) nothing
+    // is paid and nothing is recorded, and a payment can't land without the
+    // help landing with it.
     async function helpFarm(kind) {
       if (viewingUid === currentUid || typeof db === 'undefined') return;
-      const key = viewingUid + '|' + kind;
-      if (_farmSent[key]) return showToast('今天已经' + FARM_HELP_LABEL[kind].done + '过了，明天再来吧！', '');
+      const hostUid = viewingUid;
+      if (_sentToHost(hostUid).indexOf(kind) >= 0) {
+        return showToast('今天已经' + FARM_HELP_LABEL[kind].done + '过这个农场了！', '');
+      }
       const host = roomData.displayName || 'this';
+      let paid = 0;
       try {
-        await _inboxCol(viewingUid).doc(_inboxId(kind)).set({
-          kind: kind, fromUid: currentUid, fromName: getPlayerName(), day: _farmToday(), at: Date.now(),
-        });
+        paid = await _sendHelpTxn(hostUid, kind);
       } catch (e) {
         // The rules forbid update, so a same-day repeat is rejected — that's the
         // only error that means "already done". Anything else (offline, a flaky
-        // write) must stay retryable, so the button is NOT marked as spent.
+        // write) must stay retryable, so nothing is marked as spent.
         if (e && e.code === 'permission-denied') {
-          _farmSent[key] = true;
+          _noteHelped(hostUid, kind);
           renderFarmPanel();
           return showToast('今天已经' + FARM_HELP_LABEL[kind].done + '过这个农场了！', '');
         }
         return showToast('没送出去，网络好像不太顺 — 再试一次？', 'error');
       }
-      _farmSent[key] = true;
-      let paid = 0;
-      try { paid = await _payVisitorHelp(); } catch (e) { /* helped anyway — just unpaid */ }
+      _noteHelped(hostUid, kind);
       if (paid > 0) {
         roomData.coins = (roomData.coins || 0) + paid;   // visitRoom leaves coins mine, so this is my balance
         if (typeof logCoin === 'function') logCoin(paid, '帮忙农场 ' + FARM_HELP_LABEL[kind].emoji);
@@ -577,6 +609,7 @@
       if (el) el.style.display = 'none';
     }
     function pickGiftProd(id) {
+      if (_sentToHost(viewingUid).indexOf('gift:' + id) >= 0) return;
       _giftProd = id;
       _giftQty = Math.min(_giftQty, Math.min(FARM_GIFT_MAX_QTY, (_myStock || {})[id] || 1));
       renderGiftPicker();
@@ -599,22 +632,31 @@
       } else if (!ids.length) {
         body = '<div class="farm-panel-empty">你的仓库是空的 — 先去收点产物吧。</div>';
       } else {
+        // One of EACH product per farm per day, so a product already sent today
+        // greys out on its own rather than closing the whole picker.
+        const sent = _sentToHost(viewingUid);
+        const done = (id) => sent.indexOf('gift:' + id) >= 0;
         const max = _giftProd ? Math.min(FARM_GIFT_MAX_QTY, stock[_giftProd] || 1) : 1;
+        const left = ids.filter(id => !done(id));
         body = '<div class="farm-gift-grid">' + ids.map(function (id) {
           const m = meta[id] || { emoji: '❓', name: id };
-          return '<button class="farm-gift-item' + (id === _giftProd ? ' on' : '') + '" onclick="pickGiftProd(\'' + id + '\')">' +
+          const spent = done(id);
+          return '<button class="farm-gift-item' + (id === _giftProd ? ' on' : '') + (spent ? ' done' : '') + '"' +
+            (spent ? ' disabled' : ' onclick="pickGiftProd(\'' + id + '\')"') + '>' +
             '<span class="farm-gift-emoji">' + m.emoji + '</span>' +
             '<span class="farm-gift-name">' + escapeHtml(m.name) + '</span>' +
-            '<span class="farm-gift-have">×' + stock[id] + '</span>' +
+            '<span class="farm-gift-have">' + (spent ? '今天已送' : '×' + stock[id]) + '</span>' +
           '</button>';
         }).join('') + '</div>' +
-        (_giftProd
+        (_giftProd && !done(_giftProd)
           ? '<div class="farm-gift-qty">' +
               '<button onclick="setGiftQty(-1)"' + (_giftQty <= 1 ? ' disabled' : '') + '>−</button>' +
               '<span>' + (meta[_giftProd] || {}).emoji + ' ×' + _giftQty + '</span>' +
               '<button onclick="setGiftQty(1)"' + (_giftQty >= max ? ' disabled' : '') + '>+</button>' +
             '</div>' +
             '<button class="cp-crop farm-gift-send" onclick="sendFarmGift()">🎁 送出 ' + (meta[_giftProd] || {}).emoji + ' ×' + _giftQty + '</button>'
+          : !left.length
+          ? '<div class="farm-panel-empty">仓库里的东西今天都送过这个农场了 — 明天再来吧。</div>'
           : '<div class="farm-panel-empty">挑一样东西送过去（每天每样一次，最多 ' + FARM_GIFT_MAX_QTY + ' 个）。</div>');
       }
       el.innerHTML =
@@ -639,26 +681,40 @@
       try {
         await db.runTransaction(async function (tx) {
           const snap = await tx.get(meRef);
-          const mine = (snap.exists ? snap.data().farmStock : null) || {};
+          const d = snap.exists ? snap.data() : {};
+          const mine = d.farmStock || {};
           if ((mine[prod] || 0) < qty) throw new Error('nostock');
           const next = Object.assign({}, mine);
           next[prod] -= qty;
           if (next[prod] <= 0) delete next[prod];
-          tx.set(meRef, { farmStock: next }, { merge: true });
+          const today = _farmToday();
+          tx.set(meRef, {
+            farmStock: next,
+            // Recorded per PRODUCT: the server allows one of each a day, not one
+            // gift a day, so only that product greys out in the picker.
+            farmHelpDay: today,
+            farmHelpCount: d.farmHelpDay === today ? (d.farmHelpCount || 0) : 0,   // a gift costs no allowance, but the day must roll as one
+            farmHelped: farmHelpedAdd(d.farmHelped, d.farmHelpDay, today, host, 'gift:' + prod),
+          }, { merge: true });
           tx.set(inboxRef, {                       // create-only: a repeat today is denied by the rules
             kind: 'gift', prod: prod, qty: qty,
-            fromUid: currentUid, fromName: getPlayerName(), day: _farmToday(), at: Date.now(),
+            fromUid: currentUid, fromName: getPlayerName(), day: today, at: Date.now(),
           });
         });
       } catch (e) {
         if (e && e.message === 'nostock') return showToast('仓库里不够了！', 'error');
-        if (e && e.code === 'permission-denied') return showToast('今天已经送过 ' + meta.emoji + ' 给这个农场了。', '');
+        if (e && e.code === 'permission-denied') {
+          _noteHelped(host, 'gift:' + prod);
+          renderGiftPicker();
+          return showToast('今天已经送过 ' + meta.emoji + ' 给这个农场了。', '');
+        }
         return showToast('没送出去，网络好像不太顺 — 再试一次？', 'error');
       }
       if (_myStock) {                              // keep the picker's numbers honest
         _myStock[prod] = (_myStock[prod] || 0) - qty;
         if (_myStock[prod] <= 0) delete _myStock[prod];
       }
+      _noteHelped(host, 'gift:' + prod);
       closeGiftPicker();
       for (let i = 0; i < 6; i++) {
         _farmParticles.push({ text: meta.emoji, x: 0.2 + Math.random() * 0.6, y: 0.7 + Math.random() * 0.1, vy: -0.0012, life: 1500, born: performance.now() });
@@ -1092,9 +1148,10 @@
         const herdLine = FARM_ANIMALS.filter(d => counts[d.id]).map(d => d.emoji + '×' + counts[d.id]).join('  ') || 'No animals yet';
         _refreshMyHelpLeft();   // fire-and-forget; re-renders once my allowance is known
         const left = _myHelpLeft;
+        const sent = _sentToHost(viewingUid);
         const helpBtns = FARM_HELP_KINDS.map(function (k) {
           const L = FARM_HELP_LABEL[k];
-          const done = !!_farmSent[viewingUid + '|' + k];
+          const done = sent.indexOf(k) >= 0;
           return '<button class="farm-help-btn' + (done ? ' done' : '') + '" onclick="helpFarm(\'' + k + '\')"' + (done ? ' disabled' : '') + '>' +
             '<span class="farm-help-emoji">' + L.emoji + '</span>' +
             '<span class="farm-help-name">' + (done ? '已' + L.done : L.name) + '</span>' +

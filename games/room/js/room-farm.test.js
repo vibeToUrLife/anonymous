@@ -381,6 +381,51 @@ test('farmHelpAllowance spends down today, and resets on a new day', () => {
   assert.equal(F.farmHelpAllowance('', '2026-07-26', 0, 5), 5);            // never helped
 });
 
+/* ── farmHelpedKinds / farmHelpedAdd ── */
+
+test('farmHelpedKinds reports what was sent to one host today', () => {
+  const rec = { alice: ['cheer', 'gift:milk'], bob: ['water'] };
+  assert.deepEqual(F.farmHelpedKinds(rec, '2026-07-26', '2026-07-26', 'alice'), ['cheer', 'gift:milk']);
+  assert.deepEqual(F.farmHelpedKinds(rec, '2026-07-26', '2026-07-26', 'bob'), ['water']);
+  assert.deepEqual(F.farmHelpedKinds(rec, '2026-07-26', '2026-07-26', 'carol'), []);
+});
+
+test('farmHelpedKinds treats yesterday\'s record as nothing', () => {
+  const rec = { alice: ['cheer'] };
+  assert.deepEqual(F.farmHelpedKinds(rec, '2026-07-25', '2026-07-26', 'alice'), []);
+  assert.deepEqual(F.farmHelpedKinds(null, '2026-07-26', '2026-07-26', 'alice'), []);
+  assert.deepEqual(F.farmHelpedKinds({ alice: 'junk' }, '2026-07-26', '2026-07-26', 'alice'), []);
+});
+
+test('farmHelpedAdd accumulates within a day, per host', () => {
+  let rec = F.farmHelpedAdd(null, '', '2026-07-26', 'alice', 'cheer');
+  assert.deepEqual(rec, { alice: ['cheer'] });
+  rec = F.farmHelpedAdd(rec, '2026-07-26', '2026-07-26', 'alice', 'water');
+  rec = F.farmHelpedAdd(rec, '2026-07-26', '2026-07-26', 'bob', 'cheer');
+  assert.deepEqual(rec, { alice: ['cheer', 'water'], bob: ['cheer'] });
+});
+
+test('farmHelpedAdd wipes the whole map on a new day', () => {
+  const yesterday = { alice: ['cheer'], bob: ['feed'] };
+  const rec = F.farmHelpedAdd(yesterday, '2026-07-25', '2026-07-26', 'carol', 'cheer');
+  assert.deepEqual(rec, { carol: ['cheer'] }, 'a new day must not inherit yesterday\'s farms');
+});
+
+test('farmHelpedAdd never duplicates and never mutates its input', () => {
+  const rec = { alice: ['cheer'] };
+  const next = F.farmHelpedAdd(rec, '2026-07-26', '2026-07-26', 'alice', 'cheer');
+  assert.deepEqual(next, { alice: ['cheer'] });
+  next.alice.push('water');
+  assert.deepEqual(rec, { alice: ['cheer'] }, 'the original record was mutated');
+});
+
+test('gifts are recorded per product, so a second product is still allowed', () => {
+  let rec = F.farmHelpedAdd(null, '', '2026-07-26', 'alice', 'gift:milk');
+  const sent = F.farmHelpedKinds(rec, '2026-07-26', '2026-07-26', 'alice');
+  assert.ok(sent.indexOf('gift:milk') >= 0);
+  assert.ok(sent.indexOf('gift:cheese') < 0, 'a different product must still be giftable');
+});
+
 /* ── farmInboxEffects ── */
 
 const IN_OPTS = { cheerCoin: 20, cheerCapPerDay: 10, waterMs: 10 * 60 * 1000, feedUnits: 5, giftMaxQty: 5 };

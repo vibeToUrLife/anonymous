@@ -901,6 +901,8 @@
     .farm-gift-item:hover{background:rgba(255,255,255,.09);border-color:var(--g-accent)}
     .farm-gift-item:active{transform:scale(.97)}
     .farm-gift-item.on{border-color:transparent;background:var(--g-accent-grad);color:#2a1c08}
+    .farm-gift-item.done,.farm-gift-item:disabled{opacity:.42;cursor:default;border-style:dashed;background:rgba(255,255,255,.03)}
+    .farm-gift-item.done:hover{background:rgba(255,255,255,.03);border-color:var(--g-border)}
     .farm-gift-item.on .farm-gift-name,.farm-gift-item.on .farm-gift-have{color:#2a1c08}
     .farm-gift-emoji{font-size:24px;line-height:1}
     .farm-gift-name{font-size:10.5px;font-weight:700;color:var(--cream);text-align:center;line-height:1.15}
