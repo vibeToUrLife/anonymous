@@ -64,9 +64,9 @@
     let _farmSettleTried = false;     // settlement attempted this page load (it only ever needs to run once)
     // The three things a visitor can do, in the order they're shown.
     const FARM_HELP_LABEL = {
-      cheer: { emoji: '👍', name: '点赞', done: '点赞', hint: '给他鼓个劲' },
-      water: { emoji: '💧', name: '浇水', done: '浇水', hint: '作物快 10 分钟' },
-      feed:  { emoji: '🌾', name: '添料', done: '添料', hint: '食槽 +5' },
+      cheer: { emoji: '👍', name: 'Cheer', done: 'cheered', hint: 'Give them a boost' },
+      water: { emoji: '💧', name: 'Water', done: 'watered', hint: 'Crops finish 10 min sooner' },
+      feed:  { emoji: '🌾', name: 'Feed',  done: 'fed',     hint: 'Trough +5' },
     };
     const FARM_HELP_KINDS = ['cheer', 'water', 'feed'];
     // Tuning passed to the pure settlement in room-farm.js.
@@ -447,15 +447,15 @@
 
     function _farmVisitListHtml() {
       _subFarmVisitList();
-      if (_farmVisitRooms == null) return '<div class="farm-panel-empty">加载农场列表中…</div>';
-      if (!_farmVisitRooms.length) return '<div class="farm-panel-empty">暂时没有其他农场可参观。</div>';
+      if (_farmVisitRooms == null) return '<div class="farm-panel-empty">' + T('Loading farms…') + '</div>';
+      if (!_farmVisitRooms.length) return '<div class="farm-panel-empty">' + T('No other farms to visit yet.') + '</div>';
       return _farmVisitRooms.map(function (r) {
-        const peek = (r.animals ? '🐮 ×' + r.animals : '<span style="opacity:.5">空农场</span>') +
+        const peek = (r.animals ? '🐮 ×' + r.animals : '<span style="opacity:.5">' + T('Empty farm') + '</span>') +
                      (r.cheers ? '　🔥 ' + r.cheers : '');
         return '<div class="farm-visit-row" onclick="visitFarm(\'' + r.uid + '\')">' +
           '<span class="farm-visit-emoji">🚜</span>' +
           '<span class="farm-visit-info">' +
-            '<span class="farm-visit-name">' + (r.online ? '🟢 ' : '') + escapeHtml(r.name || 'Anonymous') + '</span>' +
+            '<span class="farm-visit-name">' + (r.online ? '🟢 ' : '') + escapeHtml(r.name || T('Anonymous')) + '</span>' +
             '<span class="farm-visit-peek">' + peek + '</span>' +
           '</span>' +
           '<span class="farm-visit-go">›</span>' +
@@ -608,7 +608,7 @@
       if (viewingUid === currentUid || typeof db === 'undefined') return;
       const hostUid = viewingUid;
       if (_sentToHost(hostUid).indexOf(kind) >= 0) {
-        return showToast('今天已经' + FARM_HELP_LABEL[kind].done + '过这个农场了！', '');
+        return showToast(T('You already {action} this farm today!', { action: T(FARM_HELP_LABEL[kind].done) }), '');
       }
       const host = roomData.displayName || 'this';
       let paid = 0;
@@ -621,14 +621,14 @@
         if (e && e.code === 'permission-denied') {
           _noteHelped(hostUid, kind);
           renderFarmPanel();
-          return showToast('今天已经' + FARM_HELP_LABEL[kind].done + '过这个农场了！', '');
+          return showToast(T('You already {action} this farm today!', { action: T(FARM_HELP_LABEL[kind].done) }), '');
         }
-        return showToast('没送出去，网络好像不太顺 — 再试一次？', 'error');
+        return showToast(T("Couldn't send that — the network looks unhappy. Try again?"), 'error');
       }
       _noteHelped(hostUid, kind);
       if (paid > 0) {
         roomData.coins = (roomData.coins || 0) + paid;   // visitRoom leaves coins mine, so this is my balance
-        if (typeof logCoin === 'function') logCoin(paid, '帮忙农场 ' + FARM_HELP_LABEL[kind].emoji);
+        if (typeof logCoin === 'function') logCoin(paid, T('Lend a hand') + ' ' + FARM_HELP_LABEL[kind].emoji);
         if (_myHelpLeft != null) _myHelpLeft = Math.max(0, _myHelpLeft - 1);
         // Write the header directly rather than renderAll() — we're standing in
         // someone else's room, and roomData's room fields are theirs, not ours.
@@ -641,8 +641,9 @@
         _farmParticles.push({ text: FARM_HELP_LABEL[kind].emoji, x: 0.2 + Math.random() * 0.6, y: 0.7 + Math.random() * 0.1, vy: -0.0012 - Math.random() * 0.0008, life: 1500, born: performance.now() });
       }
       renderFarmPanel();
-      showToast(FARM_HELP_LABEL[kind].emoji + ' 你' + FARM_HELP_LABEL[kind].done + '了 ' + host + ' 的农场' +
-                (paid > 0 ? ' · +' + paid + '🪙' : ' · 今日奖励已用完'), 'success');
+      showToast(FARM_HELP_LABEL[kind].emoji + ' ' +
+                T("You {action} {name}'s farm", { action: T(FARM_HELP_LABEL[kind].done), name: host }) +
+                (paid > 0 ? ' · +' + paid + '🪙' : ' · ' + T('Daily reward spent')), 'success');
     }
 
     /* ── Gift picker (send produce from MY barn to the farm I'm visiting) ── */
@@ -684,9 +685,9 @@
       const ids = Object.keys(stock).filter(k => stock[k] > 0);
       let body;
       if (_myStock == null) {
-        body = '<div class="farm-panel-empty">读取你的仓库中…</div>';
+        body = '<div class="farm-panel-empty">' + T('Reading your barn…') + '</div>';
       } else if (!ids.length) {
-        body = '<div class="farm-panel-empty">你的仓库是空的 — 先去收点产物吧。</div>';
+        body = '<div class="farm-panel-empty">' + T('Your barn is empty — go collect something first.') + '</div>';
       } else {
         // One of EACH product per farm per day, so a product already sent today
         // greys out on its own rather than closing the whole picker.
@@ -701,7 +702,7 @@
             (spent ? ' disabled' : ' onclick="pickGiftProd(\'' + id + '\')"') + '>' +
             '<span class="farm-gift-emoji">' + m.emoji + '</span>' +
             '<span class="farm-gift-name">' + escapeHtml(m.name) + '</span>' +
-            '<span class="farm-gift-have">' + (spent ? '今天已送' : '×' + stock[id]) + '</span>' +
+            '<span class="farm-gift-have">' + (spent ? T('Sent today') : '×' + stock[id]) + '</span>' +
           '</button>';
         }).join('') + '</div>' +
         (_giftProd && !done(_giftProd)
@@ -710,17 +711,17 @@
               '<span>' + (meta[_giftProd] || {}).emoji + ' ×' + _giftQty + '</span>' +
               '<button onclick="setGiftQty(1)"' + (_giftQty >= max ? ' disabled' : '') + '>+</button>' +
             '</div>' +
-            '<button class="cp-crop farm-gift-send" onclick="sendFarmGift()">🎁 送出 ' + (meta[_giftProd] || {}).emoji + ' ×' + _giftQty + '</button>'
+            '<button class="cp-crop farm-gift-send" onclick="sendFarmGift()">🎁 ' + T('Send {item}', { item: (meta[_giftProd] || {}).emoji + ' ×' + _giftQty }) + '</button>'
           : !left.length
-          ? '<div class="farm-panel-empty">仓库里的东西今天都送过这个农场了 — 明天再来吧。</div>'
-          : '<div class="farm-panel-empty">挑一样东西送过去（每天每样一次，最多 ' + FARM_GIFT_MAX_QTY + ' 个）。</div>');
+          ? '<div class="farm-panel-empty">' + T("You've already sent this farm everything in your barn today — try tomorrow.") + '</div>'
+          : '<div class="farm-panel-empty">' + T('Pick something to send (one of each per day, up to {max}).', { max: FARM_GIFT_MAX_QTY }) + '</div>');
       }
       el.innerHTML =
         '<div class="ws-box">' +
-          '<div class="ws-head">🎁 送给 ' + escapeHtml(roomData.displayName || '这位农场主') + '</div>' +
-          '<div class="ws-sub">从你自己的仓库里拿 — 对方下次进农场时领取。</div>' +
+          '<div class="ws-head">🎁 ' + T('Send to {name}', { name: escapeHtml(roomData.displayName || T('this farmer')) }) + '</div>' +
+          '<div class="ws-sub">' + T('From your own barn — they claim it next time they visit their farm.') + '</div>' +
           body +
-          '<button class="cp-crop farm-gift-cancel" onclick="closeGiftPicker()">取消</button>' +
+          '<button class="cp-crop farm-gift-cancel" onclick="closeGiftPicker()">' + T('Cancel') + '</button>' +
         '</div>';
       el.style.display = 'flex';
     }
@@ -751,13 +752,13 @@
           });
         });
       } catch (e) {
-        if (e && e.message === 'nostock') return showToast('仓库里不够了！', 'error');
+        if (e && e.message === 'nostock') return showToast(T('Not enough in your barn!'), 'error');
         if (e && e.code === 'permission-denied') {
           _noteHelped(host, 'gift:' + prod);
           renderGiftPicker();
-          return showToast('今天已经送过 ' + meta.emoji + ' 给这个农场了。', '');
+          return showToast(T('You already sent {item} to this farm today.', { item: meta.emoji }), '');
         }
-        return showToast('没送出去，网络好像不太顺 — 再试一次？', 'error');
+        return showToast(T("Couldn't send that — the network looks unhappy. Try again?"), 'error');
       }
       if (_myStock) {                              // keep the picker's numbers honest
         _myStock[prod] = (_myStock[prod] || 0) - qty;
@@ -769,7 +770,7 @@
         _farmParticles.push({ text: meta.emoji, x: 0.2 + Math.random() * 0.6, y: 0.7 + Math.random() * 0.1, vy: -0.0012, life: 1500, born: performance.now() });
       }
       renderFarmPanel();
-      showToast('🎁 送出 ' + meta.emoji + ' ×' + qty + ' 给 ' + (roomData.displayName || '对方') + '！', 'success');
+      showToast('🎁 ' + T('Sent {item} to {name}!', { item: meta.emoji + ' ×' + qty, name: roomData.displayName || T('them') }), 'success');
     }
 
     /* ── Owner side: the 📮 mailbox ── */
@@ -1207,7 +1208,7 @@
         const herd = roomData.farmAnimals || [];
         const counts = {};
         for (const a of herd) counts[a.type] = (counts[a.type] || 0) + 1;
-        const herdLine = FARM_ANIMALS.filter(d => counts[d.id]).map(d => d.emoji + '×' + counts[d.id]).join('  ') || 'No animals yet';
+        const herdLine = FARM_ANIMALS.filter(d => counts[d.id]).map(d => d.emoji + '×' + counts[d.id]).join('  ') || T('No animals yet');
         _refreshMyHelpLeft();   // fire-and-forget; re-renders once my allowance is known
         const left = _myHelpLeft;
         const sent = _sentToHost(viewingUid);
@@ -1216,32 +1217,37 @@
           const done = sent.indexOf(k) >= 0;
           return '<button class="farm-help-btn' + (done ? ' done' : '') + '" onclick="helpFarm(\'' + k + '\')"' + (done ? ' disabled' : '') + '>' +
             '<span class="farm-help-emoji">' + L.emoji + '</span>' +
-            '<span class="farm-help-name">' + (done ? '已' + L.done : L.name) + '</span>' +
-            '<span class="farm-help-hint">' + (done ? '明天再来' : L.hint) + '</span>' +
+            '<span class="farm-help-name">' + (done ? T('Already {action}', { action: T(L.done) }) : T(L.name)) + '</span>' +
+            '<span class="farm-help-hint">' + T(done ? 'Come back tomorrow' : L.hint) + '</span>' +
           '</button>';
         }).join('');
         panel.innerHTML =
-          '<div class="farm-panel-head">🚜 ' + escapeHtml(roomData.displayName || 'Their') + '\'s Farm ' +
+          '<div class="farm-panel-head">🚜 ' + T("{name}'s Farm", { name: escapeHtml(roomData.displayName || T('Their')) }) + ' ' +
             '<span class="farm-panel-cap">🔥 ' + (roomData.farmCheersTotal || 0) + '</span></div>' +
           '<section class="farm-card">' +
-            '<div class="farm-section-title">🐮 Their Herd <span class="farm-panel-cap">Lv ' + herd.reduce((m, a) => Math.max(m, animalLevel(a.collected, FARM_LEVELS)), 0) + ' top</span></div>' +
-            '<div class="farm-shop-row"><span class="farm-shop-animal">' + herd.length + ' animals</span></div>' +
+            '<div class="farm-section-title">🐮 ' + T('Their Herd') +
+              ' <span class="farm-panel-cap">' + T('Lv {n} top', { n: herd.reduce((m, a) => Math.max(m, animalLevel(a.collected, FARM_LEVELS)), 0) }) + '</span></div>' +
+            '<div class="farm-shop-row"><span class="farm-shop-animal">' + T('{n} animals', { n: herd.length }) + '</span></div>' +
             '<div class="farm-shop-row"><span class="farm-shop-animal">' + herdLine + '</span></div>' +
-            '<div class="farm-shop-row"><span class="farm-shop-animal">🌱 ' + (roomData.farmPlots || []).length + ' plots</span></div>' +
+            '<div class="farm-shop-row"><span class="farm-shop-animal">🌱 ' + T('{n} plots', { n: (roomData.farmPlots || []).length }) + '</span></div>' +
           '</section>' +
           '<section class="farm-card">' +
-            '<div class="farm-section-title">🤝 帮一把 ' +
-              '<span class="farm-panel-cap">' + (left == null ? '…' : left > 0 ? '今日还能赚 ' + left + ' 次' : '今日奖励已满') + '</span></div>' +
+            '<div class="farm-section-title">🤝 ' + T('Lend a hand') + ' ' +
+              '<span class="farm-panel-cap">' +
+                (left == null ? '…' : left > 0 ? T('{n} rewarded left today', { n: left }) : T('Daily reward used up')) +
+              '</span></div>' +
             '<div class="farm-help-row">' + helpBtns + '</div>' +
-            '<button class="farm-shop-buy" style="width:100%;padding:9px;font-size:13px;margin-top:8px" onclick="openGiftPicker()">🎁 送点产物给他</button>' +
-            '<div class="farm-panel-empty" style="padding-top:6px">每样每天一次 · 每次帮忙 +' + FARM_HELP_REWARD + '🪙（每天前 ' + FARM_HELP_DAILY_CAP + ' 次）· 对方下次进农场时领取</div>' +
+            '<button class="farm-shop-buy" style="width:100%;padding:9px;font-size:13px;margin-top:8px" onclick="openGiftPicker()">🎁 ' + T('Send them some produce') + '</button>' +
+            '<div class="farm-panel-empty" style="padding-top:6px">' +
+              T('One of each per day · +{coins} per help (first {cap} a day) · they claim it next time they visit their farm',
+                { coins: FARM_HELP_REWARD + '🪙', cap: FARM_HELP_DAILY_CAP }) + '</div>' +
           '</section>' +
-          '<button class="farm-visit-home" onclick="visitFarm(\'' + currentUid + '\')">🏠 回我的农场</button>' +
+          '<button class="farm-visit-home" onclick="visitFarm(\'' + currentUid + '\')">🏠 ' + T('Back to my farm') + '</button>' +
           '<section class="farm-card" style="margin-top:10px">' +
-            '<div class="farm-section-title">🚜 参观其他农场 <span class="farm-panel-cap">live</span></div>' +
+            '<div class="farm-section-title">🚜 ' + T('Visit other farms') + ' <span class="farm-panel-cap">live</span></div>' +
             _farmVisitListHtml() +
           '</section>' +
-          '<div class="farm-panel-hint">串门帮个忙，双方都有奖励 — 他也更可能回访你的农场。</div>';
+          '<div class="farm-panel-hint">' + T("Lend a hand and you both gain — they're far likelier to visit you back.") + '</div>';
         return;
       }
 

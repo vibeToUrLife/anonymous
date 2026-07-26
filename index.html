@@ -1008,7 +1008,15 @@
       </div>
       <hr class="settings-divider">
       <div class="settings-section">
-        <div class="settings-label">Appearance — Theme</div>
+        <div class="settings-label" data-i18n>Language</div>
+        <div class="settings-select" id="langSelect">
+          <button data-lang-val="en">English</button>
+          <button data-lang-val="zh">中文</button>
+        </div>
+      </div>
+      <hr class="settings-divider">
+      <div class="settings-section">
+        <div class="settings-label" data-i18n>Appearance — Theme</div>
         <div class="settings-select" id="themeSelect">
           <button data-theme-val="light">☀️ Light</button>
           <button data-theme-val="dark">🌙 Dark</button>
@@ -1631,6 +1639,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="./src/js/i18n.js?v=1"></script>
+  <script defer src="./src/js/i18n-ui.js?v=1"></script>
   <script src="./src/js/firebase-config.js"></script>
   <script src="./src/js/daily-quotes.js?v=2"></script>
   <script src="./src/js/quote-comments.js"></script>

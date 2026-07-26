@@ -2690,6 +2690,7 @@ document.getElementById('walkPetSelect').addEventListener('click', (e) => {
 function currentLocalSettings() {
     const _t = localStorage.getItem('theme');
     return {
+        lang:       (typeof I18N !== 'undefined') ? I18N.getLang() : (localStorage.getItem('app_lang') || 'en'),
         theme:      (_t === 'dark' || _t === 'terminal') ? _t : 'light',
         fontSize:   localStorage.getItem('font_size') || 'medium',
         animations: localStorage.getItem('animations') !== '0',
@@ -2714,6 +2715,7 @@ function syncSettingsToAccount() {
 function applyAccountSettings(s) {
     if (!s) return;
     const o = {
+        lang:       (s.lang === 'zh' || s.lang === 'en') ? s.lang : ((typeof I18N !== 'undefined') ? I18N.getLang() : 'en'),
         theme:      (s.theme === 'dark' || s.theme === 'terminal') ? s.theme : 'light',
         fontSize:   s.fontSize || 'medium',
         animations: s.animations !== false,
@@ -2724,6 +2726,10 @@ function applyAccountSettings(s) {
     const json = JSON.stringify(o);
     if (json === _lastSettingsJson) return;  // unchanged (or echo of our own write)
     _lastSettingsJson = json;
+    // Language — first, since it decides what every label below reads. setLang
+    // fires langchange (and re-sweeps static markup) only when it actually
+    // differs, so arriving settings that match change nothing.
+    if (typeof I18N !== 'undefined') I18N.setLang(o.lang);
     // Theme
     if (window.Theme) Theme.setTheme(o.theme);
     else { localStorage.setItem('theme', o.theme); document.documentElement.setAttribute('data-theme', o.theme); document.body.classList.toggle('light-theme', o.theme === 'light'); }
