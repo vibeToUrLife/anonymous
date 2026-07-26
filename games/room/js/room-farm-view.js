@@ -44,6 +44,18 @@
     let _makeChoiceSlot = null;       // slot index currently choosing a recipe (or null)
     let _slotConfirm = false;         // awaiting confirmation to open (buy) a new slot
     const FARM_CART_X = 0.84, FARM_CART_Y = 0.19; // where the sky merchant plane hovers (normalized; up in the sky band)
+    /* On a narrow stage the plane moves in from the corner and grows. At 0.84 it
+       hovers right against the tree at 0.94, and a 47px sprite camouflaged
+       against a canopy in the hardest corner of a phone to reach is hard to
+       FIND — its tap zone was already ~130x166px, so the trouble was never the
+       hit-test. Wide stages keep the corner: there the plane is 78px with room
+       around it. */
+    function _farmCartPos(W) {
+      return (W < FARM_NARROW_W) ? { x: 0.70, y: FARM_CART_Y } : { x: FARM_CART_X, y: FARM_CART_Y };
+    }
+    function _farmCartSize(W, H) {
+      return (W < FARM_NARROW_W) ? Math.max(56, W * 0.16) : Math.max(44, Math.min(W, H) * 0.12);
+    }
 
     // The trough stands on the open grass between the top fence and the pens,
     // to the left of the workshop huts (which start at x 0.22). It used to sit
@@ -1443,9 +1455,10 @@
     // render loop fly it off-screen + fade it for the leave animation. (Was a
     // ground wagon; restyled to an aeroplane that stops in the sky.)
     function _drawMerchantCart(ctx, W, H, t, offsetX, alpha) {
-      const s = Math.max(44, Math.min(W, H) * 0.12);
+      const s = _farmCartSize(W, H);
       const hover = Math.sin(t / 600) * (s * 0.08);
-      const cx = (FARM_CART_X + (offsetX || 0)) * W, cy = FARM_CART_Y * H + hover;
+      const at = _farmCartPos(W);
+      const cx = (at.x + (offsetX || 0)) * W, cy = at.y * H + hover;
       ctx.save();
       if (alpha != null) ctx.globalAlpha = alpha;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -1488,9 +1501,10 @@
     // While the plane is AWAY, mark its sky parking spot with a small cloud + a
     // ✈️ and the return countdown — tap it for the next-flight info.
     function _drawCartAway(ctx, W, H, t, cart) {
-      const s = Math.max(34, Math.min(W, H) * 0.1);
+      const s = _farmCartSize(W, H) * 0.84;   // the away cloud reads a touch smaller than the plane
       const hover = Math.sin(t / 700) * (s * 0.06);
-      const cx = FARM_CART_X * W, cy = FARM_CART_Y * H + hover;
+      const at = _farmCartPos(W);
+      const cx = at.x * W, cy = at.y * H + hover;
       ctx.save();
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       // puffy cloud
@@ -2787,7 +2801,8 @@
 
         // Sky plane / away cloud: big tap zone covering the plane AND its trailing
         // "Tap to sell!" banner (which streams out to the left of the body).
-        if (Math.hypot(FARM_CART_X - cx, FARM_CART_Y - cy) < 0.18) { openCartSheet(); return; }
+        const _cartAt = _farmCartPos(rect.width);
+        if (Math.hypot(_cartAt.x - cx, _cartAt.y - cy) < 0.18) { openCartSheet(); return; }
         closeCartSheet();   // tapping elsewhere on the farm dismisses the sheet
 
         // Garden strip: any tap picks the nearest plot OR signboard, then acts on
