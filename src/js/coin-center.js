@@ -68,11 +68,11 @@
   function histTime(ts) {
     if (!ts) return '';
     var diff = Date.now() - ts;
-    if (diff < 60000) return '刚刚';
-    if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
-    if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
-    if (diff < 604800000) return Math.floor(diff / 86400000) + '天前';
-    try { var dt = new Date(ts); return (dt.getMonth() + 1) + '月' + dt.getDate() + '日'; } catch (e) { return ''; }
+    if (diff < 60000) return T('刚刚');
+    if (diff < 3600000) return T('{n} 分钟前', { n: Math.floor(diff / 60000) });
+    if (diff < 86400000) return T('{n} 小时前', { n: Math.floor(diff / 3600000) });
+    if (diff < 604800000) return T('{n} 天前', { n: Math.floor(diff / 86400000) });
+    try { var dt = new Date(ts); return T('{m}月{d}日', { m: dt.getMonth() + 1, d: dt.getDate() }); } catch (e) { return ''; }
   }
   // Tap-the-wallet coin-history popup (mirrors the confirm/pool popups).
   async function openCoinHist() {
@@ -80,8 +80,8 @@
     pop.className = 'cc-overlay show';
     pop.innerHTML = '<div class="cc-card cc-hist-card">'
       + '<button class="cc-close" title="关闭">✕</button>'
-      + '<div class="cc-title">' + CIC + ' 金币记录</div>'
-      + '<div class="cc-hist-list" id="ccHistList"><div class="cc-hint">加载中…</div></div>'
+      + '<div class="cc-title">' + CIC + ' ' + T('金币记录') + '</div>'
+      + '<div class="cc-hist-list" id="ccHistList"><div class="cc-hint">' + T('加载中…') + '</div></div>'
       + '</div>';
     document.body.appendChild(pop);
     function destroy() { pop.remove(); }
@@ -92,9 +92,9 @@
     try {
       var doc = await roomRef().get();
       hist = (doc.exists && Array.isArray(doc.data().coinHistory)) ? doc.data().coinHistory : [];
-    } catch (e) { listEl.innerHTML = '<div class="cc-hint">加载失败，请重试</div>'; return; }
+    } catch (e) { listEl.innerHTML = '<div class="cc-hint">' + T('加载失败，请重试') + '</div>'; return; }
     if (!hist.length) {
-      listEl.innerHTML = '<div class="cc-hist-empty">还没有金币记录～<br>消费或赚取金币后会显示在这里</div>';
+      listEl.innerHTML = '<div class="cc-hist-empty">' + T('还没有金币记录～') + '<br>' + T('消费或赚取金币后会显示在这里') + '</div>';
       return;
     }
     // Paginate: the whole (≤100) history came back in the single room-doc read
@@ -108,7 +108,7 @@
       var cls = dd > 0 ? 'pos' : (dd < 0 ? 'neg' : 'zero');
       var dtxt = dd > 0 ? ('+' + dd.toLocaleString()) : (dd < 0 ? ('−' + Math.abs(dd).toLocaleString()) : '—');
       return '<div class="cc-hist-row">'
-        + '<div class="cc-hist-mid"><div class="cc-hist-reason">' + esc(e.r || '金币') + '</div>'
+        + '<div class="cc-hist-mid"><div class="cc-hist-reason">' + esc(e.r || T('金币')) + '</div>'
         + '<div class="cc-hist-time">' + esc(histTime(e.t)) + '</div></div>'
         + '<div class="cc-hist-delta ' + cls + '">' + dtxt + '</div>'
         + '<div class="cc-hist-bal">' + Math.floor(e.b || 0).toLocaleString() + '</div></div>';
@@ -121,7 +121,7 @@
       for (; shown < end; shown++) frag += rowHTML(entries[shown]);
       listEl.insertAdjacentHTML('beforeend', frag);
       var remaining = entries.length - shown;
-      if (remaining > 0) moreBtn.textContent = '下一页（还剩 ' + remaining + ' 条）';
+      if (remaining > 0) moreBtn.textContent = T('下一页（还剩 {n} 条）', { n: remaining });
       else moreBtn.remove();
     }
     moreBtn.addEventListener('click', renderMore);
@@ -142,7 +142,7 @@
     }
     delete o.ty;
     // Developer signature title — shown only to devs, and only when no other title is equipped.
-    if (!o.t && isDev()) { o.t = '开发者'; o.tr = 'DEV'; }
+    if (!o.t && isDev()) { o.t = T('开发者'); o.tr = 'DEV'; }
     return Object.keys(o).length ? o : null;
   };
 
@@ -180,7 +180,7 @@
         if (!affordOK(cur, it.price)) return { ok: false, reason: 'insufficient' };
         own.push(id);
         const nc = chargedCoins(cur, it.price);
-        tx.set(ref, { coins: nc, boardCosOwned: own, coinsSpent: spentTally(d.coinsSpent, it.price), coinHistory: histAppend(d, nc - cur, '商店：' + (it.name || '装扮'), nc) }, { merge: true });
+        tx.set(ref, { coins: nc, boardCosOwned: own, coinsSpent: spentTally(d.coinsSpent, it.price), coinHistory: histAppend(d, nc - cur, T('商店：{name}', { name: it.name || T('装扮') }), nc) }, { merge: true });
         return { ok: true, coins: nc, owned: own };
       });
     } catch (e) { return { ok: false, reason: 'error' }; }
@@ -201,7 +201,7 @@
           results.push({ id: it.id, dup: dup });
         });
         const newCoins = isDev() ? cur : cur - cost + refund;
-        tx.set(ref, { coins: newCoins, boardCosOwned: own, coinsSpent: spentTally(d.coinsSpent, cost), coinHistory: histAppend(d, newCoins - cur, refund > 0 ? '扭蛋抽奖（返还 ' + refund + '）' : '扭蛋抽奖', newCoins) }, { merge: true });
+        tx.set(ref, { coins: newCoins, boardCosOwned: own, coinsSpent: spentTally(d.coinsSpent, cost), coinHistory: histAppend(d, newCoins - cur, refund > 0 ? T('扭蛋抽奖（返还 {n}）', { n: refund }) : T('扭蛋抽奖'), newCoins) }, { merge: true });
         return { ok: true, results: results, coins: newCoins, owned: own, refund: refund };
       });
     } catch (e) { return { ok: false, reason: 'error' }; }
@@ -215,7 +215,7 @@
         const ref = roomRef(); const doc = await tx.get(ref); const d = doc.exists ? doc.data() : {};
         const cur = d.coins || 0; if (!affordOK(cur, bet)) return { ok: false, reason: 'insufficient' };
         const newCoins = isDev() ? cur : cur - bet + payout;
-        tx.set(ref, { coins: newCoins, coinsSpent: spentTally(d.coinsSpent, bet), coinHistory: histAppend(d, newCoins - cur, payout > bet ? '老虎机中奖' : '老虎机', newCoins) }, { merge: true });
+        tx.set(ref, { coins: newCoins, coinsSpent: spentTally(d.coinsSpent, bet), coinHistory: histAppend(d, newCoins - cur, payout > bet ? T('老虎机中奖') : T('老虎机'), newCoins) }, { merge: true });
         return { ok: true, coins: newCoins };
       });
       if (!res.ok) return res;
@@ -229,7 +229,7 @@
         const ref = roomRef(); const doc = await tx.get(ref); const d = doc.exists ? doc.data() : {};
         const cur = d.coins || 0; if (!affordOK(cur, price)) return { ok: false, reason: 'insufficient' };
         const nc = chargedCoins(cur, price);
-        tx.set(ref, { coins: nc, coinsSpent: spentTally(d.coinsSpent, price), coinHistory: histAppend(d, nc - cur, '置顶冲榜', nc) }, { merge: true });
+        tx.set(ref, { coins: nc, coinsSpent: spentTally(d.coinsSpent, price), coinHistory: histAppend(d, nc - cur, T('置顶冲榜'), nc) }, { merge: true });
         return { ok: true, coins: nc };
       });
       if (!res.ok) return res;
@@ -251,10 +251,10 @@
   /* ── 土豪榜 (big-spender leaderboard) ── */
   function renderBoard() {
     body.innerHTML =
-      '<div class="cc-hint">按累计消费金币排名 · 烧得越多越靠前 💸</div>'
-      + '<div class="cc-note cc-board-note">📌 本榜单仅统计「本页面（金币乐园）」的消费，房间 / 地铁等其他页面的消费不计入</div>'
-      + '<div class="cc-lb" id="ccLb">加载中…</div>'
-      + '<div class="cc-sec">🔥 烧钱冲榜</div>'
+      '<div class="cc-hint">' + T('按累计消费金币排名 · 烧得越多越靠前 💸') + '</div>'
+      + '<div class="cc-note cc-board-note">' + T('📌 本榜单仅统计「本页面（金币乐园）」的消费，房间 / 地铁等其他页面的消费不计入') + '</div>'
+      + '<div class="cc-lb" id="ccLb">' + T('加载中…') + '</div>'
+      + '<div class="cc-sec">' + T('🔥 烧钱冲榜') + '</div>'
       + '<div class="cc-burn-btns">'
       + C.BURN_OPTIONS.map(function (b) { return '<button class="cc-btn buy" data-act="burn" data-b="' + b + '">烧 ' + (b / 1000) + 'k</button>'; }).join('')
       + '</div>';
@@ -270,17 +270,17 @@
         const x = d.data(); const spent = x.coinsSpent || 0;
         if (spent <= 0) return;
         rank++;
-        rows.push({ rank: rank, name: x.displayName || '匿名', spent: spent, me: d.id === me });
+        rows.push({ rank: rank, name: x.displayName || T('匿名'), spent: spent, me: d.id === me });
       });
-      if (!rows.length) { lb.innerHTML = '<div class="cc-hint">还没有人消费，快来当第一个土豪！</div>'; return; }
+      if (!rows.length) { lb.innerHTML = '<div class="cc-hint">' + T('还没有人消费，快来当第一个土豪！') + '</div>'; return; }
       const medal = ['🥇', '🥈', '🥉'];
       lb.innerHTML = rows.map(function (r) {
         return '<div class="cc-lb-row' + (r.me ? ' me' : '') + '">'
           + '<span class="cc-lb-rank">' + (medal[r.rank - 1] || r.rank) + '</span>'
-          + '<span class="cc-lb-name">' + esc(r.name) + (r.me ? ' (你)' : '') + '</span>'
+          + '<span class="cc-lb-name">' + esc(r.name) + (r.me ? T(' (你)') : '') + '</span>'
           + '<span class="cc-lb-spent">' + CIC + ' ' + r.spent.toLocaleString() + '</span></div>';
       }).join('');
-    } catch (e) { lb.innerHTML = '<div class="cc-hint">排行榜加载失败</div>'; }
+    } catch (e) { lb.innerHTML = '<div class="cc-hint">' + T('排行榜加载失败') + '</div>'; }
   }
   async function burnTx(amount) {
     try {
@@ -288,7 +288,7 @@
         const ref = roomRef(); const doc = await tx.get(ref); const d = doc.exists ? doc.data() : {};
         const cur = d.coins || 0; if (!affordOK(cur, amount)) return { ok: false, reason: 'insufficient' };
         const nc = chargedCoins(cur, amount);
-        tx.set(ref, { coins: nc, coinsSpent: spentTally(d.coinsSpent, amount), coinHistory: histAppend(d, nc - cur, '烧钱冲榜', nc) }, { merge: true });
+        tx.set(ref, { coins: nc, coinsSpent: spentTally(d.coinsSpent, amount), coinHistory: histAppend(d, nc - cur, T('烧钱冲榜'), nc) }, { merge: true });
         return { ok: true, coins: nc };
       });
     } catch (e) { return { ok: false, reason: 'error' }; }
@@ -300,12 +300,13 @@
     pop.innerHTML =
       '<div class="cc-card cc-boost cc-confirm">'
       + '<button class="cc-close" title="关闭">✕</button>'
-      + '<div class="cc-title">🔥 烧钱冲榜</div>'
-      + '<div class="cc-confirm-msg">确定要烧掉 <b>' + CIC + ' ' + amount.toLocaleString() + '</b> 金币来冲榜吗？'
-      + '<br><span class="cc-warn">⚠️ 金币将永久消耗，不会退还！</span></div>'
+      + '<div class="cc-title">' + T('🔥 烧钱冲榜') + '</div>'
+      + '<div class="cc-confirm-msg">' + T('确定要烧掉 <b>{amount}</b> 金币来冲榜吗？',
+          { amount: CIC + ' ' + amount.toLocaleString() })
+      + '<br><span class="cc-warn">' + T('⚠️ 金币将永久消耗，不会退还！') + '</span></div>'
       + '<div class="cc-confirm-btns">'
-      + '<button class="cc-btn own" data-cancel>取消</button>'
-      + '<button class="cc-btn buy" data-confirm>确定烧掉</button>'
+      + '<button class="cc-btn own" data-cancel>' + T('取消') + '</button>'
+      + '<button class="cc-btn buy" data-confirm>' + T('确定烧掉') + '</button>'
       + '</div></div>';
     document.body.appendChild(pop);
     function destroy() { pop.remove(); }
@@ -315,9 +316,9 @@
     pop.querySelector('[data-confirm]').addEventListener('click', async function (e) {
       e.target.disabled = true;
       const res = await burnTx(amount);
-      if (!res.ok) { toast(res.reason === 'insufficient' ? '金币不足' : '出错了', 'error'); e.target.disabled = false; return; }
+      if (!res.ok) { toast(res.reason === 'insufficient' ? T('金币不足') : T('出错了'), 'error'); e.target.disabled = false; return; }
       coins = res.coins; updateCoins(); loadBoard();
-      toast('🔥 烧掉 ' + amount.toLocaleString() + ' 金币，冲榜！', 'success');
+      toast(T('🔥 烧掉 {n} 金币，冲榜！', { n: amount.toLocaleString() }), 'success');
       destroy();
     });
   }
@@ -325,7 +326,7 @@
   /* ── 全屏特效 (super reaction, broadcast to everyone) ── */
   function renderSuper() {
     body.innerHTML =
-      '<div class="cc-hint">放一个全屏特效，所有在线的人都能看到！🎆</div>'
+      '<div class="cc-hint">' + T('放一个全屏特效，所有在线的人都能看到！🎆') + '</div>'
       + '<div class="cc-super-btns">'
       + C.SUPER_EFFECTS.map(function (e) { return '<button class="cc-btn buy cc-super-btn" data-act="super" data-id="' + e.id + '">' + e.emoji + ' ' + e.name + ' ' + CIC + '' + e.price + '</button>'; }).join('')
       + '</div>';
@@ -337,39 +338,39 @@
         const ref = roomRef(); const doc = await tx.get(ref); const d = doc.exists ? doc.data() : {};
         const cur = d.coins || 0; if (!affordOK(cur, e.price)) return { ok: false, reason: 'insufficient' };
         const nc = chargedCoins(cur, e.price);
-        tx.set(ref, { coins: nc, coinsSpent: spentTally(d.coinsSpent, e.price), coinHistory: histAppend(d, nc - cur, '特效：' + (e.name || ''), nc) }, { merge: true });
+        tx.set(ref, { coins: nc, coinsSpent: spentTally(d.coinsSpent, e.price), coinHistory: histAppend(d, nc - cur, T('特效：{name}', { name: e.name || '' }), nc) }, { merge: true });
         return { ok: true, coins: nc };
       });
     } catch (err) { return { ok: false, reason: 'error' }; }
   }
   async function onSuper(id) {
     const res = await superTx(id);
-    if (!res.ok) { toast(res.reason === 'insufficient' ? '金币不足' : '出错了', 'error'); return; }
+    if (!res.ok) { toast(res.reason === 'insufficient' ? T('金币不足') : T('出错了'), 'error'); return; }
     coins = res.coins; updateCoins();
     close();   // return to the board so the full-screen effect is actually visible
     if (typeof window.fireSuperReaction === 'function') window.fireSuperReaction(id);
-    toast('🎆 特效已发射！', 'success');
+    toast(T('🎆 特效已发射！'), 'success');
   }
 
   /* ── 每日求签 (fortune draw — once per day, result locked for the day) ── */
   function fortuneCardHtml(draw, reveal) {
-    const rare = draw.tier === '上上签' || draw.tier === '上签';
+    const rare = draw.tier === T('上上签') || draw.tier === T('上签');
     return '<div class="cc-fortune-card' + (reveal ? ' reveal' : '') + (rare ? ' rare' : '') + '">'
       + '<div class="cc-fortune-tier">' + draw.tier + '</div>'
       + '<div class="cc-fortune-line">' + esc(draw.line) + '</div>'
-      + (draw.bonus > 0 ? '<div class="cc-fortune-bonus">' + CIC + ' 返还 ' + draw.bonus + '</div>' : '')
+      + (draw.bonus > 0 ? '<div class="cc-fortune-bonus">' + CIC + ' ' + T('返还 {n}', { n: draw.bonus }) + '</div>' : '')
       + '</div>';
   }
   function renderFortune() {
     if (fortuneToday) {
       // Already drawn today — always show today's locked result.
       body.innerHTML = '<div class="cc-fortune"><div class="cc-fortune-icon">🎋</div>'
-        + '<div class="cc-hint">今天已经求过签啦，明天再来～</div>'
+        + '<div class="cc-hint">' + T('今天已经求过签啦，明天再来～') + '</div>'
         + '<div class="cc-fortune-result">' + fortuneCardHtml(fortuneToday, false) + '</div></div>';
     } else {
       body.innerHTML = '<div class="cc-fortune"><div class="cc-fortune-icon">🎋</div>'
-        + '<div class="cc-hint">每天可求一签 ' + CIC + '' + C.FORTUNE_COST + ' · 抽中稀有签返还金币</div>'
-        + '<button class="cc-btn buy" data-act="fortune">🎋 求一签</button>'
+        + '<div class="cc-hint">' + T('每天可求一签 {cost} · 抽中稀有签返还金币', { cost: CIC + C.FORTUNE_COST }) + '</div>'
+        + '<button class="cc-btn buy" data-act="fortune">' + T('🎋 求一签') + '</button>'
         + '<div class="cc-fortune-result" id="ccFortune"></div></div>';
     }
   }
@@ -385,7 +386,7 @@
         }
         const cur = d.coins || 0; if (!affordOK(cur, C.FORTUNE_COST)) return { ok: false, reason: 'insufficient' };
         const newCoins = isDev() ? cur : cur - C.FORTUNE_COST + rolled.bonus;
-        tx.set(ref, { coins: newCoins, coinsSpent: spentTally(d.coinsSpent, C.FORTUNE_COST), fortuneDay: today, fortuneResult: rolled, coinHistory: histAppend(d, newCoins - cur, rolled.bonus > 0 ? '每日求签（返还 ' + rolled.bonus + '）' : '每日求签', newCoins) }, { merge: true });
+        tx.set(ref, { coins: newCoins, coinsSpent: spentTally(d.coinsSpent, C.FORTUNE_COST), fortuneDay: today, fortuneResult: rolled, coinHistory: histAppend(d, newCoins - cur, rolled.bonus > 0 ? T('每日求签（返还 {n}）', { n: rolled.bonus }) : T('每日求签'), newCoins) }, { merge: true });
         return { ok: true, coins: newCoins, draw: rolled, already: false };
       });
     } catch (e) { return { ok: false, reason: 'error' }; }
@@ -397,19 +398,19 @@
     if (btn) btn.disabled = true;
     // Suspense: shake the 签筒 while the draw resolves (min ~1.5s).
     el.innerHTML = '<div class="cc-fortune-draw"><div class="cc-fortune-shake">🎋</div>'
-      + '<div class="cc-fortune-shaking">求签中<span class="cc-dots"><i></i><i></i><i></i></span></div></div>';
+      + '<div class="cc-fortune-shaking">' + T('求签中') + '<span class="cc-dots"><i></i><i></i><i></i></span></div></div>';
     const results = await Promise.all([fortuneTx(), new Promise(function (r) { setTimeout(r, 1500); })]);
     const res = results[0];
-    if (!res.ok) { if (btn) btn.disabled = false; el.innerHTML = ''; toast(res.reason === 'insufficient' ? '金币不足' : '出错了', 'error'); return; }
+    if (!res.ok) { if (btn) btn.disabled = false; el.innerHTML = ''; toast(res.reason === 'insufficient' ? T('金币不足') : T('出错了'), 'error'); return; }
     coins = res.coins; updateCoins();
     fortuneToday = res.draw;                              // lock today's result
     el.innerHTML = fortuneCardHtml(res.draw, true);
     if (btn) btn.style.display = 'none';                  // used up for today
     const hintEl = body.querySelector('.cc-fortune .cc-hint');
-    if (hintEl) hintEl.textContent = '今天已经求过签啦，明天再来～';
-    const rare = res.draw.tier === '上上签' || res.draw.tier === '上签';
-    if (res.already) toast('今天已经求过签啦～', '');
-    else if (rare && typeof showToast === 'function') showToast('🎉 抽中 ' + res.draw.tier + '！', 'success');
+    if (hintEl) hintEl.textContent = T('今天已经求过签啦，明天再来～');
+    const rare = res.draw.tier === T('上上签') || res.draw.tier === T('上签');
+    if (res.already) toast(T('今天已经求过签啦～'), '');
+    else if (rare && typeof showToast === 'function') showToast(T('🎉 抽中 {tier}！', { tier: res.draw.tier }), 'success');
   }
 
   /* ── Bubble Awards 🏆 (called from each bubble's 打赏 button) ── */
@@ -425,7 +426,7 @@
       });
       if (!res.ok) return res;
       try {
-        const giver = localStorage.getItem('flappy_name') || (auth.currentUser && auth.currentUser.displayName) || '匿名';
+        const giver = localStorage.getItem('flappy_name') || (auth.currentUser && auth.currentUser.displayName) || T('匿名');
         const patch = { awards: {}, awardGivers: FieldValue.arrayUnion({ n: String(giver).slice(0, 20), a: awardId }) };
         patch.awards[awardId] = FieldValue.increment(1);
         await db.collection('answers').doc(answerId).set(patch, { merge: true });
@@ -442,9 +443,9 @@
     const pop = document.createElement('div');
     pop.className = 'cc-overlay show';
     pop.innerHTML =
-      '<div class="cc-card cc-award-pop"><button class="cc-close" title="关闭">✕</button>'
-      + '<div class="cc-title">🏆 打赏这条留言</div>'
-      + '<div class="cc-hint">为喜欢的留言点亮一枚奖章，让大家看到你的支持 ✨</div>'
+      '<div class="cc-card cc-award-pop"><button class="cc-close" title="' + T('关闭') + '">✕</button>'
+      + '<div class="cc-title">' + T('🏆 打赏这条留言') + '</div>'
+      + '<div class="cc-hint">' + T('为喜欢的留言点亮一枚奖章，让大家看到你的支持 ✨') + '</div>'
       + '<div class="cc-award-grid">'
       + C.AWARDS.map(function (a) {
           return '<button class="cc-award-card" data-aid="' + a.id + '">'
@@ -453,7 +454,7 @@
             + '<span class="cc-award-price">' + CIC + ' ' + a.price + '</span></button>';
         }).join('')
       + '</div>'
-      + '<div class="cc-award-note">💡 打赏仅用于支持这条留言，会显示你的名字；金币不会退还，也不会获得任何回报哦～</div>'
+      + '<div class="cc-award-note">' + T('💡 打赏仅用于支持这条留言，会显示你的名字；金币不会退还，也不会获得任何回报哦～') + '</div>'
       + '</div>';
     document.body.appendChild(pop);
     function destroy() { pop.remove(); }
@@ -463,13 +464,13 @@
       b.addEventListener('click', async function () {
         b.disabled = true;
         const res = await awardTx(answerId, b.getAttribute('data-aid'));
-        if (res.ok) { toast('🏆 打赏成功！', 'success'); destroy(); }
-        else { toast(res.reason === 'insufficient' ? '金币不足' : '出错了', 'error'); b.disabled = false; }
+        if (res.ok) { toast(T('🏆 打赏成功！'), 'success'); destroy(); }
+        else { toast(res.reason === 'insufficient' ? T('金币不足') : T('出错了'), 'error'); b.disabled = false; }
       });
     });
   }
   window.openAward = function (answerId) {
-    if (!hasFB || !auth.currentUser) { toast('请先登录', 'error'); return; }
+    if (!hasFB || !auth.currentUser) { toast(T('请先登录'), 'error'); return; }
     if (!answerId) return;
     buildAwardPopup(answerId);
   };
@@ -490,19 +491,19 @@
   }
 
   function previewHtml(it) {
-    if (it.type === 'color') return it.val === 'rainbow' ? '<span class="cos-name-rainbow">名字</span>' : '<span style="color:' + it.val + '">名字</span>';
-    if (it.type === 'frame') return '<span class="cos-frame-' + it.val + ' cc-frame-prev">气泡</span>';
+    if (it.type === 'color') return it.val === 'rainbow' ? '<span class="cos-name-rainbow">' + T('名字') + '</span>' : '<span style="color:' + it.val + '">' + T('名字') + '</span>';
+    if (it.type === 'frame') return '<span class="cos-frame-' + it.val + ' cc-frame-prev">' + T('气泡') + '</span>';
     if (it.type === 'badge') return '<span style="font-size:24px">' + it.val + '</span>';
     if (it.type === 'title') return '<span class="cos-title cos-title-' + it.rarity + '">' + esc(myTitlePrefix() + it.val) + '</span>';
     // Entrance animation — a mini bubble that plays the effect; tap to replay.
-    if (it.type === 'anim') return '<span class="cc-anim-prev cos-anim-' + it.val + '" data-act="animprev" data-val="' + it.val + '" title="点一下预览">泡</span>';
+    if (it.type === 'anim') return '<span class="cc-anim-prev cos-anim-' + it.val + '" data-act="animprev" data-val="' + it.val + '" title="点一下预览">' + T('泡') + '</span>';
     return '';
   }
 
   function renderShop() {
     const bal = (typeof coins === 'number') ? coins : 0;
     const free = isDev();
-    let html = '<div class="cc-hint">购买装扮，装备后会显示在你的留言上 ✨</div>';
+    let html = '<div class="cc-hint">' + T('购买装扮，装备后会显示在你的留言上 ✨') + '</div>';
     C.COS_TYPES.forEach(function (type) {
       const list = C.byType(type);
       const ownedN = list.filter(function (it) { return owned.indexOf(it.id) !== -1; }).length;
@@ -515,11 +516,11 @@
         const cant = !own && !free && bal < it.price;   // can't afford → dim + grey the price
         html += '<div class="cc-item rarity-' + it.rarity + (cant ? ' cant' : '') + '" data-r="' + it.rarity + '">'
           + '<span class="cc-rib" data-r="' + it.rarity + '">' + it.rarity + '</span>'
-          + (own ? '<span class="cc-own">已拥有</span>' : '')
+          + (own ? '<span class="cc-own">' + T('已拥有') + '</span>' : '')
           + '<div class="cc-prev">' + previewHtml(it) + '</div>'
           + '<div class="cc-name">' + esc(it.name) + '</div>'
           + (own
-              ? '<button class="cc-btn ' + (eq ? 'eq' : 'own') + '" data-act="equip" data-id="' + it.id + '">' + (eq ? '已装备 ✓' : '装备') + '</button>'
+              ? '<button class="cc-btn ' + (eq ? 'eq' : 'own') + '" data-act="equip" data-id="' + it.id + '">' + (eq ? T('已装备 ✓') : T('装备')) + '</button>'
               : '<button class="cc-btn buy" data-act="buy" data-id="' + it.id + '">' + CIC + ' ' + it.price.toLocaleString('en-US') + '</button>')
           + '</div>';
       });
@@ -535,14 +536,14 @@
     body.innerHTML =
       '<div class="cc-gacha">'
       + '<div class="cc-machine">🎁</div>'
-      + '<div class="cc-odds">传说 2% · 史诗 8% · 稀有 30% · 普通 60%</div>'
-      + '<button class="cc-btn own cc-pool-btn" data-act="pool">🎲 查看奖池 / 概率</button>'
+      + '<div class="cc-odds">' + T('传说 2% · 史诗 8% · 稀有 30% · 普通 60%') + '</div>'
+      + '<button class="cc-btn own cc-pool-btn" data-act="pool">' + T('🎲 查看奖池 / 概率') + '</button>'
       + '<div class="cc-gacha-btns">'
-      + '<button class="cc-btn buy" data-act="pull" data-n="1">抽一次 ' + CIC + '' + o.pullCost + '</button>'
-      + '<button class="cc-btn buy" data-act="pull" data-n="10">抽十次 ' + CIC + '' + o.tenCost + '</button>'
+      + '<button class="cc-btn buy" data-act="pull" data-n="1">' + T('抽一次 {cost}', { cost: CIC + o.pullCost }) + '</button>'
+      + '<button class="cc-btn buy" data-act="pull" data-n="10">' + T('抽十次 {cost}', { cost: CIC + o.tenCost }) + '</button>'
       + '</div>'
       + '<div class="cc-gacha-result" id="ccGachaResult"></div>'
-      + '<div class="cc-note">抽到重复的装扮返还 ' + CIC + '' + o.dupRefund + '</div>'
+      + '<div class="cc-note">' + T('抽到重复的装扮返还 {n}', { n: CIC + o.dupRefund }) + '</div>'
       + '</div>';
   }
 
@@ -554,7 +555,7 @@
         + '<div class="cc-prev">' + previewHtml(it) + '</div>'
         + '<div class="cc-name">' + esc(it.name) + '</div>'
         + rarityTag(it.rarity)
-        + (r.dup ? '<div class="cc-dup">重复 +' + CIC + '' + C.GACHA.dupRefund + '</div>' : '<div class="cc-new">NEW!</div>')
+        + (r.dup ? '<div class="cc-dup">' + T('重复 +{n}', { n: CIC + C.GACHA.dupRefund }) + '</div>' : '<div class="cc-new">NEW!</div>')
         + '</div>';
     }).join('');
   }
@@ -569,9 +570,9 @@
       '<div class="cc-slot">'
       + '<div class="cc-reels">' + reel('ccR0') + reel('ccR1') + reel('ccR2') + '</div>'
       + '<div class="cc-bets">' + C.SLOT_BETS.map(function (b, i) { return '<button class="cc-bet' + (i === 0 ? ' active' : '') + '" data-bet="' + b + '">' + CIC + '' + b + '</button>'; }).join('') + '</div>'
-      + '<button class="cc-btn buy" data-act="spin">🎰 拉一把</button>'
+      + '<button class="cc-btn buy" data-act="spin">' + T('🎰 拉一把') + '</button>'
       + '<div class="cc-slot-result" id="ccSlotResult"></div>'
-      + '<div class="cc-note">三个一样 = 大奖 · 两个🍒 = 小奖 · 三个7️⃣ = 头奖×100</div>'
+      + '<div class="cc-note">' + T('三个一样 = 大奖 · 两个🍒 = 小奖 · 三个7️⃣ = 头奖×100') + '</div>'
       + '</div>';
   }
 
@@ -587,24 +588,24 @@
   /* ── Actions ──────────────────────────────────────────────── */
   async function onBuy(id) {
     const res = await buyTx(id);
-    if (res.ok) { coins = res.coins; owned = res.owned; updateCoins(); renderShop(); toast('购买成功 🎉', 'success'); }
-    else toast(res.reason === 'insufficient' ? '金币不足' : (res.reason === 'owned' ? '已经拥有啦' : '出错了'), 'error');
+    if (res.ok) { coins = res.coins; owned = res.owned; updateCoins(); renderShop(); toast(T('购买成功 🎉'), 'success'); }
+    else toast(res.reason === 'insufficient' ? T('金币不足') : (res.reason === 'owned' ? T('已经拥有啦') : T('出错了')), 'error');
   }
   async function onEquip(id) { await equipCos(id); renderShop(); }
   async function onPull(n) {
     const res = await gachaTx(n);
-    if (!res.ok) { toast(res.reason === 'insufficient' ? '金币不足' : '出错了', 'error'); return; }
+    if (!res.ok) { toast(res.reason === 'insufficient' ? T('金币不足') : T('出错了'), 'error'); return; }
     coins = res.coins; owned = res.owned; updateCoins();
     showGachaResults(res.results);
     const news = res.results.filter(function (r) { return !r.dup; }).length;
-    toast(news ? ('恭喜获得 ' + news + ' 件新装扮！') : '又是重复的…再来！', 'success');
+    toast(news ? T('恭喜获得 {n} 件新装扮！', { n: news }) : T('又是重复的…再来！'), 'success');
   }
   async function onSpin() {
     if (spinning) return;
-    if (!affordOK(coins, curBet)) { toast('金币不足', 'error'); return; }
+    if (!affordOK(coins, curBet)) { toast(T('金币不足'), 'error'); return; }
     spinning = true;
     const res = await slotTx(curBet);
-    if (!res.ok) { spinning = false; toast(res.reason === 'insufficient' ? '金币不足' : '出错了', 'error'); return; }
+    if (!res.ok) { spinning = false; toast(res.reason === 'insufficient' ? T('金币不足') : T('出错了'), 'error'); return; }
     const rEl = document.getElementById('ccSlotResult');
     if (rEl) { rEl.textContent = ''; rEl.className = 'cc-slot-result'; }
 
@@ -637,8 +638,12 @@
     setTimeout(function () {
       coins = res.coins; updateCoins();
       if (rEl) {
-        if (res.payout > 0) { rEl.textContent = '🎉 中奖 +' + res.payout + ' 金币！'; rEl.className = 'cc-slot-result win'; toast('🎰 中奖 +' + res.payout + ' 金币！', 'success'); }
-        else { rEl.textContent = '差一点，再来一把～'; rEl.className = 'cc-slot-result lose'; }
+        if (res.payout > 0) {
+          rEl.textContent = T('🎉 中奖 +{n} 金币！', { n: res.payout });
+          rEl.className = 'cc-slot-result win';
+          toast(T('🎰 中奖 +{n} 金币！', { n: res.payout }), 'success');
+        }
+        else { rEl.textContent = T('差一点，再来一把～'); rEl.className = 'cc-slot-result lose'; }
       }
       spinning = false;
     }, maxEnd + 260);
@@ -656,16 +661,16 @@
       + '<button class="cc-close" id="ccClose" title="关闭">✕</button>'
       + '<div class="cc-header">'
       +   '<div class="cc-brand"><span class="cc-mark">🎰</span>'
-      +     '<div><div class="cc-brand-name">金币乐园</div><div class="cc-brand-sub">用金币换装扮</div></div></div>'
+      +     '<div><div class="cc-brand-name">' + T('金币乐园') + '</div><div class="cc-brand-sub">' + T('用金币换装扮') + '</div></div></div>'
       +   '<span class="cc-wallet" id="ccWallet" role="button" tabindex="0" title="点击查看金币记录"><span class="coin">' + CIC + '</span> <b id="ccCoins">0</b></span>'
       + '</div>'
       + '<div class="cc-tabs">'
-      + '<button class="cc-tab active" data-tab="shop"><span class="ic">🛍️</span>商店</button>'
-      + '<button class="cc-tab" data-tab="gacha"><span class="ic">🎁</span>扭蛋</button>'
-      + '<button class="cc-tab" data-tab="slot"><span class="ic">🎰</span>老虎机</button>'
-      + '<button class="cc-tab" data-tab="board"><span class="ic">💰</span>土豪榜</button>'
-      + '<button class="cc-tab" data-tab="super"><span class="ic">🎆</span>特效</button>'
-      + '<button class="cc-tab" data-tab="fortune"><span class="ic">🎋</span>求签</button>'
+      + '<button class="cc-tab active" data-tab="shop"><span class="ic">🛍️</span>' + T('商店') + '</button>'
+      + '<button class="cc-tab" data-tab="gacha"><span class="ic">🎁</span>' + T('扭蛋') + '</button>'
+      + '<button class="cc-tab" data-tab="slot"><span class="ic">🎰</span>' + T('老虎机') + '</button>'
+      + '<button class="cc-tab" data-tab="board"><span class="ic">💰</span>' + T('土豪榜') + '</button>'
+      + '<button class="cc-tab" data-tab="super"><span class="ic">🎆</span>' + T('特效') + '</button>'
+      + '<button class="cc-tab" data-tab="fortune"><span class="ic">🎋</span>' + T('求签') + '</button>'
       + '</div><div class="cc-body" id="ccBody"></div>'
       + '</div>';
     document.body.appendChild(overlay);
@@ -711,7 +716,7 @@
   }
 
   async function open() {
-    if (!hasFB || !auth.currentUser) { toast('请先登录', 'error'); return; }
+    if (!hasFB || !auth.currentUser) { toast(T('请先登录'), 'error'); return; }
     build();
     await loadRoom();
     updateCoins();
@@ -726,9 +731,9 @@
   function buildPoolPopup() {
     const odds = C.gachaItemOdds();
     const order = ['SSR', 'SR', 'R', 'N'];
-    let html = '<div class="cc-card cc-pool"><button class="cc-close" title="关闭">✕</button>'
-      + '<div class="cc-title">🎲 扭蛋奖池 &amp; 概率</div>'
-      + '<div class="cc-hint">奖池整体：传说 2% · 史诗 8% · 稀有 30% · 普通 60%（同稀有度平分）</div>'
+    let html = '<div class="cc-card cc-pool"><button class="cc-close" title="' + T('关闭') + '">✕</button>'
+      + '<div class="cc-title">' + T('🎲 扭蛋奖池 &amp; 概率') + '</div>'
+      + '<div class="cc-hint">' + T('奖池整体：传说 2% · 史诗 8% · 稀有 30% · 普通 60%（同稀有度平分）') + '</div>'
       + '<div class="cc-pool-list">';
     order.forEach(function (rar) {
       const items = odds.filter(function (o) { return o.rarity === rar; });
@@ -763,8 +768,8 @@
     pop.innerHTML =
       '<div class="cc-card cc-boost">'
       + '<button class="cc-close" title="关闭">✕</button>'
-      + '<div class="cc-title">⭐ 置顶这条留言</div>'
-      + '<div class="cc-hint">置顶后会浮到留言板最上方并高亮显示</div>'
+      + '<div class="cc-title">' + T('⭐ 置顶这条留言') + '</div>'
+      + '<div class="cc-hint">' + T('置顶后会浮到留言板最上方并高亮显示') + '</div>'
       + '<div class="cc-boost-opts">'
       + C.BOOST_OPTIONS.map(function (o) { return '<button class="cc-btn buy" data-h="' + o.hours + '" data-p="' + o.price + '">' + o.label + ' ' + CIC + '' + o.price + '</button>'; }).join('')
       + '</div></div>';
@@ -776,13 +781,13 @@
       b.addEventListener('click', async function () {
         b.disabled = true;
         const res = await boostTx(answerId, parseInt(b.getAttribute('data-h'), 10), parseInt(b.getAttribute('data-p'), 10));
-        if (res.ok) { toast('⭐ 置顶成功！', 'success'); destroy(); }
-        else { toast(res.reason === 'insufficient' ? '金币不足' : '出错了', 'error'); b.disabled = false; }
+        if (res.ok) { toast(T('⭐ 置顶成功！'), 'success'); destroy(); }
+        else { toast(res.reason === 'insufficient' ? T('金币不足') : T('出错了'), 'error'); b.disabled = false; }
       });
     });
   }
   window.openBoost = function (answerId) {
-    if (!hasFB || !auth.currentUser) { toast('请先登录', 'error'); return; }
+    if (!hasFB || !auth.currentUser) { toast(T('请先登录'), 'error'); return; }
     if (!answerId) return;
     buildBoostPopup(answerId);
   };

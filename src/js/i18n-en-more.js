@@ -171,5 +171,108 @@
     '★ 假 期 预 告 ★': '★ H O L I D A Y  A H E A D ★',
     '▶ 点一下关闭 ◀': '▶ TAP TO CLOSE ◀',
     '还有 <b>{n}</b> 天': '<b>{n}</b> days to go',
+
+    /* ── 🎰 金币乐园 ── */
+    '用金币换装扮': 'Spend coins on cosmetics',
+    '商店': 'Shop',
+    '扭蛋': 'Gacha',
+    '老虎机': 'Slots',
+    '土豪榜': 'Big Spenders',
+    '特效': 'Effects',
+    '求签': 'Fortune',
+
+    // Coin history
+    '金币记录': 'Coin history',
+    '刚刚': 'just now',
+    '{n} 分钟前': '{n} min ago',
+    '{n} 小时前': '{n} h ago',
+    '{n} 天前': '{n} d ago',
+    '{m}月{d}日': '{m}/{d}',
+    '加载失败，请重试': 'Failed to load — try again',
+    '还没有金币记录～': 'No coin history yet',
+    '消费或赚取金币后会显示在这里': 'Spending or earning coins will show up here',
+    '金币': 'Coins',
+    '下一页（还剩 {n} 条）': 'Next page ({n} more)',
+    '开发者': 'Developer',
+    '商店：{name}': 'Shop: {name}',
+    '装扮': 'cosmetic',
+    '扭蛋抽奖（返还 {n}）': 'Gacha pull (refund {n})',
+    '扭蛋抽奖': 'Gacha pull',
+    '老虎机中奖': 'Slots win',
+    '置顶冲榜': 'Pin & burn',
+    '每日求签': 'Daily fortune',
+    '每日求签（返还 {n}）': 'Daily fortune (refund {n})',
+
+    // 土豪榜 + burn
+    '按累计消费金币排名 · 烧得越多越靠前 💸': 'Ranked by coins burned — the more you spend, the higher you sit 💸',
+    '📌 本榜单仅统计「本页面（金币乐园）」的消费，房间 / 地铁等其他页面的消费不计入':
+      '📌 Only spending on this page (Coin Park) counts — the room, Subway Dash and the rest do not',
+    '🔥 烧钱冲榜': '🔥 Burn to climb',
+    '烧钱冲榜': 'Burn to climb',
+    '还没有人消费，快来当第一个土豪！': 'Nobody has spent a thing — be the first big spender!',
+    ' (你)': ' (you)',
+    '确定要烧掉 <b>{amount}</b> 金币来冲榜吗？': 'Burn <b>{amount}</b> coins to climb the board?',
+    '⚠️ 金币将永久消耗，不会退还！': '⚠️ These coins are gone for good — no refunds!',
+    '确定烧掉': 'Burn them',
+    '🔥 烧掉 {n} 金币，冲榜！': '🔥 Burned {n} coins — up you go!',
+
+    // Effects, awards, boost
+    '放一个全屏特效，所有在线的人都能看到！🎆': 'Set off a full-screen effect everyone online will see! 🎆',
+    '特效：{name}': 'Effect: {name}',
+    '🎆 特效已发射！': '🎆 Effect launched!',
+    '🏆 打赏这条留言': '🏆 Award this message',
+    '为喜欢的留言点亮一枚奖章，让大家看到你的支持 ✨': 'Pin a medal on a message you like so everyone sees your support ✨',
+    '💡 打赏仅用于支持这条留言，会显示你的名字；金币不会退还，也不会获得任何回报哦～':
+      '💡 An award just supports the message and shows your name. The coins are not refunded and buy you nothing else.',
+    '🏆 打赏成功！': '🏆 Awarded!',
+    '⭐ 置顶这条留言': '⭐ Pin this message',
+    '置顶后会浮到留言板最上方并高亮显示': 'It floats to the top of the board and gets highlighted',
+    '⭐ 置顶成功！': '⭐ Pinned!',
+
+    // Fortune
+    '上上签': 'Great fortune',
+    '上签': 'Good fortune',
+    '返还 {n}': 'refund {n}',
+    '今天已经求过签啦，明天再来～': "You've drawn today — come back tomorrow",
+    '今天已经求过签啦～': "Already drawn today",
+    '每天可求一签 {cost} · 抽中稀有签返还金币': 'One draw a day for {cost} · a rare fortune refunds coins',
+    '🎋 求一签': '🎋 Draw',
+    '求签中': 'Drawing',
+    '🎉 抽中 {tier}！': '🎉 You drew {tier}!',
+
+    // Shop + gacha
+    '名字': 'Name',
+    '气泡': 'Bubble',
+    '泡': 'B',
+    '点一下预览': 'Tap to preview',
+    '购买装扮，装备后会显示在你的留言上 ✨': 'Buy a look — once equipped it shows on your messages ✨',
+    '已拥有': 'Owned',
+    '已装备 ✓': 'Equipped ✓',
+    '装备': 'Equip',
+    '传说 2% · 史诗 8% · 稀有 30% · 普通 60%': 'Legendary 2% · Epic 8% · Rare 30% · Common 60%',
+    '🎲 查看奖池 / 概率': '🎲 Pool & odds',
+    '🎲 扭蛋奖池 &amp; 概率': '🎲 Gacha pool &amp; odds',
+    '奖池整体：传说 2% · 史诗 8% · 稀有 30% · 普通 60%（同稀有度平分）':
+      'Whole pool: Legendary 2% · Epic 8% · Rare 30% · Common 60% (even within a tier)',
+    '抽一次 {cost}': 'One pull {cost}',
+    '抽十次 {cost}': 'Ten pulls {cost}',
+    '抽到重复的装扮返还 {n}': 'A duplicate refunds {n}',
+    '重复 +{n}': 'Dup +{n}',
+    '购买成功 🎉': 'Bought 🎉',
+    '已经拥有啦': 'You already own that',
+    '恭喜获得 {n} 件新装扮！': '{n} new looks — nice!',
+    '又是重复的…再来！': 'All duplicates… go again!',
+
+    // Slots
+    '🎰 拉一把': '🎰 Pull',
+    '三个一样 = 大奖 · 两个🍒 = 小奖 · 三个7️⃣ = 头奖×100':
+      'Three of a kind = big win · two 🍒 = small win · three 7️⃣ = jackpot ×100',
+    '🎉 中奖 +{n} 金币！': '🎉 You won +{n} coins!',
+    '🎰 中奖 +{n} 金币！': '🎰 You won +{n} coins!',
+    '差一点，再来一把～': 'So close — one more?',
+
+    // Shared errors
+    '金币不足': 'Not enough coins',
+    '出错了': 'Something went wrong',
   });
 })();
