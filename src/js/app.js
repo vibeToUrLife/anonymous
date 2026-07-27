@@ -369,6 +369,18 @@ async function persistReply(docId, parentReplyPath, reply) {
         replies.push(reply);
     }
 
+    // Firestore hard-caps a document at 1 MiB. The whole replies array — with
+    // any inline base64 photo/GIF it carries, plus the bubble's own image — is
+    // rewritten on every reply, so an image-heavy thread eventually overflows
+    // and the update throws, silently dropping the reply. Refuse the write here
+    // with a typed error the UI can explain, instead of attempting an update
+    // Firestore will reject. (No-op if reply-logic.js failed to load.)
+    if (window.ReplyLogic && ReplyLogic.wouldExceedBudget(data, replies)) {
+        const err = new Error('REPLY_TOO_LARGE');
+        err.code = 'REPLY_TOO_LARGE';
+        throw err;
+    }
+
     tx.update(ref, { replies });
     });
 }
@@ -1920,8 +1932,15 @@ function buildReplyInput(docId, parentReplyPath, depth) {
         inp.value = '';
         replyPendingImage = null;
         preview.style.display = 'none';
-    } catch {
+    } catch (err) {
+        // The reply never landed, so don't muzzle the notification for the next
+        // real reply (the flag is normally cleared by the arriving snapshot).
+        suppressNextReplyNotif = false;
+        if (err && err.code === 'REPLY_TOO_LARGE') {
+        showToast('这条泡泡的回复太满了，图片放不下 —— 试试只发文字，或用 GIF 按钮（不占空间）', 'error');
+        } else {
         showToast('Reply failed', 'error');
+        }
     } finally {
         btn.disabled = false;
     }
