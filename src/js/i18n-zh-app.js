@@ -468,5 +468,9 @@
     '{n}小时前': '{n} h ago',
     '{n}天前': '{n} d ago',
     '昨天': 'yesterday',
+
+    // Written in Chinese by the reply-size guard, so the en block answers it.
+    '这条泡泡的回复太满了，图片放不下 —— 试试只发文字，或用 GIF 按钮（不占空间）':
+      "This bubble's replies are full — the image won't fit. Try text only, or the GIF button (it takes no space).",
   });
 })();
