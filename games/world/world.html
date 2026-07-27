@@ -9,6 +9,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/world.css?v=w10" />
 
+  <!-- i18n first: everything below renders text through T(). The language is
+       chosen in index.html's settings; this page only reads it. -->
+  <script src="../../src/js/i18n.js?v=3"></script>
+  <script src="../../src/js/i18n-zh-app.js?v=5"></script>
+  <script src="js/world-i18n-zh.js?v=1"></script>
+  <script defer src="../../src/js/i18n-ui.js?v=3"></script>
+
   <!-- Firebase (compat 10.12.0) — same versions as room.html, plus Realtime Database for live sync -->
   <script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -64,36 +71,41 @@
   </div>
 
   <div id="worldTopbar">
-    <a class="world-back" href="../room.html" title="Back to room">←</a>
-    <div id="worldSceneName">🌍 Pet World</div>
+    <a class="world-back" href="../room.html" data-i18n-title title="Back to room">←</a>
+    <div id="worldSceneName" data-i18n>🌍 Pet World</div>
     <div class="world-top-actions">
-      <button id="worldPetBtn">🐾 Pet</button>
-      <button id="worldWearBtn">👕 Wear</button>
-      <button id="worldShareBtn" title="Share this world to the bubble board">📢 Share</button>
+      <button id="worldPetBtn" data-i18n>🐾 Pet</button>
+      <button id="worldWearBtn" data-i18n>👕 Wear</button>
+      <button id="worldShareBtn" data-i18n-title title="Share this world to the bubble board" data-i18n>📢 Share</button>
     </div>
   </div>
 
   <div id="worldSceneTabs"></div>
-  <div id="worldStatus" class="world-status warn">🔴 connecting…</div>
+  <div id="worldStatus" class="world-status warn" data-i18n>🔴 connecting…</div>
   <div id="worldSparkleChip" class="world-status" hidden>✨ 0/0</div>
 
   <div id="worldJoystick"></div>
   <div id="worldActionBtns"></div>
-  <button id="worldHighfiveBack" hidden>✋ High-five back!</button>
-  <button id="worldNotePrompt" hidden>📋 Open board<span class="world-note-key">Enter</span></button>
+  <button id="worldHighfiveBack" hidden data-i18n>✋ High-five back!</button>
+  <!-- The label sits beside the key chip: data-i18n assigns textContent, so
+       marking the button would delete the chip — the label gets its own span.
+       The chip prints the keyboard key's OWN name and stays as-is (the app
+       dictionary already reads 'Enter' as the access-code button, "进入"), the
+       same way 'Close (Esc)' keeps its Esc. -->
+  <button id="worldNotePrompt" hidden><span data-i18n>📋 Open board</span><span class="world-note-key">Enter</span></button>
 
   <div id="worldBoardModal" hidden>
     <div class="world-board-frame">
       <div class="world-board-head">
-        <span id="worldBoardTitle">📋 Notes Board</span>
-        <button id="worldBoardClose" aria-label="Close board">✕</button>
+        <span id="worldBoardTitle" data-i18n>📋 Notes Board</span>
+        <button id="worldBoardClose" data-i18n-aria-label aria-label="Close board">✕</button>
       </div>
       <div id="worldBoardGrid"></div>
       <div class="world-board-foot">
         <div id="worldBoardPager"></div>
         <div class="world-board-write">
-          <input id="worldBoardInput" maxlength="80" autocomplete="off" placeholder="Write a note for the board… 🌸" />
-          <button id="worldBoardAdd">📌 Pin</button>
+          <input id="worldBoardInput" maxlength="80" autocomplete="off" data-i18n-placeholder placeholder="Write a note for the board… 🌸" />
+          <button id="worldBoardAdd" data-i18n>📌 Pin</button>
         </div>
         <div id="worldBoardMsg"></div>
       </div>
@@ -101,15 +113,15 @@
   </div>
 
   <div id="worldChat" class="collapsed">
-    <button id="worldChatToggle" aria-label="Toggle chat">
-      <span id="worldChatToggleLabel">💬 Chat</span>
+    <button id="worldChatToggle" data-i18n-aria-label aria-label="Toggle chat">
+      <span id="worldChatToggleLabel" data-i18n>💬 Chat</span>
       <span id="worldChatUnread" hidden></span>
     </button>
     <div id="worldChatPanel">
       <div id="worldChatLog"></div>
       <div id="worldChatRow">
-        <input id="worldChatInput" maxlength="100" autocomplete="off" placeholder="Say hi… (be kind 🌸)" />
-        <button id="worldChatSend" title="Send">➤</button>
+        <input id="worldChatInput" maxlength="100" autocomplete="off" data-i18n-placeholder placeholder="Say hi… (be kind 🌸)" />
+        <button id="worldChatSend" data-i18n-title title="Send">➤</button>
       </div>
     </div>
   </div>
@@ -117,14 +129,14 @@
 
   <div id="worldMenu" data-pane="pet">
     <button id="worldMenuClose">✕</button>
-    <div id="worldPetPane"><h3>🐾 Choose your pet</h3><div id="worldPetPicker"></div></div>
-    <div id="worldWearPane" style="display:none"><h3>👕 Change your outfit</h3><div id="worldWardrobe"></div></div>
+    <div id="worldPetPane"><h3 data-i18n>🐾 Choose your pet</h3><div id="worldPetPicker"></div></div>
+    <div id="worldWearPane" style="display:none"><h3 data-i18n>👕 Change your outfit</h3><div id="worldWardrobe"></div></div>
   </div>
 
   <div id="worldGate">
-    <h1>🌍 Pet World</h1>
-    <p>Please open the World from inside the app so we know who you are.</p>
-    <a href="../../index.html">Go to the app</a>
+    <h1 data-i18n>🌍 Pet World</h1>
+    <p data-i18n>Please open the World from inside the app so we know who you are.</p>
+    <a href="../../index.html" data-i18n>Go to the app</a>
   </div>
 </body>
 </html>

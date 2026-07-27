@@ -81,7 +81,9 @@ const WorldNotes = (function () {
     const mod = moderateMessage(rawText, { maxLen: c.maxLen, banned: bannedList() });
     if (!mod.ok) return { ok: false, reason: mod.reason }; // 'empty' | 'blocked'
     lastPinAt = now;
-    const note = { uid: myUid, name: (me && me.name) || 'Pet', text: mod.text, x: me.x, y: me.y, ts: now, scene: me.scene };
+    // The name is PERSISTED (RTDB + localStorage) and read by other clients, so
+    // it stays raw data; the board supplies its own T() fallback when rendering.
+    const note = { uid: myUid, name: (me && me.name) || '', text: mod.text, x: me.x, y: me.y, ts: now, scene: me.scene };
     mine.push(note);
     saveMine();             // survive a reload even if the shared write below never lands
     // Pass `now` so the shared write carries the SAME ts as this optimistic note;
@@ -122,7 +124,7 @@ const WorldNotes = (function () {
     roundRectPath(ctx, x + ds * 3, top + ds * 3, w - ds * 6, ds * 10, ds * 2.5); ctx.fillStyle = '#e5533b'; ctx.fill(); // header
     ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = 'bold ' + Math.max(8, (ds * 8) | 0) + 'px "Noto Sans SC", sans-serif';
-    ctx.fillText('📋 NOTES', px, top + ds * 8.4);
+    ctx.fillText(T('📋 NOTES'), px, top + ds * 8.4);
     const stickies = [['#bfe3ff', ds * 6, ds * 17], ['#ffe6a8', ds * 24, ds * 19], ['#ffc9d6', ds * 40, ds * 17]];
     for (let i = 0; i < stickies.length; i++) {
       const s = stickies[i];

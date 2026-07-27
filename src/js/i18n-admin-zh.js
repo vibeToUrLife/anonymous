@@ -1,0 +1,317 @@
+/* ============================================================
+   Chinese for the admin console (admin.html).
+
+   Keys are the English source text — see src/js/i18n.js for why.
+   Kept apart from the player-facing dictionaries so the pages readers
+   actually load stay small.
+
+   Destructive actions are translated literally, not softened. A button
+   that wipes an account should read as alarming in either language.
+   ============================================================ */
+(function () {
+  if (typeof I18N === 'undefined') return;
+  I18N.register('zh', {
+
+    /* ── Shell & access ── */
+    'Dev Admin': '开发者后台',
+    'Checking access…': '正在检查权限…',
+    'Developer sign-in': '开发者登录',
+    'Sign in with your developer Google account to manage the site.': '用开发者 Google 账号登录来管理站点。',
+    'Sign in with Google': '用 Google 登录',
+    'Sign-in failed': '登录失败',
+    'Access denied': '没有权限',
+    'This account is not a developer.': '这个账号不是开发者。',
+    'Add your UID to isDeveloper() in firestore.rules to grant access.':
+      '把你的 UID 加进 firestore.rules 的 isDeveloper() 才能进入。',
+    'Your UID:': '你的 UID：',
+    'Confirm': '确认',
+    'Type “{text}” to confirm': '输入「{text}」来确认',
+
+    /* ── Tabs ── */
+    'Site': '站点',
+    'Manage': '账号',
+    'Content': '内容',
+    'Games': '游戏',
+    'Economy': '经济',
+    'Stats': '数据',
+
+    /* ── Site controls ── */
+    'Site controls': '站点控制',
+    'Maintenance, access code, and announcements.': '维护模式、访问码和公告。',
+    'Maintenance mode': '维护模式',
+    'When ON, every page shows the “Under Maintenance” screen on load.':
+      '开启后，所有页面一打开就显示「维护中」。',
+    'Custom message (optional)': '自定义文案（可选）',
+    'Save maintenance': '保存维护设置',
+    '🔴 Site is in maintenance': '🔴 站点维护中',
+    '🟢 Site is live': '🟢 站点运行中',
+    '✅ Maintenance is ON site-wide.': '✅ 全站已进入维护模式。',
+    '✅ Site is live.': '✅ 站点已恢复。',
+
+    'Access code': '访问码',
+    'The code users must enter to open the site. Changing it locks out anyone who hasn’t entered the new code.':
+      '用户进站要输入的码。一改，没输过新码的人都会被挡在外面。',
+    'Current access code': '当前访问码',
+    'Save code': '保存访问码',
+    '⚠️ Code cannot be empty.': '⚠️ 访问码不能为空。',
+    '✅ Access code updated.': '✅ 访问码已更新。',
+    'Access code · wrong attempts': '访问码 · 错误记录',
+    'Users who entered the wrong code after signing in. Each account gets 3 tries before it is locked out. Unlock resets their count.':
+      '登录后输错访问码的账号。每个账号 3 次机会，用完就锁定。解锁会把次数清零。',
+    'No wrong attempts. 🎉': '没有输错记录。🎉',
+    'LOCKED': '已锁定',
+    '{n}/3 wrong': '错 {n}/3 次',
+    'tried: {codes}': '试过：{codes}',
+    'Unlock / reset': '解锁 / 清零',
+    'Unlock failed: {msg}': '解锁失败：{msg}',
+    'Refresh': '刷新',
+
+    'Announcement · What’s New': '公告 · 更新内容',
+    'Shown as a popup once per version key. Change the version to re-show it. Each line is one bullet (HTML allowed).':
+      '每个版本号只弹一次。改版本号就会重新弹。每行一条（可以写 HTML）。',
+    'Version key': '版本号',
+    'Badge title': '标题',
+    'Items (one per line)': '内容（每行一条）',
+    'Intro page URL (optional)': '介绍页链接（可选）',
+    'Publish announcement': '发布公告',
+    '⚠️ Version key is required.': '⚠️ 必须填版本号。',
+    'Publishing…': '发布中…',
+    '✅ Published — users see it on next visit.': '✅ 已发布 —— 用户下次进站就能看到。',
+
+    'Countdown timer': '倒数计时',
+    'A site-wide countdown everyone sees; it fires a celebration when it hits zero. Clearing falls back to the default schedule.':
+      '全站可见的倒数，归零时会放庆祝动画。清除后回到默认时间表。',
+    'Target date & time': '目标日期和时间',
+    'Set countdown': '设置倒数',
+    '⚠️ Pick a date & time.': '⚠️ 请选日期和时间。',
+    '⚠️ Invalid time.': '⚠️ 时间不对。',
+    '⚠️ Pick a time in the future.': '⚠️ 请选一个未来的时间。',
+    '✅ Countdown set site-wide.': '✅ 全站倒数已设置。',
+    '✅ Cleared — using default schedule.': '✅ 已清除 —— 回到默认时间表。',
+
+    'Food spin result': '吃什么转盘结果',
+    'Override the shared lunch/dinner spin result everyone sees, or clear it.':
+      '覆盖所有人看到的午餐／晚餐转盘结果，或者清掉。',
+    'Result text': '结果文字',
+    'Set result': '设置结果',
+    '⚠️ Enter result text.': '⚠️ 请输入结果文字。',
+    '✅ Spin result set for everyone.': '✅ 所有人的转盘结果已设置。',
+    '✅ Cleared.': '✅ 已清除。',
+
+    'Developer access': '开发者权限',
+    'Who can open this panel and run developer actions. Built-in devs are permanent; add or remove others by UID.':
+      '谁能打开这个后台、执行开发者操作。内置开发者不能删；其他人按 UID 增删。',
+    'Add developer': '添加开发者',
+    '⚠️ Enter a UID.': '⚠️ 请输入 UID。',
+    'Already a built-in developer.': '已经是内置开发者了。',
+    'Adding…': '添加中…',
+    '✅ Developer added.': '✅ 开发者已添加。',
+    'built-in': '内置',
+    'Remove developer': '移除开发者',
+    'Remove admin access for {uid}?': '取消 {uid} 的后台权限？',
+
+    'Feature switches': '功能开关',
+    'Turn a feature off to hide it for all users (applies on their next page load). Default is on.':
+      '关掉某个功能，所有用户就看不到（下次加载生效）。默认是开。',
+
+    /* ── User management ── */
+    'Look up accounts, adjust coins, rename, ban, or reset.': '查账号、改金币、改名、封禁或重置。',
+    'Find a user': '查找用户',
+    'Search by exact display name, or paste a UID.': '按完整昵称搜索，或直接贴 UID。',
+    'Search': '搜索',
+    'No user found.': '没找到这个用户。',
+    '{n} result(s).': '{n} 条结果。',
+    '(no name)': '（没有名字）',
+    'User no longer exists.': '这个用户已经不存在了。',
+    'Coins': '金币',
+    'Pets': '宠物',
+    'Login streak': '连续登录',
+    'Last seen': '最后上线',
+    'Status': '状态',
+    '⛔ Banned': '⛔ 已封禁',
+    'Active': '正常',
+    'Coins — current:': '金币 — 当前：',
+    '＋ Grant': '＋ 发放',
+    '－ Deduct': '－ 扣除',
+    '＝ Set exact': '＝ 设为',
+    '⚠️ Enter a number.': '⚠️ 请输入数字。',
+    '✅ Coins: {from} → {to}': '✅ 金币：{from} → {to}',
+    'Display name': '昵称',
+    'Rename': '改名',
+    '⚠️ Name cannot be empty.': '⚠️ 昵称不能为空。',
+    '✅ Renamed.': '✅ 已改名。',
+    'Unban user': '解封用户',
+    'Ban user': '封禁用户',
+    'Unban': '解封',
+    'Unban “{name}”? They will be able to use the site again.': '解封「{name}」？他们又能正常使用站点了。',
+    'Unban “{name}”?': '解封「{name}」？',
+    '✅ User unbanned.': '✅ 已解封。',
+    'Ban “{name}”? They will be blocked from the site and can no longer earn coins.':
+      '封禁「{name}」？他们将无法进入站点，也不能再赚金币。',
+    '⛔ User banned.': '⛔ 已封禁。',
+    'Advanced — targeted resets': '进阶 —— 定点重置',
+    'Clear achievements': '清空成就',
+    'Clear': '清空',
+    'Clear all achievements for “{name}”?': '清空「{name}」的全部成就？',
+    '✅ Achievements cleared.': '✅ 成就已清空。',
+    'Reset riddle progress': '重置急转弯进度',
+    'Reset': '重置',
+    'Reset daily-riddle progress for “{name}”? They can answer today again.':
+      '重置「{name}」的每日急转弯进度？他们今天可以重新答。',
+    '✅ Riddle progress reset.': '✅ 急转弯进度已重置。',
+    'Reset account': '重置账号',
+    'This WIPES the account (coins, pets, rooms, decor) but keeps the name. This cannot be undone.':
+      '这会清空整个账号（金币、宠物、房间、装饰），只保留名字。不可撤销。',
+    '✅ Account reset to a clean slate.': '✅ 账号已清空重来。',
+    'Recent admin actions': '最近的后台操作',
+    'Audit log of coin changes, renames, resets and bans.': '金币变动、改名、重置和封禁的记录。',
+    'No actions yet.': '还没有操作记录。',
+    'by {who} · {when}': '{who} · {when}',
+
+    /* ── Content moderation ── */
+    'Moderate community events and the bubble board.': '管理社区活动和留言板。',
+    'Upcoming events': '活动预告',
+    'Remove junk or off-topic notes.': '删掉灌水或跑题的内容。',
+    'No events.': '没有活动。',
+    'by {who} · event {when}': '{who} · 活动时间 {when}',
+    'Delete event': '删除活动',
+    'this event': '这个活动',
+    'Food suggestions': '吃什么建议',
+    'Remove spam or junk entries from the food suggestion list.': '删掉建议列表里的垃圾内容。',
+    'No suggestions.': '没有建议。',
+    'removed from spin': '已从转盘移除',
+    'Delete suggestion': '删除建议',
+    'Delete “{text}”? This cannot be undone.': '删除「{text}」？不可撤销。',
+    'this item': '这一条',
+    'Bubble board': '留言板',
+    'Recent messages on the bubble board. Posts made anonymously show no name (the board never stores the sender’s account). Remove anything inappropriate.':
+      '留言板上的最近消息。匿名发的不显示名字（留言板从不保存发送者账号）。不合适的删掉。',
+    'No bubbles.': '没有留言。',
+    'Poll:': '投票：',
+    '({n} options)': '（{n} 个选项）',
+    '🖼️ image only': '🖼️ 只有图片',
+    '1 reply': '1 条回复',
+    '{n} replies': '{n} 条回复',
+    'Delete bubble': '删除留言',
+    'Delete this bubble from “{name}”? This cannot be undone.': '删除「{name}」的这条留言？不可撤销。',
+    'Delete this bubble? This cannot be undone.': '删除这条留言？不可撤销。',
+    'Pet World · notice boards': '宠物世界 · 留言板',
+    'Sticky notes players pinned on the in-world notice boards (stored in Realtime Database). Deleting one removes it for everyone. Needs the RTDB rules published with the admin-delete clause, or Delete returns “permission denied”.':
+      '玩家贴在世界留言板上的便条（存在 Realtime Database）。删掉就是对所有人删掉。需要 RTDB 规则里带上 admin-delete 那条并已发布，否则删除会返回「permission denied」。',
+    'Realtime Database SDK not loaded.': 'Realtime Database SDK 没加载。',
+    'No notes on any board.': '所有留言板都没有便条。',
+    '(empty)': '（空）',
+    'Pet': '宠物',
+    'shard {id}': '分片 {id}',
+    'Delete board note': '删除便条',
+    'Delete “{text}” from the {board} board? This removes it for everyone.':
+      '从 {board} 留言板删掉「{text}」？所有人都会看不到。',
+    'this note': '这张便条',
+    'Delete failed — check the Realtime Database rules are published with the admin-delete clause.':
+      '删除失败 —— 检查 Realtime Database 规则里的 admin-delete 那条是否已发布。',
+    'Quote comments': '每日正能量评论',
+    'Comments on the daily quote, last 7 days. Remove anything inappropriate.':
+      '最近 7 天每日正能量下的评论。不合适的删掉。',
+    'No comments in the last 7 days.': '最近 7 天没有评论。',
+    'Delete comment': '删除评论',
+    'Delete this comment? This cannot be undone.': '删除这条评论？不可撤销。',
+    '成语接龙 chain': '成语接龙',
+    'Today’s idiom chain — trim junk links, clear wrong attempts, or reset the day.':
+      '今天的成语接龙 —— 删掉乱接的、清空答错记录，或者整天重置。',
+    'No chain today ({day}).': '{day} 还没有接龙。',
+    'seed': '开头',
+    'Seed {word} · {links} links · {wrong} wrong': '开头 {word} · 接了 {links} 个 · 错 {wrong} 次',
+    'Chain links ({n})': '接龙链（{n}）',
+    'Clear wrong attempts ({n})': '清空答错记录（{n}）',
+    'Reset day': '重置当天',
+    'Trim chain': '截断接龙',
+    'Remove “{word}” and every link after it? (Removing a middle link would break the chain.)':
+      '删掉「{word}」以及它后面的所有接龙？（只删中间一个会把链断开。）',
+    'Clear wrong attempts': '清空答错记录',
+    'Clear the wrong-attempt history for {day}?': '清空 {day} 的答错记录？',
+    'Reset chain': '重置接龙',
+    'Delete today’s ({day}) idiom chain entirely? It will reseed for users.':
+      '整个删掉今天（{day}）的成语接龙？用户那边会重新开一局。',
+
+    /* ── Games ── */
+    'Clean up leaderboards and the daily Coin Rush.': '清理排行榜和每日金币狂潮。',
+    'Leaderboards': '排行榜',
+    'Remove a cheater’s entry or reset an entire board.': '删掉作弊的成绩，或者整个榜重置。',
+    '2048': '2048',
+    'Snake': '贪吃蛇',
+    'Flappy': 'Flappy',
+    'Load': '加载',
+    'No entries.': '没有成绩。',
+    '{n} entries (top 50).': '{n} 条成绩（前 50）。',
+    'Delete entry': '删除成绩',
+    'Delete {name}’s score of {score}?': '删掉 {name} 的 {score} 分？',
+    'Reset leaderboard': '重置排行榜',
+    'Reset board': '重置该榜',
+    'This deletes EVERY entry on the {board} leaderboard. This cannot be undone.':
+      '这会删掉 {board} 排行榜上的每一条成绩。不可撤销。',
+    'Resetting…': '重置中…',
+    '✅ Board reset ({n} removed).': '✅ 排行榜已重置（删掉 {n} 条）。',
+    'Daily Coin Rush': '每日金币狂潮',
+    'Today’s synced bubble-pop competition. Reset wipes today’s scores and bonus claims.':
+      '今天的同步抢金币比赛。重置会清掉今天的成绩和已领的奖励。',
+    'Load today': '加载今天',
+    'Loading {day}…': '正在加载 {day}…',
+    'No scores today ({day}).': '{day} 还没有成绩。',
+    '{n} players today ({day}).': '{day} 有 {n} 位玩家。',
+    '{n} pops': '戳了 {n} 下',
+    'Reset Coin Rush': '重置金币狂潮',
+    'Reset today': '重置今天',
+    'This wipes today’s ({day}) Coin Rush scores and bonus claims. This cannot be undone.':
+      '这会清掉今天（{day}）金币狂潮的成绩和已领奖励。不可撤销。',
+    '✅ Coin Rush reset for {day}.': '✅ {day} 的金币狂潮已重置。',
+
+    /* ── Economy ── */
+    'Tune coin sinks live. Saved values apply on users’ next page load; blanks keep the built-in default.':
+      '实时调整金币消耗。保存后在用户下次加载时生效；留空就用内置默认值。',
+    'Gacha · 扭蛋机': '扭蛋机',
+    'Pull costs, duplicate refund, and rarity odds (must total 100%).':
+      '抽取价格、重复返还，以及各稀有度概率（必须加起来 100%）。',
+    'Single pull': '单抽',
+    '10-pull': '十连',
+    'Duplicate refund': '重复返还',
+    'Odds % — SSR / SR / R / N': '概率 % — SSR / SR / R / N',
+    'Save gacha': '保存扭蛋设置',
+    '⚠️ All fields must be numbers ≥ 0.': '⚠️ 所有项都要是 ≥ 0 的数字。',
+    '⚠️ Odds must total 100% (now {sum}%).': '⚠️ 概率要加起来 100%（现在是 {sum}%）。',
+    '✅ Saved. Applies on users’ next load.': '✅ 已保存。用户下次加载生效。',
+    'Slot machine · 老虎机': '老虎机',
+    'Bet amounts and the two-cherry multiplier.': '下注金额，以及两个 🍒 的倍数。',
+    'Bet 1': '注额 1',
+    'Bet 2': '注额 2',
+    'Bet 3': '注额 3',
+    'Two-cherry ×': '两樱桃 ×',
+    'Save slot': '保存老虎机设置',
+    '⚠️ Enter valid numbers.': '⚠️ 请输入有效的数字。',
+    'Daily Fortune · 求签': '每日求签',
+    'Cost per draw.': '每次求签的价格。',
+    'Draw cost': '求签价格',
+    'Save fortune': '保存求签设置',
+    '⚠️ Enter a valid cost.': '⚠️ 请输入有效的价格。',
+
+    /* ── Stats ── */
+    'A live snapshot of the community.': '社区的实时快照。',
+    'Overview': '总览',
+    'Online now': '当前在线',
+    'Total users': '用户总数',
+    'Coins in economy': '流通金币',
+    'Banned users': '被封禁用户',
+    'Stats error: {msg}': '数据出错：{msg}',
+    'Updated {when}': '更新于 {when}',
+    'No one online right now.': '现在没有人在线。',
+    '● online': '● 在线',
+    '{n} total · showing top 100 by coins': '共 {n} 位 · 按金币显示前 100',
+    '{n} total': '共 {n} 位',
+    'Total coins': '金币总量',
+    'Avg / user': '人均',
+    'Users': '用户',
+    'Top holders': '金币最多',
+    'No banned users.': '没有被封禁的用户。',
+    'banned {when}': '{when} 封禁',
+    'Details': '详情',
+  });
+})();

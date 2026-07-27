@@ -25,6 +25,10 @@ const WorldNet = (function () {
   let onRemotes = function () {};
   let onChat = function () {};
   let onDiag = function () {};   // surfaces connection / permission errors to the UI
+  // Raw English on purpose: whatever this returns is WRITTEN to RTDB as our
+  // display name and read by every other client, so it is data on the wire, not
+  // text on our screen. Readers localize a missing name themselves. (Matches
+  // world-core's worldPlayerName, whose own last resort is the same literal.)
   let getName = function () { return 'Anonymous'; };
 
   // Server-aligned clock: Date.now() + offset ≈ Firebase server time. Using this
@@ -72,7 +76,11 @@ const WorldNet = (function () {
       const cur = remotes[k];
       if (!cur) {
         remotes[k] = {
-          name: p.name || 'Pet', pet: p.pet || 'cat', color: p.color || '', outfit: p.outfit || '',
+          // Keep the received name RAW (a translated fallback cached here would
+          // freeze that nameplate in the language it arrived in); every reader —
+          // world-actors' tag, world-core's tag menu and toasts — supplies its
+          // own T() fallback at paint time.
+          name: p.name || '', pet: p.pet || 'cat', color: p.color || '', outfit: p.outfit || '',
           x: p.x, y: p.y, targetX: p.x, targetY: p.y, facing: p.facing || 1,
           action: p.action || '', actionTs: p.actionTs || 0, ts: p.ts || now,
         };
@@ -106,7 +114,7 @@ const WorldNet = (function () {
     } catch (e) {
       // Most common causes: RTDB rules not deployed (permission_denied) or a wrong
       // databaseURL (can't reach the instance). Surface it instead of failing silently.
-      onDiag({ type: 'error', where: 'write', message: (e && e.message) || 'write failed' });
+      onDiag({ type: 'error', where: 'write', message: (e && e.message) || T('write failed') });
       return { scene, shard, online: false };
     }
     lastSent = { x: r3(me.x), y: r3(me.y), facing: me.facing, action: me.action || '', actionTs: me.actionTs || 0, ts: nowMs() };
@@ -114,7 +122,7 @@ const WorldNet = (function () {
     playersRef = base().child('players');
     playersCb = playersRef.on('value',
       s => handlePlayers(s.val() || {}),
-      err => onDiag({ type: 'error', where: 'read', message: (err && err.message) || 'read denied' }));
+      err => onDiag({ type: 'error', where: 'read', message: (err && err.message) || T('read denied') }));
     chatRef = base().child('chat').limitToLast(WORLD_CHAT.historyLimit);
     chatCb = chatRef.on('value', s => handleChat(s.val() || {}));
 

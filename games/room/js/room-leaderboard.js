@@ -111,7 +111,7 @@
               const ov = document.createElement('div');
               ov.className = 'chess-invite-overlay';
               ov.innerHTML = '<div class="chess-invite-box">' +
-                '<h3>♟️ ' + T('Chess Challenge!') + '</h3>' +
+                '<h3>' + T('♟️ Chess Challenge!') + '</h3>' +
                 '<div class="ci-from">' + T('{name} invites you', { name: inv.fromName || T('Someone') }) + '</div>' +
                 '<div class="ci-bet">💰 ' + T('{n} coins', { n: inv.bet }) + '</div>' +
                 '<div class="ci-buttons">' +

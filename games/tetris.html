@@ -325,61 +325,63 @@
   <div class="login-overlay loading" id="loginOverlay">
     <div class="login-box">
       <div class="login-icon">🧱</div>
-      <h2>Tetris</h2>
-      <p>Sign in with Google to play.<br>Your score will appear on the leaderboard.</p>
+      <h2 data-i18n>Tetris</h2>
+      <p><span data-i18n>Sign in with Google to play.</span><br><span data-i18n>Your score will appear on the leaderboard.</span></p>
       <button class="google-login-btn" id="googleLoginBtn">
         <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59a14.5 14.5 0 0 1 0-9.18l-7.98-6.19a24.0 24.0 0 0 0 0 21.56l7.98-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-        Sign in with Google
+        <span data-i18n>Sign in with Google</span>
       </button>
       <div class="login-error" id="loginError"></div>
     </div>
   </div>
 
-  <a href="../index.html" class="back-btn">← Back</a>
-  <button class="settings-btn" id="settingsBtn" title="Settings">⚙️</button>
+  <a href="../index.html" class="back-btn" data-i18n>← Back</a>
+  <button class="settings-btn" id="settingsBtn" data-i18n-title title="Settings">⚙️</button>
 
-  <!-- Settings modal -->
+  <!-- Settings modal — no language switch here on purpose: the choice lives in
+       one place, the settings on index.html. This page only renders in whatever
+       was chosen there, and follows a change made while it is open. -->
   <div class="settings-overlay hidden" id="settingsOverlay">
     <div class="settings-box">
-      <h3>⚙️ Settings</h3>
-      <button class="settings-logout-btn" id="settingsLogoutBtn">🚶 Sign Out</button>
-      <button class="settings-close-btn" id="settingsCloseBtn">Close</button>
+      <h3 data-i18n>⚙️ Settings</h3>
+      <button class="settings-logout-btn" id="settingsLogoutBtn" data-i18n>🚶 Sign Out</button>
+      <button class="settings-close-btn" id="settingsCloseBtn" data-i18n>Close</button>
     </div>
   </div>
 
   <div class="game-header">
-    <h1>🧱 Tetris</h1>
-    <p>Complete lines to earn coins!</p>
+    <h1 data-i18n>🧱 Tetris</h1>
+    <p data-i18n>Complete lines to earn coins!</p>
   </div>
 
   <div class="game-area">
     <canvas id="gameCanvas"></canvas>
     <div class="side-panel">
       <div class="panel-box">
-        <div class="panel-label">Hold <kbd style="font-size:8px;opacity:.4;margin-left:2px">C</kbd></div>
+        <div class="panel-label"><span data-i18n>Hold</span> <kbd style="font-size:8px;opacity:.4;margin-left:2px">C</kbd></div>
         <canvas id="holdCanvas" width="80" height="80"></canvas>
       </div>
       <div class="panel-box">
-        <div class="panel-label">Next</div>
+        <div class="panel-label" data-i18n>Next</div>
         <canvas id="nextCanvas" width="80" height="80"></canvas>
       </div>
       <div class="panel-box">
-        <div class="panel-label">Score</div>
+        <div class="panel-label" data-i18n>Score</div>
         <div class="panel-value" id="scoreDisplay">0</div>
       </div>
       <div class="panel-box">
-        <div class="panel-label">Lines</div>
+        <div class="panel-label" data-i18n>Lines</div>
         <div class="panel-value" id="linesDisplay">0</div>
       </div>
       <div class="panel-box">
-        <div class="panel-label">Combo</div>
+        <div class="panel-label" data-i18n>Combo</div>
         <div class="panel-value" id="comboDisplay">0</div>
       </div>
       <div class="panel-box">
-        <div class="panel-label">Coins</div>
+        <div class="panel-label" data-i18n>Coins</div>
         <div class="panel-value" id="coinDisplay">0</div>
       </div>
-      <button class="panel-pause-btn" id="btnPauseSide" style="display:none">⏸ PAUSE</button>
+      <button class="panel-pause-btn" id="btnPauseSide" style="display:none" data-i18n>⏸ PAUSE</button>
     </div>
   </div>
 
@@ -389,8 +391,8 @@
     <button class="touch-btn" id="btnRotate">↻</button>
     <button class="touch-btn" id="btnRight">▶</button>
     <button class="touch-btn" id="btnDown">▼</button>
-    <button class="touch-btn wide" id="btnDrop">DROP</button>
-    <button class="touch-btn wide" id="btnHold" style="background:rgba(255,122,92,0.15);color:var(--g-accent)">HOLD</button>
+    <button class="touch-btn wide" id="btnDrop" data-i18n>DROP</button>
+    <button class="touch-btn wide" id="btnHold" style="background:rgba(255,122,92,0.15);color:var(--g-accent)" data-i18n>HOLD</button>
   </div>
 
   <!-- Combo popup -->
@@ -398,34 +400,41 @@
 
   <!-- Start screen -->
   <div class="overlay" id="startScreen">
-    <h2>🧱 Tetris</h2>
+    <h2 data-i18n>🧱 Tetris</h2>
     <div style="font-size:14px;color:var(--g-ink-soft);margin-top:8px;text-align:center">
-      Playing as: <strong id="playerDisplayName" style="color:var(--g-accent)">...</strong>
+      <span data-i18n>Playing as:</span> <strong id="playerDisplayName" style="color:var(--g-accent)">...</strong>
     </div>
-    <button class="play-btn" id="startBtn">Play!</button>
-    <div class="tap-hint">← → Move &nbsp; ↑ Rotate &nbsp; ↓ Soft Drop &nbsp; Space Hard Drop &nbsp; C Hold &nbsp; P Pause</div>
+    <button class="play-btn" id="startBtn" data-i18n>Play!</button>
+    <div class="tap-hint"><span data-i18n>← → Move</span> &nbsp; <span data-i18n>↑ Rotate</span> &nbsp; <span data-i18n>↓ Soft Drop</span> &nbsp; <span data-i18n>Space Hard Drop</span> &nbsp; <span data-i18n>C Hold</span> &nbsp; <span data-i18n>P Pause</span></div>
     <div class="leaderboard" id="startLeaderboard">
-      <div class="lb-title">🏆 Leaderboard</div>
-      <div id="startLbBody"><div class="lb-empty">Loading…</div></div>
+      <div class="lb-title" data-i18n>🏆 Leaderboard</div>
+      <div id="startLbBody"><div class="lb-empty" data-i18n>Loading…</div></div>
     </div>
   </div>
 
   <!-- Game over screen -->
   <div class="overlay hidden" id="gameOverScreen">
-    <h2>Game Over</h2>
+    <h2 data-i18n>Game Over</h2>
     <div class="final-score" id="finalScore">0</div>
     <div class="best-score" id="bestScore"></div>
-    <div class="new-best hidden" id="newBestLabel">⭐ New personal best!</div>
+    <div class="new-best hidden" id="newBestLabel" data-i18n>⭐ New personal best!</div>
     <div class="stats-row">
-      <span>Lines: <strong id="finalLines">0</strong></span>
-      <span>Coins: <strong id="finalCoins">0</strong></span>
+      <span><span data-i18n>Lines:</span> <strong id="finalLines">0</strong></span>
+      <span><span data-i18n>Coins:</span> <strong id="finalCoins">0</strong></span>
     </div>
-    <button class="play-btn" id="retryBtn">Play Again</button>
+    <button class="play-btn" id="retryBtn" data-i18n>Play Again</button>
     <div class="leaderboard" id="overLeaderboard">
-      <div class="lb-title">🏆 Leaderboard</div>
+      <div class="lb-title" data-i18n>🏆 Leaderboard</div>
       <div id="overLbBody"></div>
     </div>
   </div>
+
+  <!-- i18n first: everything below renders text through T(). The language
+       itself is chosen in index.html's settings; this page only reads it. -->
+  <script src="../src/js/i18n.js?v=3"></script>
+  <script src="../src/js/i18n-zh-app.js?v=5"></script>
+  <script src="../src/js/i18n-games-zh.js?v=1"></script>
+  <script defer src="../src/js/i18n-ui.js?v=3"></script>
 
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -448,7 +457,7 @@
     const loginError     = document.getElementById('loginError');
 
     auth.getRedirectResult().catch(err => {
-      if (err.code) loginError.textContent = 'Login failed: ' + (err.message || 'Unknown error');
+      if (err.code) loginError.textContent = T('Login failed: {msg}', { msg: err.message || T('Unknown error') });
     });
 
     const provider = new firebase.auth.GoogleAuthProvider();
@@ -461,10 +470,10 @@
       } catch (err) {
         if (err.code === 'auth/popup-blocked' || err.code === 'auth/operation-not-supported-in-this-environment') {
           try { await auth.signInWithRedirect(provider); } catch (e) {
-            loginError.textContent = 'Login failed: ' + (e.message || 'Unknown error');
+            loginError.textContent = T('Login failed: {msg}', { msg: e.message || T('Unknown error') });
           }
         } else if (err.code !== 'auth/popup-closed-by-user') {
-          loginError.textContent = 'Login failed: ' + (err.message || 'Unknown error');
+          loginError.textContent = T('Login failed: {msg}', { msg: err.message || T('Unknown error') });
         }
       } finally { googleLoginBtn.disabled = false; }
     });
@@ -718,7 +727,7 @@
         // Update displays
         document.getElementById('scoreDisplay').textContent = score;
         document.getElementById('linesDisplay').textContent = lines;
-        document.getElementById('comboDisplay').textContent = combo > 1 ? combo + 'x' : '0';
+        document.getElementById('comboDisplay').textContent = combo > 1 ? T('{n}x', { n: combo }) : '0';
         document.getElementById('coinDisplay').textContent = coinsEarned;
 
         // Sound
@@ -777,10 +786,10 @@
     function showCombo(comboNum, lineCount) {
       const popup = document.getElementById('comboPopup');
       let text = '';
-      if (lineCount === 4) text = '💥 TETRIS!';
-      else if (lineCount === 3) text = '🔥 Triple!';
-      else if (lineCount === 2) text = '✨ Double!';
-      if (comboNum > 1) text += (text ? ' ' : '') + '🔗 ' + comboNum + 'x Combo!';
+      if (lineCount === 4) text = '💥 ' + T('TETRIS!');
+      else if (lineCount === 3) text = '🔥 ' + T('Triple!');
+      else if (lineCount === 2) text = '✨ ' + T('Double!');
+      if (comboNum > 1) text += (text ? ' ' : '') + '🔗 ' + T('{n}x Combo!', { n: comboNum });
       if (!text) return;
 
       popup.textContent = text;
@@ -1020,6 +1029,21 @@
       for (const key in keyRepeatTimers) { clearInterval(keyRepeatTimers[key]); delete keyRepeatTimers[key]; }
     }
 
+    // Painted once, on pause — unlike the board it is not redrawn every frame,
+    // so a language switch has to call this again (see the langchange listener).
+    function drawPauseOverlay() {
+      ctx2d.fillStyle = 'rgba(8,10,14,0.82)';
+      ctx2d.fillRect(0, 0, canvas.width, canvas.height);
+      ctx2d.fillStyle = '#E7EAF0';
+      ctx2d.font = 'bold ' + Math.floor(BLOCK * 1.2) + 'px sans-serif';
+      ctx2d.textAlign = 'center';
+      ctx2d.textBaseline = 'middle';
+      ctx2d.fillText(T('PAUSED'), canvas.width / 2, canvas.height / 2 - 10);
+      ctx2d.font = Math.floor(BLOCK * 0.55) + 'px sans-serif';
+      ctx2d.fillStyle = 'rgba(231,234,240,0.55)';
+      ctx2d.fillText(T('Press P or tap to resume'), canvas.width / 2, canvas.height / 2 + 20);
+    }
+
     function togglePause() {
       if (!gameRunning || animatingLines) return;
       gamePaused = !gamePaused;
@@ -1027,16 +1051,7 @@
         clearAllKeyRepeats();
         clearInterval(dropTimer);
         // Draw pause overlay
-        ctx2d.fillStyle = 'rgba(8,10,14,0.82)';
-        ctx2d.fillRect(0, 0, canvas.width, canvas.height);
-        ctx2d.fillStyle = '#E7EAF0';
-        ctx2d.font = 'bold ' + Math.floor(BLOCK * 1.2) + 'px sans-serif';
-        ctx2d.textAlign = 'center';
-        ctx2d.textBaseline = 'middle';
-        ctx2d.fillText('PAUSED', canvas.width / 2, canvas.height / 2 - 10);
-        ctx2d.font = Math.floor(BLOCK * 0.55) + 'px sans-serif';
-        ctx2d.fillStyle = 'rgba(231,234,240,0.55)';
-        ctx2d.fillText('Press P or tap to resume', canvas.width / 2, canvas.height / 2 + 20);
+        drawPauseOverlay();
       } else {
         dropTimer = setInterval(tick, dropInterval);
         drawBoard();
@@ -1081,7 +1096,7 @@
       bestLocalScore = Math.max(prev, score);
 
       document.getElementById('finalScore').textContent = score;
-      document.getElementById('bestScore').textContent = 'Best: ' + bestLocalScore;
+      document.getElementById('bestScore').textContent = T('Best: {n}', { n: bestLocalScore });
       document.getElementById('finalLines').textContent = lines;
       document.getElementById('finalCoins').textContent = coinsEarned;
       const newLabel = document.getElementById('newBestLabel');
@@ -1256,7 +1271,7 @@
         el.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999;font-size:28px;font-weight:800;color:#f7c97e;text-shadow:0 2px 8px rgba(0,0,0,0.5);pointer-events:none;opacity:0;transition:all 0.6s;';
         document.body.appendChild(el);
       }
-      el.textContent = '🪙 +' + n + ' coins!';
+      el.textContent = I18N.plural(n, '🪙 +1 coin!', '🪙 +{n} coins!');
       el.style.opacity = '1'; el.style.transform = 'translate(-50%,-80%)';
       setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translate(-50%,-50%)'; }, 2000);
     }
@@ -1269,34 +1284,43 @@
     function renderLeaderboard(containerId, entries) {
       const el = document.getElementById(containerId);
       if (!entries.length) {
-        el.innerHTML = '<div class="lb-empty">No scores yet — be the first!</div>';
+        el.innerHTML = '<div class="lb-empty">' + T('No scores yet — be the first!') + '</div>';
         return;
       }
       const myName = getPlayerName();
       el.innerHTML = entries.map((e, i) => {
         const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-        const meClass = e.name === myName ? ' me' : '';
+        // Match on the DATA: getPlayerName() returns the bare 'Anonymous', so a
+        // row with no name field has to fall back to that same literal here, in
+        // either language — the translated fallback is for display only.
+        const meClass = (e.name || 'Anonymous') === myName ? ' me' : '';
         const rankIcon = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
         return '<div class="lb-row' + meClass + '">' +
           '<span class="lb-rank ' + rankClass + '">' + rankIcon + '</span>' +
-          '<span class="lb-name">' + escapeHtml(e.name) + '</span>' +
+          '<span class="lb-name">' + escapeHtml(e.name || T('Anonymous')) + '</span>' +
           '<span class="lb-score">' + e.score + '</span></div>';
       }).join('');
     }
 
+    let lastLbEntries = null;   // rows last received, so a language switch can repaint
     function startLeaderboardListener() {
       lbUnsubscribe = lbRef.orderBy('score', 'desc').limit(20).onSnapshot(
         snap => {
           const entries = [];
           snap.forEach(doc => {
             const d = doc.data();
-            entries.push({ name: d.name || 'Anonymous', score: d.score });
+            // The name is player data; the missing-name fallback is filled in
+            // where the row is drawn, so a repaint gets it in the new language
+            // and the `e.name === myName` test still compares stored names.
+            entries.push({ name: d.name || '', score: d.score });
           });
+          lastLbEntries = entries;
           renderLeaderboard('startLbBody', entries);
           renderLeaderboard('overLbBody', entries);
         },
         err => {
           console.error('Leaderboard listen error:', err);
+          lastLbEntries = [];
           renderLeaderboard('startLbBody', []);
           renderLeaderboard('overLbBody', []);
         }
@@ -1316,6 +1340,29 @@
     gamePaused = false;
     animatingLines = false;
     drawBoard();
+
+    /* ── Repaint the text that is painted once, when the language changes ──
+       The board redraws on every move and picks up T() on its own, but the
+       pause overlay, the game over card and the leaderboard rows are drawn
+       once and then left, so they would keep the language that drew them. The
+       switch can be thrown on index.html or in another tab, so this listens
+       rather than being called by a toggle. Each repaint is guarded: whichever
+       views are closed simply do nothing. */
+    if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('langchange', function () {
+      try { if (gameRunning && gamePaused) { drawBoard(); drawPauseOverlay(); } } catch (e) {}
+      try {
+        if (!document.getElementById('gameOverScreen').classList.contains('hidden')) {
+          document.getElementById('bestScore').textContent = T('Best: {n}', { n: bestLocalScore });
+        }
+      } catch (e) {}
+      // The combo panel is only rewritten on the next line clear, which may
+      // never come — a switch mid-game would leave the old '3x' standing.
+      try { document.getElementById('comboDisplay').textContent = combo > 1 ? T('{n}x', { n: combo }) : '0'; } catch (e) {}
+      // The rows carry the drawn 'Anonymous' fallback and the empty-list line,
+      // so redraw both from the names last received — no second read.
+      try { if (lastLbEntries) renderLeaderboard('startLbBody', lastLbEntries); } catch (e) {}
+      try { if (lastLbEntries) renderLeaderboard('overLbBody', lastLbEntries); } catch (e) {}
+    });
 
     // ═══ Chinese Chess invite listener ═══
     (function() {
@@ -1339,12 +1386,12 @@
               const ov = document.createElement('div');
               ov.className = 'chess-invite-overlay';
               ov.innerHTML = '<div class="chess-invite-box">' +
-                '<h3>♟️ Chess Challenge!</h3>' +
-                '<div class="ci-from">' + (inv.fromName||'Someone') + ' invites you</div>' +
-                '<div class="ci-bet">🪙 ' + inv.bet + ' coins</div>' +
+                '<h3>' + T('♟️ Chess Challenge!') + '</h3>' +
+                '<div class="ci-from">' + T('{name} invites you', { name: escapeHtml(inv.fromName || T('Someone')) }) + '</div>' +
+                '<div class="ci-bet">🪙 ' + I18N.plural(inv.bet, '1 coin', '{n} coins') + '</div>' +
                 '<div class="ci-buttons">' +
-                  '<button class="ci-reject">Reject</button>' +
-                  '<button class="ci-accept">Accept</button>' +
+                  '<button class="ci-reject">' + T('Reject') + '</button>' +
+                  '<button class="ci-accept">' + T('Accept') + '</button>' +
                 '</div></div>';
               document.body.appendChild(ov);
               ov.querySelector('.ci-accept').addEventListener('click', () => {

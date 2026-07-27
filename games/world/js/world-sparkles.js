@@ -95,9 +95,11 @@ const WorldSparkles = (function () {
         celebrateUntil = serverNow() + 2400;
         if (rewardedDay !== dayKey) { rewardedDay = dayKey; onComplete(); } // core grants the reward + shows the toast
       } else if (sceneFound >= c.perScene) {
-        flashHint('✨ All ' + c.perScene + ' sparkles in this scene found! On to the next 🗺️');
+        flashHint(I18N.plural(c.perScene,
+          '✨ All 1 sparkle in this scene found! On to the next 🗺️',
+          '✨ All {n} sparkles in this scene found! On to the next 🗺️'));
       } else {
-        flashHint('✨ Sparkle found! ' + found.size + '/' + total + ' today');
+        flashHint(T('✨ Sparkle found! {n}/{total} today', { n: found.size, total: total }));
       }
     }
   }

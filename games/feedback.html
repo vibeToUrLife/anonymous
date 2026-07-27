@@ -337,34 +337,41 @@
 </head>
 <body>
 
-  <a class="back-btn" href="../index.html">← Back</a>
+  <a class="back-btn" href="../index.html" data-i18n>← Back</a>
 
-  <h1 class="page-title">💬 Feedback Corner</h1>
-  <p class="page-subtitle">Share your ideas & suggestions anonymously</p>
+  <h1 class="page-title" data-i18n>💬 Feedback Corner</h1>
+  <p class="page-subtitle" data-i18n>Share your ideas & suggestions anonymously</p>
 
   <!-- Submit feedback -->
   <div class="feedback-input-area">
-    <textarea id="feedbackInput" placeholder="Write your feedback, suggestion, or bug report…" maxlength="1000"></textarea>
+    <textarea id="feedbackInput" data-i18n-placeholder placeholder="Write your feedback, suggestion, or bug report…" maxlength="1000"></textarea>
     <div class="feedback-submit-row">
-      <button class="feedback-submit-btn" id="submitFeedbackBtn">📩 Submit Feedback</button>
+      <button class="feedback-submit-btn" id="submitFeedbackBtn" data-i18n>📩 Submit Feedback</button>
     </div>
   </div>
 
   <!-- Filter tabs -->
   <div class="filter-tabs">
-    <button class="filter-tab active" data-filter="all">All</button>
-    <button class="filter-tab" data-filter="pending">⏳ Pending</button>
-    <button class="filter-tab" data-filter="developing">🔧 Developing</button>
-    <button class="filter-tab" data-filter="done">✅ Done</button>
-    <button class="filter-tab" data-filter="rejected">❌ Rejected</button>
+    <button class="filter-tab active" data-filter="all" data-i18n>All</button>
+    <button class="filter-tab" data-filter="pending" data-i18n>⏳ Pending</button>
+    <button class="filter-tab" data-filter="developing" data-i18n>🔧 Developing</button>
+    <button class="filter-tab" data-filter="done" data-i18n>✅ Done</button>
+    <button class="filter-tab" data-filter="rejected" data-i18n>❌ Rejected</button>
   </div>
 
   <!-- Feedback list -->
   <div class="feedback-list" id="feedbackList">
-    <div class="feedback-empty">Loading…</div>
+    <div class="feedback-empty" data-i18n>Loading…</div>
   </div>
 
   <div class="toast" id="toast"></div>
+
+  <!-- i18n first: everything below renders text through T(). The language
+       itself is chosen in index.html's settings; this page only reads it. -->
+  <script src="../src/js/i18n.js?v=3"></script>
+  <script src="../src/js/i18n-zh-app.js?v=5"></script>
+  <script src="../src/js/i18n-games-zh.js?v=1"></script>
+  <script defer src="../src/js/i18n-ui.js?v=3"></script>
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -413,8 +420,8 @@
     document.getElementById('submitFeedbackBtn').addEventListener('click', async () => {
       const input = document.getElementById('feedbackInput');
       const text = input.value.trim();
-      if (!text) return showToast('Please write some feedback first!');
-      if (text.length > 1000) return showToast('Feedback is too long (max 1000 chars)');
+      if (!text) return showToast(T('Please write some feedback first!'));
+      if (text.length > 1000) return showToast(T('Feedback is too long (max 1000 chars)'));
 
       try {
         await db.collection('feedback').add({
@@ -426,10 +433,10 @@
           uid: currentUid
         });
         input.value = '';
-        showToast('📩 Feedback submitted! Thank you!');
+        showToast(T('📩 Feedback submitted! Thank you!'));
       } catch (e) {
         console.error(e);
-        showToast('Failed to submit feedback');
+        showToast(T('Failed to submit feedback'));
       }
     });
 
@@ -445,16 +452,37 @@
 
     /* ── Real-time listener ── */
     let feedbackData = [];
+    // Has the first snapshot landed? Only used by the langchange repaint below,
+    // so that a language switch before the data arrives can't turn the
+    // "Loading…" placeholder into "No feedback yet".
+    let feedbackLoaded = false;
 
     function listenFeedback() {
       db.collection('feedback')
         .orderBy('createdAt', 'desc')
         .onSnapshot(snap => {
           feedbackData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          feedbackLoaded = true;
           renderFeedback();
         }, err => {
           console.error('Feedback listen error:', err);
         });
+    }
+
+    /* ── Status label ──
+       Maps the STORED status id ('pending', …) to the words shown for it. The
+       id itself is data — it is what the filter and Firestore compare with ===
+       — so it is never a key; only the label it maps to is. Shared by the pill,
+       the dev buttons and the "status updated" toast so the three can't drift.
+       T() runs on every call, so a repaint picks up a language switch. */
+    function statusLabel(s) {
+      const labels = {
+        pending: T('⏳ Pending'),
+        developing: T('🔧 Developing'),
+        done: T('✅ Done'),
+        rejected: T('❌ Rejected')
+      };
+      return labels[s] || labels.pending;
     }
 
     /* ── Render ── */
@@ -468,7 +496,7 @@
       }
 
       if (!items.length) {
-        list.innerHTML = '<div class="feedback-empty">No feedback yet — be the first!</div>';
+        list.innerHTML = '<div class="feedback-empty">' + T('No feedback yet — be the first!') + '</div>';
         return;
       }
 
@@ -476,13 +504,6 @@
         const date = new Date(f.createdAt);
         const timeStr = date.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' }) +
           ' ' + date.toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' });
-
-        const statusLabel = {
-          pending: '⏳ Pending',
-          developing: '🔧 Developing',
-          done: '✅ Done',
-          rejected: '❌ Rejected'
-        };
 
         const voteCount = (f.votes || []).length;
         const hasVoted = (f.votes || []).includes(currentUid);
@@ -497,7 +518,7 @@
                 ' ' + cd.toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' });
               return '<div class="feedback-comment">' +
                 '<div>' + escapeHtml(c.text) + '</div>' +
-                '<div class="comment-meta">Developer · ' + ct + '</div>' +
+                '<div class="comment-meta">' + T('Developer · {time}', { time: ct }) + '</div>' +
                 '</div>';
             }).join('') +
             '</div>';
@@ -511,12 +532,12 @@
             '<div class="dev-status-row">' +
             statuses.map(s =>
               '<button class="dev-status-btn' + (f.status === s ? ' active' : '') + '" onclick="setStatus(\'' + f.id + '\',\'' + s + '\')">' +
-              statusLabel[s] + '</button>'
+              statusLabel(s) + '</button>'
             ).join('') +
             '</div>' +
             '<div class="dev-comment-row">' +
-            '<input class="dev-comment-input" id="comment_' + f.id + '" placeholder="Leave a dev comment…" maxlength="500">' +
-            '<button class="dev-comment-send" onclick="addComment(\'' + f.id + '\')">Send</button>' +
+            '<input class="dev-comment-input" id="comment_' + f.id + '" placeholder="' + T('Leave a dev comment…') + '" maxlength="500">' +
+            '<button class="dev-comment-send" onclick="addComment(\'' + f.id + '\')">' + T('Send') + '</button>' +
             '</div>' +
             '</div>';
         }
@@ -524,7 +545,7 @@
         return '<div class="feedback-card" data-id="' + f.id + '">' +
           '<div class="feedback-header">' +
           '<span class="feedback-time">' + timeStr + '</span>' +
-          '<span class="feedback-status ' + f.status + '">' + (statusLabel[f.status] || '⏳ Pending') + '</span>' +
+          '<span class="feedback-status ' + f.status + '">' + statusLabel(f.status) + '</span>' +
           '</div>' +
           '<div class="feedback-body">' + escapeHtml(f.text) + '</div>' +
           '<div class="feedback-footer">' +
@@ -537,6 +558,15 @@
           '</div>';
       }).join('');
     }
+
+    /* ── Repaint the cards when the language changes ──
+       The list is painted once per Firestore snapshot, so the status pills, the
+       empty state and the dev controls would keep the language that drew them
+       until the collection happened to change. feedbackData is already cached,
+       so re-rendering costs nothing and needs no re-fetch. */
+    window.addEventListener('langchange', function () {
+      try { if (feedbackLoaded) renderFeedback(); } catch (e) {}
+    });
 
     /* ── Escape HTML ── */
     function escapeHtml(str) {
@@ -570,10 +600,13 @@
       if (!isDev) return;
       try {
         await db.collection('feedback').doc(feedbackId).update({ status: status });
-        showToast('Status updated to ' + status);
+        // The stored value ('pending', …) is written to Firestore untouched;
+        // what the toast SHOWS is its label, so the whole sentence changes
+        // language instead of ending in a bare English id.
+        showToast(T('Status updated to {status}', { status: statusLabel(status) }));
       } catch (e) {
         console.error(e);
-        showToast('Failed to update status');
+        showToast(T('Failed to update status'));
       }
     }
 
@@ -583,7 +616,7 @@
       const input = document.getElementById('comment_' + feedbackId);
       const text = input.value.trim();
       if (!text) return;
-      if (text.length > 500) return showToast('Comment too long');
+      if (text.length > 500) return showToast(T('Comment too long'));
 
       try {
         await db.collection('feedback').doc(feedbackId).update({
@@ -594,10 +627,10 @@
           })
         });
         input.value = '';
-        showToast('Comment added');
+        showToast(T('Comment added'));
       } catch (e) {
         console.error(e);
-        showToast('Failed to add comment');
+        showToast(T('Failed to add comment'));
       }
     }
   </script>

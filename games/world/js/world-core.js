@@ -61,7 +61,7 @@
         { coins: firebase.firestore.FieldValue.increment(amt) }, { merge: true }
       ).catch(function () {});
     }
-    flashHint('🎉 All sparkles found! You earned ' + amt + ' coins 💰');
+    flashHint(T('🎉 All sparkles found! You earned {n} coins 💰', { n: amt }));
   }
 
   // Live sync status chip — also the multiplayer diagnostic. Shows connection
@@ -69,15 +69,20 @@
   // Database can't be reached (wrong databaseURL) or writes are denied (rules
   // not deployed). Without this, sync failures are invisible.
   let diagConn = false, diagErr = null;
+  // Painting is split out so a language change can repaint the chip from the
+  // state we already hold (it is otherwise written only when a diag arrives).
+  function paintStatus() {
+    const chip = el('worldStatus'); if (!chip) return;
+    const here = 1 + Object.keys(WorldNet.getRemotes()).length;
+    if (diagErr) { chip.textContent = T('⚠️ can’t sync: {msg}', { msg: diagErr }); chip.className = 'world-status err'; }
+    else if (!diagConn) { chip.textContent = T('🔴 connecting to server…'); chip.className = 'world-status warn'; }
+    else { chip.textContent = I18N.plural(here, '🟢 1 pet here', '🟢 {n} pets here'); chip.className = 'world-status ok'; }
+  }
   function onDiag(d) {
     if (!d) return;
     if (d.type === 'conn') diagConn = d.connected;
-    else if (d.type === 'error') diagErr = d.message || 'sync error';
-    const chip = el('worldStatus'); if (!chip) return;
-    const here = 1 + Object.keys(WorldNet.getRemotes()).length;
-    if (diagErr) { chip.textContent = '⚠️ can’t sync: ' + diagErr; chip.className = 'world-status err'; }
-    else if (!diagConn) { chip.textContent = '🔴 connecting to server…'; chip.className = 'world-status warn'; }
-    else { chip.textContent = '🟢 ' + here + ' pet' + (here === 1 ? '' : 's') + ' here'; chip.className = 'world-status ok'; }
+    else if (d.type === 'error') diagErr = d.message || T('sync error');
+    paintStatus();
   }
 
   function worldPlayerName(uid) {
@@ -128,7 +133,7 @@
       if (near && worldDist(me, near.r) > WORLD_PLAY_RADIUS) {
         // The tag menu can pick a pet across the map; an out-of-range offer can
         // never match and the target is never prompted — tell the player instead.
-        flashHint('Get closer to ' + (near.r.name || 'them') + ' to high-five 🐾');
+        flashHint(T('Get closer to {name} to high-five 🐾', { name: near.r.name || T('them') }));
         return;
       }
     } else {
@@ -136,12 +141,12 @@
       // otherwise a closer idle pet would steal the facing + toast), then any pet.
       near = nearestRemote(r => r.action === WORLD_HIGHFIVE.actionId) || nearestRemote();
     }
-    if (!near) { flashHint('Get closer to another pet to play 🐾'); return; }
+    if (!near) { flashHint(T('Get closer to another pet to play 🐾')); return; }
     me.facing = near.r.x >= me.x ? 1 : -1;
     triggerAction(WORLD_HIGHFIVE.actionId);
     // If they're already offering, the match fires next frame with its own toast.
     if (near.r.action !== WORLD_HIGHFIVE.actionId)
-      flashHint('You offered a high five to ' + (near.r.name || 'a friend') + '! ✋');
+      flashHint(T('You offered a high five to {name}! ✋', { name: near.r.name || T('a friend') }));
   }
 
   function updateHighfives(t, remotes) {
@@ -167,13 +172,13 @@
         hfBursts.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 - 0.05, start: t });
         if (a.uid === me.uid || b.uid === me.uid) {
           const other = a.uid === me.uid ? b : a;
-          myPartners.push(other.name || 'a friend');
+          myPartners.push(other.name || T('a friend'));
         }
       }
     }
     // One toast even when a single press matches several clustered offers
     // (flashHint is single-slot; sequential toasts would overwrite each other).
-    if (myPartners.length) flashHint('High five with ' + myPartners.join(' & ') + '! 🎉');
+    if (myPartners.length) flashHint(T('High five with {names}! 🎉', { names: myPartners.join(' & ') }));
     if (hfSeen.size > 64) hfSeen.forEach((ts, k) => { if (t - ts > 10000) hfSeen.delete(k); });
 
     // Persistent "high-five back" prompt: a big, always-tappable button (not a
@@ -231,7 +236,7 @@
   function renderBoard() {
     const grid = el('worldBoardGrid'); if (!grid) return;
     const title = el('worldBoardTitle');
-    if (title) title.textContent = '📋 ' + sceneObj.emoji + ' ' + sceneObj.name + ' — Notes';
+    if (title) title.textContent = T('📋 {emoji} {scene} — Notes', { emoji: sceneObj.emoji, scene: T(sceneObj.name) });
     const notes = WorldNotes.list(me.scene);
     const per = WORLD_NOTES.perPage || 8;
     const pages = Math.max(1, Math.ceil(notes.length / per));
@@ -239,7 +244,7 @@
     const start = boardPage * per, slice = notes.slice(start, start + per);
     const colors = ['#bfe3ff', '#ffe6a8', '#ffc9d6', '#c9f0d0', '#e6d4ff', '#ffd9b3'];
     if (!slice.length) {
-      grid.innerHTML = '<div class="world-board-empty">No notes yet — be the first to leave one! 🌸</div>';
+      grid.innerHTML = '<div class="world-board-empty">' + esc(T('No notes yet — be the first to leave one! 🌸')) + '</div>';
     } else {
       // Scatter the notes at absolute positions on the cork, NOT in reading order:
       // build a set of spread-out anchor cells (percent, inset from the edges) and
@@ -262,7 +267,7 @@
         return '<div class="world-sticky" style="left:' + left + '%;top:' + top + '%;z-index:' + (100 + per - i) + ';background:' + c + ';transform:translate(-50%,-50%) rotate(' + rot + 'deg)">' +
           '<span class="world-sticky-pin"></span>' +
           '<div class="world-sticky-text">' + esc(n.text || '') + '</div>' +
-          '<div class="world-sticky-by">— ' + esc(n.name || 'Pet') + '</div></div>';
+          '<div class="world-sticky-by">— ' + esc(n.name || T('Pet')) + '</div></div>';
       }).join('');
     }
     const pager = el('worldBoardPager');
@@ -270,7 +275,7 @@
       if (pages <= 1) pager.innerHTML = '';
       else {
         pager.innerHTML = '<button id="wbPrev"' + (boardPage === 0 ? ' disabled' : '') + '>‹</button>' +
-          '<span>Page ' + (boardPage + 1) + ' / ' + pages + '</span>' +
+          '<span>' + esc(T('Page {n} / {total}', { n: boardPage + 1, total: pages })) + '</span>' +
           '<button id="wbNext"' + (boardPage >= pages - 1 ? ' disabled' : '') + '>›</button>';
         const prev = el('wbPrev'), next = el('wbNext');
         if (prev) prev.onclick = function () { boardPage--; renderBoard(); };
@@ -291,8 +296,8 @@
   function addFromBoard() {
     const inp = el('worldBoardInput'); if (!inp) return;
     const res = WorldNotes.pin(inp.value, me);
-    if (res.ok) { inp.value = ''; boardPage = 0; renderBoard(); showBoardMsg('📌 Pinned to the board!'); }
-    else showBoardMsg(res.reason === 'blocked' ? "Let's keep it kind 🌸" : res.reason === 'cooldown' ? 'Give it a moment ⏳' : 'Write something first ✍️');
+    if (res.ok) { inp.value = ''; boardPage = 0; renderBoard(); showBoardMsg(T('📌 Pinned to the board!')); }
+    else showBoardMsg(res.reason === 'blocked' ? T("Let's keep it kind 🌸") : res.reason === 'cooldown' ? T('Give it a moment ⏳') : T('Write something first ✍️'));
   }
 
   // ── Remote tag menu: play / report / block ──
@@ -304,23 +309,23 @@
     const menu = document.createElement('div');
     menu.className = 'world-tagmenu'; menu.id = 'worldTagMenu';
     menu.innerHTML =
-      '<div class="world-tagmenu-name">' + esc(r.name || 'Pet') + '</div>' +
-      '<button data-act="play">✋ High-five</button>' +
-      '<button data-act="report">🚩 Report</button>' +
-      '<button data-act="block">🚫 Block</button>';
+      '<div class="world-tagmenu-name">' + esc(r.name || T('Pet')) + '</div>' +
+      '<button data-act="play">' + esc(T('✋ High-five')) + '</button>' +
+      '<button data-act="report">' + esc(T('🚩 Report')) + '</button>' +
+      '<button data-act="block">' + esc(T('🚫 Block')) + '</button>';
     document.body.appendChild(menu);
     const rect = anchor.getBoundingClientRect();
     menu.style.left = Math.min(rect.left, window.innerWidth - 150) + 'px';
     menu.style.top = (rect.bottom + 6) + 'px';
     menu.querySelector('[data-act=play]').onclick = () => { offerHighfive(uid); closeTagMenu(); };
-    menu.querySelector('[data-act=report]').onclick = () => { WorldNet.reportUser(uid, ''); flashHint('Reported. Thanks for keeping the World kind 💛'); closeTagMenu(); };
-    menu.querySelector('[data-act=block]').onclick = () => { WorldChat.block(uid); flashHint("Blocked. You won't see them anymore."); closeTagMenu(); };
+    menu.querySelector('[data-act=report]').onclick = () => { WorldNet.reportUser(uid, ''); flashHint(T('Reported. Thanks for keeping the World kind 💛')); closeTagMenu(); };
+    menu.querySelector('[data-act=block]').onclick = () => { WorldChat.block(uid); flashHint(T("Blocked. You won't see them anymore.")); closeTagMenu(); };
     setTimeout(() => document.addEventListener('click', outsideClose), 0);
   }
 
   // ── Scenes ──
   function updateSceneUI() {
-    const nm = el('worldSceneName'); if (nm) nm.textContent = sceneObj.emoji + ' ' + sceneObj.name;
+    const nm = el('worldSceneName'); if (nm) nm.textContent = sceneObj.emoji + ' ' + T(sceneObj.name);
     document.querySelectorAll('.world-scene-chip').forEach(c => c.classList.toggle('active', c.dataset.scene === me.scene));
   }
   // `entry` (optional) places the pet at a specific spot in the new scene — used
@@ -345,7 +350,7 @@
   }
   function buildSceneTabs() {
     const c = el('worldSceneTabs'); if (!c) return;
-    c.innerHTML = WORLD_SCENES.map(s => '<button class="world-scene-chip" data-scene="' + s.id + '">' + s.emoji + ' ' + esc(s.name) + '</button>').join('');
+    c.innerHTML = WORLD_SCENES.map(s => '<button class="world-scene-chip" data-scene="' + s.id + '">' + s.emoji + ' ' + esc(T(s.name)) + '</button>').join('');
     c.querySelectorAll('.world-scene-chip').forEach(b => b.addEventListener('click', () => switchScene(b.dataset.scene)));
   }
 
@@ -394,7 +399,7 @@
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = ((H * 0.14) | 0) + 'px serif'; ctx.fillText(dst.emoji, W / 2, H * 0.4);
     ctx.fillStyle = 'rgba(255,255,255,0.96)';
-    ctx.font = 'bold ' + ((H * 0.05) | 0) + 'px sans-serif'; ctx.fillText('🚶  ' + dst.name, W / 2, H * 0.55);
+    ctx.font = 'bold ' + ((H * 0.05) | 0) + 'px sans-serif'; ctx.fillText(T('🚶  {scene}', { scene: T(dst.name) }), W / 2, H * 0.55);
     ctx.restore();
   }
   function drawEdgeArrows(ctx, W, H, t) {
@@ -422,9 +427,9 @@
       const colors = PET_COLORS[type] || [];
       return '<div class="world-pet-row">' +
         '<canvas class="world-pet-thumb" width="70" height="70" data-pet="' + type + '"></canvas>' +
-        '<div class="world-pet-info"><div class="world-pet-name">' + type + '</div>' +
+        '<div class="world-pet-info"><div class="world-pet-name">' + esc(T(type)) + '</div>' +
         '<div class="world-pet-colors">' + colors.map(col =>
-          '<button class="world-color-dot" data-pet="' + type + '" data-color="' + col.key + '" style="background:' + col.body + '" title="' + col.name + '"></button>').join('') +
+          '<button class="world-color-dot" data-pet="' + type + '" data-color="' + col.key + '" style="background:' + col.body + '" title="' + esc(T(col.name)) + '"></button>').join('') +
         '</div></div></div>';
     }).join('');
     c.querySelectorAll('.world-pet-thumb').forEach(cv => {
@@ -443,7 +448,7 @@
     WorldNet.forceUpdate(me); persistAvatar();
     WorldInput.buildActionButtons(el('worldActionBtns'), me.scene);
     highlightPet();
-    flashHint('You are now a ' + type + '! ' + '🐾');
+    flashHint(T('You are now a {pet}! 🐾', { pet: T(type) }));
   }
   function highlightPet() {
     document.querySelectorAll('.world-color-dot').forEach(d =>
@@ -565,7 +570,7 @@
     });
     if (!localStorage.getItem('world_sparkle_intro')) {
       localStorage.setItem('world_sparkle_intro', '1');
-      setTimeout(function () { flashHint('✨ 3 sparkles hide in each scene (9 total). Collect them all for ' + ((WORLD_SPARKLES && WORLD_SPARKLES.reward) || 500) + ' coins 💰'); }, 1600);
+      setTimeout(function () { flashHint(T('✨ 3 sparkles hide in each scene (9 total). Collect them all for {n} coins 💰', { n: (WORLD_SPARKLES && WORLD_SPARKLES.reward) || 500 })); }, 1600);
     }
 
     // Load saved avatar + owned accessories, then build the pickers.
@@ -622,10 +627,23 @@
   // the world's own Firestore instance; the scene link drops joiners in the same
   // shard (shard 0 fills first), so clicking the board card lands them here too.
   el('worldShareBtn') && el('worldShareBtn').addEventListener('click', () => {
-    if (!window.ShareToBoard || !wAuth.currentUser) { flashHint('Sign in first to share.'); return; }
+    if (!window.ShareToBoard || !wAuth.currentUser) { flashHint(T('Sign in first to share.')); return; }
     ShareToBoard.postSpace(wDb, wAuth.currentUser, { kind: 'world', scene: me.scene, ownerName: me.name })
-      .then(() => flashHint('📢 Shared Pet World to the board!'))
-      .catch(err => flashHint(err && err.code === 'cooldown' ? 'Just shared — give it a moment.' : 'Could not share.'));
+      .then(() => flashHint(T('📢 Shared Pet World to the board!')))
+      .catch(err => flashHint(err && err.code === 'cooldown' ? T('Just shared — give it a moment.') : T('Could not share.')));
+  });
+
+  // The canvas redraws every frame, so the scene art, the travelling curtain and
+  // the notice-board prop pick up a new language on their own. The HTML around it
+  // is painted ONCE and left (scene name + tabs, the status chip, the pet picker,
+  // the open board), so those have to be asked for again. Each repaint is
+  // isolated: the language can change before auth resolves, and a subsystem that
+  // isn't up yet must not stop the others.
+  window.addEventListener('langchange', function () {
+    try { buildSceneTabs(); updateSceneUI(); } catch (e) {}
+    try { paintStatus(); } catch (e) {}
+    try { buildPetPicker(); } catch (e) {}
+    try { if (boardOpen()) renderBoard(); } catch (e) {}
   });
 
   // Auth gate — the World inherits the app's persisted Google session.

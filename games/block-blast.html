@@ -327,27 +327,27 @@
 </head>
 <body>
 
-  <a class="back-btn" href="../index.html">← Back</a>
+  <a class="back-btn" href="../index.html" data-i18n>← Back</a>
   <button class="settings-btn" id="settingsBtn">⚙</button>
 
   <div class="settings-overlay hidden" id="settingsOverlay">
     <div class="settings-box">
-      <h3>⚙️ Settings</h3>
-      <button class="settings-logout-btn" id="settingsLogoutBtn">🚶 Sign Out</button>
-      <button class="settings-close-btn" id="settingsCloseBtn">Close</button>
+      <h3 data-i18n>⚙️ Settings</h3>
+      <button class="settings-logout-btn" id="settingsLogoutBtn" data-i18n>🚶 Sign Out</button>
+      <button class="settings-close-btn" id="settingsCloseBtn" data-i18n>Close</button>
     </div>
   </div>
 
   <div class="game-header">
-    <h1>🧩 Block Blast</h1>
-    <p>Fill rows & columns to clear — place all 3 blocks!</p>
+    <h1 data-i18n>🧩 Block Blast</h1>
+    <p data-i18n>Fill rows & columns to clear — place all 3 blocks!</p>
   </div>
 
   <div class="score-bar">
-    <div class="score-item"><div class="label">Score</div><div class="value score-val" id="scoreVal">0</div></div>
-    <div class="score-item"><div class="label">Best</div><div class="value" id="bestVal">0</div></div>
-    <div class="score-item"><div class="label">Combo</div><div class="value combo-val" id="comboVal">0</div></div>
-    <div class="score-item"><div class="label">Coins</div><div class="value coins-val" id="coinsVal">0</div></div>
+    <div class="score-item"><div class="label" data-i18n>Score</div><div class="value score-val" id="scoreVal">0</div></div>
+    <div class="score-item"><div class="label" data-i18n>Best</div><div class="value" id="bestVal">0</div></div>
+    <div class="score-item"><div class="label" data-i18n>Combo</div><div class="value combo-val" id="comboVal">0</div></div>
+    <div class="score-item"><div class="label" data-i18n>Coins</div><div class="value coins-val" id="coinsVal">0</div></div>
   </div>
 
   <div class="board-wrap">
@@ -355,17 +355,17 @@
   </div>
 
   <div class="piece-tray" id="pieceTray"></div>
-  <button class="end-game-btn hidden" id="endGameBtn">✖ End Game</button>
+  <button class="end-game-btn hidden" id="endGameBtn" data-i18n>✖ End Game</button>
   <div class="combo-popup" id="comboPopup"></div>
 
   <!-- Login -->
   <div class="overlay loading" id="loginOverlay">
     <div class="login-box">
-      <div class="login-title">🧩 Block Blast</div>
-      <div class="login-sub">Sign in to save scores &amp; earn coins</div>
+      <div class="login-title" data-i18n>🧩 Block Blast</div>
+      <div class="login-sub" data-i18n>Sign in to save scores &amp; earn coins</div>
       <button class="google-btn" id="googleLoginBtn">
         <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59A14.5 14.5 0 019.5 24c0-1.59.28-3.14.76-4.59l-7.98-6.19A23.998 23.998 0 000 24c0 3.77.87 7.34 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-        Sign in with Google
+        <span data-i18n>Sign in with Google</span>
       </button>
       <div class="login-error" id="loginError"></div>
     </div>
@@ -373,34 +373,41 @@
 
   <!-- Start screen -->
   <div class="overlay hidden" id="startScreen">
-    <h2>🧩 Block Blast</h2>
+    <h2 data-i18n>🧩 Block Blast</h2>
     <div style="font-size:13px;color:var(--g-ink-soft);margin-bottom:4px" id="playerDisplayName"></div>
-    <button class="play-btn" id="playBtn">▶ Play</button>
-    <a href="../index.html" style="display:inline-block;margin-top:10px;padding:10px 32px;border:1px solid var(--g-border);border-radius:14px;background:var(--g-card);color:var(--g-ink);font-size:14px;font-weight:600;text-decoration:none;transition:background 0.2s;cursor:pointer;box-shadow:var(--g-shadow-sm)" onmouseover="this.style.background='#fff'" onmouseout="this.style.background='var(--g-card)'">← Back to Lobby</a>
-    <div style="font-size:12px;color:var(--g-ink-faint);margin-top:10px">Drag or tap to place blocks</div>
+    <button class="play-btn" id="playBtn" data-i18n>▶ Play</button>
+    <a href="../index.html" style="display:inline-block;margin-top:10px;padding:10px 32px;border:1px solid var(--g-border);border-radius:14px;background:var(--g-card);color:var(--g-ink);font-size:14px;font-weight:600;text-decoration:none;transition:background 0.2s;cursor:pointer;box-shadow:var(--g-shadow-sm)" onmouseover="this.style.background='#fff'" onmouseout="this.style.background='var(--g-card)'" data-i18n>← Back to Lobby</a>
+    <div style="font-size:12px;color:var(--g-ink-faint);margin-top:10px" data-i18n>Drag or tap to place blocks</div>
     <div class="leaderboard" id="startLeaderboard">
-      <div class="lb-title">🏆 Leaderboard</div>
+      <div class="lb-title" data-i18n>🏆 Leaderboard</div>
       <div id="startLbBody"></div>
     </div>
   </div>
 
   <!-- Game over -->
   <div class="overlay hidden" id="gameOverScreen">
-    <h2>Game Over</h2>
+    <h2 data-i18n>Game Over</h2>
     <div class="final-score" id="finalScore">0</div>
     <div class="best-score" id="bestScore"></div>
-    <div class="new-best hidden" id="newBestLabel">⭐ New personal best!</div>
+    <div class="new-best hidden" id="newBestLabel" data-i18n>⭐ New personal best!</div>
     <div class="stats-row">
-      <span>Lines: <strong id="finalLines">0</strong></span>
-      <span>Coins: <strong id="finalCoins">0</strong></span>
+      <span><span data-i18n>Lines:</span> <strong id="finalLines">0</strong></span>
+      <span><span data-i18n>Coins:</span> <strong id="finalCoins">0</strong></span>
     </div>
-    <button class="play-btn" id="retryBtn">Play Again</button>
-    <a href="../index.html" style="display:inline-block;margin-top:10px;padding:10px 32px;border:1px solid var(--g-border);border-radius:14px;background:var(--g-card);color:var(--g-ink);font-size:14px;font-weight:600;text-decoration:none;transition:background 0.2s;cursor:pointer;box-shadow:var(--g-shadow-sm)" onmouseover="this.style.background='#fff'" onmouseout="this.style.background='var(--g-card)'">← Back to Lobby</a>
+    <button class="play-btn" id="retryBtn" data-i18n>Play Again</button>
+    <a href="../index.html" style="display:inline-block;margin-top:10px;padding:10px 32px;border:1px solid var(--g-border);border-radius:14px;background:var(--g-card);color:var(--g-ink);font-size:14px;font-weight:600;text-decoration:none;transition:background 0.2s;cursor:pointer;box-shadow:var(--g-shadow-sm)" onmouseover="this.style.background='#fff'" onmouseout="this.style.background='var(--g-card)'" data-i18n>← Back to Lobby</a>
     <div class="leaderboard" id="overLeaderboard">
-      <div class="lb-title">🏆 Leaderboard</div>
+      <div class="lb-title" data-i18n>🏆 Leaderboard</div>
       <div id="overLbBody"></div>
     </div>
   </div>
+
+  <!-- i18n first: everything below renders text through T(). The language
+       itself is chosen in index.html's settings; this page only reads it. -->
+  <script src="../src/js/i18n.js?v=3"></script>
+  <script src="../src/js/i18n-zh-app.js?v=5"></script>
+  <script src="../src/js/i18n-games-zh.js?v=1"></script>
+  <script defer src="../src/js/i18n-ui.js?v=3"></script>
 
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -423,7 +430,7 @@
     const loginError     = document.getElementById('loginError');
 
     auth.getRedirectResult().catch(err => {
-      if (err.code) loginError.textContent = 'Login failed: ' + (err.message || 'Unknown error');
+      if (err.code) loginError.textContent = T('Login failed: {msg}', { msg: err.message || T('Unknown error') });
     });
 
     const provider = new firebase.auth.GoogleAuthProvider();
@@ -432,9 +439,9 @@
       try { await auth.signInWithPopup(provider); }
       catch (err) {
         if (err.code === 'auth/popup-blocked' || err.code === 'auth/operation-not-supported-in-this-environment') {
-          try { await auth.signInWithRedirect(provider); } catch (e) { loginError.textContent = 'Login failed: ' + (e.message || 'Unknown error'); }
+          try { await auth.signInWithRedirect(provider); } catch (e) { loginError.textContent = T('Login failed: {msg}', { msg: e.message || T('Unknown error') }); }
         } else if (err.code !== 'auth/popup-closed-by-user') {
-          loginError.textContent = 'Login failed: ' + (err.message || 'Unknown error');
+          loginError.textContent = T('Login failed: {msg}', { msg: err.message || T('Unknown error') });
         }
       } finally { googleLoginBtn.disabled = false; }
     });
@@ -456,6 +463,10 @@
       loginOverlay.classList.remove('loading');
       if (user) {
         loginOverlay.classList.add('hidden');
+        // Not T('Player'): playerName is state, not a label. It is stored as
+        // 'flappy_name', keys the personal best under 'bb_best_' + playerName,
+        // and is written to this room's displayName — a translated default
+        // would file the same person under a different name per language.
         const defaultName = user.displayName || user.email?.split('@')[0] || 'Player';
         const customName  = localStorage.getItem('flappy_custom_name_' + user.uid);
         playerName = customName || defaultName;
@@ -1058,7 +1069,7 @@
     }
 
     function showCombo(n) {
-      comboPopup.textContent = n + 'x COMBO!';
+      comboPopup.textContent = T('{n}x COMBO!', { n: n });
       comboPopup.style.fontSize = Math.min(32 + (n - 1) * 4, 52) + 'px';
       comboPopup.classList.remove('show');
       void comboPopup.offsetWidth;
@@ -1069,6 +1080,14 @@
     /* ═══════════════════════════════
        Game Over
        ═══════════════════════════════ */
+    // The "Best: N" line on the game-over card is painted once and then left on
+    // screen, so a language switch has to be able to repaint it. Remember what
+    // it was drawn from (see the langchange listener at the bottom).
+    let goBest = 0, goIsNew = false;
+    function paintGameOverText() {
+      document.getElementById('bestScore').textContent = goIsNew ? '' : T('Best: {n}', { n: goBest });
+    }
+
     function gameOver() {
       gameActive = false;
       document.getElementById('endGameBtn').classList.add('hidden');
@@ -1089,11 +1108,12 @@
       const best = parseInt(localStorage.getItem('bb_best_' + playerName)) || 0;
       const isNew = score > best;
       if (isNew) localStorage.setItem('bb_best_' + playerName, score);
+      goBest = best; goIsNew = isNew;
 
       // Show game over screen after shake + fade
       setTimeout(() => {
         document.getElementById('finalScore').textContent = score;
-        document.getElementById('bestScore').textContent = isNew ? '' : 'Best: ' + best;
+        paintGameOverText();
         document.getElementById('newBestLabel').classList.toggle('hidden', !isNew);
         document.getElementById('finalLines').textContent = linesCleared;
         document.getElementById('finalCoins').textContent = coinsEarned;
@@ -1118,6 +1138,8 @@
        Screens
        ═══════════════════════════════ */
     function showStartScreen() {
+      // Not T('Player') — see the note in onAuthStateChanged; this value keys
+      // the stored best score, so it has to read the same in every language.
       playerName = localStorage.getItem('flappy_name') || 'Player';
       const best = parseInt(localStorage.getItem('bb_best_' + playerName)) || 0;
       bestEl.textContent = best;
@@ -1239,6 +1261,9 @@
         await db.runTransaction(async tx => {
           const snap = await tx.get(roomRef);
           const current = snap.exists ? (snap.data().coins || 0) : 0;
+          // Not T('Anonymous'): this is written to Firestore and read back by
+          // everyone who visits the room, so it is stored data rather than a
+          // label on this reader's screen.
           const update = { coins: current + earned, displayName: playerName || 'Anonymous', updatedAt: Date.now() };
           if (snap.exists) tx.update(roomRef, update);
           else tx.set(roomRef, { ...update, pet: null, plant: null, petHunger: {}, plantLevels: {}, ownedPets: [], ownedPlants: [] });
@@ -1254,13 +1279,27 @@
         el.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999;font-size:28px;font-weight:800;color:#f7c97e;text-shadow:0 2px 8px rgba(0,0,0,0.5);pointer-events:none;opacity:0;transition:all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);';
         document.body.appendChild(el);
       }
-      el.textContent = '🪙 +' + n + ' coins!';
+      el.textContent = I18N.plural(n, '🪙 +1 coin!', '🪙 +{n} coins!');
       el.style.opacity = '1'; el.style.transform = 'translate(-50%,-80%) scale(1.1)';
       setTimeout(() => { el.style.transform = 'translate(-50%,-80%) scale(1)'; }, 200);
       setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translate(-50%,-120%) scale(0.8)'; }, 2000);
     }
 
     function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    /* ═══ Repaint when the language changes ═══
+       The switch is thrown in index.html's settings — possibly in another tab —
+       so this listens rather than being called by it. i18n-ui.js re-sweeps the
+       static markup on its own, and the score bar, combo popup and coin reward
+       are all rewritten the next time they appear. Only the game-over card is
+       painted once and then left sitting there, so it is the one that needs a
+       nudge; guarded, so a card that isn't on screen is a no-op. */
+    window.addEventListener('langchange', () => {
+      try {
+        const go = document.getElementById('gameOverScreen');
+        if (go && !go.classList.contains('hidden')) paintGameOverText();
+      } catch (e) {}
+    });
 
     // ═══ Chinese Chess invite listener ═══
     (function() {
@@ -1282,12 +1321,12 @@
               const ov = document.createElement('div');
               ov.className = 'chess-invite-overlay';
               ov.innerHTML = '<div class="chess-invite-box">' +
-                '<h3>♟️ Chess Challenge!</h3>' +
-                '<div class="ci-from">' + escapeHtml(inv.fromName||'Someone') + ' invites you</div>' +
-                '<div class="ci-bet">🪙 ' + inv.bet + ' coins</div>' +
+                '<h3>' + T('♟️ Chess Challenge!') + '</h3>' +
+                '<div class="ci-from">' + T('{name} invites you', { name: escapeHtml(inv.fromName||T('Someone')) }) + '</div>' +
+                '<div class="ci-bet">' + T('🪙 {n} coins', { n: inv.bet }) + '</div>' +
                 '<div class="ci-buttons">' +
-                  '<button class="ci-reject">Reject</button>' +
-                  '<button class="ci-accept">Accept</button>' +
+                  '<button class="ci-reject">' + T('Reject') + '</button>' +
+                  '<button class="ci-accept">' + T('Accept') + '</button>' +
                 '</div></div>';
               document.body.appendChild(ov);
               ov.querySelector('.ci-accept').addEventListener('click', () => {

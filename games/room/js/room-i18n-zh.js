@@ -1241,5 +1241,26 @@
     'Getaway Trophy': '逃脱奖杯',
     'Gemstone': '宝石',
     'Mouse Crown': '老鼠皇冠',
+
+    /* ── Share to the bubble board (room.html's inline script) ──
+       {kind} is the lowercase space id, itself run through T(). */
+    '📢 Shared your {kind} to the board!': '📢 已经把你的{kind}分享到留言板！',
+    'You just shared that — give it a moment.': '刚分享过，稍等一下。',
+    'Could not share. Try again.': '分享失败，再试一次。',
+    'room': '房间',
+    'farm': '农场',
+    'aquarium': '水族箱',
+
+    /* ── Plural pairs ──
+       I18N.plural picks the English form at the call site; Chinese has no
+       plural, so both rows map to the same sentence. */
+    '1 bite · best combo x{combo}': '吃到 1 口 · 最高连击 x{combo}',
+    '{n} bites · best combo x{combo}': '吃到 {n} 口 · 最高连击 x{combo}',
+    'Popped 1 bubble': '戳破 1 个泡泡',
+    'Popped {n} bubbles': '戳破 {n} 个泡泡',
+    'Collect 1 coin': '收下 1 金币',
+    'Collect {n} coins': '收下 {n} 金币',
+    'Current streak: 1 day': '已连续 1 天',
+    'Current streak: {n} days': '已连续 {n} 天',
   });
 })();

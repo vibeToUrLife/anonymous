@@ -317,6 +317,24 @@
     '{n} viewing the board right now': '现在有 {n} 人在看留言板',
     'Close (Esc)': '关闭（Esc）',
     'Under Maintenance': '维护中',
+    /* The space cards read these out of a data table (T(meta.label)), so the
+       checker that only sees T('literal') cannot find them. */
+    'Room': '房间',
+    'Aquarium': '水族箱',
+    'Pet World': '宠物世界',
+    'Visit': '参观',
+    '1 vote': '1 票',
+    '{n} votes': '{n} 票',
+    /* Rows the room dictionary also carries. index.html does not load that
+       file, and a key it alone answers renders in English here. room.html
+       loads both and registers the room LAST, so its own wording still wins
+       there — 'Remove' is 收起 for a decoration, 移除 for a pinned note. */
+    'Someone': '某人',
+    '{name} invites you': '{name}邀请你',
+    'Reject': '拒绝',
+    'Accept': '接受',
+    'Anonymous': '匿名',
+    'Remove': '移除',
   });
 
   /* ── Chinese keys → English ── */

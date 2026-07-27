@@ -43,12 +43,12 @@ const WorldChat = (function () {
     if (!inputEl) return;
     const mod = moderateMessage(inputEl.value, { maxLen: WORLD_CHAT.maxLen, banned: WORLD_CHAT.banned });
     if (!mod.ok) {
-      if (mod.reason === 'blocked') flash("Let's keep it kind 🌸");
+      if (mod.reason === 'blocked') flash(T("Let's keep it kind 🌸"));
       return;
     }
     const rl = rateAllow(rateHistory, Date.now(), WORLD_CHAT.rateWindowMs, WORLD_CHAT.rateMax);
     rateHistory = rl.history;
-    if (!rl.allowed) { flash('Slow down a little 🐢'); return; }
+    if (!rl.allowed) { flash(T('Slow down a little 🐢')); return; }
     inputEl.value = '';
     onSend(mod.text);
     if (myUid) setBubble(myUid, mod.text); // optimistic local bubble
@@ -60,7 +60,7 @@ const WorldChat = (function () {
     const visible = list.filter(m => m && !isBlocked(m.uid));
     if (logEl) {
       logEl.innerHTML = visible.slice(-8).map(m =>
-        '<div class="world-chatline"><b>' + esc(m.name || 'Pet') + ':</b> ' +
+        '<div class="world-chatline"><b>' + esc(m.name || T('Pet')) + ':</b> ' +
         esc(maskProfanity(m.text || '', WORLD_CHAT.banned)) + '</div>').join('');
       logEl.scrollTop = logEl.scrollHeight;
     }
@@ -77,7 +77,7 @@ const WorldChat = (function () {
 
   // ── Collapse / expand ──
   function renderToggle() {
-    if (labelEl) labelEl.textContent = collapsed ? '💬 Chat' : '💬 Hide';
+    if (labelEl) labelEl.textContent = collapsed ? T('💬 Chat') : T('💬 Hide');
     if (unreadEl) unreadEl.hidden = !(collapsed && unread);
   }
   function setCollapsed(v) {
@@ -97,6 +97,9 @@ const WorldChat = (function () {
     setCollapsed(true); // start collapsed so the world is unobstructed
     if (inputEl) inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); trySend(); } });
     if (opts.sendBtn) opts.sendBtn.addEventListener('click', e => { e.preventDefault(); trySend(); });
+    // The toggle label is written once per collapse/expand, so a language change
+    // has to ask for it again (the log repaints itself on the next message).
+    window.addEventListener('langchange', function () { try { renderToggle(); } catch (e) {} });
   }
 
   return { init, receive, getBubble, isBlocked, block, unblock, setBubble };

@@ -10,6 +10,7 @@ const WorldInput = (function () {
   let joyVec = { x: 0, y: 0 };// touch joystick vector (-1..1)
   let touchMode = false;      // true once a touch/pointer joystick is used
   let onAction = function () {};
+  let lastBarEl = null, lastBarScene = null;  // what the action bar last painted (langchange repaint)
 
   function isTyping() {
     const el = document.activeElement;
@@ -83,6 +84,7 @@ const WorldInput = (function () {
   function buildActionButtons(container, sceneId) {
     if (!container) return;
     const scene = worldSceneById(sceneId);
+    lastBarEl = container; lastBarScene = sceneId;
     container.innerHTML = '';
 
     function addBtn(emoji, label, cls, handler) {
@@ -98,12 +100,12 @@ const WorldInput = (function () {
     // Scene-themed actions
     scene.themed.forEach((a, i) => {
       const m = WORLD_ACTIONS[a];
-      addBtn(m ? m.emoji : '❓', m ? m.label : a, 'scene', () => onAction({ kind: 'scene', index: i }));
+      addBtn(m ? m.emoji : '❓', m ? T(m.label) : a, 'scene', () => onAction({ kind: 'scene', index: i }));
     });
     // Signature move
-    addBtn('⭐', 'Signature move', 'sig', () => onAction({ kind: 'signature', index: 0 }));
+    addBtn('⭐', T('Signature move'), 'sig', () => onAction({ kind: 'signature', index: 0 }));
     // High-five a nearby pet (the reciprocal "play" verb)
-    addBtn('🤝', 'High-five a nearby pet', 'play', () => onAction({ kind: 'play', index: 0 }));
+    addBtn('🤝', T('High-five a nearby pet'), 'play', () => onAction({ kind: 'play', index: 0 }));
     // (Notes are written at the per-scene notice board — walk up to it and the
     //  ✍️ prompt appears — so there's no note button in the action bar.)
 
@@ -116,15 +118,22 @@ const WorldInput = (function () {
     WORLD_EMOTES.forEach((a, i) => {
       const m = WORLD_ACTIONS[a];
       const b = document.createElement('button');
-      b.className = 'world-emote-btn'; b.textContent = m ? m.emoji : '❓'; b.title = m ? m.label : a;
+      b.className = 'world-emote-btn'; b.textContent = m ? m.emoji : '❓'; b.title = m ? T(m.label) : a;
       b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); onAction({ kind: 'emote', index: i }); tray.style.display = 'none'; });
       tray.appendChild(b);
     });
-    addBtn('😊', 'Emotes', 'emote', () => {
+    addBtn('😊', T('Emotes'), 'emote', () => {
       tray.style.display = tray.style.display === 'none' ? 'flex' : 'none';
     });
     container.appendChild(tray);
   }
+
+  // The action bar paints its labels ONCE per scene (they live in title /
+  // aria-label, which i18n-ui.js only sweeps for static markup), so rebuild it
+  // when the reader switches language.
+  if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('langchange', function () {
+    try { if (lastBarEl) buildActionButtons(lastBarEl, lastBarScene); } catch (e) {}
+  });
 
   function init(opts) {
     onAction = opts.onAction || onAction;

@@ -25,7 +25,9 @@ const WORLD_ACTIONS = {
   splash:  { kind: 'scene', emoji: '💦', dur: 850, label: 'Splash' },
   dive:    { kind: 'scene', emoji: '🤿', dur: 900, label: 'Dive' },
   float:   { kind: 'scene', emoji: '🛟', dur: 1400, label: 'Float' },
-  bow:     { kind: 'scene', emoji: '🙇', dur: 1000, label: 'Bow' },
+  // "Take a bow", not "Bow" — the accessory catalog already has a 🎀 named 'Bow'
+  // and the key IS the source text, so two different words must not share one.
+  bow:     { kind: 'scene', emoji: '🙇', dur: 1000, label: 'Take a bow' },
   digSand: { kind: 'scene', emoji: '🏖️', dur: 1100, label: 'Dig' },
   roll:    { kind: 'scene', emoji: '🌀', dur: 850, label: 'Roll' },
   pounce:  { kind: 'scene', emoji: '🐾', dur: 800, label: 'Pounce' },

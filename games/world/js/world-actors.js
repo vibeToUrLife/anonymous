@@ -70,7 +70,7 @@ const WorldActors = (function () {
 
   function positionTag(a, W, H) {
     const tag = ensureTag(a.uid, a.isSelf);
-    tag.name.textContent = a.name || 'Pet';
+    tag.name.textContent = a.name || T('Pet');
     const bub = getBubble(a.uid);
     if (bub) { tag.bubble.textContent = bub; tag.bubble.style.display = 'block'; }
     else tag.bubble.style.display = 'none';

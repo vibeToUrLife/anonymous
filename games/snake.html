@@ -165,30 +165,30 @@
 </head>
 <body>
 
-  <a class="back-btn" href="../index.html">← Back</a>
+  <a class="back-btn" href="../index.html" data-i18n>← Back</a>
   <button class="settings-btn" id="settingsBtn">⚙</button>
 
   <!-- Settings modal -->
   <div class="settings-overlay hidden" id="settingsOverlay">
     <div class="settings-box">
-      <h3>⚙️ Settings</h3>
-      <button class="settings-logout-btn" id="settingsLogoutBtn">🚶 Sign Out</button>
-      <button class="settings-close-btn" id="settingsCloseBtn">Close</button>
+      <h3 data-i18n>⚙️ Settings</h3>
+      <button class="settings-logout-btn" id="settingsLogoutBtn" data-i18n>🚶 Sign Out</button>
+      <button class="settings-close-btn" id="settingsCloseBtn" data-i18n>Close</button>
     </div>
   </div>
 
   <div class="game-header">
-    <h1>🐍 贪吃蛇</h1>
-    <p>Eat food to grow — don't hit yourself!</p>
+    <h1 data-i18n>🐍 Snake</h1>
+    <p data-i18n>Eat food to grow — don't hit yourself!</p>
   </div>
 
   <div class="game-area">
     <canvas id="gameCanvas"></canvas>
     <div class="side-panel">
-      <div class="info-box"><div class="label">Score</div><div class="value score-val" id="scoreVal">0</div></div>
-      <div class="info-box"><div class="label">Best</div><div class="value" id="bestVal">0</div></div>
-      <div class="info-box"><div class="label">Length</div><div class="value" id="lengthVal">3</div></div>
-      <div class="info-box"><div class="label">Coins</div><div class="value coins-val" id="coinsVal">0</div></div>
+      <div class="info-box"><div class="label" data-i18n>Score</div><div class="value score-val" id="scoreVal">0</div></div>
+      <div class="info-box"><div class="label" data-i18n>Best</div><div class="value" id="bestVal">0</div></div>
+      <div class="info-box"><div class="label" data-i18n>Length</div><div class="value" id="lengthVal">3</div></div>
+      <div class="info-box"><div class="label" data-i18n>Coins</div><div class="value coins-val" id="coinsVal">0</div></div>
     </div>
   </div>
 
@@ -203,18 +203,18 @@
       <button class="touch-btn" id="btnRight">▶</button>
     </div>
     <div class="touch-row">
-      <button class="touch-btn wide" id="btnPause">PAUSE</button>
+      <button class="touch-btn wide" id="btnPause" data-i18n>PAUSE</button>
     </div>
   </div>
 
   <!-- Login overlay -->
   <div class="overlay loading" id="loginOverlay">
     <div class="login-box">
-      <div class="login-title">🐍 Snake</div>
-      <div class="login-sub">Sign in to save scores &amp; earn coins</div>
+      <div class="login-title" data-i18n>🐍 Snake</div>
+      <div class="login-sub" data-i18n>Sign in to save scores &amp; earn coins</div>
       <button class="google-btn" id="googleLoginBtn">
         <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59A14.5 14.5 0 019.5 24c0-1.59.28-3.14.76-4.59l-7.98-6.19A23.998 23.998 0 000 24c0 3.77.87 7.34 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-        Sign in with Google
+        <span data-i18n>Sign in with Google</span>
       </button>
       <div class="login-error" id="loginError"></div>
     </div>
@@ -222,34 +222,41 @@
 
   <!-- Start screen -->
   <div class="overlay hidden" id="startScreen">
-    <h2>🐍 Snake</h2>
+    <h2 data-i18n>🐍 Snake</h2>
     <div style="font-size:13px;color:var(--g-ink-soft);margin-bottom:4px" id="playerDisplayName"></div>
-    <button class="play-btn" id="playBtn">▶ Play</button>
-    <a href="../index.html" style="display:inline-block;margin-top:10px;padding:10px 32px;border:1px solid var(--g-border);border-radius:14px;background:var(--g-card);color:var(--g-ink);font-size:14px;font-weight:600;text-decoration:none;transition:background 0.2s;cursor:pointer;box-shadow:var(--g-shadow-sm)" onmouseover="this.style.background='#fff'" onmouseout="this.style.background='var(--g-card)'">← Back to Lobby</a>
-    <div style="font-size:12px;color:var(--g-ink-faint);margin-top:10px">Press <strong>P</strong> or <strong>Space</strong> to pause</div>
+    <button class="play-btn" id="playBtn" data-i18n>▶ Play</button>
+    <a href="../index.html" style="display:inline-block;margin-top:10px;padding:10px 32px;border:1px solid var(--g-border);border-radius:14px;background:var(--g-card);color:var(--g-ink);font-size:14px;font-weight:600;text-decoration:none;transition:background 0.2s;cursor:pointer;box-shadow:var(--g-shadow-sm)" onmouseover="this.style.background='#fff'" onmouseout="this.style.background='var(--g-card)'" data-i18n>← Back to Lobby</a>
+    <div style="font-size:12px;color:var(--g-ink-faint);margin-top:10px"><span data-i18n>Press P or Space to pause</span></div>
     <div class="leaderboard" id="startLeaderboard">
-      <div class="lb-title">🏆 Leaderboard</div>
+      <div class="lb-title" data-i18n>🏆 Leaderboard</div>
       <div id="startLbBody"></div>
     </div>
   </div>
 
   <!-- Game over screen -->
   <div class="overlay hidden" id="gameOverScreen">
-    <h2>Game Over</h2>
+    <h2 data-i18n>Game Over</h2>
     <div class="final-score" id="finalScore">0</div>
     <div class="best-score" id="bestScore"></div>
-    <div class="new-best hidden" id="newBestLabel">⭐ New personal best!</div>
+    <div class="new-best hidden" id="newBestLabel" data-i18n>⭐ New personal best!</div>
     <div class="stats-row">
-      <span>Length: <strong id="finalLength">0</strong></span>
-      <span>Coins: <strong id="finalCoins">0</strong></span>
+      <span><span data-i18n>Length:</span> <strong id="finalLength">0</strong></span>
+      <span><span data-i18n>Coins:</span> <strong id="finalCoins">0</strong></span>
     </div>
-    <button class="play-btn" id="retryBtn">Play Again</button>
-    <a href="../index.html" style="display:inline-block;margin-top:10px;padding:10px 32px;border:1px solid var(--g-border);border-radius:14px;background:var(--g-card);color:var(--g-ink);font-size:14px;font-weight:600;text-decoration:none;transition:background 0.2s;cursor:pointer;box-shadow:var(--g-shadow-sm)" onmouseover="this.style.background='#fff'" onmouseout="this.style.background='var(--g-card)'">← Back to Lobby</a>
+    <button class="play-btn" id="retryBtn" data-i18n>Play Again</button>
+    <a href="../index.html" style="display:inline-block;margin-top:10px;padding:10px 32px;border:1px solid var(--g-border);border-radius:14px;background:var(--g-card);color:var(--g-ink);font-size:14px;font-weight:600;text-decoration:none;transition:background 0.2s;cursor:pointer;box-shadow:var(--g-shadow-sm)" onmouseover="this.style.background='#fff'" onmouseout="this.style.background='var(--g-card)'" data-i18n>← Back to Lobby</a>
     <div class="leaderboard" id="overLeaderboard">
-      <div class="lb-title">🏆 Leaderboard</div>
+      <div class="lb-title" data-i18n>🏆 Leaderboard</div>
       <div id="overLbBody"></div>
     </div>
   </div>
+
+  <!-- i18n first: everything below renders text through T(). The language
+       itself is chosen in index.html's settings; this page only reads it. -->
+  <script src="../src/js/i18n.js?v=3"></script>
+  <script src="../src/js/i18n-zh-app.js?v=5"></script>
+  <script src="../src/js/i18n-games-zh.js?v=1"></script>
+  <script defer src="../src/js/i18n-ui.js?v=3"></script>
 
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -272,7 +279,7 @@
     const loginError     = document.getElementById('loginError');
 
     auth.getRedirectResult().catch(err => {
-      if (err.code) loginError.textContent = 'Login failed: ' + (err.message || 'Unknown error');
+      if (err.code) loginError.textContent = T('Login failed: {msg}', { msg: err.message || T('Unknown error') });
     });
 
     const provider = new firebase.auth.GoogleAuthProvider();
@@ -282,9 +289,9 @@
       try { await auth.signInWithPopup(provider); }
       catch (err) {
         if (err.code === 'auth/popup-blocked' || err.code === 'auth/operation-not-supported-in-this-environment') {
-          try { await auth.signInWithRedirect(provider); } catch (e) { loginError.textContent = 'Login failed: ' + (e.message || 'Unknown error'); }
+          try { await auth.signInWithRedirect(provider); } catch (e) { loginError.textContent = T('Login failed: {msg}', { msg: e.message || T('Unknown error') }); }
         } else if (err.code !== 'auth/popup-closed-by-user') {
-          loginError.textContent = 'Login failed: ' + (err.message || 'Unknown error');
+          loginError.textContent = T('Login failed: {msg}', { msg: err.message || T('Unknown error') });
         }
       } finally { googleLoginBtn.disabled = false; }
     });
@@ -377,6 +384,10 @@
     let loopTimer = null;
     let speed = 150; // ms per tick
     let playerName = '';
+    // What the game-over card's "Best: n" line is currently showing (null when
+    // the run WAS the best, so the line is blank). Kept so a language switch
+    // can repaint a card that is painted once and then left alone.
+    let shownBest = null;
 
     const scoreEl  = document.getElementById('scoreVal');
     const bestEl   = document.getElementById('bestVal');
@@ -525,7 +536,7 @@
         ctx.fillStyle = '#E7EAF0';
         ctx.font = 'bold ' + (CELL * 1.5) + 'px sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
+        ctx.fillText(T('PAUSED'), canvas.width / 2, canvas.height / 2);
       }
     }
 
@@ -585,7 +596,8 @@
       if (isNew) localStorage.setItem('snake_best_' + playerName, score);
 
       document.getElementById('finalScore').textContent = score;
-      document.getElementById('bestScore').textContent = isNew ? '' : 'Best: ' + best;
+      shownBest = isNew ? null : best;
+      document.getElementById('bestScore').textContent = isNew ? '' : T('Best: {n}', { n: best });
       document.getElementById('newBestLabel').classList.toggle('hidden', !isNew);
       document.getElementById('finalLength').textContent = snake.length;
       document.getElementById('finalCoins').textContent = coinsEarned;
@@ -671,6 +683,18 @@
 
     document.getElementById('playBtn').addEventListener('click', startGame);
     document.getElementById('retryBtn').addEventListener('click', startGame);
+
+    /* The static labels repaint themselves (i18n-ui.js sweeps data-i18n on a
+       language change). These two don't: the canvas only redraws while the
+       loop is running — and it is stopped exactly when PAUSED is on screen —
+       and the game-over card is painted once per run. */
+    window.addEventListener('langchange', () => {
+      try { draw(); } catch (e) {}
+      try {
+        const bestEl2 = document.getElementById('bestScore');
+        if (bestEl2 && shownBest != null) bestEl2.textContent = T('Best: {n}', { n: shownBest });
+      } catch (e) {}
+    });
 
     /* ═══════════════════════════════
        Audio (procedural)
@@ -764,7 +788,7 @@
         el.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999;font-size:28px;font-weight:800;color:#f7c97e;text-shadow:0 2px 8px rgba(0,0,0,0.5);pointer-events:none;opacity:0;transition:all 0.6s;';
         document.body.appendChild(el);
       }
-      el.textContent = '🪙 +' + n + ' coins!';
+      el.textContent = I18N.plural(n, '🪙 +1 coin!', '🪙 +{n} coins!');
       el.style.opacity = '1'; el.style.transform = 'translate(-50%,-80%)';
       setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translate(-50%,-50%)'; }, 2000);
     }
@@ -791,12 +815,12 @@
               const ov = document.createElement('div');
               ov.className = 'chess-invite-overlay';
               ov.innerHTML = '<div class="chess-invite-box">' +
-                '<h3>♟️ Chess Challenge!</h3>' +
-                '<div class="ci-from">' + escapeHtml(inv.fromName||'Someone') + ' invites you</div>' +
-                '<div class="ci-bet">🪙 ' + inv.bet + ' coins</div>' +
+                '<h3>' + T('♟️ Chess Challenge!') + '</h3>' +
+                '<div class="ci-from">' + T('{name} invites you', { name: escapeHtml(inv.fromName||T('Someone')) }) + '</div>' +
+                '<div class="ci-bet">' + T('🪙 {n} coins', { n: inv.bet }) + '</div>' +
                 '<div class="ci-buttons">' +
-                  '<button class="ci-reject">Reject</button>' +
-                  '<button class="ci-accept">Accept</button>' +
+                  '<button class="ci-reject">' + T('Reject') + '</button>' +
+                  '<button class="ci-accept">' + T('Accept') + '</button>' +
                 '</div></div>';
               document.body.appendChild(ov);
               ov.querySelector('.ci-accept').addEventListener('click', () => {
