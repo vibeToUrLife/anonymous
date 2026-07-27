@@ -592,7 +592,7 @@
   }
 
   /* ═══════════════ CONTENT TAB ═══════════════ */
-  function loadContent() { loadEvents(); loadFood(); loadBubbles(); loadQuoteComments(); loadChengyu(); loadWorldNotes(); }
+  function loadContent() { loadEvents(); loadFood(); loadBubbles(); loadDocSizes(); loadQuoteComments(); loadChengyu(); loadWorldNotes(); }
 
   // ── Pet World notice-board notes (Realtime Database, not Firestore) ──
   // Notes live at world/scenes/{scene}/{shard}/notes/{id} = {uid,name,text,x,y,ts}.
@@ -827,6 +827,75 @@
         loadBubbles();
       } catch (e) { alert(e.message); }
     });
+    return div;
+  }
+
+  // ── Firestore doc-size monitor (answers docs vs the 1 MiB per-document cap) ──
+  // A bubble stores its message + EVERY reply + any inline base64 image/GIF in
+  // ONE document, and persistReply rewrites the whole thing on each reply. Once
+  // the doc nears Firestore's 1,048,576-byte cap, image replies fail (see
+  // reply-logic.js / persistReply). This scans the newest bubbles, estimates
+  // each doc's size the same way the reply guard does, and ranks them so a heavy
+  // thread can be trimmed before it jams. Sizes are estimates; there is no
+  // Firestore query for "documents over N bytes", so we read a window and sort.
+  const DOC_HARD_CAP = 1048576;            // Firestore's 1 MiB per-document limit
+  const DOC_WATCH = 0.60, DOC_CRIT = 0.85; // fraction-of-cap colour thresholds
+  const DOC_SCAN_LIMIT = 100;              // newest bubbles scanned per refresh
+
+  function initDocSizesOnce() {
+    const rb = $('docSizeRefresh');
+    if (rb && !rb._bound) { rb._bound = true; rb.addEventListener('click', loadDocSizes); }
+  }
+  function fmtSize(bytes) {
+    if (!isFinite(bytes)) return '—';
+    return bytes >= DOC_HARD_CAP ? (bytes / 1048576).toFixed(2) + ' MB' : Math.round(bytes / 1024) + ' KB';
+  }
+  function loadDocSizes() {
+    initDocSizesOnce();
+    const list = $('docSizeList'), sum = $('docSizeSummary');
+    if (!list) return;
+    if (!window.ReplyLogic) { list.innerHTML = '<div class="status err">reply-logic.js not loaded — cannot estimate sizes.</div>'; return; }
+    list.innerHTML = '<div class="muted">Loading…</div>';
+    if (sum) { sum.textContent = ''; sum.className = 'status'; }
+    db.collection('answers').orderBy('ts', 'desc').limit(DOC_SCAN_LIMIT).get().then(snap => {
+      if (snap.empty) { list.innerHTML = '<div class="muted">No bubbles.</div>'; return; }
+      const rows = [];
+      snap.forEach(doc => { const data = doc.data(); rows.push({ id: doc.id, data, bytes: ReplyLogic.docByteSize(data) }); });
+      rows.sort((a, b) => b.bytes - a.bytes);
+      const near = rows.filter(r => r.bytes >= DOC_HARD_CAP * DOC_CRIT).length;
+      const top = rows[0];
+      if (sum) {
+        sum.className = 'status' + (near ? ' err' : ' ok');
+        sum.textContent = 'Largest ' + fmtSize(top.bytes) + ' (' + Math.round(top.bytes / DOC_HARD_CAP * 100) +
+          '% of 1MB) · ' + near + ' near the cap (≥85%) · ' + rows.length + ' newest scanned';
+      }
+      list.innerHTML = '';
+      rows.forEach(r => list.appendChild(docSizeItem(r)));
+    }).catch(e => { list.innerHTML = '<div class="status err">' + esc(e.message) + '</div>'; });
+  }
+  function docSizeItem(r) {
+    const frac = isFinite(r.bytes) ? r.bytes / DOC_HARD_CAP : 1;
+    const pct = Math.min(100, Math.round(frac * 100));
+    const level = frac >= DOC_CRIT ? { chip: 'bad',  bar: '#fca5a5', label: 'Critical' }
+                : frac >= DOC_WATCH ? { chip: 'warn', bar: '#fbbf24', label: 'Watch' }
+                :                     { chip: 'good', bar: '#4ade80', label: 'OK' };
+    const b = r.data;
+    const replies = Array.isArray(b.replies) ? b.replies.length : 0;
+    const imgReplies = Array.isArray(b.replies) ? b.replies.filter(x => x && x.image).length : 0;
+    const label = b.text ? esc(b.text.slice(0, 48))
+                : (b.image ? '🖼️ image only' : (b.type === 'poll' ? '📊 poll' : '(empty)'));
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.innerHTML =
+      '<div class="row" style="justify-content:space-between;gap:10px;align-items:center">' +
+        '<div style="min-width:0;word-break:break-word">' + label + '</div>' +
+        '<span class="chip ' + level.chip + '">' + fmtSize(r.bytes) + ' · ' + pct + '%</span>' +
+      '</div>' +
+      '<div style="height:8px;border-radius:6px;background:rgba(127,127,127,.18);margin:8px 0;overflow:hidden">' +
+        '<div style="height:100%;width:' + pct + '%;background:' + level.bar + '"></div>' +
+      '</div>' +
+      '<div class="meta">' + level.label + ' · ' + fmtDate(b.ts) +
+        (replies ? ' · 💬 ' + replies + (imgReplies ? ' (' + imgReplies + ' 🖼️)' : '') : '') + '</div>';
     return div;
   }
 

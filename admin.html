@@ -452,6 +452,13 @@
           <div class="list" id="bubbleList"><div class="muted">Loading…</div></div>
         </div>
         <div class="card">
+          <div class="card-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg></span><h2>Firestore doc size · 1&nbsp;MB limit</h2></div>
+          <div class="hint">Each bubble — its message, every reply, and any inline base64 image/GIF — lives in <strong>one</strong> Firestore document, hard-capped at 1&nbsp;MiB. As a thread nears the cap, new image replies start failing. This ranks the newest bubbles by estimated size so you can spot and trim heavy ones. <span class="muted">Sizes are estimates. Account-level quotas (daily reads/writes, storage) live in the Firebase console, not here.</span></div>
+          <div class="row" style="margin-bottom:10px"><button class="btn" id="docSizeRefresh">Refresh</button></div>
+          <div class="status" id="docSizeSummary"></div>
+          <div class="list" id="docSizeList"><div class="muted">Loading…</div></div>
+        </div>
+        <div class="card">
           <div class="card-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18M8 13h8M8 4v5"/></svg></span><h2>Pet World · notice boards</h2></div>
           <div class="hint">Sticky notes players pinned on the in-world notice boards (stored in Realtime Database). Deleting one removes it for everyone. <strong>Needs the RTDB rules published</strong> with the admin-delete clause, or Delete returns “permission denied”.</div>
           <div class="row" style="margin-bottom:10px"><button class="btn" id="worldNotesRefresh">Refresh</button></div>
@@ -615,6 +622,8 @@
   <!-- Realtime Database — for moderating Pet World notice-board notes (RTDB, not Firestore). -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <script src="./src/js/firebase-config.js"></script>
-  <script src="./src/js/admin.js?v=4"></script>
+  <!-- Shared byte-size estimator (docByteSize) used by the Firestore doc-size monitor. -->
+  <script src="./src/js/reply-logic.js?v=1"></script>
+  <script src="./src/js/admin.js?v=5"></script>
 </body>
 </html>
