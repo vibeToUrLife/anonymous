@@ -1275,6 +1275,11 @@ function render(items) {
     }
 
     const newIds = new Set(items.map(a => a.id));
+    // The empty-state placeholder ("还没有人回答 —— 来抢第一个！") isn't a .bubble,
+    // so the stale-removal loop below never clears it — drop it explicitly now
+    // that real answers exist, or it lingers behind the first bubble.
+    const emptyState = wrap.querySelector('.empty-state');
+    if (emptyState) emptyState.remove();
     // Remove bubbles that no longer exist
     wrap.querySelectorAll('.bubble').forEach(el => {
     if (!newIds.has(el.dataset.id)) el.remove();
