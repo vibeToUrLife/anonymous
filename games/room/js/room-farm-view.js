@@ -2480,6 +2480,34 @@
         ctx.beginPath(); ctx.moveTo(fx - rOver, fy); ctx.lineTo(cx, rTop); ctx.lineTo(fx + wallW + rOver, fy); ctx.closePath(); ctx.fill();
         ctx.strokeStyle = 'rgba(255,255,255,.20)'; ctx.lineWidth = 1.5;     // ridge highlight
         ctx.beginPath(); ctx.moveTo(cx, rTop); ctx.lineTo(cx + D, rTop - dy); ctx.stroke();
+
+        /* Snow settles on a roof from the ridge DOWN, and it stops short of the
+           eaves where it slid off — a roof painted white to the edge reads as a
+           white roof, not a snowy one. So: the receding slope carries most of
+           it, the gable gets a band along each rake, and a couple of lumps hang
+           over the eave where it is about to drop. */
+        if (pal && pal.roofSnow) {
+          const sn = pal.roofSnow;
+          ctx.fillStyle = sn;
+          // the slope we look down on
+          ctx.beginPath();
+          ctx.moveTo(cx, rTop); ctx.lineTo(cx + D, rTop - dy);
+          ctx.lineTo(fx + wallW + rOver + D - s * 0.05, fy - dy - s * 0.06);
+          ctx.lineTo(fx + wallW + rOver - s * 0.05, fy - s * 0.06);
+          ctx.closePath(); ctx.fill();
+          // a band down each rake of the gable
+          ctx.lineWidth = Math.max(2, s * 0.055); ctx.lineCap = 'round'; ctx.strokeStyle = sn;
+          ctx.beginPath(); ctx.moveTo(fx - rOver + s * 0.02, fy - s * 0.01); ctx.lineTo(cx, rTop); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(cx, rTop); ctx.lineTo(fx + wallW + rOver - s * 0.02, fy - s * 0.01); ctx.stroke();
+          // the ridge, and what is hanging off the edge
+          ctx.lineWidth = Math.max(2.5, s * 0.07);
+          ctx.beginPath(); ctx.moveTo(cx, rTop); ctx.lineTo(cx + D, rTop - dy); ctx.stroke();
+          ctx.fillStyle = sn;
+          [[0.22, 0.030], [0.52, 0.022], [0.78, 0.026]].forEach(function (d2) {
+            const ex = fx - rOver + (wallW + rOver * 2) * d2[0];
+            ctx.beginPath(); ctx.ellipse(ex, fy + s * 0.005, s * d2[1] * 1.6, s * d2[1], 0, 0, Math.PI * 2); ctx.fill();
+          });
+        }
         // round sign with the machine emoji on the gable
         ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(cx, fy - s * 0.04, s * 0.17, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = 'rgba(0,0,0,.15)'; ctx.lineWidth = 1; ctx.stroke();
@@ -3568,6 +3596,7 @@
         _drawHDTree(ctx, W * 0.06, topFenceY, H * 0.18, windSway, night, pal);
         _drawHDTree(ctx, W * 0.94, topFenceY, H * 0.15, windSway * 0.7, night, pal);
 
+        _drawFarmSnowman(ctx, W, H, pal);   // before the trough and the herd, so both pass in front
         _drawFarmTrough(ctx, W, H, night);
         if (viewingUid === currentUid) _drawFarmMailbox(ctx, W, H, t, night, pal);   // your mail only
         _drawFarmPlots(ctx, W, H, t);
@@ -3741,6 +3770,81 @@
        Drawn straight after the ground and before anything interactive, so it
        always sits UNDER the animals, drops, plots and the trough. It is texture,
        never a target. */
+    /* Somebody built a snowman.
+
+       It stands on the open strip between the workshop huts and the pens — the
+       same band the trough and the mailbox use — at x 0.78, which is the only
+       gap wide enough: the trough owns 0.085, the huts run 0.22 to 0.66, and
+       the mailbox tap rect reaches left from 0.90. Nothing here is tappable, so
+       it must not sit under anything that is; a check measures the real gaps in
+       pixels rather than trusting these numbers.
+
+       Drawn with the fixed props rather than baked into the ground texture,
+       because it stands in front of the fence and needs the animals to be able
+       to pass in front of it. */
+    /* 0.74, not 0.78: at 0.78 the right twig arm reached 5px INTO the mailbox
+       tap rect on a 320-wide stage — the same mistake the blossom branch made,
+       and the same check caught it. The gap it has to live in is the strip
+       between the last hut (0.66) and where the mailbox rect starts. */
+    const FARM_SNOWMAN_X = 0.74;
+
+    function _farmSnowmanPos(W, H) { return { x: FARM_SNOWMAN_X, y: _farmTroughY(W, H) }; }
+    // The floor is 26 rather than 30 because on the narrowest stage that floor
+    // is what makes it relatively widest, and this is the tightest gap on the farm.
+    function _farmSnowmanSize(W, H) { return Math.max(26, Math.min(W, H) * 0.072); }
+
+    function _drawFarmSnowman(ctx, W, H, pal) {
+      if (!pal || pal.groundProp !== 'snowman') return;
+      const p = _farmSnowmanPos(W, H);
+      const s = _farmSnowmanSize(W, H);
+      const cx = p.x * W, by = p.y * H;                 // by = where it meets the ground
+      const snow = pal.propSnow || '#f7fbff';
+      const shade = pal.propShade || 'rgba(150,175,200,0.55)';
+
+      ctx.save();
+      ctx.fillStyle = pal.groundShadow || 'rgba(90,120,150,.22)';
+      ctx.beginPath(); ctx.ellipse(cx + s * 0.05, by, s * 0.52, s * 0.13, 0, 0, Math.PI * 2); ctx.fill();
+
+      const balls = [[0.00, -0.34, 0.36], [0.01, -0.86, 0.26], [0.02, -1.28, 0.19]];
+      balls.forEach(function (b) {
+        const x = cx + s * b[0], y = by + s * b[1], r = s * b[2];
+        ctx.fillStyle = shade;                          // shaded underside first
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = snow;                           // then the lit body, offset up-left
+        ctx.beginPath(); ctx.arc(x - r * 0.10, y - r * 0.12, r * 0.93, 0, Math.PI * 2); ctx.fill();
+      });
+
+      const hx = cx + s * 0.02, hy = by - s * 1.28, hr = s * 0.19;
+      // twig arms, out of the middle ball
+      ctx.strokeStyle = '#6b4a2e'; ctx.lineCap = 'round'; ctx.lineWidth = Math.max(1.2, s * 0.035);
+      ctx.beginPath(); ctx.moveTo(cx - s * 0.24, by - s * 0.92); ctx.lineTo(cx - s * 0.60, by - s * 1.14); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx - s * 0.46, by - s * 1.06); ctx.lineTo(cx - s * 0.56, by - s * 1.24); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx + s * 0.26, by - s * 0.92); ctx.lineTo(cx + s * 0.62, by - s * 1.08); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx + s * 0.48, by - s * 1.00); ctx.lineTo(cx + s * 0.58, by - s * 1.18); ctx.stroke();
+
+      ctx.fillStyle = '#2b2b2b';                        // coal eyes and a coal smile
+      ctx.beginPath(); ctx.arc(hx - hr * 0.36, hy - hr * 0.22, hr * 0.14, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(hx + hr * 0.30, hy - hr * 0.24, hr * 0.14, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#2b2b2b'; ctx.lineWidth = Math.max(1, s * 0.022);
+      ctx.beginPath(); ctx.arc(hx - hr * 0.02, hy + hr * 0.12, hr * 0.42, 0.25 * Math.PI, 0.75 * Math.PI); ctx.stroke();
+
+      ctx.fillStyle = '#e8792b';                        // carrot
+      ctx.beginPath();
+      ctx.moveTo(hx - hr * 0.02, hy + hr * 0.02);
+      ctx.lineTo(hx + hr * 0.92, hy + hr * 0.14);
+      ctx.lineTo(hx - hr * 0.02, hy + hr * 0.24);
+      ctx.closePath(); ctx.fill();
+
+      ctx.fillStyle = '#c8443a';                        // scarf, with a tail the wind never moves
+      ctx.fillRect(cx - s * 0.22, by - s * 1.10, s * 0.46, s * 0.10);
+      ctx.beginPath();
+      ctx.moveTo(cx + s * 0.10, by - s * 1.06);
+      ctx.lineTo(cx + s * 0.30, by - s * 0.86);
+      ctx.lineTo(cx + s * 0.18, by - s * 0.82);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+
     /* The decking the garden beds stand on.
 
        Boards run across the stage and get THINNER toward the fence, because

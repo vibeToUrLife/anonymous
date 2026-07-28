@@ -531,6 +531,7 @@
                        bloom: '255,255,255', bloom2: '214,234,250', bloomAt: 0.8, bloomCore: 'rgba(255,255,255,0.9)' }],
           leaf: '#33586b', leafLight: 'rgba(255,255,255,0.85)', leafMid: 'rgba(150,190,215,0.28)', leafDapple: 'rgba(255,255,255,0.95)',
           sky: 'rgba(150,195,240,0.30)',
+          roofSnow: 'rgba(250,253,255,0.95)', groundProp: 'snowman', propSnow: '#f7fbff', propShade: 'rgba(158,182,206,0.55)',
           weather: { kind: 'snow', count: 70, color: '255,255,255', size: 3.0, speed: 30, sway: 24, alpha: 0.95 },
         },
         night: {
@@ -543,6 +544,7 @@
                        bloom: '215,235,250', bloomAt: 0.82, bloomCore: 'rgba(230,242,255,0.7)' }],
           leaf: '#1d3441', leafLight: 'rgba(200,225,245,0.55)', leafMid: 'rgba(70,105,135,0.22)', leafDapple: 'rgba(235,245,255,0.70)',
           sky: 'rgba(90,130,180,0.20)',
+          roofSnow: 'rgba(206,224,244,0.85)', groundProp: 'snowman', propSnow: '#c9d9ec', propShade: 'rgba(70,92,118,0.6)',
           weather: { kind: 'snow', count: 52, color: '235,245,255', size: 2.8, speed: 27, sway: 22, alpha: 0.70 },
         },
       },
