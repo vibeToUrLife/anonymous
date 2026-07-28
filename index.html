@@ -70,7 +70,17 @@
        Deliberately NOT a card in the page: this sits above the message board,
        and anything that lives there is scrolled past on every single visit. */
     .devboard-btn {
-      position: fixed; top: 14px; right: 64px; z-index: 310;
+      /* Under the gear, not beside it. Beside it the chip shared a row with the
+         off-work countdown bubble — centred, up to 360px wide, z 320 — which
+         overlaps this corner at EVERY phone width and swallowed the tap. Simply
+         out-ranking it would have made the chip sit on top of the bubble's text
+         instead, so the chip moves down a row where nothing centred reaches:
+         the "N new" pill at top 60 is the only neighbour and it stops well
+         short of the right edge.
+
+         z 330 anyway, as a belt: still far below every overlay (600+), so the
+         chip can never cover a dialog. */
+      position: fixed; top: 64px; right: 14px; z-index: 330;
       width: 42px; height: 42px; border: none; border-radius: 12px;
       background: var(--surface); color: var(--primary-deep);
       border: 1px solid var(--border); box-shadow: var(--clay-up-sm);
@@ -1837,7 +1847,7 @@
   <script src="./src/js/wall-logic.js?v=6"></script>
   <script src="./src/js/graffiti-wall.js?v=8"></script>
   <script src="./src/js/dev-board-logic.js?v=2"></script>
-  <script src="./src/js/dev-board.js?v=4"></script>
+  <script src="./src/js/dev-board.js?v=5"></script>
   <script src="./src/js/coin-rush-logic.js"></script>
   <script src="./src/js/coin-rush.js?v=1"></script>
   <!-- Daily brain-teaser (脑筋急转弯) -->
