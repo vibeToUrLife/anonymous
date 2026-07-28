@@ -3677,7 +3677,9 @@
         const x = ((rx * W + drift) % W + W) % W;
         const r = wx.size * depth;
         ctx.globalAlpha = wx.alpha * (0.6 + rz * 0.4);
-        ctx.fillStyle = 'rgba(' + wx.color + ',1)';
+        // A second tone, sprinkled through, is what stops a petal fall reading
+        // as one flat pink wash — roughly a third of them take it.
+        ctx.fillStyle = 'rgba(' + ((wx.color2 && rx > 0.66) ? wx.color2 : wx.color) + ',1)';
         if (wx.kind === 'petal') {
           // a petal turns as it falls, so it flashes between edge-on and flat
           ctx.save();
