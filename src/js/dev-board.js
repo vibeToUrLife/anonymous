@@ -73,6 +73,13 @@
     const more = $('devBoardMore');
     if (!list) return;
 
+    /* An empty board is nobody's business but the developer's. Until the first
+       update exists there is nothing to announce, and a strip promising updates
+       that opens onto "nothing yet" is worse than no strip at all. The developer
+       still sees it, because otherwise there would be nowhere to post from. */
+    if (!posts.length && !isDev()) { card.classList.add('hidden'); return; }
+    card.classList.remove('hidden');
+
     const unseen = unseenCount(posts, seenTs());
     if (dot) {
       dot.textContent = unseen ? _t('{n} new', { n: unseen }) : '';
@@ -84,7 +91,7 @@
        visit for the sake of an update the reader has already read. Unread
        opens it; reading it, or tapping the strip, shuts it again. A developer
        still gets the composer — one tap away, not permanently in the page. */
-    const isOpen = (open === null) ? unseen > 0 : open;
+    const isOpen = (open === null) ? (unseen > 0 || (!posts.length && isDev())) : open;
     const body = $('devBoardBody');
     const head = $('devBoardHead');
     card.classList.toggle('is-open', isOpen);
