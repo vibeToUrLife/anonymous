@@ -2436,7 +2436,7 @@
     }
 
     // Draw owned machine huts on the pasture (machines are built in the Garden tab).
-    function _drawWorkshopMachines(ctx, W, H, t, night) {
+    function _drawWorkshopMachines(ctx, W, H, t, night, pal) {
       const machines = roomData.farmMachines || {};
       const now = Date.now();
       FARM_MACHINES.forEach((m, slot) => {
@@ -2449,7 +2449,7 @@
         ctx.save();
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         // ground shadow
-        ctx.fillStyle = night ? 'rgba(0,0,0,.34)' : 'rgba(30,62,20,.24)';
+        ctx.fillStyle = night ? 'rgba(0,0,0,.34)' : ((pal && pal.groundShadow) || 'rgba(30,62,20,.24)');
         ctx.beginPath(); ctx.ellipse(cx + D * 0.4, cy + s * 0.5, s * 0.62, s * 0.14, 0, 0, Math.PI * 2); ctx.fill();
         // right side wall (3D depth) — darker
         ctx.fillStyle = night ? '#6f4e33' : '#a9794d';
@@ -2984,14 +2984,14 @@
     }
 
     // Draw the pens (grass panel + wooden rail + label tab) behind the animals.
-    function _drawAnimalPens(ctx, W, H, pens, night) {
+    function _drawAnimalPens(ctx, W, H, pens, night, pal) {
       for (const p of pens) {
         const x = p.x0 * W, y = p.y0 * H, w = (p.x1 - p.x0) * W, h = (p.y1 - p.y0) * H;
         const r = Math.min(14, w * 0.2, h * 0.3);
         ctx.save();
         ctx.beginPath();
         if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h);
-        ctx.fillStyle = night ? 'rgba(80,120,60,0.16)' : 'rgba(150,200,90,0.14)';   // soft paddock tint
+        ctx.fillStyle = (pal && pal.penTint) || (night ? 'rgba(80,120,60,0.16)' : 'rgba(150,200,90,0.14)');   // paddock tint
         ctx.fill();
         ctx.lineWidth = Math.max(2.5, W * 0.006);                                     // wooden rail
         ctx.strokeStyle = night ? '#5a4326' : '#8a5a30';
@@ -3218,14 +3218,14 @@
     // 📮 The mailbox on your own farm — a post-mounted box whose flag stands up
     // (with a count badge) whenever visitors have left something to claim. Same
     // wood/clay palette as the signboards and pen rails.
-    function _drawFarmMailbox(ctx, W, H, t, night) {
+    function _drawFarmMailbox(ctx, W, H, t, night, pal) {
       const p = _farmMailPos(W, H);
       const gx = p.x * W, gy = p.y * H;
       const s = _farmMailSize(W, H);                       // box width, and the unit for everything else
       const n = _farmInboxCount();
       const bob = n ? Math.sin(t / 260) * (s * 0.06) : 0;  // a gentle nudge while mail is waiting
 
-      ctx.fillStyle = night ? 'rgba(0,0,0,.32)' : 'rgba(30,62,20,.24)';
+      ctx.fillStyle = night ? 'rgba(0,0,0,.32)' : ((pal && pal.groundShadow) || 'rgba(30,62,20,.24)');
       ctx.beginPath(); ctx.ellipse(gx, gy, s * 0.34, s * 0.11, 0, 0, Math.PI * 2); ctx.fill();
 
       ctx.fillStyle = night ? '#4a3620' : '#714a26';       // post
@@ -3504,7 +3504,7 @@
         _drawHDTree(ctx, W * 0.94, topFenceY, H * 0.15, windSway * 0.7, night, pal);
 
         _drawFarmTrough(ctx, W, H, night);
-        if (viewingUid === currentUid) _drawFarmMailbox(ctx, W, H, t, night);   // your mail only
+        if (viewingUid === currentUid) _drawFarmMailbox(ctx, W, H, t, night, pal);   // your mail only
         _drawFarmPlots(ctx, W, H, t);
 
         // Drops on the ground (visual juice) — collected via the Produce modal.
@@ -3533,12 +3533,12 @@
         // Animals stay in the pasture, above the dividing fence (crops are below).
         const _band = _farmPenBand();
         const penTop = _band.top, penBot = _band.bot;
-        _drawWorkshopMachines(ctx, W, H, t, night);   // huts behind the herd
+        _drawWorkshopMachines(ctx, W, H, t, night, pal);   // huts behind the herd
         const _blocked = _farmBlockedZones();           // workshop + cart: animals keep out
         const _herd = roomData.farmAnimals || [];
         // Group the herd into one fenced pen per type, then keep each animal in its pen.
         const _pens = _buildAnimalPens(_herd, penTop, penBot, W, H);
-        _drawAnimalPens(ctx, W, H, _pens.list, night);
+        _drawAnimalPens(ctx, W, H, _pens.list, night, pal);
         // One animal per cell, drawn a little smaller so it has room inside it.
         const _aSize = Math.max(22, (_pens.cell || 0) * 0.72);
         let _ai = 0;
@@ -3590,7 +3590,7 @@
           const size = _aSize;
           const bob = Math.sin(t / 400 + st.x * 20) * 2;
           // soft ground shadow under the animal -> grounds it in the 3D field
-          ctx.fillStyle = night ? 'rgba(0,0,0,.30)' : 'rgba(30,62,20,.24)';
+          ctx.fillStyle = night ? 'rgba(0,0,0,.30)' : (pal.groundShadow || 'rgba(30,62,20,.24)');
           ctx.beginPath();
           ctx.ellipse(px, py + size * 0.30, size * 0.40, size * 0.12, 0, 0, Math.PI * 2);
           ctx.fill();
