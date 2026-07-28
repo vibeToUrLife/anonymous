@@ -335,6 +335,36 @@
     'Accept': '接受',
     'Anonymous': '匿名',
     'Remove': '移除',
+
+    /* ══ 📣 Dev board ══ */
+    "📣 What's new": '📣 更新板',
+    '{n} new': '{n} 条新的',
+    'Nothing posted yet.': '还没有发过更新。',
+    '🆕 New': '🆕 新功能',
+    '🔧 Fixed': '🔧 修复',
+    '🎉 Event': '🎉 活动',
+    'Take a look →': '去看看 →',
+    'screenshot': '截图',
+    // These three read the other way round in i18n-en-more.js, where the key is
+    // the Chinese and this is the value. Same words, opposite direction — the
+    // dev board was authored in English, so it needs its own row.
+    '{m}/{d}': '{m}月{d}日',
+    'Collapse ▴': '收起 ▴',
+    'Show all ({n}) ▾': '展开全部（{n}）▾',
+    // The composer, developer-only — translated anyway so the page does not
+    // switch language around one panel that stays English.
+    'What changed?': '改了什么？',
+    'A line or two about it…': '写一两句说明…',
+    'Link (optional) — e.g. games/room.html?view=farm': '链接（选填）—— 例如 games/room.html?view=farm',
+    '🖼️ Image': '🖼️ 配图',
+    'Post': '发布',
+    'Give it a title first': '先写个标题',
+    '📣 Posted!': '📣 发布成功！',
+    'Could not post — check the rules are published': '发布失败 —— 检查 Firestore 规则是否已发布',
+    'Could not delete': '删除失败',
+    'Could not read that image': '这张图读不出来',
+    'Too big to post ({size}KB of {cap}KB) — use a smaller image':
+      '太大了发不出去（{size}KB，上限 {cap}KB）—— 换张小一点的图',
   });
 
   /* ── Chinese keys → English ── */
