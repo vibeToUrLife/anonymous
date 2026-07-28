@@ -535,7 +535,7 @@
           // on the stage. That is what keeps the falling petals readable on top
           // of it: they are white and deep pink, i.e. lighter and darker than
           // what they land against, rather than the same pink twice.
-          grass: ['#ffdcea', '#fbc0d8', '#ee9fc2'], soil: ['#a8746e', '#77504c'],
+          grass: ['#fff0f6', '#fbc0d8', '#e58cb6'], soil: ['#a8746e', '#77504c'],
           mowLight: 'rgba(255,255,255,0.34)', mowDark: 'rgba(198,104,150,0.14)', band: 'rgba(198,104,150,0.18)',
           tillLight: 'rgba(255,240,247,0.12)', tillDark: 'rgba(70,30,45,0.16)', furrow: 'rgba(110,50,75,0.18)',
           hillFar: '#ffc3dc', hillNear: '#f79ec4',
@@ -543,12 +543,13 @@
           sky: 'rgba(255,168,208,0.30)',
           cloud: 'rgba(255,228,240,0.95)',
           skyFx: 'blossom-branch', branch: '#7a5240', blossom: '#ff8fbb', blossomAlt: '#ffffff', blossomCore: 'rgba(255,206,110,0.95)',
+          groundFx: { count: 150, color: '255,255,255', color2: '255,138,182', size: 3.4, alpha: 0.85 },
           weather: { kind: 'petal', count: 64, color: '255,255,255', color2: '255,120,170', size: 4.4, speed: 18, sway: 46, alpha: 0.92 },
         },
         night: {
           // 夜樱. The carpet dims but stays unmistakably pink — a night farm
           // that went grey would throw away the thing that was paid for.
-          grass: ['#5e3f52', '#4b3243', '#3a2634'], soil: ['#4a3330', '#2c1e1d'],
+          grass: ['#6b4a5e', '#4b3243', '#332030'], soil: ['#4a3330', '#2c1e1d'],
           mowLight: 'rgba(255,225,240,0.10)', mowDark: 'rgba(0,0,0,0.16)', band: 'rgba(0,0,0,0.18)',
           tillLight: 'rgba(255,235,245,0.06)', tillDark: 'rgba(0,0,0,0.18)', furrow: 'rgba(0,0,0,0.20)',
           hillFar: '#6d4560', hillNear: '#7d5070',
@@ -556,6 +557,7 @@
           sky: 'rgba(175,105,160,0.22)',
           cloud: 'rgba(210,165,200,0.75)',
           skyFx: 'blossom-branch', branch: '#3f2a24', blossom: '#e08ab4', blossomAlt: '#f6e6f0', blossomCore: 'rgba(230,180,110,0.85)',
+          groundFx: { count: 110, color: '235,220,232', color2: '198,116,158', size: 3.2, alpha: 0.55 },
           weather: { kind: 'petal', count: 44, color: '245,235,245', color2: '230,140,180', size: 4.0, speed: 16, sway: 42, alpha: 0.62 },
         },
       },

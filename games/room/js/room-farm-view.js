@@ -3472,6 +3472,9 @@
         for (let k = 1; k <= 5; k++) { const f = k / 6; const yy = gy - (gy - skyY) * (f * f); ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(W, yy); ctx.stroke(); }
         ctx.restore();
 
+        // Petals lying on the pasture (skins only — meadow has none).
+        _drawFarmGroundFx(ctx, W, H, skyY, gy, pal);
+
         // Crop garden — a tilled soil band below the dividing fence
         const soil = ctx.createLinearGradient(0, gy, 0, H);
         soil.addColorStop(0, pal.soil[0]);                        // warmer tilled earth
@@ -3661,6 +3664,45 @@
       _attachFarmPointerHandlers(cvs);
     }
 
+    /* What is lying ON the grass.
+
+       A pink fill reads as paint; what makes it read as a carpet of blossom is
+       seeing the individual petals that formed it. Scattered in NORMALISED
+       coordinates from a hash of the index, so the drift is stable frame to
+       frame and simply rescales when the stage resizes — a scatter that
+       reshuffled every frame would shimmer, and one keyed to pixels would jump
+       when the panel opens.
+
+       Drawn straight after the ground and before anything interactive, so it
+       always sits UNDER the animals, drops, plots and the trough. It is texture,
+       never a target. */
+    function _drawFarmGroundFx(ctx, W, H, top, bot, pal) {
+      const fx = pal.groundFx;
+      if (!fx || !fx.count) return;
+      const band = bot - top;
+      if (band <= 0) return;
+      const hash = (n) => { const v = Math.sin(n) * 43758.5453; return v - Math.floor(v); };
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0, top, W, band); ctx.clip();
+      for (let i = 0; i < fx.count; i++) {
+        const rx = hash(i * 31.7), ry = hash(i * 57.3 + 2.1), rr = hash(i * 91.1 + 5.5);
+        // Perspective: the field recedes to the horizon, so a petal near the top
+        // of the band is further away and has to be drawn smaller, or the scatter
+        // reads as flat confetti pasted over the grass.
+        const depth = 0.35 + ry * 0.65;
+        const x = rx * W;
+        const y = top + ry * band;
+        const r = fx.size * depth;
+        ctx.globalAlpha = (fx.alpha || 0.9) * (0.55 + rr * 0.45);
+        ctx.fillStyle = 'rgba(' + ((fx.color2 && rr > 0.6) ? fx.color2 : fx.color) + ',1)';
+        ctx.beginPath();
+        ctx.ellipse(x, y, r, r * 0.62, rr * Math.PI, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+
     /* A skin's one big set piece in the sky.
 
        Kept to the TOP-LEFT on purpose: the merchant plane hovers at x 0.84
@@ -3713,7 +3755,9 @@
         const px = X(p[0]) + drift * p[0];
         const py = by + H * p[1];
         const r = R * p[2];
-        const spin = t / 2600 + i;
+        // Fixed, not animated: a blossom still on the branch does not spin.
+        // The index still varies the angle so the twelve are not identical.
+        const spin = i * 1.13;
         ctx.fillStyle = (i % 3 === 0) ? (pal.blossomAlt || '#fff') : (pal.blossom || '#ff9ec4');
         for (let k = 0; k < 5; k++) {
           const a = spin + k * (Math.PI * 2 / 5);
