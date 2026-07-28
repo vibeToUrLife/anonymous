@@ -1721,7 +1721,7 @@
        alone never has to carry the difference. */
     function _farmSwatch(theme) {
       const d = theme.day || {};
-      const g = d.grass || [], s = d.soil || [];
+      const g = d.grass || [], dk = d.deck || {};
       // A mini cross-section of the real thing: tinted sky, grass, soil, with a
       // dot for the canopy. Built from the very colours the canvas paints with,
       // so the row cannot promise a look the farm does not deliver.
@@ -1730,7 +1730,8 @@
         'vertical-align:-4px;margin-right:7px;border:1px solid rgba(0,0,0,.25);overflow:hidden;' +
         'background:linear-gradient(180deg,' + sky + ' 0%,' + sky + ' 26%,' +
         (g[0] || '#9ed26b') + ' 26%,' + (g[2] || '#5ba23c') + ' 66%,' +
-        (s[0] || '#8a6238') + ' 66%,' + (s[1] || '#5e4324') + ' 100%)">' +
+        'rgb(' + (dk.top || [122, 86, 48]).join(',') + ') 66%,' +
+        'rgb(' + (dk.bottom || [86, 58, 30]).join(',') + ') 100%)">' +
         '<span style="position:absolute;left:3px;top:6px;width:7px;height:7px;border-radius:50%;background:' +
         (d.leaf || '#3f9a30') + '"></span></span>';
     }
@@ -3547,12 +3548,6 @@
         ctx.fillRect(0, skyY, W, gy - skyY);
 
 
-        // Crop garden — a tilled soil band below the dividing fence
-        const soil = ctx.createLinearGradient(0, gy, 0, H);
-        soil.addColorStop(0, pal.soil[0]);                        // warmer tilled earth
-        soil.addColorStop(1, pal.soil[1]);
-        ctx.fillStyle = soil;
-        ctx.fillRect(0, gy, W, H - gy);
         /* Both bands get their grain from one baked texture, blitted after the
            two fills. No mown stripes, no depth bands, no tilled rows and no
            furrows any more: the pasture's depth comes from tufts drawn smaller
@@ -3562,7 +3557,7 @@
         const _tex = _farmGroundTexture(W, H, skyY, gy, pal,
           W + 'x' + H + '|' + (_theme ? _theme.id : '?') + '|' + (night ? 'n' : 'd') + '|' + Math.round(gy));
         if (_tex) ctx.drawImage(_tex, 0, 0);
-        else { _drawFarmScatter(ctx, W, H, skyY, gy, pal.groundFx); _drawFarmScatter(ctx, W, H, gy, H, pal.soilFx); }
+        else { _drawFarmScatter(ctx, W, H, skyY, gy, pal.groundFx); _drawFarmDeck(ctx, W, H, gy, H, pal); }
 
         // Fences: top of the pasture and the divider (farm | crops). No bottom
         // fence — its posts are a fixed 22px tall, so on a short stage they cut
@@ -3746,6 +3741,89 @@
        Drawn straight after the ground and before anything interactive, so it
        always sits UNDER the animals, drops, plots and the trough. It is texture,
        never a target. */
+    /* The decking the garden beds stand on.
+
+       Boards run across the stage and get THINNER toward the fence, because
+       that is what a plank floor does as it recedes — even spacing would read
+       as a flat wallpaper of stripes, which is the thing we just took out of
+       this band. Each board is cut from its own tone, grained along its length,
+       jointed where two boards meet, and knotted now and then.
+
+       Everything is keyed to the board index, so the deck is identical on every
+       frame; it is baked into the ground texture with the pasture scatter and
+       blitted, not redrawn. */
+    function _drawFarmDeck(ctx, W, H, top, bot, pal) {
+      const d = pal.deck;
+      if (!d) return;
+      const band = bot - top;
+      if (band <= 0) return;
+      const hash = (n) => { const v = Math.sin(n) * 43758.5453; return v - Math.floor(v); };
+
+      const base = ctx.createLinearGradient(0, top, 0, bot);
+      base.addColorStop(0, d.dark); base.addColorStop(1, d.light);
+      ctx.fillStyle = base;
+      ctx.fillRect(0, top, W, band);
+
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0, top, W, band); ctx.clip();
+
+      // Board edges laid out so each is a little deeper than the one behind it.
+      const N = 7;
+      const edges = [];
+      for (let k = 0; k <= N; k++) {
+        const f = k / N;
+        edges.push(top + band * (f * f * 0.72 + f * 0.28));   // quadratic ease → perspective
+      }
+
+      for (let k = 0; k < N; k++) {
+        const y0 = edges[k], h = edges[k + 1] - y0;
+        const tone = 0.88 + hash(k * 7.3) * 0.26;
+        const shade = (c) => 'rgb(' + c.map((v) => Math.round(v * tone)).join(',') + ')';
+        const g = ctx.createLinearGradient(0, y0, 0, y0 + h);
+        g.addColorStop(0, shade(d.top));
+        g.addColorStop(1, shade(d.bottom));
+        ctx.fillStyle = g;
+        ctx.fillRect(0, y0, W, h);
+
+        // grain along the board
+        ctx.lineWidth = Math.max(0.5, h * 0.05);
+        for (let n = 0; n < 3; n++) {
+          const f = hash(k * 11.9 + n * 3.1);
+          const gy2 = y0 + h * (0.2 + f * 0.62);
+          ctx.strokeStyle = 'rgba(' + d.grain + ',' + (0.08 + f * 0.10).toFixed(2) + ')';
+          ctx.beginPath();
+          ctx.moveTo(-2, gy2);
+          ctx.quadraticCurveTo(W * (0.25 + f * 0.5), gy2 + h * (f - 0.5) * 0.3, W + 2, gy2);
+          ctx.stroke();
+        }
+
+        // end joints — one or two per board, never lining up with the row behind
+        const joints = 1 + (hash(k * 19.7) > 0.5 ? 1 : 0);
+        ctx.strokeStyle = 'rgba(' + d.seam + ',0.5)';
+        ctx.lineWidth = Math.max(0.8, h * 0.06);
+        for (let j = 0; j < joints; j++) {
+          const jx = W * (0.12 + hash(k * 23.3 + j * 5.9) * 0.76);
+          ctx.beginPath(); ctx.moveTo(jx, y0); ctx.lineTo(jx, y0 + h); ctx.stroke();
+        }
+
+        if (hash(k * 29.1) > 0.62 && h > 6) {
+          const kx = W * (0.1 + hash(k * 31.7) * 0.8), ky = y0 + h * 0.52;
+          const kr = Math.max(1.2, h * 0.14);
+          ctx.fillStyle = 'rgba(' + d.knot + ',0.5)';
+          ctx.beginPath(); ctx.ellipse(kx, ky, kr, kr * 0.7, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = 'rgba(' + d.knot + ',0.22)'; ctx.lineWidth = Math.max(0.5, kr * 0.3);
+          ctx.beginPath(); ctx.ellipse(kx, ky, kr * 1.9, kr * 1.2, 0, 0, Math.PI * 2); ctx.stroke();
+        }
+
+        // the gap between boards: a dark line with the lit edge of the next below it
+        ctx.fillStyle = 'rgba(' + d.seam + ',0.55)';
+        ctx.fillRect(0, y0 + h - Math.max(0.8, h * 0.05), W, Math.max(0.8, h * 0.05));
+        ctx.fillStyle = 'rgba(' + d.lit + ',0.20)';
+        ctx.fillRect(0, y0, W, Math.max(0.6, h * 0.04));
+      }
+      ctx.restore();
+    }
+
     /* The ground scatter never moves, so it should not be redrawn 24 times a
        second. Bake both bands into one offscreen canvas and blit it; rebuild
        only when something it depends on actually changes — the stage size, the
@@ -3764,7 +3842,7 @@
       cvs.width = W; cvs.height = H;
       const c = cvs.getContext('2d');
       _drawFarmScatter(c, W, H, top, bot, pal.groundFx);     // tufts and flowers on the pasture
-      _drawFarmScatter(c, W, H, bot, H, pal.soilFx);         // clods and stones on the crop band
+      _drawFarmDeck(c, W, H, bot, H, pal);                   // plank decking under the beds
       _farmTexCache = { key: key, cvs: cvs };
       return cvs;
     }
