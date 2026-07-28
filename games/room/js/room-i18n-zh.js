@@ -1273,5 +1273,10 @@
     'Golden Harvest': '金色麦田',
     'Winter Farm': '雪国农场',
     'Blossom Season': '樱花田园',
+    // Rendered as T(th.blurb) — a variable, so no key-scanner will find these.
+    'the farm you know': '你熟悉的农场',
+    'golden fields · drifting chaff': '金黄的田 · 飞舞的麦屑',
+    'deep snow · falling flakes': '白雪覆盖 · 雪花纷飞',
+    'blossom trees · drifting petals': '满树樱花 · 花瓣飘落',
   });
 })();

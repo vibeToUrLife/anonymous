@@ -1722,10 +1722,17 @@
     function _farmSwatch(theme) {
       const d = theme.day || {};
       const g = d.grass || [], s = d.soil || [];
-      return '<span style="display:inline-block;width:24px;height:15px;border-radius:4px;vertical-align:-3px;' +
-        'margin-right:7px;border:1px solid rgba(0,0,0,.25);background:linear-gradient(180deg,' +
-        (g[0] || '#9ed26b') + ' 0%,' + (g[2] || '#5ba23c') + ' 58%,' + (s[0] || '#8a6238') + ' 58%,' +
-        (s[1] || '#5e4324') + ' 100%)"></span>';
+      // A mini cross-section of the real thing: tinted sky, grass, soil, with a
+      // dot for the canopy. Built from the very colours the canvas paints with,
+      // so the row cannot promise a look the farm does not deliver.
+      const sky = d.sky || 'rgba(150,205,245,0.55)';
+      return '<span style="position:relative;display:inline-block;width:26px;height:18px;border-radius:4px;' +
+        'vertical-align:-4px;margin-right:7px;border:1px solid rgba(0,0,0,.25);overflow:hidden;' +
+        'background:linear-gradient(180deg,' + sky + ' 0%,' + sky + ' 26%,' +
+        (g[0] || '#9ed26b') + ' 26%,' + (g[2] || '#5ba23c') + ' 66%,' +
+        (s[0] || '#8a6238') + ' 66%,' + (s[1] || '#5e4324') + ' 100%)">' +
+        '<span style="position:absolute;left:3px;top:6px;width:7px;height:7px;border-radius:50%;background:' +
+        (d.leaf || '#3f9a30') + '"></span></span>';
     }
 
     function _farmSkinsHtml() {
@@ -1740,7 +1747,8 @@
           : '<button class="farm-shop-buy" onclick="buyFarmTheme(\'' + th.id + '\')"' +
             (roomData.coins < th.cost ? ' disabled' : '') + '>' + th.cost + '🪙</button>';
         return '<div class="farm-shop-row">' +
-          '<span class="farm-shop-animal">' + _farmSwatch(th) + th.emoji + ' ' + T(th.name) + '</span>' +
+          '<span class="farm-shop-animal">' + _farmSwatch(th) + th.emoji + ' ' + T(th.name) +
+            (th.blurb ? ' <small>' + T(th.blurb) + '</small>' : '') + '</span>' +
           action +
         '</div>';
       }).join('');
@@ -3422,6 +3430,16 @@
         const pal = farmThemePalette(_theme, night) || {};
 
         _drawHDSky(ctx, W, H, night, t, H * FARM_SKY_Y);   // arc the sun/moon inside the farm's shallower sky
+        // A skin tints the farm's OWN sky band. The sky painter itself is shared
+        // with the room's Outside View, so the wash goes on top of it here
+        // rather than into it — the room stays exactly as it was.
+        if (pal.sky) {
+          const sw = ctx.createLinearGradient(0, 0, 0, H * FARM_SKY_Y);
+          sw.addColorStop(0, pal.sky);
+          sw.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = sw;
+          ctx.fillRect(0, 0, W, H * FARM_SKY_Y);
+        }
         _drawRollingHills(ctx, W, H, night, pal);
 
         // The dividing fence between the animal pasture (above) and the crop
@@ -3479,8 +3497,8 @@
         const topFenceY = H * FARM_TOPFENCE_Y;
         _drawFence(ctx, W * 0.02, topFenceY, W * 0.96, night);
         _drawFence(ctx, W * 0.02, gy, W * 0.96, night);
-        _drawHDTree(ctx, W * 0.06, topFenceY, H * 0.18, windSway, night);
-        _drawHDTree(ctx, W * 0.94, topFenceY, H * 0.15, windSway * 0.7, night);
+        _drawHDTree(ctx, W * 0.06, topFenceY, H * 0.18, windSway, night, pal);
+        _drawHDTree(ctx, W * 0.94, topFenceY, H * 0.15, windSway * 0.7, night, pal);
 
         _drawFarmTrough(ctx, W, H, night);
         if (viewingUid === currentUid) _drawFarmMailbox(ctx, W, H, t, night);   // your mail only
@@ -3628,10 +3646,55 @@
             else _drawCartAway(ctx, W, H, t, _cartS);
           }
         }
+        // Weather LAST, so snow and petals fall in front of the animals rather
+        // than behind them — that one ordering is most of why it reads as
+        // weather at all.
+        _drawFarmWeather(ctx, W, H, t, pal.weather);
+
         _farmAnimFrame = requestAnimationFrame(frame);
       }
       _farmAnimFrame = requestAnimationFrame(frame);
       _attachFarmPointerHandlers(cvs);
+    }
+
+    /* A skin's particle layer: snow, petals or drifting motes.
+
+       Every particle's position is a pure function of its index and the clock,
+       so there is no array to allocate, nothing to seed, and nothing to keep in
+       sync when the canvas is resized or the farm is reopened. The scatter comes
+       from the usual sin·large-constant hash — good enough to look random, and
+       identical on every frame so a particle never teleports. */
+    function _drawFarmWeather(ctx, W, H, t, wx) {
+      if (!wx || !wx.count) return;
+      const hash = (n) => { const v = Math.sin(n) * 43758.5453; return v - Math.floor(v); };
+      const fall = H + 24;
+      ctx.save();
+      for (let i = 0; i < wx.count; i++) {
+        const rx = hash(i * 12.9898), rz = hash(i * 78.233 + 1.7);
+        const depth = 0.55 + rz * 0.45;                       // nearer ones fall faster and bigger
+        const y = ((rz * fall) + (t / 1000) * wx.speed * depth) % fall - 12;
+        const drift = Math.sin(t / 1300 + i * 0.7) * wx.sway * depth;
+        const x = ((rx * W + drift) % W + W) % W;
+        const r = wx.size * depth;
+        ctx.globalAlpha = wx.alpha * (0.6 + rz * 0.4);
+        ctx.fillStyle = 'rgba(' + wx.color + ',1)';
+        if (wx.kind === 'petal') {
+          // a petal turns as it falls, so it flashes between edge-on and flat
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(t / 700 + i);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, r, r * (0.35 + 0.45 * Math.abs(Math.sin(t / 900 + i))), 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        } else {
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+      ctx.globalAlpha = 1;
     }
 
     /* ── Pointer handling: tap = collect/react, drag = move decor ── */

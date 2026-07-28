@@ -601,7 +601,11 @@
     }
 
     // -- Lush soft "clay" tree: full rounded crown, unified light/shade, sway --
-    function _drawHDTree(ctx, tx, ty, treeH, sway, night) {
+    /* `pal` is optional and only the farm passes it — a skin recolours the
+       canopy, and the room's Outside View calls this with six arguments and
+       keeps the green it has always had. The palette is already resolved for
+       the time of day, so there is no night branch to thread through. */
+    function _drawHDTree(ctx, tx, ty, treeH, sway, night, pal) {
       const trunkW = treeH * 0.06;
       const trunkH = treeH * 0.34;
       const topX = tx + sway * treeH;
@@ -640,7 +644,7 @@
       ];
       const cxy = (b, idx) => ({ cx: tx + b.dx + swayTop * (0.6 + idx * 0.12), cy: cb + b.dy });
       // 1) base silhouette (one unified deep-green mass)
-      ctx.fillStyle = night ? '#185016' : '#3f9a30';
+      ctx.fillStyle = (pal && pal.leaf) || (night ? '#185016' : '#3f9a30');
       blobs.forEach((b, idx) => { const { cx, cy } = cxy(b, idx); ctx.beginPath(); ctx.arc(cx, cy, b.r, 0, Math.PI * 2); ctx.fill(); });
       // 2) clay shading clipped to the crown: top-left light + bottom ambient shade
       ctx.save();
@@ -648,8 +652,8 @@
       blobs.forEach((b, idx) => { const { cx, cy } = cxy(b, idx); ctx.moveTo(cx + b.r, cy); ctx.arc(cx, cy, b.r, 0, Math.PI * 2); });
       ctx.clip();
       const lg = ctx.createRadialGradient(tx - R * 0.5 + swayTop, cb - R * 0.7, R * 0.1, tx + swayTop * 0.6, cb - R * 0.2, R * 1.8);
-      lg.addColorStop(0, night ? 'rgba(95,175,85,0.55)' : 'rgba(152,226,112,0.68)');
-      lg.addColorStop(0.55, night ? 'rgba(40,110,40,0.18)' : 'rgba(92,190,70,0.24)');
+      lg.addColorStop(0, (pal && pal.leafLight) || (night ? 'rgba(95,175,85,0.55)' : 'rgba(152,226,112,0.68)'));
+      lg.addColorStop(0.55, (pal && pal.leafMid) || (night ? 'rgba(40,110,40,0.18)' : 'rgba(92,190,70,0.24)'));
       lg.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = lg; ctx.fillRect(tx - R * 2.4, cb - R * 2.7, R * 4.8, R * 3.9);
       const sg = ctx.createLinearGradient(0, cb - R * 0.2, 0, cb + R * 1.2);
@@ -657,7 +661,7 @@
       ctx.fillStyle = sg; ctx.fillRect(tx - R * 2.4, cb - R * 0.2, R * 4.8, R * 1.6);
       ctx.restore();
       // 3) dapple highlights on the sunlit side
-      ctx.fillStyle = night ? 'rgba(120,200,110,0.4)' : 'rgba(195,242,155,0.6)';
+      ctx.fillStyle = (pal && pal.leafDapple) || (night ? 'rgba(120,200,110,0.4)' : 'rgba(195,242,155,0.6)');
       [[-R * 0.5, -R * 0.72, R * 0.13], [-R * 0.08, -R * 0.98, R * 0.09], [R * 0.32, -R * 0.7, R * 0.10], [-R * 0.74, -R * 0.12, R * 0.08]]
         .forEach(d => { ctx.beginPath(); ctx.arc(tx + d[0] + swayTop, cb + d[1], d[2], 0, Math.PI * 2); ctx.fill(); });
       ctx.restore();
