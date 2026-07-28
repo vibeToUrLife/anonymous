@@ -53,6 +53,19 @@
     .feedback-fab:hover { transform: scale(1.1); box-shadow: 0 6px 24px rgba(59,130,246,0.5); }
 
     /* ── Daily Quote Banner (clay card) ── */
+    /* There is no global `.hidden` rule in this codebase — every use of that
+       class is scoped to the element it hides (.cr-banner.hidden,
+       .settings-overlay.hidden, and so on). So these have to be declared, or
+       toggling the class does NOTHING: the sheet never closes, the chip never
+       goes away, and the panel simply sits on the page. That is exactly what
+       happened. */
+    .devboard-sheet.hidden,
+    .devboard-btn.hidden,
+    .devboard-badge.hidden,
+    .dev-board-compose.hidden,
+    .dev-board-more.hidden,
+    .dev-compose-preview.hidden { display: none !important; }
+
     /* 📣 Dev board — a chip beside the gear, and a sheet behind it.
        Deliberately NOT a card in the page: this sits above the message board,
        and anything that lives there is scrolled past on every single visit. */
@@ -1824,7 +1837,7 @@
   <script src="./src/js/wall-logic.js?v=6"></script>
   <script src="./src/js/graffiti-wall.js?v=8"></script>
   <script src="./src/js/dev-board-logic.js?v=2"></script>
-  <script src="./src/js/dev-board.js?v=2"></script>
+  <script src="./src/js/dev-board.js?v=3"></script>
   <script src="./src/js/coin-rush-logic.js"></script>
   <script src="./src/js/coin-rush.js?v=1"></script>
   <!-- Daily brain-teaser (脑筋急转弯) -->

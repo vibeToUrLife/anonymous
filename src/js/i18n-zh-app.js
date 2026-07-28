@@ -361,7 +361,9 @@
     'Post': '发布',
     'Give it a title first': '先写个标题',
     '📣 Posted!': '📣 发布成功！',
-    'Could not post — check the rules are published': '发布失败 —— 检查 Firestore 规则是否已发布',
+    'Denied — paste the dev_updates block from firestore.rules into the Firebase Console':
+      '没有权限 —— 把 firestore.rules 里的 dev_updates 那一块贴进 Firebase Console',
+    'Could not post ({code})': '发布失败（{code}）',
     'Could not delete': '删除失败',
     'Could not read that image': '这张图读不出来',
     'Too big to post ({size}KB of {cap}KB) — use a smaller image':

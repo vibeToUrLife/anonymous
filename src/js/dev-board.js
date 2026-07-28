@@ -226,7 +226,17 @@
       const fileEl = $('devComposeFile'); if (fileEl) fileEl.value = '';
       if (typeof showToast === 'function') showToast(_t('📣 Posted!'), 'success');
     } catch (e) {
-      if (typeof showToast === 'function') showToast(_t('Could not post — check the rules are published'), 'error');
+      /* Name the reason. "permission-denied" here almost always means the
+         dev_updates block in firestore.rules has not been pasted into the
+         Firebase Console yet — the collection then has no matching rule and
+         everything is denied by default. A generic "failed" would send you
+         looking at the network instead. */
+      const code = (e && e.code) || '';
+      const msg = code === 'permission-denied'
+        ? _t('Denied — paste the dev_updates block from firestore.rules into the Firebase Console')
+        : _t('Could not post ({code})', { code: code || (e && e.message) || 'unknown' });
+      console.error('dev board publish failed:', e);
+      if (typeof showToast === 'function') showToast(msg, 'error');
     }
     busy = false;
   }
@@ -234,7 +244,10 @@
   async function remove(id) {
     if (!isDev()) return;
     try { await db().collection(COL).doc(id).delete(); }
-    catch (e) { if (typeof showToast === 'function') showToast(_t('Could not delete'), 'error'); }
+    catch (e) {
+      console.error('dev board delete failed:', e);
+      if (typeof showToast === 'function') showToast(_t('Could not delete'), 'error');
+    }
   }
 
   /* ── data ── */
@@ -249,7 +262,11 @@
           posts = [];
           snap.forEach(function (d) { posts.push(Object.assign({ id: d.id }, d.data())); });
           render();
-        }, function () { /* a board that cannot load simply stays empty */ });
+        }, function (err) {
+          // An empty board and a denied board look identical to a reader, so
+          // leave the reason where a developer will find it.
+          console.error('dev board read failed:', err);
+        });
     } catch (e) {}
   }
 
