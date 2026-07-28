@@ -64,7 +64,15 @@
       box-shadow: var(--clay-up);
       border-left: 5px solid var(--primary-deep);
     }
-    .dev-board-head { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+    /* The head is the whole control when the card is shut: one strip, ~44px,
+       instead of a card that pushes the messages down forever. */
+    .dev-board-head {
+      display:flex; align-items:center; gap:8px; width:100%;
+      border:0; background:transparent; cursor:pointer; padding:0; text-align:left;
+    }
+    .dev-board-chev { margin-left:auto; font-size:12px; color:var(--ink-soft); transition:transform .18s; }
+    .dev-board-card.is-open .dev-board-chev { transform:rotate(180deg); }
+    .dev-board-body { margin-top:10px; }
     .dev-board-title {
       font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
       text-transform: uppercase; color: var(--primary-deep);
@@ -1467,15 +1475,18 @@
        the daily quote. Collapsed to two posts; the composer only renders for
        a developer, and firestore.rules is what actually enforces that. -->
   <section class="dev-board-card" id="devBoardCard">
-    <div class="dev-board-head">
+    <button class="dev-board-head" id="devBoardHead" type="button" aria-expanded="false">
       <span class="dev-board-title" data-i18n>📣 What's new</span>
       <span class="dev-board-dot hidden" id="devBoardDot"></span>
+      <span class="dev-board-chev" id="devBoardChev">▾</span>
+    </button>
+
+    <div class="dev-board-body hidden" id="devBoardBody">
+      <div class="dev-board-list" id="devBoardList"></div>
+      <button class="dev-board-more hidden" id="devBoardMore" type="button"></button>
     </div>
 
-    <div class="dev-board-list" id="devBoardList"></div>
-    <button class="dev-board-more hidden" id="devBoardMore" type="button"></button>
-
-    <div class="dev-board-compose hidden" id="devBoardCompose">
+      <div class="dev-board-compose hidden" id="devBoardCompose">
       <div class="dev-compose-row">
         <select class="dev-compose-tag" id="devComposeTag">
           <option value="feature">🆕</option>
@@ -1496,6 +1507,7 @@
           <span data-i18n>🖼️ Image</span>
         </label>
         <button class="dev-compose-post" id="devComposePost" type="button" data-i18n>Post</button>
+        </div>
       </div>
     </div>
   </section>

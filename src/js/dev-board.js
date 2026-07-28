@@ -33,7 +33,8 @@
   const DEV_UIDS = ['eUs3isAgsaRT9VLKEFI4HEFbCnk1'];
 
   let posts = [];
-  let expanded = false;
+  let expanded = false;      // "show all" inside the list
+  let open = null;           // the card itself; null = decide from unread
   let unsub = null;
   let busy = false;
 
@@ -77,6 +78,19 @@
       dot.textContent = unseen ? _t('{n} new', { n: unseen }) : '';
       dot.classList.toggle('hidden', !unseen);
     }
+
+    /* Shut unless there is something to see. The card sits above the message
+       board, and a card that stayed open would push the messages down every
+       visit for the sake of an update the reader has already read. Unread
+       opens it; reading it, or tapping the strip, shuts it again. A developer
+       still gets the composer — one tap away, not permanently in the page. */
+    const isOpen = (open === null) ? unseen > 0 : open;
+    const body = $('devBoardBody');
+    const head = $('devBoardHead');
+    card.classList.toggle('is-open', isOpen);
+    if (body) body.classList.toggle('hidden', !isOpen);
+    if (head) head.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    if (!isOpen) return;
 
     if (!posts.length) {
       list.innerHTML = '<div class="dev-board-empty">' + esc(_t('Nothing posted yet.')) + '</div>';
@@ -252,11 +266,30 @@
     const more = $('devBoardMore');
     if (more) more.addEventListener('click', function () { expanded = !expanded; render(); });
 
-    // Opening the card is what marks it read — a badge that cleared on page
-    // load would mean you could never see that something arrived.
+    const head = $('devBoardHead');
+    if (head) head.addEventListener('click', function () {
+      const unseen = unseenCount(posts, seenTs());
+      open = (open === null) ? !(unseen > 0) : !open;
+      // Shutting it counts as having read it; that is what the strip means.
+      if (!open && unseen) markSeen();
+      render();
+    });
+
+    // Opening it also marks it read, but only after a beat — clearing the badge
+    // the instant it renders would mean you never see that something arrived.
     card.addEventListener('click', function () {
       if (!posts.length) return;
-      if (unseenCount(posts, seenTs())) { markSeen(); setTimeout(render, 1200); }
+      const isOpen = (open === null) ? unseenCount(posts, seenTs()) > 0 : open;
+      if (isOpen && unseenCount(posts, seenTs())) {
+        setTimeout(function () {
+          // Pin it open first. Marking it read drops the unread count to zero,
+          // and the card decides its own state from that count — so without
+          // this it would fold up under the reader mid-sentence.
+          open = true;
+          markSeen();
+          render();
+        }, 2500);
+      }
     });
 
     const pub = $('devComposePost');
