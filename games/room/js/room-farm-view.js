@@ -3310,6 +3310,71 @@
 
     // Garden plots: brown soil tiles; growing crops show a progress bar, ripe
     // crops bob with a ✨ to invite a harvest tap.
+    /* The front board of a raised bed.
+
+       It used to be one flat brown rectangle with a single seam ruled across
+       it, which reads as plastic. Wood is cheap to suggest properly: two
+       stacked planks each shaded light-top to dark-bottom so they look round,
+       grain streaks running the LENGTH of the board (grain follows the plank,
+       and drawing it any other way is the tell), an end joint where two boards
+       meet, and a knot on some beds but not all.
+
+       Every variation comes from `seed` — the plot's own index — so a bed's
+       grain belongs to that bed and is identical on every frame. Grain rolled
+       per frame would crawl, which is worse than no grain at all. */
+    function _drawBedBoard(ctx, x, y, w, h, seed) {
+      const hash = (n) => { const v = Math.sin(n) * 43758.5453; return v - Math.floor(v); };
+      const planks = 2, ph = h / planks;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+
+      for (let k = 0; k < planks; k++) {
+        const py = y + k * ph;
+        const tone = 0.86 + hash(seed * 3.1 + k) * 0.28;          // each plank cut from a different board
+        const gr = ctx.createLinearGradient(0, py, 0, py + ph);
+        gr.addColorStop(0, 'rgb(' + Math.round(82 * tone) + ',' + Math.round(58 * tone) + ',' + Math.round(32 * tone) + ')');
+        gr.addColorStop(1, 'rgb(' + Math.round(52 * tone) + ',' + Math.round(35 * tone) + ',' + Math.round(18 * tone) + ')');
+        ctx.fillStyle = gr;
+        ctx.fillRect(x, py, w, ph);
+
+        // grain — long, shallow arcs along the plank
+        ctx.lineWidth = Math.max(0.6, ph * 0.07);
+        for (let n = 0; n < 3; n++) {
+          const f = hash(seed * 5.7 + k * 2.3 + n);
+          const gy = py + ph * (0.22 + f * 0.6);
+          ctx.strokeStyle = 'rgba(30,18,6,' + (0.10 + f * 0.12).toFixed(2) + ')';
+          ctx.beginPath();
+          ctx.moveTo(x - 1, gy);
+          ctx.quadraticCurveTo(x + w * (0.3 + f * 0.4), gy + ph * (f - 0.5) * 0.35, x + w + 1, gy);
+          ctx.stroke();
+        }
+
+        // where two boards meet end to end
+        const jx = x + w * (0.3 + hash(seed * 9.4 + k) * 0.4);
+        ctx.strokeStyle = 'rgba(24,14,4,0.35)';
+        ctx.lineWidth = Math.max(0.7, w * 0.008);
+        ctx.beginPath(); ctx.moveTo(jx, py); ctx.lineTo(jx, py + ph); ctx.stroke();
+
+        // a knot, on some planks
+        const kf = hash(seed * 13.7 + k * 4.1);
+        if (kf > 0.78) {                                     // a knot is a feature, not a texture
+          const kx = x + w * (0.15 + hash(seed * 17.3 + k) * 0.7), ky = py + ph * 0.5;
+          const kr = Math.max(1, ph * 0.16);
+          ctx.fillStyle = 'rgba(28,16,5,0.45)';
+          ctx.beginPath(); ctx.ellipse(kx, ky, kr, kr * 0.72, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = 'rgba(28,16,5,0.22)'; ctx.lineWidth = Math.max(0.5, kr * 0.35);
+          ctx.beginPath(); ctx.ellipse(kx, ky, kr * 1.9, kr * 1.25, 0, 0, Math.PI * 2); ctx.stroke();
+        }
+
+        // the lit edge of each plank, and the shadow it casts on the one below
+        ctx.fillStyle = 'rgba(255,226,180,0.16)';
+        ctx.fillRect(x, py, w, Math.max(0.7, ph * 0.09));
+        ctx.fillStyle = 'rgba(0,0,0,0.26)';
+        ctx.fillRect(x, py + ph - Math.max(0.7, ph * 0.08), w, Math.max(0.7, ph * 0.08));
+      }
+      ctx.restore();
+    }
+
     function _drawFarmPlots(ctx, W, H, t) {
       const plots = roomData.farmPlots || [];
       const now = Date.now();
@@ -3332,12 +3397,9 @@
         // 3D raised garden bed: front (wooden) face for depth + top soil face
         const _x0 = px - tile / 2, _y0 = py - tile / 2, _r = Math.max(3, tile * 0.16);
         const _depth = tile * 0.30;
-        ctx.fillStyle = '#43301c';                                   // front face
-        ctx.fillRect(_x0, _y0 + tile - _r, tile, _depth + _r);
-        ctx.fillStyle = 'rgba(0,0,0,0.22)';
+        _drawBedBoard(ctx, _x0, _y0 + tile - _r, tile, _depth + _r, i + 1);   // front face
+        ctx.fillStyle = 'rgba(0,0,0,0.22)';                          // where it meets the ground
         ctx.fillRect(_x0, _y0 + tile + _depth - 2, tile, 2);
-        ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = 1;     // plank seam on the side
-        ctx.beginPath(); ctx.moveTo(_x0 + 2, _y0 + tile + _depth * 0.5); ctx.lineTo(_x0 + tile - 2, _y0 + tile + _depth * 0.5); ctx.stroke();
         const _tg = ctx.createLinearGradient(0, _y0, 0, _y0 + tile);  // top soil face
         _tg.addColorStop(0, '#8a6038'); _tg.addColorStop(1, '#6b4a2c');
         ctx.fillStyle = _tg;
@@ -3348,9 +3410,15 @@
         else ctx.fillRect(_x0, _y0, tile, tile * 0.16);
         ctx.strokeStyle = 'rgba(40,26,12,.28)'; ctx.lineWidth = 1;    // tilled lines
         for (let ly = _y0 + tile * 0.38; ly < _y0 + tile - 2; ly += tile * 0.26) { ctx.beginPath(); ctx.moveTo(_x0 + 3, ly); ctx.lineTo(_x0 + tile - 3, ly); ctx.stroke(); }
-        ctx.strokeStyle = '#5a3c22'; ctx.lineWidth = 1.5;            // wooden frame edge
+        // Wooden frame edge — two passes so the rim reads as the same timber as
+        // the front board: the dark line is the wood, the lighter inset is the
+        // sunlit top of the frame.
+        ctx.strokeStyle = '#4a3018'; ctx.lineWidth = 2;
         if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(_x0, _y0, tile, tile, _r); ctx.stroke(); }
         else ctx.strokeRect(_x0, _y0, tile, tile);
+        ctx.strokeStyle = 'rgba(214,168,110,0.42)'; ctx.lineWidth = 1;
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(_x0 + 1.2, _y0 + 1.2, tile - 2.4, tile - 2.4, Math.max(1, _r - 1)); ctx.stroke(); }
+        else ctx.strokeRect(_x0 + 1.2, _y0 + 1.2, tile - 2.4, tile - 2.4);
         if (!plot.crop) return;
         const crop = FARM_CROPS.find(c => c.id === plot.crop);
         if (!crop) return;
