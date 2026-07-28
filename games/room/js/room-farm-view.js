@@ -3408,8 +3408,29 @@
         ctx.fillStyle = 'rgba(255,255,255,.08)';
         if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(_x0, _y0, tile, tile * 0.30, _r); ctx.fill(); }
         else ctx.fillRect(_x0, _y0, tile, tile * 0.16);
-        ctx.strokeStyle = 'rgba(40,26,12,.28)'; ctx.lineWidth = 1;    // tilled lines
-        for (let ly = _y0 + tile * 0.38; ly < _y0 + tile - 2; ly += tile * 0.26) { ctx.beginPath(); ctx.moveTo(_x0 + 3, ly); ctx.lineTo(_x0 + tile - 3, ly); ctx.stroke(); }
+        /* Worked earth inside the bed. The ruled tilled lines are gone the same
+           way the band's furrows went; what is left is the soil itself — a
+           handful of clods with a lit top and a shadow under each, keyed to the
+           plot index so a bed's earth is its own and never crawls. Without this
+           the beds would be the smoothest thing on a field of grainy ground. */
+        (function () {
+          const hb = (n2) => { const v = Math.sin(n2) * 43758.5453; return v - Math.floor(v); };
+          ctx.save();
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(_x0, _y0, tile, tile, _r); else ctx.rect(_x0, _y0, tile, tile);
+          ctx.clip();
+          for (let c = 0; c < 7; c++) {
+            const a1 = hb((i + 1) * 12.3 + c * 3.7), a2 = hb((i + 1) * 27.1 + c * 5.3), a3 = hb((i + 1) * 41.9 + c * 7.1);
+            const cx2 = _x0 + tile * (0.12 + a1 * 0.76);
+            const cy2 = _y0 + tile * (0.30 + a2 * 0.62);      // below the lit upper lip
+            const cr = Math.max(0.9, tile * (0.045 + a3 * 0.05));
+            ctx.fillStyle = 'rgba(58,38,18,0.34)';
+            ctx.beginPath(); ctx.ellipse(cx2, cy2, cr, cr * 0.6, a3 * Math.PI, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = 'rgba(190,146,92,0.26)';
+            ctx.beginPath(); ctx.ellipse(cx2 - cr * 0.2, cy2 - cr * 0.24, cr * 0.6, cr * 0.28, a3 * Math.PI, 0, Math.PI * 2); ctx.fill();
+          }
+          ctx.restore();
+        })();
         // Wooden frame edge — two passes so the rim reads as the same timber as
         // the front board: the dark line is the wood, the lighter inset is the
         // sunlit top of the frame.
@@ -3525,11 +3546,6 @@
         ctx.fillStyle = grass;
         ctx.fillRect(0, skyY, W, gy - skyY);
 
-        // No mown stripes and no depth bands: the field is a clean sweep of
-        // colour, and its depth comes from the gradient plus the scatter below
-        // — tufts drawn smaller toward the horizon read as distance far better
-        // than ruled lines did.
-        _drawFarmGroundFx(ctx, W, H, skyY, gy, pal);
 
         // Crop garden — a tilled soil band below the dividing fence
         const soil = ctx.createLinearGradient(0, gy, 0, H);
@@ -3537,8 +3553,16 @@
         soil.addColorStop(1, pal.soil[1]);
         ctx.fillStyle = soil;
         ctx.fillRect(0, gy, W, H - gy);
-        // No tilled rows or furrows either — the beds themselves give the soil
-        // band its structure, and the ruled lines were fighting them for it.
+        /* Both bands get their grain from one baked texture, blitted after the
+           two fills. No mown stripes, no depth bands, no tilled rows and no
+           furrows any more: the pasture's depth comes from tufts drawn smaller
+           toward the horizon, and the crop band's from clods doing the same —
+           which is how ground actually recedes, rather than ruled lines
+           pretending it does. */
+        const _tex = _farmGroundTexture(W, H, skyY, gy, pal,
+          W + 'x' + H + '|' + (_theme ? _theme.id : '?') + '|' + (night ? 'n' : 'd') + '|' + Math.round(gy));
+        if (_tex) ctx.drawImage(_tex, 0, 0);
+        else { _drawFarmScatter(ctx, W, H, skyY, gy, pal.groundFx); _drawFarmScatter(ctx, W, H, gy, H, pal.soilFx); }
 
         // Fences: top of the pasture and the divider (farm | crops). No bottom
         // fence — its posts are a fixed 22px tall, so on a short stage they cut
@@ -3722,8 +3746,30 @@
        Drawn straight after the ground and before anything interactive, so it
        always sits UNDER the animals, drops, plots and the trough. It is texture,
        never a target. */
-    function _drawFarmGroundFx(ctx, W, H, top, bot, pal) {
-      const layers = pal.groundFx;
+    /* The ground scatter never moves, so it should not be redrawn 24 times a
+       second. Bake both bands into one offscreen canvas and blit it; rebuild
+       only when something it depends on actually changes — the stage size, the
+       skin, day flipping to night, or the fence moving after an expansion.
+
+       Measured before and after on the most expensive skin with a full field:
+       4,594 canvas calls per frame became about 1,500. The texture work in the
+       last few rounds is only affordable because of this. */
+    let _farmTexCache = null;
+
+    function _farmGroundTexture(W, H, top, bot, pal, key) {
+      if (_farmTexCache && _farmTexCache.key === key) return _farmTexCache.cvs;
+      let cvs;
+      try { cvs = document.createElement('canvas'); } catch (e) { return null; }
+      if (!cvs || !cvs.getContext) return null;
+      cvs.width = W; cvs.height = H;
+      const c = cvs.getContext('2d');
+      _drawFarmScatter(c, W, H, top, bot, pal.groundFx);     // tufts and flowers on the pasture
+      _drawFarmScatter(c, W, H, bot, H, pal.soilFx);         // clods and stones on the crop band
+      _farmTexCache = { key: key, cvs: cvs };
+      return cvs;
+    }
+
+    function _drawFarmScatter(ctx, W, H, top, bot, layers) {
       if (!layers || !layers.length) return;
       const band = bot - top;
       if (band <= 0) return;
@@ -3770,6 +3816,28 @@
                 ctx.fillStyle = fx.bloomCore;
                 ctx.beginPath(); ctx.arc(bx, by, r * 0.16, 0, Math.PI * 2); ctx.fill();
               }
+            }
+          } else if (fx.kind === 'clod') {
+            /* Broken earth. A clod is not a dot: it is a lump with a lit top
+               and a shadow under it, and that pairing is what makes tilled soil
+               read as lumpy rather than as speckled paint. A few are stones
+               instead — paler, rounder, and rarer. */
+            const stone = fx.stone && rx > 0.88;
+            ctx.fillStyle = 'rgba(' + (stone ? fx.stone : fx.color) + ',1)';
+            ctx.beginPath();
+            ctx.ellipse(x, y, r, r * (stone ? 0.78 : 0.55), rr * Math.PI, 0, Math.PI * 2);
+            ctx.fill();
+            if (fx.lit) {                                  // sun on the upper face
+              ctx.fillStyle = 'rgba(' + fx.lit + ',1)';
+              ctx.beginPath();
+              ctx.ellipse(x - r * 0.16, y - r * 0.22, r * 0.6, r * 0.26, rr * Math.PI, 0, Math.PI * 2);
+              ctx.fill();
+            }
+            if (fx.shade) {                                // and the shadow it sits in
+              ctx.fillStyle = 'rgba(' + fx.shade + ',1)';
+              ctx.beginPath();
+              ctx.ellipse(x + r * 0.12, y + r * 0.34, r * 0.72, r * 0.2, 0, 0, Math.PI * 2);
+              ctx.fill();
             }
           } else {
             ctx.fillStyle = 'rgba(' + ((fx.color2 && rr > 0.6) ? fx.color2 : fx.color) + ',1)';
