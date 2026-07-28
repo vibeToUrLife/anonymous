@@ -532,6 +532,8 @@
           leaf: '#33586b', leafLight: 'rgba(255,255,255,0.85)', leafMid: 'rgba(150,190,215,0.28)', leafDapple: 'rgba(255,255,255,0.95)',
           sky: 'rgba(150,195,240,0.30)',
           roofSnow: 'rgba(250,253,255,0.95)', groundProp: 'snowman', propSnow: '#f7fbff', propShade: 'rgba(158,182,206,0.55)',
+          treeShape: 'conifer', conifer: '#2f6b3c', coniferDark: 'rgba(8,40,20,0.20)', coniferSnow: 'rgba(252,254,255,0.92)',
+          coniferTrunk: '#5a3f28', star: '#ffd24a', baubles: ['#e05a4a', '#f0c04a', '#5aa8e0', '#c86ad0'],
           weather: { kind: 'snow', count: 70, color: '255,255,255', size: 3.0, speed: 30, sway: 24, alpha: 0.95 },
         },
         night: {
@@ -545,6 +547,8 @@
           leaf: '#1d3441', leafLight: 'rgba(200,225,245,0.55)', leafMid: 'rgba(70,105,135,0.22)', leafDapple: 'rgba(235,245,255,0.70)',
           sky: 'rgba(90,130,180,0.20)',
           roofSnow: 'rgba(206,224,244,0.85)', groundProp: 'snowman', propSnow: '#c9d9ec', propShade: 'rgba(70,92,118,0.6)',
+          treeShape: 'conifer', conifer: '#173b28', coniferDark: 'rgba(0,0,0,0.26)', coniferSnow: 'rgba(210,228,246,0.78)',
+          coniferTrunk: '#2e2116', star: '#ffdc72', baubles: ['#e0705f', '#ffd980', '#7cc0ee', '#d68ade'],
           weather: { kind: 'snow', count: 52, color: '235,245,255', size: 2.8, speed: 27, sway: 22, alpha: 0.70 },
         },
       },

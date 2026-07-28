@@ -3593,8 +3593,14 @@
         const topFenceY = H * FARM_TOPFENCE_Y;
         _drawFence(ctx, W * 0.02, topFenceY, W * 0.96, night);
         _drawFence(ctx, W * 0.02, gy, W * 0.96, night);
-        _drawHDTree(ctx, W * 0.06, topFenceY, H * 0.18, windSway, night, pal);
-        _drawHDTree(ctx, W * 0.94, topFenceY, H * 0.15, windSway * 0.7, night, pal);
+        // A skin can swap the SHAPE of the trees, not just their colour.
+        if (pal.treeShape === 'conifer') {
+          _drawFarmConifer(ctx, W * 0.06, topFenceY, H * 0.18, windSway, pal, t);
+          _drawFarmConifer(ctx, W * 0.94, topFenceY, H * 0.15, windSway * 0.7, pal, t);
+        } else {
+          _drawHDTree(ctx, W * 0.06, topFenceY, H * 0.18, windSway, night, pal);
+          _drawHDTree(ctx, W * 0.94, topFenceY, H * 0.15, windSway * 0.7, night, pal);
+        }
 
         _drawFarmSnowman(ctx, W, H, pal);   // before the trough and the herd, so both pass in front
         _drawFarmTrough(ctx, W, H, night);
@@ -3770,6 +3776,94 @@
        Drawn straight after the ground and before anything interactive, so it
        always sits UNDER the animals, drops, plots and the trough. It is texture,
        never a target. */
+    /* The winter farm's trees are firs, dressed for Christmas.
+
+       A skin cannot do this by recolouring: a round canopy painted white is a
+       snowy oak, not a fir. So the farm draws its own tree when the skin asks
+       for one, and room-layers.js — which the room's Outside View shares —
+       keeps the only tree it has ever had.
+
+       The base tier is 0.30 of the tree's height half-wide, deliberately under
+       the round canopy's 0.316, so swapping shapes cannot push the right-hand
+       tree further over the mailbox than the tree already standing there does.
+
+       Sway comes from the same wind the rest of the farm uses, and grows toward
+       the top so the tree bends rather than slides. */
+    function _drawFarmConifer(ctx, tx, ty, treeH, sway, pal, t) {
+      const p = pal || {};
+      const trunkW = treeH * 0.055, trunkH = treeH * 0.16;
+      ctx.save();
+
+      ctx.fillStyle = p.groundShadow || 'rgba(90,120,150,.22)';
+      ctx.beginPath(); ctx.ellipse(tx, ty + 1, treeH * 0.20, treeH * 0.045, 0, 0, Math.PI * 2); ctx.fill();
+
+      ctx.fillStyle = p.coniferTrunk || '#5a3f28';
+      ctx.fillRect(tx - trunkW / 2, ty - trunkH, trunkW, trunkH);
+
+      // four tiers, each narrower and shorter than the one below
+      const TIERS = 4;
+      const base = ty - trunkH * 0.75;
+      for (let k = 0; k < TIERS; k++) {
+        const f = k / TIERS;
+        const halfW = treeH * 0.30 * (1 - f * 0.62);
+        const tierTop = base - treeH * (0.20 + k * 0.20);
+        const tierBot = base - treeH * (k * 0.20);
+        const lean = sway * treeH * (0.6 + k * 0.5);          // the top moves most
+
+        ctx.fillStyle = p.conifer || '#2f6b3c';
+        ctx.beginPath();
+        ctx.moveTo(tx + lean, tierTop);
+        ctx.lineTo(tx + halfW, tierBot);
+        ctx.lineTo(tx - halfW, tierBot);
+        ctx.closePath(); ctx.fill();
+
+        // shaded right half, so the tier is not a flat triangle
+        ctx.fillStyle = p.coniferDark || 'rgba(0,0,0,0.16)';
+        ctx.beginPath();
+        ctx.moveTo(tx + lean, tierTop);
+        ctx.lineTo(tx + halfW, tierBot);
+        ctx.lineTo(tx + lean * 0.5, tierBot);
+        ctx.closePath(); ctx.fill();
+
+        // snow lying along the tier's shoulders
+        if (p.coniferSnow) {
+          ctx.strokeStyle = p.coniferSnow;
+          ctx.lineWidth = Math.max(1.6, treeH * 0.022);
+          ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+          ctx.beginPath();
+          ctx.moveTo(tx - halfW * 0.94, tierBot - treeH * 0.008);
+          ctx.lineTo(tx + lean, tierTop + treeH * 0.012);
+          ctx.lineTo(tx + halfW * 0.94, tierBot - treeH * 0.008);
+          ctx.stroke();
+        }
+      }
+
+      // baubles, breathing slowly and out of phase with each other
+      const spots = [[-0.16, 0.30], [0.15, 0.34], [-0.10, 0.56], [0.12, 0.62], [-0.05, 0.80], [0.07, 0.86]];
+      const cols = p.baubles || ['#e05a4a', '#f0c04a', '#5aa8e0'];
+      spots.forEach(function (d, i) {
+        const bx = tx + treeH * d[0] + sway * treeH * (d[1] * 2.2);
+        const by2 = base - treeH * d[1];
+        ctx.globalAlpha = 0.72 + 0.28 * Math.sin(t / 620 + i * 1.7);
+        ctx.fillStyle = cols[i % cols.length];
+        ctx.beginPath(); ctx.arc(bx, by2, Math.max(1.3, treeH * 0.022), 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+
+      // and a star on top
+      const sx = tx + sway * treeH * 1.1, sy = base - treeH * 1.0;
+      const sr = treeH * 0.055;
+      ctx.fillStyle = p.star || '#ffd24a';
+      ctx.beginPath();
+      for (let k = 0; k < 10; k++) {
+        const a = -Math.PI / 2 + k * Math.PI / 5;
+        const r = (k % 2 ? sr * 0.42 : sr);
+        ctx[k ? 'lineTo' : 'moveTo'](sx + Math.cos(a) * r, sy + Math.sin(a) * r);
+      }
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+
     /* Somebody built a snowman.
 
        It stands on the open strip between the workshop huts and the pens — the
