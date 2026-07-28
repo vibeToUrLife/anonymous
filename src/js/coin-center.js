@@ -22,7 +22,11 @@
 
   // Developer UIDs (must match WN_DEV_UIDS in index.html / isDeveloper() in firestore.rules).
   // These users get the exclusive "开发者" signature title when no other title is equipped.
-  const DEV_UIDS = ['eUs3isAgsaRT9VLKEFI4HEFbCnk1'];
+  // BOTH bootstrap devs from isDeveloper() in firestore.rules. This file had
+  // only one of them, so the other developer was charged for cosmetics and
+  // never got the DEV tag here — and seeding a new file from this list is how
+  // the dev board inherited the same hole.
+  const DEV_UIDS = ['HClZmAeuEaUVjHqUaFLFFMTMQnd2', 'eUs3isAgsaRT9VLKEFI4HEFbCnk1'];
   function isDev() { return hasFB && auth.currentUser && DEV_UIDS.indexOf(auth.currentUser.uid) !== -1; }
 
   // Dev test mode: every coin sink is FREE for developers — no balance requirement,

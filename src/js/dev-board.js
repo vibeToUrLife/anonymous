@@ -36,9 +36,18 @@
     { id: 'party', emoji: '🎉' },
     { id: 'up',    emoji: '👍' },
   ];
-  // Must match isDeveloper() in firestore.rules — the rules are what actually
-  // enforce this; the check here only decides whether to show the composer.
-  const DEV_UIDS = ['eUs3isAgsaRT9VLKEFI4HEFbCnk1'];
+  /* BOTH bootstrap devs from isDeveloper() in firestore.rules. I first copied
+     this list from coin-center.js, which carries only one of them — so the
+     other developer was not recognised, the chip hid itself, and publish
+     returned without a word. index.html's WN_DEV_UIDS and upcoming-events.js
+     both have the pair; that one file is the odd one out.
+
+     Prefer the list index.html already defines, so there is one fewer copy to
+     drift. The rules are what actually enforce any of this; the check here
+     only decides what to draw. */
+  const DEV_UIDS = (typeof WN_DEV_UIDS !== 'undefined' && WN_DEV_UIDS.length)
+    ? WN_DEV_UIDS
+    : ['HClZmAeuEaUVjHqUaFLFFMTMQnd2', 'eUs3isAgsaRT9VLKEFI4HEFbCnk1'];
 
   let posts = [];
   let expanded = false;      // "show all" inside the list
@@ -191,7 +200,14 @@
   }
 
   async function publish() {
-    if (busy || !isDev()) return;
+    if (busy) return;
+    if (!isDev()) {
+      // Silence here was the whole problem: the button looked live and did
+      // nothing, with no way to tell that the account simply was not on the list.
+      console.warn('dev board: not a developer', (me() || {}).uid);
+      if (typeof showToast === 'function') showToast(_t('This account is not a developer'), 'error');
+      return;
+    }
     const title = ($('devComposeTitle') || {}).value || '';
     const body = ($('devComposeBody') || {}).value || '';
     const link = ($('devComposeLink') || {}).value || '';
