@@ -573,7 +573,10 @@
     }
 
     // -- Fluffy drifting clouds --
-    function _drawClouds(ctx, W, H, t) {
+    /* `tint` is optional and only the farm passes it — a skin can colour the
+       clouds, and the room's Outside View calls this with four arguments and
+       keeps them white. */
+    function _drawClouds(ctx, W, H, t, tint) {
       if (!_outsideClouds) return;
       _outsideClouds.forEach(c => {
         // Drift right and wrap around
@@ -582,7 +585,7 @@
         const cx = c.x * W, cy = c.y * H;
         const s = c.scale * 25;
         ctx.globalAlpha = c.opacity;
-        ctx.fillStyle = '#fff';
+        ctx.fillStyle = tint || '#fff';
         // Overlapping puffs for a fluffy shape
         const puffs = [
           { x: 0,         y: 0,          r: s * 0.7  },

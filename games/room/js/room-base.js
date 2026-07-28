@@ -510,7 +510,7 @@
       {
         id: 'winter', emoji: '❄️', name: 'Winter Farm', cost: 8000, blurb: 'a snowfield · frozen ground',
         day: {
-          grass: ['#ffffff', '#eef5fc', '#d2e2f0'], soil: ['#5e6670', '#3c424b'],
+          grass: ['#fbfeff', '#e2eefb', '#bfd6ec'], soil: ['#5e6670', '#3c424b'],
           mowLight: 'rgba(255,255,255,0.55)', mowDark: 'rgba(110,150,190,0.20)', band: 'rgba(110,150,190,0.22)',
           tillLight: 'rgba(255,255,255,0.16)', tillDark: 'rgba(20,35,55,0.20)', furrow: 'rgba(60,90,120,0.24)',
           hillFar: '#f2f8fd', hillNear: '#d6e5f2',
@@ -529,24 +529,34 @@
         },
       },
       {
-        id: 'sakura', emoji: '🌸', name: 'Blossom Season', cost: 15000, blurb: 'pink canopy · a snow of petals',
+        id: 'sakura', emoji: '🌸', name: 'Blossom Season', cost: 15000, blurb: 'petal carpet · blossom branch',
         day: {
-          grass: ['#e6f7c8', '#c8ec9e', '#a5da76'], soil: ['#a07a5c', '#6b4d38'],
-          mowLight: 'rgba(255,240,248,0.22)', mowDark: 'rgba(215,120,170,0.12)', band: 'rgba(215,120,170,0.16)',
-          tillLight: 'rgba(255,235,245,0.10)', tillDark: 'rgba(70,30,45,0.14)', furrow: 'rgba(110,50,75,0.16)',
-          hillFar: '#ffd0e4', hillNear: '#f7aecd',
-          leaf: '#ff9ec4', leafLight: 'rgba(255,242,249,0.85)', leafMid: 'rgba(255,150,200,0.30)', leafDapple: 'rgba(255,255,255,0.90)',
-          sky: 'rgba(255,170,210,0.28)',
-          weather: { kind: 'petal', count: 64, color: '255,175,205', color2: '255,255,255', size: 4.4, speed: 18, sway: 46, alpha: 0.90 },
+          // The ground is a carpet of fallen petals, so it is the PALEST surface
+          // on the stage. That is what keeps the falling petals readable on top
+          // of it: they are white and deep pink, i.e. lighter and darker than
+          // what they land against, rather than the same pink twice.
+          grass: ['#ffdcea', '#fbc0d8', '#ee9fc2'], soil: ['#a8746e', '#77504c'],
+          mowLight: 'rgba(255,255,255,0.34)', mowDark: 'rgba(198,104,150,0.14)', band: 'rgba(198,104,150,0.18)',
+          tillLight: 'rgba(255,240,247,0.12)', tillDark: 'rgba(70,30,45,0.16)', furrow: 'rgba(110,50,75,0.18)',
+          hillFar: '#ffc3dc', hillNear: '#f79ec4',
+          leaf: '#ff7fb0', leafLight: 'rgba(255,236,245,0.85)', leafMid: 'rgba(255,130,185,0.32)', leafDapple: 'rgba(255,255,255,0.92)',
+          sky: 'rgba(255,168,208,0.30)',
+          cloud: 'rgba(255,228,240,0.95)',
+          skyFx: 'blossom-branch', branch: '#7a5240', blossom: '#ff8fbb', blossomAlt: '#ffffff', blossomCore: 'rgba(255,206,110,0.95)',
+          weather: { kind: 'petal', count: 64, color: '255,255,255', color2: '255,120,170', size: 4.4, speed: 18, sway: 46, alpha: 0.92 },
         },
         night: {
-          grass: ['#2c3f2c', '#233322', '#1a271a'], soil: ['#41301b', '#251b0e'],
-          mowLight: 'rgba(255,235,245,0.07)', mowDark: 'rgba(0,0,0,0.13)', band: 'rgba(0,0,0,0.14)',
-          tillLight: 'rgba(255,255,255,0.06)', tillDark: 'rgba(0,0,0,0.14)', furrow: 'rgba(0,0,0,0.15)',
-          hillFar: '#5c3a52', hillNear: '#6d4562',
-          leaf: '#8a4d74', leafLight: 'rgba(235,190,220,0.55)', leafMid: 'rgba(150,90,130,0.24)', leafDapple: 'rgba(255,235,248,0.60)',
-          sky: 'rgba(175,105,160,0.20)',
-          weather: { kind: 'petal', count: 44, color: '235,165,200', color2: '245,235,245', size: 4.0, speed: 16, sway: 42, alpha: 0.58 },
+          // 夜樱. The carpet dims but stays unmistakably pink — a night farm
+          // that went grey would throw away the thing that was paid for.
+          grass: ['#5e3f52', '#4b3243', '#3a2634'], soil: ['#4a3330', '#2c1e1d'],
+          mowLight: 'rgba(255,225,240,0.10)', mowDark: 'rgba(0,0,0,0.16)', band: 'rgba(0,0,0,0.18)',
+          tillLight: 'rgba(255,235,245,0.06)', tillDark: 'rgba(0,0,0,0.18)', furrow: 'rgba(0,0,0,0.20)',
+          hillFar: '#6d4560', hillNear: '#7d5070',
+          leaf: '#a35b87', leafLight: 'rgba(245,205,230,0.60)', leafMid: 'rgba(165,100,145,0.26)', leafDapple: 'rgba(255,240,250,0.68)',
+          sky: 'rgba(175,105,160,0.22)',
+          cloud: 'rgba(210,165,200,0.75)',
+          skyFx: 'blossom-branch', branch: '#3f2a24', blossom: '#e08ab4', blossomAlt: '#f6e6f0', blossomCore: 'rgba(230,180,110,0.85)',
+          weather: { kind: 'petal', count: 44, color: '245,235,245', color2: '230,140,180', size: 4.0, speed: 16, sway: 42, alpha: 0.62 },
         },
       },
     ];

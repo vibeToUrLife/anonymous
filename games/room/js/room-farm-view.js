@@ -3631,7 +3631,11 @@
           ctx.globalAlpha = 1;
         }
 
-        if (!night) _drawClouds(ctx, W, H, t);
+        if (!night) _drawClouds(ctx, W, H, t, pal.cloud);
+
+        // The skin's sky set piece — after the clouds so it reads as nearer
+        // than them, before the plane so it can never sit on top of a tap target.
+        _drawFarmSkyFx(ctx, W, H, t, pal, windSway);
 
         // Sky merchant plane — drawn LAST so drifting clouds never hide the
         // tappable prompt: fly-off animation → hovering plane → away cloud.
@@ -3655,6 +3659,72 @@
       }
       _farmAnimFrame = requestAnimationFrame(frame);
       _attachFarmPointerHandlers(cvs);
+    }
+
+    /* A skin's one big set piece in the sky.
+
+       Kept to the TOP-LEFT on purpose: the merchant plane hovers at x 0.84
+       (0.70 on a narrow screen) and it is a tap target, so anything decorative
+       up there has to stay well clear of it. Nothing here is tappable.
+
+       Blossom branch — the view from under a cherry tree looking up. It sways
+       on the same wind value the farm's trees use, so the whole scene moves
+       together instead of each piece drifting on its own clock. */
+    function _drawFarmSkyFx(ctx, W, H, t, pal, sway) {
+      if (pal.skyFx !== 'blossom-branch') return;
+      const s = Math.min(W, H * 2.2);              // scale off the smaller side so a phone gets a smaller branch
+      /* SPAN is what keeps the branch off the merchant plane. The plane's tap
+         rect reaches far LEFT of the plane itself — its banner is drawn about
+         1.7 plane-widths out — so on a narrow stage that rect starts around
+         0.40W. Everything drawn here stays inside SPAN of the left edge, and
+         a check measures the real gap at every viewport rather than trusting
+         this comment. */
+      const SPAN = s * 0.32;
+      const bx = -s * 0.04, by = H * 0.012;        // anchored just off the top-left corner
+      const drift = sway * s * 1.6;                // the tip travels further than the root
+      ctx.save();
+
+      // limb + two forks, drawn as tapering strokes
+      const limb = (x1, y1, cx, cy, x2, y2, w) => {
+        ctx.strokeStyle = pal.branch || '#6b4a3a';
+        ctx.lineCap = 'round';
+        ctx.lineWidth = w;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.quadraticCurveTo(cx, cy, x2, y2);
+        ctx.stroke();
+      };
+      // every x below is a fraction of SPAN, so the whole branch scales together
+      const X = (f) => bx + SPAN * f;
+      limb(X(0), by, X(0.48), by + H * 0.005, X(1) + drift, by + H * 0.10, Math.max(2.5, s * 0.011));
+      limb(X(0.35), by + H * 0.028, X(0.52), by + H * 0.075,
+           X(0.65) + drift * 0.6, by + H * 0.085, Math.max(1.6, s * 0.006));
+      limb(X(0.65), by + H * 0.052, X(0.78), by + H * 0.015,
+           X(0.87) + drift * 0.8, by + H * 0.008, Math.max(1.4, s * 0.005));
+
+      // blossom clusters along the limbs — five petals and a gold centre
+      const spots = [
+        [0.17, 0.010, 1.00], [0.33, 0.030, 0.85], [0.46, 0.020, 1.05], [0.57, 0.062, 0.80],
+        [0.65, 0.038, 0.95], [0.74, 0.070, 0.75], [0.78, 0.020, 0.90], [0.87, 0.052, 0.85],
+        [0.93, 0.086, 0.70], [0.97, 0.030, 0.80], [0.43, 0.062, 0.70], [0.26, 0.048, 0.75],
+      ];
+      const R = Math.max(3.2, s * 0.017);
+      spots.forEach(function (p, i) {
+        const px = X(p[0]) + drift * p[0];
+        const py = by + H * p[1];
+        const r = R * p[2];
+        const spin = t / 2600 + i;
+        ctx.fillStyle = (i % 3 === 0) ? (pal.blossomAlt || '#fff') : (pal.blossom || '#ff9ec4');
+        for (let k = 0; k < 5; k++) {
+          const a = spin + k * (Math.PI * 2 / 5);
+          ctx.beginPath();
+          ctx.ellipse(px + Math.cos(a) * r * 0.62, py + Math.sin(a) * r * 0.62, r * 0.52, r * 0.42, a, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = pal.blossomCore || 'rgba(255,214,120,0.95)';
+        ctx.beginPath(); ctx.arc(px, py, r * 0.22, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.restore();
     }
 
     /* A skin's particle layer: snow, petals or drifting motes.

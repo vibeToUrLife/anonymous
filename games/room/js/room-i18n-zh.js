@@ -1277,6 +1277,6 @@
     'the farm you know': '你熟悉的农场',
     'amber fields · autumn trees': '琥珀色的田 · 秋色的树',
     'a snowfield · frozen ground': '一片雪原 · 冻土',
-    'pink canopy · a snow of petals': '满树粉樱 · 花瓣如雪',
+    'petal carpet · blossom branch': '一地落英 · 樱枝入镜',
   });
 })();
