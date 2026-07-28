@@ -338,6 +338,7 @@
 
     /* ══ 📣 Dev board ══ */
     "📣 What's new": '📣 更新板',
+    "What's new": '更新板',   // the chip's tooltip, without the emoji
     '{n} new': '{n} 条新的',
     'Nothing posted yet.': '还没有发过更新。',
     '🆕 New': '🆕 新功能',

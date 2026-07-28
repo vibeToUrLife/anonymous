@@ -53,35 +53,56 @@
     .feedback-fab:hover { transform: scale(1.1); box-shadow: 0 6px 24px rgba(59,130,246,0.5); }
 
     /* ── Daily Quote Banner (clay card) ── */
-    /* 📣 Dev board — same clay card language as the quote banner beside it,
-       so it reads as part of the page rather than bolted on. */
-    .dev-board-card {
-      max-width: 600px;
-      margin: 18px auto 0;
-      padding: 14px 16px;
-      border-radius: var(--r);
-      background: var(--surface);
-      box-shadow: var(--clay-up);
-      border-left: 5px solid var(--primary-deep);
+    /* 📣 Dev board — a chip beside the gear, and a sheet behind it.
+       Deliberately NOT a card in the page: this sits above the message board,
+       and anything that lives there is scrolled past on every single visit. */
+    .devboard-btn {
+      position: fixed; top: 14px; right: 64px; z-index: 310;
+      width: 42px; height: 42px; border: none; border-radius: 12px;
+      background: var(--surface); color: var(--primary-deep);
+      border: 1px solid var(--border); box-shadow: var(--clay-up-sm);
+      font-size: 18px; cursor: pointer; display: grid; place-items: center;
     }
-    /* The head is the whole control when the card is shut: one strip, ~44px,
-       instead of a card that pushes the messages down forever. */
-    .dev-board-head {
-      display:flex; align-items:center; gap:8px; width:100%;
-      border:0; background:transparent; cursor:pointer; padding:0; text-align:left;
+    .devboard-btn:hover { box-shadow: var(--clay-up); filter: brightness(1.02); }
+    .devboard-badge {
+      position: absolute; top: -4px; right: -4px;
+      min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+      background: #e06377; color: #fff; font-size: 11px; font-weight: 700;
+      display: grid; place-items: center;
     }
-    .dev-board-chev { margin-left:auto; font-size:12px; color:var(--ink-soft); transition:transform .18s; }
-    .dev-board-card.is-open .dev-board-chev { transform:rotate(180deg); }
-    .dev-board-body { margin-top:10px; }
+
+    .devboard-sheet {
+      position: fixed; inset: 0; z-index: 9600;
+      background: var(--g-scrim, rgba(20,16,28,.55));
+      backdrop-filter: blur(6px);
+      display: flex; align-items: flex-end; justify-content: center;
+    }
+    .devboard-panel {
+      width: 100%; max-width: 600px; max-height: 86vh;
+      display: flex; flex-direction: column;
+      background: var(--surface); color: var(--ink);
+      border-radius: 20px 20px 0 0; box-shadow: var(--clay-up);
+      animation: devboardUp .22s ease;
+    }
+    @keyframes devboardUp { from { transform: translateY(18px); opacity: 0; } }
+    @media (min-width: 640px) {
+      .devboard-sheet { align-items: center; }
+      .devboard-panel { border-radius: 20px; max-height: 78vh; }
+    }
+    .devboard-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 14px 16px; border-bottom: 1px solid rgba(0,0,0,.08);
+    }
+    .devboard-close {
+      margin-left: auto; border: 0; background: transparent; cursor: pointer;
+      font-size: 16px; color: var(--ink-soft); padding: 2px 4px;
+    }
+    .devboard-scroll { overflow-y: auto; padding: 4px 16px 16px; -webkit-overflow-scrolling: touch; }
     .dev-board-title {
-      font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
+      font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
       text-transform: uppercase; color: var(--primary-deep);
     }
-    .dev-board-dot {
-      font-size: 10px; font-weight: 700; color: #fff;
-      background: #e0574a; border-radius: 999px; padding: 2px 8px;
-    }
-    .dev-board-empty { font-size: 13px; color: var(--ink-soft); padding: 6px 2px; }
+    .dev-board-empty { font-size: 13px; color: var(--ink-soft); padding: 10px 2px; }
 
     .dev-post { padding: 10px 0; border-top: 1px solid rgba(0,0,0,.07); }
     .dev-post:first-child { border-top: 0; padding-top: 0; }
@@ -1470,48 +1491,6 @@
     </div>
   </div>
 
-  <!-- 📣 Dev board — what the developer changed, newest first (dev-board.js).
-       Sits above the coin rush banner so an update is the first thing after
-       the daily quote. Collapsed to two posts; the composer only renders for
-       a developer, and firestore.rules is what actually enforces that. -->
-  <section class="dev-board-card" id="devBoardCard">
-    <button class="dev-board-head" id="devBoardHead" type="button" aria-expanded="false">
-      <span class="dev-board-title" data-i18n>📣 What's new</span>
-      <span class="dev-board-dot hidden" id="devBoardDot"></span>
-      <span class="dev-board-chev" id="devBoardChev">▾</span>
-    </button>
-
-    <div class="dev-board-body hidden" id="devBoardBody">
-      <div class="dev-board-list" id="devBoardList"></div>
-      <button class="dev-board-more hidden" id="devBoardMore" type="button"></button>
-    </div>
-
-      <div class="dev-board-compose hidden" id="devBoardCompose">
-      <div class="dev-compose-row">
-        <select class="dev-compose-tag" id="devComposeTag">
-          <option value="feature">🆕</option>
-          <option value="fix">🔧</option>
-          <option value="event">🎉</option>
-        </select>
-        <input type="text" class="dev-compose-title" id="devComposeTitle"
-               data-i18n-placeholder placeholder="What changed?" maxlength="80" autocomplete="off">
-      </div>
-      <textarea class="dev-compose-body" id="devComposeBody" rows="2"
-                data-i18n-placeholder placeholder="A line or two about it…" maxlength="600"></textarea>
-      <input type="text" class="dev-compose-link" id="devComposeLink"
-             data-i18n-placeholder placeholder="Link (optional) — e.g. games/room.html?view=farm" autocomplete="off">
-      <img class="dev-compose-preview hidden" id="devComposePreview" alt="">
-      <div class="dev-compose-row">
-        <label class="dev-compose-file">
-          <input type="file" id="devComposeFile" accept="image/*" hidden>
-          <span data-i18n>🖼️ Image</span>
-        </label>
-        <button class="dev-compose-post" id="devComposePost" type="button" data-i18n>Post</button>
-        </div>
-      </div>
-    </div>
-  </section>
-
   <!-- Coin Rush banner — revealed at 9am, counts down to today's rush, then Join/View (coin-rush.js) -->
   <div class="cr-banner hidden" id="crBanner" role="status" aria-live="polite">
     <span class="cr-banner-emoji" id="crBannerEmoji">💰</span>
@@ -1731,6 +1710,56 @@
     </div>
   </div>
 
+  <!-- 📣 Dev board — a sheet, not a card.
+
+       It lived inline above the messages and blocked them; even shut it was a
+       strip the reader had to scroll past every visit. Now it costs the page
+       nothing: a chip beside the ⚙️ gear, a dot when something is new, and a
+       full-height sheet when you open it. (dev-board.js) -->
+  <button class="devboard-btn" id="devBoardBtn" type="button"
+          data-i18n-title title="What's new" data-i18n-aria-label aria-label="What's new">
+    📣
+    <span class="devboard-badge hidden" id="devBoardDot">0</span>
+  </button>
+
+  <div class="devboard-sheet hidden" id="devBoardSheet" role="dialog" aria-modal="true">
+    <div class="devboard-panel" id="devBoardCard">
+      <div class="devboard-bar">
+        <span class="dev-board-title" data-i18n>📣 What's new</span>
+        <button class="devboard-close" id="devBoardClose" type="button"
+                data-i18n-aria-label aria-label="Close">✕</button>
+      </div>
+
+      <div class="devboard-scroll">
+        <div class="dev-board-list" id="devBoardList"></div>
+        <button class="dev-board-more hidden" id="devBoardMore" type="button"></button>
+      <div class="dev-board-compose hidden" id="devBoardCompose">
+      <div class="dev-compose-row">
+        <select class="dev-compose-tag" id="devComposeTag">
+          <option value="feature">🆕</option>
+          <option value="fix">🔧</option>
+          <option value="event">🎉</option>
+        </select>
+        <input type="text" class="dev-compose-title" id="devComposeTitle"
+               data-i18n-placeholder placeholder="What changed?" maxlength="80" autocomplete="off">
+      </div>
+      <textarea class="dev-compose-body" id="devComposeBody" rows="2"
+                data-i18n-placeholder placeholder="A line or two about it…" maxlength="600"></textarea>
+      <input type="text" class="dev-compose-link" id="devComposeLink"
+             data-i18n-placeholder placeholder="Link (optional) — e.g. games/room.html?view=farm" autocomplete="off">
+      <img class="dev-compose-preview hidden" id="devComposePreview" alt="">
+      <div class="dev-compose-row">
+        <label class="dev-compose-file">
+          <input type="file" id="devComposeFile" accept="image/*" hidden>
+          <span data-i18n>🖼️ Image</span>
+        </label>
+        <button class="dev-compose-post" id="devComposePost" type="button" data-i18n>Post</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Full-page 8-bit pixel event reminder (filled & toggled by upcoming-events.js) -->
   <div class="ue-reminder hidden" id="ueReminder" role="alertdialog" aria-live="assertive" data-i18n-title title="Tap to close">
     <div class="ue-reminder-box">
@@ -1794,8 +1823,8 @@
   <script src="./src/js/doodle.js?v=2"></script>
   <script src="./src/js/wall-logic.js?v=6"></script>
   <script src="./src/js/graffiti-wall.js?v=8"></script>
-  <script src="./src/js/dev-board-logic.js?v=1"></script>
-  <script src="./src/js/dev-board.js?v=1"></script>
+  <script src="./src/js/dev-board-logic.js?v=2"></script>
+  <script src="./src/js/dev-board.js?v=2"></script>
   <script src="./src/js/coin-rush-logic.js"></script>
   <script src="./src/js/coin-rush.js?v=1"></script>
   <!-- Daily brain-teaser (脑筋急转弯) -->

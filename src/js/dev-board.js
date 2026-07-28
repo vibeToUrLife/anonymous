@@ -1,9 +1,17 @@
 /* ============================================================
    📣 Dev board — what changed, posted by the developer.
 
-   A card on index.html: newest first, collapsed to a couple of posts
-   with an unread dot, expandable. Readers can leave one reaction per
-   post; the composer only exists for a developer.
+   A chip beside the settings gear with a dot when something is new, and
+   a sheet behind it: newest first, a couple of posts with a "show all".
+   Readers can leave one reaction per post; the composer only exists for
+   a developer.
+
+   It began as a card in the page and that was wrong. Anything living
+   above the message board is scrolled past on every visit, and even
+   folded to a 42px strip it was still 42px of nothing between the
+   reader and what they came for. A sheet costs the page zero height and
+   still announces itself, because the dot is on a chip that is always
+   on screen.
 
    Deliberately NOT a second announcement system. app_state/whats_new is
    the popup that must be seen once per release; this is the archive you
@@ -34,7 +42,7 @@
 
   let posts = [];
   let expanded = false;      // "show all" inside the list
-  let open = null;           // the card itself; null = decide from unread
+  let open = false;          // the sheet
   let unsub = null;
   let busy = false;
 
@@ -73,31 +81,19 @@
     const more = $('devBoardMore');
     if (!list) return;
 
-    /* An empty board is nobody's business but the developer's. Until the first
-       update exists there is nothing to announce, and a strip promising updates
-       that opens onto "nothing yet" is worse than no strip at all. The developer
-       still sees it, because otherwise there would be nowhere to post from. */
-    if (!posts.length && !isDev()) { card.classList.add('hidden'); return; }
-    card.classList.remove('hidden');
-
+    /* An empty board is nobody's business but the developer's: until the first
+       update exists there is nothing to announce, so the chip is not there
+       either. The developer keeps it, or there would be nowhere to post from. */
+    const btn = $('devBoardBtn');
+    const sheet = $('devBoardSheet');
     const unseen = unseenCount(posts, seenTs());
+    if (btn) btn.classList.toggle('hidden', !posts.length && !isDev());
     if (dot) {
-      dot.textContent = unseen ? _t('{n} new', { n: unseen }) : '';
+      dot.textContent = unseen > 99 ? '99+' : String(unseen);
       dot.classList.toggle('hidden', !unseen);
     }
-
-    /* Shut unless there is something to see. The card sits above the message
-       board, and a card that stayed open would push the messages down every
-       visit for the sake of an update the reader has already read. Unread
-       opens it; reading it, or tapping the strip, shuts it again. A developer
-       still gets the composer — one tap away, not permanently in the page. */
-    const isOpen = (open === null) ? (unseen > 0 || (!posts.length && isDev())) : open;
-    const body = $('devBoardBody');
-    const head = $('devBoardHead');
-    card.classList.toggle('is-open', isOpen);
-    if (body) body.classList.toggle('hidden', !isOpen);
-    if (head) head.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-    if (!isOpen) return;
+    if (sheet) sheet.classList.toggle('hidden', !open);
+    if (!open) return;
 
     if (!posts.length) {
       list.innerHTML = '<div class="dev-board-empty">' + esc(_t('Nothing posted yet.')) + '</div>';
@@ -273,30 +269,28 @@
     const more = $('devBoardMore');
     if (more) more.addEventListener('click', function () { expanded = !expanded; render(); });
 
-    const head = $('devBoardHead');
-    if (head) head.addEventListener('click', function () {
-      const unseen = unseenCount(posts, seenTs());
-      open = (open === null) ? !(unseen > 0) : !open;
-      // Shutting it counts as having read it; that is what the strip means.
-      if (!open && unseen) markSeen();
+    /* Opening the sheet is what marks the updates read — and only then, because
+       a badge cleared on page load would mean nobody ever learns something
+       arrived. Closing does not un-read them. */
+    function openSheet() {
+      open = true;
+      expanded = false;
       render();
-    });
+      if (unseenCount(posts, seenTs())) { markSeen(); setTimeout(render, 900); }
+    }
+    function closeSheet() { open = false; render(); }
 
-    // Opening it also marks it read, but only after a beat — clearing the badge
-    // the instant it renders would mean you never see that something arrived.
-    card.addEventListener('click', function () {
-      if (!posts.length) return;
-      const isOpen = (open === null) ? unseenCount(posts, seenTs()) > 0 : open;
-      if (isOpen && unseenCount(posts, seenTs())) {
-        setTimeout(function () {
-          // Pin it open first. Marking it read drops the unread count to zero,
-          // and the card decides its own state from that count — so without
-          // this it would fold up under the reader mid-sentence.
-          open = true;
-          markSeen();
-          render();
-        }, 2500);
-      }
+    const btn = $('devBoardBtn');
+    if (btn) btn.addEventListener('click', openSheet);
+    const close = $('devBoardClose');
+    if (close) close.addEventListener('click', closeSheet);
+
+    const sheet = $('devBoardSheet');
+    if (sheet) sheet.addEventListener('click', function (e) {
+      if (e.target === sheet) closeSheet();          // tap the scrim to dismiss
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && open) closeSheet();
     });
 
     const pub = $('devComposePost');
