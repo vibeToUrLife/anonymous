@@ -3457,22 +3457,10 @@
         ctx.fillStyle = grass;
         ctx.fillRect(0, skyY, W, gy - skyY);
 
-        // 3D mown field — alternating stripes converging to the horizon point
-        ctx.save();
-        ctx.beginPath(); ctx.rect(0, skyY, W, gy - skyY); ctx.clip();
-        const vpx = W / 2, vpy = skyY - H * 0.02;
-        const gSeg = 12, gSpread = W * 1.7, gx0 = W / 2 - gSpread / 2;
-        for (let i = 0; i < gSeg; i++) {
-          const xA = gx0 + (i / gSeg) * gSpread, xB = gx0 + ((i + 1) / gSeg) * gSpread;
-          ctx.fillStyle = (i % 2) ? pal.mowLight : pal.mowDark;
-          ctx.beginPath(); ctx.moveTo(xA, gy); ctx.lineTo(xB, gy); ctx.lineTo(vpx, vpy); ctx.closePath(); ctx.fill();
-        }
-        // horizontal depth bands (tighter toward the horizon)
-        ctx.strokeStyle = pal.band; ctx.lineWidth = 1;
-        for (let k = 1; k <= 5; k++) { const f = k / 6; const yy = gy - (gy - skyY) * (f * f); ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(W, yy); ctx.stroke(); }
-        ctx.restore();
-
-        // Petals lying on the pasture (skins only — meadow has none).
+        // No mown stripes and no depth bands: the field is a clean sweep of
+        // colour, and its depth comes from the gradient plus the scatter below
+        // — tufts drawn smaller toward the horizon read as distance far better
+        // than ruled lines did.
         _drawFarmGroundFx(ctx, W, H, skyY, gy, pal);
 
         // Crop garden — a tilled soil band below the dividing fence
@@ -3481,18 +3469,8 @@
         soil.addColorStop(1, pal.soil[1]);
         ctx.fillStyle = soil;
         ctx.fillRect(0, gy, W, H - gy);
-        // 3D tilled rows — alternating stripes converging to the dividing fence
-        ctx.save();
-        ctx.beginPath(); ctx.rect(0, gy, W, H - gy); ctx.clip();
-        const sSeg = 16, sSpread = W * 1.5, sx0 = W / 2 - sSpread / 2;
-        for (let i = 0; i < sSeg; i++) {
-          const xA = sx0 + (i / sSeg) * sSpread, xB = sx0 + ((i + 1) / sSeg) * sSpread;
-          ctx.fillStyle = (i % 2) ? pal.tillLight : pal.tillDark;
-          ctx.beginPath(); ctx.moveTo(xA, H); ctx.lineTo(xB, H); ctx.lineTo(W / 2, gy); ctx.closePath(); ctx.fill();
-        }
-        ctx.strokeStyle = pal.furrow; ctx.lineWidth = 1;
-        for (let fy = gy + (H - gy) * 0.42; fy < H - 2; fy += (H - gy) * 0.30) { ctx.beginPath(); ctx.moveTo(0, fy); ctx.lineTo(W, fy); ctx.stroke(); }
-        ctx.restore();
+        // No tilled rows or furrows either — the beds themselves give the soil
+        // band its structure, and the ruled lines were fighting them for it.
 
         // Fences: top of the pasture and the divider (farm | crops). No bottom
         // fence — its posts are a fixed 22px tall, so on a short stage they cut
@@ -3677,28 +3655,62 @@
        always sits UNDER the animals, drops, plots and the trough. It is texture,
        never a target. */
     function _drawFarmGroundFx(ctx, W, H, top, bot, pal) {
-      const fx = pal.groundFx;
-      if (!fx || !fx.count) return;
+      const layers = pal.groundFx;
+      if (!layers || !layers.length) return;
       const band = bot - top;
       if (band <= 0) return;
       const hash = (n) => { const v = Math.sin(n) * 43758.5453; return v - Math.floor(v); };
       ctx.save();
       ctx.beginPath(); ctx.rect(0, top, W, band); ctx.clip();
-      for (let i = 0; i < fx.count; i++) {
-        const rx = hash(i * 31.7), ry = hash(i * 57.3 + 2.1), rr = hash(i * 91.1 + 5.5);
-        // Perspective: the field recedes to the horizon, so a petal near the top
-        // of the band is further away and has to be drawn smaller, or the scatter
-        // reads as flat confetti pasted over the grass.
-        const depth = 0.35 + ry * 0.65;
-        const x = rx * W;
-        const y = top + ry * band;
-        const r = fx.size * depth;
-        ctx.globalAlpha = (fx.alpha || 0.9) * (0.55 + rr * 0.45);
-        ctx.fillStyle = 'rgba(' + ((fx.color2 && rr > 0.6) ? fx.color2 : fx.color) + ',1)';
-        ctx.beginPath();
-        ctx.ellipse(x, y, r, r * 0.62, rr * Math.PI, 0, Math.PI * 2);
-        ctx.fill();
-      }
+
+      layers.forEach(function (fx, li) {
+        if (!fx || !fx.count) return;
+        const seed = li * 7.3;                       // each layer scatters differently
+        for (let i = 0; i < fx.count; i++) {
+          const rx = hash(seed + i * 31.7), ry = hash(seed + i * 57.3 + 2.1), rr = hash(seed + i * 91.1 + 5.5);
+          // Perspective: the field recedes to the horizon, so anything near the
+          // top of the band is further away and has to be drawn smaller, or the
+          // scatter reads as flat confetti pasted over the grass. This is also
+          // what carries the depth the mown stripes used to fake.
+          const depth = 0.35 + ry * 0.65;
+          const x = rx * W;
+          const y = top + ry * band;
+          const r = fx.size * depth;
+          ctx.globalAlpha = (fx.alpha || 0.9) * (0.55 + rr * 0.45);
+
+          if (fx.kind === 'tuft') {
+            // three blades fanning from one root, then a bloom on some of them
+            ctx.strokeStyle = 'rgba(' + fx.color + ',1)';
+            ctx.lineWidth = Math.max(0.8, r * 0.30);
+            ctx.lineCap = 'round';
+            for (let k = -1; k <= 1; k++) {
+              ctx.beginPath();
+              ctx.moveTo(x, y);
+              ctx.quadraticCurveTo(x + k * r * 0.5, y - r * 0.8, x + k * r * 1.05 + (rr - 0.5) * r, y - r * 1.5);
+              ctx.stroke();
+            }
+            if (fx.bloom && rr > (fx.bloomAt == null ? 0.62 : fx.bloomAt)) {
+              const bx = x + (rr - 0.5) * r * 1.2, by = y - r * 1.55;
+              ctx.fillStyle = 'rgba(' + ((fx.bloom2 && rx > 0.5) ? fx.bloom2 : fx.bloom) + ',1)';
+              for (let k = 0; k < 5; k++) {
+                const a = rr * 6 + k * (Math.PI * 2 / 5);
+                ctx.beginPath();
+                ctx.arc(bx + Math.cos(a) * r * 0.26, by + Math.sin(a) * r * 0.26, r * 0.22, 0, Math.PI * 2);
+                ctx.fill();
+              }
+              if (fx.bloomCore) {
+                ctx.fillStyle = fx.bloomCore;
+                ctx.beginPath(); ctx.arc(bx, by, r * 0.16, 0, Math.PI * 2); ctx.fill();
+              }
+            }
+          } else {
+            ctx.fillStyle = 'rgba(' + ((fx.color2 && rr > 0.6) ? fx.color2 : fx.color) + ',1)';
+            ctx.beginPath();
+            ctx.ellipse(x, y, r, r * 0.62, rr * Math.PI, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      });
       ctx.restore();
       ctx.globalAlpha = 1;
     }
