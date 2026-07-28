@@ -1490,7 +1490,8 @@
               ? 'Install the 🤖 Auto-Collector above first — without it, the longer you bank, the bigger the pile you have to tap through on your way back in.'
               : "How long your animals keep producing while you're away. Pair it with the 🤖 Auto-Feeder so they don't go hungry.") +
           '</div>';
-        })();
+        })() +
+        _farmSkinsHtml();
 
       // Built (and subscribed) only when the Visit tab is active, so opening the
       // farm for normal play never spins up the rooms-list listener.
@@ -1712,6 +1713,67 @@
       await saveRoom();
       renderFarmPanel(); renderAll();
       showToast('❄️ ' + T('Cold Store extended — the farm now banks {time}!', { time: _fmtFarmTime(farmOfflineCapMs()) }), 'success');
+    }
+
+    /* ── Farm skins ──
+       Bought once, then free to switch between. The swatch is a real preview:
+       it is built from the same day colours the canvas paints with, so a name
+       alone never has to carry the difference. */
+    function _farmSwatch(theme) {
+      const d = theme.day || {};
+      const g = d.grass || [], s = d.soil || [];
+      return '<span style="display:inline-block;width:24px;height:15px;border-radius:4px;vertical-align:-3px;' +
+        'margin-right:7px;border:1px solid rgba(0,0,0,.25);background:linear-gradient(180deg,' +
+        (g[0] || '#9ed26b') + ' 0%,' + (g[2] || '#5ba23c') + ' 58%,' + (s[0] || '#8a6238') + ' 58%,' +
+        (s[1] || '#5e4324') + ' 100%)"></span>';
+    }
+
+    function _farmSkinsHtml() {
+      if (typeof FARM_THEMES === 'undefined') return '';
+      const activeId = (farmThemeOf(FARM_THEMES, roomData.farmTheme, roomData.ownedFarmThemes) || {}).id;
+      const rows = FARM_THEMES.map(function (th) {
+        const owned = farmThemeOwned(th, roomData.ownedFarmThemes);
+        const action = th.id === activeId
+          ? '<span class="farm-shop-drop">✓ ' + T('In use') + '</span>'
+          : owned
+          ? '<button class="farm-shop-buy" onclick="setFarmTheme(\'' + th.id + '\')">' + T('Use') + '</button>'
+          : '<button class="farm-shop-buy" onclick="buyFarmTheme(\'' + th.id + '\')"' +
+            (roomData.coins < th.cost ? ' disabled' : '') + '>' + th.cost + '🪙</button>';
+        return '<div class="farm-shop-row">' +
+          '<span class="farm-shop-animal">' + _farmSwatch(th) + th.emoji + ' ' + T(th.name) + '</span>' +
+          action +
+        '</div>';
+      }).join('');
+      return '<div class="farm-section-title" style="margin-top:12px">🎨 ' + T('Farm look') + '</div>' +
+        rows +
+        '<div class="farm-panel-empty" style="padding:2px 0 4px">' +
+          T('Buy a look once, then switch whenever you like. Visitors see your farm in it too.') +
+        '</div>';
+    }
+
+    async function buyFarmTheme(id) {
+      if (viewingUid !== currentUid) return;
+      const th = (FARM_THEMES || []).find(function (t) { return t.id === id; });
+      if (!th || farmThemeOwned(th, roomData.ownedFarmThemes)) return;
+      if (roomData.coins < th.cost) return showToast(T('Not enough coins!'), 'error');
+      roomData.coins -= th.cost;
+      logCoin(-th.cost, T('Farm look'));
+      roomData.ownedFarmThemes = (roomData.ownedFarmThemes || []).concat([th.id]);
+      roomData.farmTheme = th.id;                       // buying it puts it on
+      await saveRoom();
+      showToast(th.emoji + ' ' + T('{name} — your farm is wearing it now!', { name: T(th.name) }), 'success');
+      renderFarmPanel();
+      renderAll();
+    }
+
+    async function setFarmTheme(id) {
+      if (viewingUid !== currentUid) return;
+      const th = (FARM_THEMES || []).find(function (t) { return t.id === id; });
+      if (!th || !farmThemeOwned(th, roomData.ownedFarmThemes)) return;
+      if (roomData.farmTheme === id) return;
+      roomData.farmTheme = id;
+      await saveRoom();
+      renderFarmPanel();                                // the canvas picks it up on its next frame
     }
 
     async function buyFarmAutoCollect() {
@@ -3353,8 +3415,14 @@
         ctx.clearRect(0, 0, W, H);
         const windSway = Math.sin(t / 1400) * 0.012;
 
+        // The skin in force this frame. Resolved per frame rather than per
+        // draw call so buying or switching one repaints without a reload, and
+        // so a skin the player no longer owns falls back on its own.
+        const _theme = farmThemeOf(FARM_THEMES, roomData.farmTheme, roomData.ownedFarmThemes);
+        const pal = farmThemePalette(_theme, night) || {};
+
         _drawHDSky(ctx, W, H, night, t, H * FARM_SKY_Y);   // arc the sun/moon inside the farm's shallower sky
-        _drawRollingHills(ctx, W, H, night);
+        _drawRollingHills(ctx, W, H, night, pal);
 
         // The dividing fence between the animal pasture (above) and the crop
         // garden (below). It moves DOWN as the farm is expanded, so each
@@ -3365,9 +3433,9 @@
         // Animal pasture — grass from the horizon down to the dividing fence
         const skyY = H * FARM_SKY_Y;
         const grass = ctx.createLinearGradient(0, skyY, 0, gy);
-        grass.addColorStop(0, night ? '#22432b' : '#9ed26b');    // soft sunny top
-        grass.addColorStop(0.5, night ? '#1a3622' : '#79c052');
-        grass.addColorStop(1, night ? '#13291a' : '#5ba23c');    // richer deep bottom
+        grass.addColorStop(0, pal.grass[0]);                      // soft sunny top
+        grass.addColorStop(0.5, pal.grass[1]);
+        grass.addColorStop(1, pal.grass[2]);                      // richer deep bottom
         ctx.fillStyle = grass;
         ctx.fillRect(0, skyY, W, gy - skyY);
 
@@ -3378,20 +3446,18 @@
         const gSeg = 12, gSpread = W * 1.7, gx0 = W / 2 - gSpread / 2;
         for (let i = 0; i < gSeg; i++) {
           const xA = gx0 + (i / gSeg) * gSpread, xB = gx0 + ((i + 1) / gSeg) * gSpread;
-          ctx.fillStyle = (i % 2)
-            ? (night ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.11)')
-            : (night ? 'rgba(0,0,0,0.13)' : 'rgba(18,70,16,0.13)');
+          ctx.fillStyle = (i % 2) ? pal.mowLight : pal.mowDark;
           ctx.beginPath(); ctx.moveTo(xA, gy); ctx.lineTo(xB, gy); ctx.lineTo(vpx, vpy); ctx.closePath(); ctx.fill();
         }
         // horizontal depth bands (tighter toward the horizon)
-        ctx.strokeStyle = night ? 'rgba(0,0,0,0.14)' : 'rgba(18,70,16,0.16)'; ctx.lineWidth = 1;
+        ctx.strokeStyle = pal.band; ctx.lineWidth = 1;
         for (let k = 1; k <= 5; k++) { const f = k / 6; const yy = gy - (gy - skyY) * (f * f); ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(W, yy); ctx.stroke(); }
         ctx.restore();
 
         // Crop garden — a tilled soil band below the dividing fence
         const soil = ctx.createLinearGradient(0, gy, 0, H);
-        soil.addColorStop(0, night ? '#41301b' : '#8a6238');     // warmer tilled earth
-        soil.addColorStop(1, night ? '#251b0e' : '#5e4324');
+        soil.addColorStop(0, pal.soil[0]);                        // warmer tilled earth
+        soil.addColorStop(1, pal.soil[1]);
         ctx.fillStyle = soil;
         ctx.fillRect(0, gy, W, H - gy);
         // 3D tilled rows — alternating stripes converging to the dividing fence
@@ -3400,10 +3466,10 @@
         const sSeg = 16, sSpread = W * 1.5, sx0 = W / 2 - sSpread / 2;
         for (let i = 0; i < sSeg; i++) {
           const xA = sx0 + (i / sSeg) * sSpread, xB = sx0 + ((i + 1) / sSeg) * sSpread;
-          ctx.fillStyle = (i % 2) ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.14)';
+          ctx.fillStyle = (i % 2) ? pal.tillLight : pal.tillDark;
           ctx.beginPath(); ctx.moveTo(xA, H); ctx.lineTo(xB, H); ctx.lineTo(W / 2, gy); ctx.closePath(); ctx.fill();
         }
-        ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 1;
+        ctx.strokeStyle = pal.furrow; ctx.lineWidth = 1;
         for (let fy = gy + (H - gy) * 0.42; fy < H - 2; fy += (H - gy) * 0.30) { ctx.beginPath(); ctx.moveTo(0, fy); ctx.lineTo(W, fy); ctx.stroke(); }
         ctx.restore();
 

@@ -359,9 +359,12 @@
     }
 
     // -- Soft rolling hills behind the scene --
-    function _drawRollingHills(ctx, W, H, night) {
+    /* `pal` is optional and only the farm passes it — a skin recolours the
+       hills, but the room's Outside View calls this with four arguments and
+       must keep the colours it has always had. */
+    function _drawRollingHills(ctx, W, H, night, pal) {
       // Far hill
-      ctx.fillStyle = night ? '#1a3a18' : '#7cc25a';
+      ctx.fillStyle = (pal && pal.hillFar) || (night ? '#1a3a18' : '#7cc25a');
       ctx.beginPath();
       ctx.moveTo(0, H * 0.68);
       ctx.quadraticCurveTo(W * 0.25, H * 0.60, W * 0.5, H * 0.66);
@@ -369,7 +372,7 @@
       ctx.lineTo(W, H * 0.70); ctx.lineTo(0, H * 0.70);
       ctx.closePath(); ctx.fill();
       // Near hill
-      ctx.fillStyle = night ? '#1e4a1a' : '#66ad46';
+      ctx.fillStyle = (pal && pal.hillNear) || (night ? '#1e4a1a' : '#66ad46');
       ctx.beginPath();
       ctx.moveTo(0, H * 0.70);
       ctx.quadraticCurveTo(W * 0.3, H * 0.65, W * 0.6, H * 0.69);

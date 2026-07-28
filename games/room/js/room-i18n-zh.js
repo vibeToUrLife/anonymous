@@ -1262,5 +1262,16 @@
     'Collect {n} coins': '收下 {n} 金币',
     'Current streak: 1 day': '已连续 1 天',
     'Current streak: {n} days': '已连续 {n} 天',
+
+    /* ── Farm skins ── */
+    'Farm look': '农场外观',
+    'In use': '使用中',
+    'Buy a look once, then switch whenever you like. Visitors see your farm in it too.':
+      '买一次就能随便换。来串门的人也会看到你现在的样子。',
+    '{name} — your farm is wearing it now!': '{name} —— 农场已经换上了！',
+    'Green Pasture': '青草牧场',
+    'Golden Harvest': '金色麦田',
+    'Winter Farm': '雪国农场',
+    'Blossom Season': '樱花田园',
   });
 })();

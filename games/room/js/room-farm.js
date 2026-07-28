@@ -391,7 +391,39 @@
     return list.slice(0, p.length).map((r, i) => ({ uid: r.uid, name: r.name || '', score: r.score, prize: p[i] || 0 }));
   }
 
+  /* ── Farm skins ──
+     Which skin is in force, and whether it may be worn. Kept here rather than
+     in the view so the "you always own the free default" rule is stated once
+     and tested, instead of being re-derived at each of the three call sites
+     (the picker, the buy button, and the painter). */
+
+  // The skin actually in force. An id that is unknown, missing, or owned by
+  // nobody falls back to the first entry — a skin removed from the catalog, or
+  // a save from a future build, must never leave the canvas unpainted.
+  function farmThemeOf(themes, id, owned) {
+    const list = themes || [];
+    if (!list.length) return null;
+    const pick = list.find(t => t && t.id === id);
+    if (!pick) return list[0];
+    return farmThemeOwned(pick, owned) ? pick : list[0];
+  }
+
+  // Free skins are owned by everyone; the rest must have been bought.
+  function farmThemeOwned(theme, owned) {
+    if (!theme) return false;
+    if (!(theme.cost > 0)) return true;
+    return (owned || []).indexOf(theme.id) !== -1;
+  }
+
+  // The colour set for the current time of day. Falls back to `day` so a skin
+  // that forgets its night block still paints something.
+  function farmThemePalette(theme, night) {
+    if (!theme) return null;
+    return (night && theme.night) || theme.day || null;
+  }
+
   return { farmCycleMs, animalLevel, cropProgress, generateFarmOrders, farmSellAllValue, planFarmTick, farmRefillUnits, planFarmAutoFeed, farmRowCount, farmRowIndices, farmRowState, farmAffordableCount,
            farmPickTarget, farmCartTapRect, farmMailTapRect,
-           farmDayKey, farmWeekIdFor, farmHelpAllowance, farmSentKinds, farmInboxEffects, farmWeekBump, farmWeekScore, farmWeekWinners };
+           farmDayKey, farmWeekIdFor, farmHelpAllowance, farmSentKinds, farmInboxEffects, farmWeekBump, farmWeekScore, farmWeekWinners,
+           farmThemeOf, farmThemeOwned, farmThemePalette };
 });

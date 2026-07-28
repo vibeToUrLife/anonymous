@@ -450,6 +450,85 @@
       { id: 'fd_coop',      emoji: '🛖', name: 'Coop',      cost: 600, scale: 1.7 },
     ];
 
+    /* ── Farm skins ──
+       A late-game coin sink that changes how the farm LOOKS, not how it plays:
+       buy a skin once, then switch between the ones you own for free — the same
+       shape as decorations, and priced into the ladder the cold store and the
+       auto-feeder already occupy (8000 / 25000 / 60000).
+
+       A skin repaints only what the farm itself draws: the pasture grass, its
+       mown stripes, the crop soil, its furrows, and the two rolling hills. The
+       SKY is deliberately left out — room-layers.js paints it for the room's
+       Outside View too, and the sun and moon already arc by real clock time, so
+       a "sunset" sky at 10am would be a lie in both places.
+
+       `meadow` is the farm exactly as it looks today, colour for colour. That
+       is the point: a player who never buys a skin must not see a single pixel
+       change. Every value below was lifted from drawFarmCanvas() and
+       _drawRollingHills() rather than re-picked by eye. */
+    const FARM_THEMES = [
+      {
+        id: 'meadow', emoji: '🌤️', name: 'Green Pasture', cost: 0,
+        day: {
+          grass: ['#9ed26b', '#79c052', '#5ba23c'], soil: ['#8a6238', '#5e4324'],
+          mowLight: 'rgba(255,255,255,0.11)', mowDark: 'rgba(18,70,16,0.13)', band: 'rgba(18,70,16,0.16)',
+          tillLight: 'rgba(255,255,255,0.06)', tillDark: 'rgba(0,0,0,0.14)', furrow: 'rgba(0,0,0,0.15)',
+          hillFar: '#7cc25a', hillNear: '#66ad46',
+        },
+        night: {
+          grass: ['#22432b', '#1a3622', '#13291a'], soil: ['#41301b', '#251b0e'],
+          mowLight: 'rgba(255,255,255,0.05)', mowDark: 'rgba(0,0,0,0.13)', band: 'rgba(0,0,0,0.14)',
+          tillLight: 'rgba(255,255,255,0.06)', tillDark: 'rgba(0,0,0,0.14)', furrow: 'rgba(0,0,0,0.15)',
+          hillFar: '#1a3a18', hillNear: '#1e4a1a',
+        },
+      },
+      {
+        id: 'harvest', emoji: '🌾', name: 'Golden Harvest', cost: 3000,
+        day: {
+          grass: ['#e8cf7a', '#d8b95c', '#c2a044'], soil: ['#9c7442', '#6f5028'],
+          mowLight: 'rgba(255,255,255,0.13)', mowDark: 'rgba(120,86,20,0.14)', band: 'rgba(120,86,20,0.16)',
+          tillLight: 'rgba(255,255,255,0.07)', tillDark: 'rgba(0,0,0,0.13)', furrow: 'rgba(70,50,10,0.16)',
+          hillFar: '#cbb56a', hillNear: '#b59b50',
+        },
+        night: {
+          grass: ['#3b3320', '#2e281a', '#221d12'], soil: ['#42311c', '#261c0f'],
+          mowLight: 'rgba(255,255,255,0.05)', mowDark: 'rgba(0,0,0,0.13)', band: 'rgba(0,0,0,0.14)',
+          tillLight: 'rgba(255,255,255,0.06)', tillDark: 'rgba(0,0,0,0.14)', furrow: 'rgba(0,0,0,0.15)',
+          hillFar: '#2a2416', hillNear: '#332c1b',
+        },
+      },
+      {
+        id: 'winter', emoji: '❄️', name: 'Winter Farm', cost: 8000,
+        day: {
+          grass: ['#eef5fb', '#dbe7f2', '#c3d5e6'], soil: ['#7d7f85', '#5b5d63'],
+          mowLight: 'rgba(255,255,255,0.35)', mowDark: 'rgba(120,150,180,0.16)', band: 'rgba(120,150,180,0.18)',
+          tillLight: 'rgba(255,255,255,0.10)', tillDark: 'rgba(0,0,0,0.10)', furrow: 'rgba(90,110,130,0.18)',
+          hillFar: '#dce8f4', hillNear: '#c6d6e8',
+        },
+        night: {
+          grass: ['#3a4658', '#2d3747', '#212936'], soil: ['#33363d', '#212329'],
+          mowLight: 'rgba(255,255,255,0.07)', mowDark: 'rgba(0,0,0,0.14)', band: 'rgba(0,0,0,0.16)',
+          tillLight: 'rgba(255,255,255,0.06)', tillDark: 'rgba(0,0,0,0.14)', furrow: 'rgba(0,0,0,0.15)',
+          hillFar: '#2b3546', hillNear: '#333e51',
+        },
+      },
+      {
+        id: 'sakura', emoji: '🌸', name: 'Blossom Season', cost: 15000,
+        day: {
+          grass: ['#d7ecb2', '#b9dc8e', '#9bc86e'], soil: ['#9a6f52', '#6d4c34'],
+          mowLight: 'rgba(255,240,246,0.18)', mowDark: 'rgba(200,120,160,0.10)', band: 'rgba(200,120,160,0.14)',
+          tillLight: 'rgba(255,255,255,0.07)', tillDark: 'rgba(0,0,0,0.12)', furrow: 'rgba(90,50,60,0.15)',
+          hillFar: '#f2c3d8', hillNear: '#e3a9c6',
+        },
+        night: {
+          grass: ['#2c3f2c', '#233322', '#1a271a'], soil: ['#41301b', '#251b0e'],
+          mowLight: 'rgba(255,255,255,0.05)', mowDark: 'rgba(0,0,0,0.13)', band: 'rgba(0,0,0,0.14)',
+          tillLight: 'rgba(255,255,255,0.06)', tillDark: 'rgba(0,0,0,0.14)', furrow: 'rgba(0,0,0,0.15)',
+          hillFar: '#3a2734', hillNear: '#452e3e',
+        },
+      },
+    ];
+
     const AFFECTION_MILESTONES = [
       { min: 0,    title: 'Stranger',      reward: 0 },
       { min: 50,   title: 'Acquaintance',  reward: 20 },
