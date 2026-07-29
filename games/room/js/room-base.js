@@ -450,6 +450,149 @@
       { id: 'fd_coop',      emoji: '🛖', name: 'Coop',      cost: 600, scale: 1.7 },
     ];
 
+    /* ── Farm skins ──
+       A late-game coin sink that changes how the farm LOOKS, not how it plays:
+       buy a skin once, then switch between the ones you own for free — the same
+       shape as decorations, and priced into the ladder the cold store and the
+       auto-feeder already occupy (8000 / 25000 / 60000).
+
+       A skin repaints only what the farm itself draws: the pasture grass, its
+       mown stripes, the crop soil, its furrows, and the two rolling hills. The
+       SKY is deliberately left out — room-layers.js paints it for the room's
+       Outside View too, and the sun and moon already arc by real clock time, so
+       a "sunset" sky at 10am would be a lie in both places.
+
+       `meadow` is the farm exactly as it looks today, colour for colour. That
+       is the point: a player who never buys a skin must not see a single pixel
+       change. Every value below was lifted from drawFarmCanvas() and
+       _drawRollingHills() rather than re-picked by eye. */
+    const FARM_THEMES = [
+      {
+        id: 'meadow', emoji: '🌤️', name: 'Green Pasture', cost: 0, blurb: 'the farm you know',
+        day: {
+          grass: ['#9ed26b', '#79c052', '#5ba23c'],
+          deck: { dark: '#5a3d1f', light: '#7a5530', top: [138, 99, 56], bottom: [96, 65, 34],
+                  grain: '48,30,12', seam: '38,24,10', lit: '255,226,178', knot: '40,24,8' },
+          hillFar: '#7cc25a', hillNear: '#66ad46',
+          penTint: 'rgba(150,200,90,0.14)', groundShadow: 'rgba(30,62,20,.24)',
+          groundFx: [{ kind: 'tuft', count: 90, color: '92,168,62', size: 7,
+                       bloom: '255,255,255', bloom2: '255,226,120', bloomCore: 'rgba(255,214,90,0.95)' }],
+          leaf: '#3f9a30', leafLight: 'rgba(152,226,112,0.68)', leafMid: 'rgba(92,190,70,0.24)', leafDapple: 'rgba(195,242,155,0.6)',
+          sky: null, weather: null,
+        },
+        night: {
+          grass: ['#22432b', '#1a3622', '#13291a'],
+          deck: { dark: '#2b1d0e', light: '#3b2916', top: [66, 47, 26], bottom: [44, 30, 16],
+                  grain: '18,10,4', seam: '14,8,3', lit: '180,150,110', knot: '16,9,3' },
+          hillFar: '#1a3a18', hillNear: '#1e4a1a',
+          penTint: 'rgba(80,120,60,0.16)',
+          groundFx: [{ kind: 'tuft', count: 70, color: '38,80,44', size: 7, alpha: 0.7,
+                       bloom: '190,210,190', bloom2: '210,205,160', bloomCore: 'rgba(190,175,110,0.7)' }],
+          leaf: '#185016', leafLight: 'rgba(95,175,85,0.55)', leafMid: 'rgba(40,110,40,0.18)', leafDapple: 'rgba(120,200,110,0.4)',
+          sky: null, weather: null,
+        },
+      },
+      {
+        id: 'harvest', emoji: '🌾', name: 'Golden Harvest', cost: 3000, blurb: 'amber fields · autumn trees',
+        day: {
+          grass: ['#e0a83a', '#c98c22', '#a86f14'],
+          deck: { dark: '#6b4622', light: '#96683a', top: [166, 118, 64], bottom: [116, 78, 40],
+                  grain: '62,38,12', seam: '48,28,8', lit: '255,232,178', knot: '52,30,8' },
+          hillFar: '#c98f36', hillNear: '#a97420',
+          penTint: 'rgba(210,160,60,0.16)', groundShadow: 'rgba(70,40,0,.26)',
+          groundFx: [{ kind: 'tuft', count: 90, color: '168,120,26', size: 7.5,
+                       bloom: '255,246,196', bloom2: '236,196,90', bloomCore: 'rgba(180,120,20,0.9)' }],
+          leaf: '#b5651f', leafLight: 'rgba(255,190,90,0.70)', leafMid: 'rgba(190,110,30,0.26)', leafDapple: 'rgba(255,225,150,0.62)',
+          sky: 'rgba(255,150,50,0.26)',
+          weather: { kind: 'mote', count: 30, color: '255,214,120', size: 2.6, speed: 12, sway: 30, alpha: 0.50 },
+        },
+        night: {
+          grass: ['#3a2a10', '#2c200c', '#1f1608'],
+          deck: { dark: '#2a1c0b', light: '#3a2712', top: [64, 44, 22], bottom: [42, 28, 14],
+                  grain: '16,9,3', seam: '12,7,2', lit: '176,146,104', knot: '14,8,2' },
+          hillFar: '#2a1d0c', hillNear: '#352612',
+          penTint: 'rgba(110,80,25,0.18)',
+          groundFx: [{ kind: 'tuft', count: 70, color: '78,58,20', size: 7.5, alpha: 0.7,
+                       bloom: '190,170,120', bloom2: '160,140,95', bloomCore: 'rgba(140,110,50,0.7)' }],
+          leaf: '#4a2c0e', leafLight: 'rgba(170,120,50,0.48)', leafMid: 'rgba(90,58,18,0.20)', leafDapple: 'rgba(210,170,100,0.36)',
+          sky: 'rgba(150,90,30,0.18)',
+          weather: { kind: 'mote', count: 22, color: '220,180,110', size: 2.2, speed: 10, sway: 26, alpha: 0.28 },
+        },
+      },
+      {
+        id: 'winter', emoji: '❄️', name: 'Winter Farm', cost: 8000, blurb: 'a snowfield · frozen ground',
+        day: {
+          grass: ['#fbfeff', '#e2eefb', '#bfd6ec'],
+          deck: { dark: '#5c5b55', light: '#7d7a70', top: [142, 138, 128], bottom: [98, 95, 88],
+                  grain: '52,52,50', seam: '42,44,46', lit: '245,250,255', knot: '44,44,42' },
+          hillFar: '#f2f8fd', hillNear: '#d6e5f2',
+          penTint: 'rgba(150,195,235,0.20)', groundShadow: 'rgba(90,120,150,.22)',
+          groundFx: [{ kind: 'tuft', count: 55, color: '122,150,132', size: 6, alpha: 0.75,
+                       bloom: '255,255,255', bloom2: '214,234,250', bloomAt: 0.8, bloomCore: 'rgba(255,255,255,0.9)' }],
+          leaf: '#33586b', leafLight: 'rgba(255,255,255,0.85)', leafMid: 'rgba(150,190,215,0.28)', leafDapple: 'rgba(255,255,255,0.95)',
+          sky: 'rgba(150,195,240,0.30)',
+          roofSnow: 'rgba(250,253,255,0.95)', groundProp: 'snowman', propSnow: '#f7fbff', propShade: 'rgba(158,182,206,0.55)',
+          treeShape: 'conifer', conifer: '#2f6b3c', coniferDark: 'rgba(8,40,20,0.20)', coniferSnow: 'rgba(252,254,255,0.92)',
+          coniferTrunk: '#5a3f28', star: '#ffd24a', baubles: ['#e05a4a', '#f0c04a', '#5aa8e0', '#c86ad0'],
+          weather: { kind: 'snow', count: 70, color: '255,255,255', size: 3.0, speed: 30, sway: 24, alpha: 0.95 },
+        },
+        night: {
+          grass: ['#8fa4bd', '#6f8098', '#4f5d73'],
+          deck: { dark: '#2e3138', light: '#3f434c', top: [72, 76, 84], bottom: [48, 51, 58],
+                  grain: '20,22,26', seam: '16,18,22', lit: '170,190,210', knot: '18,20,24' },
+          hillFar: '#8ea4bd', hillNear: '#6d7f98',
+          penTint: 'rgba(70,95,125,0.18)',
+          groundFx: [{ kind: 'tuft', count: 45, color: '70,92,110', size: 6, alpha: 0.6,
+                       bloom: '215,235,250', bloomAt: 0.82, bloomCore: 'rgba(230,242,255,0.7)' }],
+          leaf: '#1d3441', leafLight: 'rgba(200,225,245,0.55)', leafMid: 'rgba(70,105,135,0.22)', leafDapple: 'rgba(235,245,255,0.70)',
+          sky: 'rgba(90,130,180,0.20)',
+          roofSnow: 'rgba(206,224,244,0.85)', groundProp: 'snowman', propSnow: '#c9d9ec', propShade: 'rgba(70,92,118,0.6)',
+          treeShape: 'conifer', conifer: '#173b28', coniferDark: 'rgba(0,0,0,0.26)', coniferSnow: 'rgba(210,228,246,0.78)',
+          coniferTrunk: '#2e2116', star: '#ffdc72', baubles: ['#e0705f', '#ffd980', '#7cc0ee', '#d68ade'],
+          weather: { kind: 'snow', count: 52, color: '235,245,255', size: 2.8, speed: 27, sway: 22, alpha: 0.70 },
+        },
+      },
+      {
+        id: 'sakura', emoji: '🌸', name: 'Blossom Season', cost: 15000, blurb: 'petal carpet · blossom branch',
+        day: {
+          // The ground is a carpet of fallen petals, so it is the PALEST surface
+          // on the stage. That is what keeps the falling petals readable on top
+          // of it: they are white and deep pink, i.e. lighter and darker than
+          // what they land against, rather than the same pink twice.
+          grass: ['#fff0f6', '#fbc0d8', '#e58cb6'],
+          deck: { dark: '#7a5548', light: '#a0776a', top: [178, 138, 124], bottom: [124, 92, 82],
+                  grain: '76,48,40', seam: '60,36,30', lit: '255,232,240', knot: '64,38,32' },
+          hillFar: '#ffc3dc', hillNear: '#f79ec4',
+          penTint: 'rgba(255,160,200,0.18)', groundShadow: 'rgba(120,60,90,.20)',
+          groundFx: [{ kind: 'petal', count: 150, color: '255,255,255', color2: '255,138,182', size: 3.4, alpha: 0.85 },
+                     { kind: 'tuft', count: 80, color: '150,190,120', size: 7,
+                       bloom: '255,255,255', bloom2: '255,150,195', bloomCore: 'rgba(255,206,110,0.95)' }],
+          leaf: '#ff7fb0', leafLight: 'rgba(255,236,245,0.85)', leafMid: 'rgba(255,130,185,0.32)', leafDapple: 'rgba(255,255,255,0.92)',
+          sky: 'rgba(255,168,208,0.30)',
+          cloud: 'rgba(255,228,240,0.95)',
+          skyFx: 'blossom-branch', branch: '#7a5240', blossom: '#ff8fbb', blossomAlt: '#ffffff', blossomCore: 'rgba(255,206,110,0.95)',
+          weather: { kind: 'petal', count: 64, color: '255,255,255', color2: '255,120,170', size: 4.4, speed: 18, sway: 46, alpha: 0.92 },
+        },
+        night: {
+          // 夜樱. The carpet dims but stays unmistakably pink — a night farm
+          // that went grey would throw away the thing that was paid for.
+          grass: ['#6b4a5e', '#4b3243', '#332030'],
+          deck: { dark: '#3a2a2a', light: '#4d3838', top: [86, 64, 62], bottom: [58, 42, 40],
+                  grain: '24,15,14', seam: '18,11,10', lit: '200,170,180', knot: '20,13,12' },
+          hillFar: '#6d4560', hillNear: '#7d5070',
+          penTint: 'rgba(130,80,110,0.18)',
+          groundFx: [{ kind: 'petal', count: 110, color: '235,220,232', color2: '198,116,158', size: 3.2, alpha: 0.55 },
+                     { kind: 'tuft', count: 60, color: '92,110,88', size: 7, alpha: 0.7,
+                       bloom: '235,220,232', bloom2: '210,150,180', bloomCore: 'rgba(220,180,110,0.8)' }],
+          leaf: '#a35b87', leafLight: 'rgba(245,205,230,0.60)', leafMid: 'rgba(165,100,145,0.26)', leafDapple: 'rgba(255,240,250,0.68)',
+          sky: 'rgba(175,105,160,0.22)',
+          cloud: 'rgba(210,165,200,0.75)',
+          skyFx: 'blossom-branch', branch: '#3f2a24', blossom: '#e08ab4', blossomAlt: '#f6e6f0', blossomCore: 'rgba(230,180,110,0.85)',
+          weather: { kind: 'petal', count: 44, color: '245,235,245', color2: '230,140,180', size: 4.0, speed: 16, sway: 42, alpha: 0.62 },
+        },
+      },
+    ];
+
     const AFFECTION_MILESTONES = [
       { min: 0,    title: 'Stranger',      reward: 0 },
       { min: 50,   title: 'Acquaintance',  reward: 20 },

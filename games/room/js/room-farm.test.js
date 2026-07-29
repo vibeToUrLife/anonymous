@@ -647,3 +647,39 @@ test('farmWeekWinners on an empty board pays nobody', () => {
   assert.deepEqual(F.farmWeekWinners([], [3000, 2000, 1000]), []);
   assert.deepEqual(F.farmWeekWinners(null, [3000]), []);
 });
+
+/* ── Farm skins ── */
+
+const THEMES = [
+  { id: 'meadow',  cost: 0,     day: { grass: ['a'] }, night: { grass: ['n'] } },
+  { id: 'harvest', cost: 3000,  day: { grass: ['b'] }, night: { grass: ['nb'] } },
+  { id: 'winter',  cost: 8000,  day: { grass: ['c'] } },   // no night block on purpose
+];
+
+test('the free default is owned without buying anything', () => {
+  assert.equal(F.farmThemeOwned(THEMES[0], []), true);
+  assert.equal(F.farmThemeOwned(THEMES[0], null), true);
+  assert.equal(F.farmThemeOwned(THEMES[1], []), false);
+  assert.equal(F.farmThemeOwned(THEMES[1], ['harvest']), true);
+});
+
+test('a skin you have not bought never paints, even if it is selected', () => {
+  // The save can hold a skin the player lost access to (a refund, a wipe, a
+  // hand-edited doc). Selection alone must not be enough.
+  assert.equal(F.farmThemeOf(THEMES, 'harvest', []).id, 'meadow');
+  assert.equal(F.farmThemeOf(THEMES, 'harvest', ['harvest']).id, 'harvest');
+});
+
+test('an unknown or missing skin falls back to the first, never to nothing', () => {
+  assert.equal(F.farmThemeOf(THEMES, 'no-such-skin', ['harvest']).id, 'meadow');
+  assert.equal(F.farmThemeOf(THEMES, undefined, []).id, 'meadow');
+  assert.equal(F.farmThemeOf(THEMES, '', []).id, 'meadow');
+  assert.equal(F.farmThemeOf([], 'meadow', []), null);   // nothing to fall back TO
+});
+
+test('the palette follows the clock, and a skin with no night block still paints', () => {
+  assert.deepEqual(F.farmThemePalette(THEMES[0], false).grass, ['a']);
+  assert.deepEqual(F.farmThemePalette(THEMES[0], true).grass, ['n']);
+  assert.deepEqual(F.farmThemePalette(THEMES[2], true).grass, ['c']);   // falls back to day
+  assert.equal(F.farmThemePalette(null, false), null);
+});

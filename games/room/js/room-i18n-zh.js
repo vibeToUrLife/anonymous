@@ -1262,5 +1262,21 @@
     'Collect {n} coins': '收下 {n} 金币',
     'Current streak: 1 day': '已连续 1 天',
     'Current streak: {n} days': '已连续 {n} 天',
+
+    /* ── Farm skins ── */
+    'Farm look': '农场外观',
+    'In use': '使用中',
+    'Buy a look once, then switch whenever you like. Visitors see your farm in it too.':
+      '买一次就能随便换。来串门的人也会看到你现在的样子。',
+    '{name} — your farm is wearing it now!': '{name} —— 农场已经换上了！',
+    'Green Pasture': '青草牧场',
+    'Golden Harvest': '金色麦田',
+    'Winter Farm': '雪国农场',
+    'Blossom Season': '樱花田园',
+    // Rendered as T(th.blurb) — a variable, so no key-scanner will find these.
+    'the farm you know': '你熟悉的农场',
+    'amber fields · autumn trees': '琥珀色的田 · 秋色的树',
+    'a snowfield · frozen ground': '一片雪原 · 冻土',
+    'petal carpet · blossom branch': '一地落英 · 樱枝入镜',
   });
 })();

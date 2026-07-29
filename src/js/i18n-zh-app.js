@@ -335,6 +335,10 @@
     'Accept': '接受',
     'Anonymous': '匿名',
     'Remove': '移除',
+
+    // Kept after the dev board was removed: games/room.html loads this file too,
+    // and room-ui.js still calls T('Post') for the guestbook send button.
+    'Post': '发布',
   });
 
   /* ── Chinese keys → English ── */

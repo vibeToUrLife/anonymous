@@ -1490,7 +1490,8 @@
               ? 'Install the 🤖 Auto-Collector above first — without it, the longer you bank, the bigger the pile you have to tap through on your way back in.'
               : "How long your animals keep producing while you're away. Pair it with the 🤖 Auto-Feeder so they don't go hungry.") +
           '</div>';
-        })();
+        })() +
+        _farmSkinsHtml();
 
       // Built (and subscribed) only when the Visit tab is active, so opening the
       // farm for normal play never spins up the rooms-list listener.
@@ -1712,6 +1713,76 @@
       await saveRoom();
       renderFarmPanel(); renderAll();
       showToast('❄️ ' + T('Cold Store extended — the farm now banks {time}!', { time: _fmtFarmTime(farmOfflineCapMs()) }), 'success');
+    }
+
+    /* ── Farm skins ──
+       Bought once, then free to switch between. The swatch is a real preview:
+       it is built from the same day colours the canvas paints with, so a name
+       alone never has to carry the difference. */
+    function _farmSwatch(theme) {
+      const d = theme.day || {};
+      const g = d.grass || [], dk = d.deck || {};
+      // A mini cross-section of the real thing: tinted sky, grass, soil, with a
+      // dot for the canopy. Built from the very colours the canvas paints with,
+      // so the row cannot promise a look the farm does not deliver.
+      const sky = d.sky || 'rgba(150,205,245,0.55)';
+      return '<span style="position:relative;display:inline-block;width:26px;height:18px;border-radius:4px;' +
+        'vertical-align:-4px;margin-right:7px;border:1px solid rgba(0,0,0,.25);overflow:hidden;' +
+        'background:linear-gradient(180deg,' + sky + ' 0%,' + sky + ' 26%,' +
+        (g[0] || '#9ed26b') + ' 26%,' + (g[2] || '#5ba23c') + ' 66%,' +
+        'rgb(' + (dk.top || [122, 86, 48]).join(',') + ') 66%,' +
+        'rgb(' + (dk.bottom || [86, 58, 30]).join(',') + ') 100%)">' +
+        '<span style="position:absolute;left:3px;top:6px;width:7px;height:7px;border-radius:50%;background:' +
+        (d.leaf || '#3f9a30') + '"></span></span>';
+    }
+
+    function _farmSkinsHtml() {
+      if (typeof FARM_THEMES === 'undefined') return '';
+      const activeId = (farmThemeOf(FARM_THEMES, roomData.farmTheme, roomData.ownedFarmThemes) || {}).id;
+      const rows = FARM_THEMES.map(function (th) {
+        const owned = farmThemeOwned(th, roomData.ownedFarmThemes);
+        const action = th.id === activeId
+          ? '<span class="farm-shop-drop">✓ ' + T('In use') + '</span>'
+          : owned
+          ? '<button class="farm-shop-buy" onclick="setFarmTheme(\'' + th.id + '\')">' + T('Use') + '</button>'
+          : '<button class="farm-shop-buy" onclick="buyFarmTheme(\'' + th.id + '\')"' +
+            (roomData.coins < th.cost ? ' disabled' : '') + '>' + th.cost + '🪙</button>';
+        return '<div class="farm-shop-row">' +
+          '<span class="farm-shop-animal">' + _farmSwatch(th) + th.emoji + ' ' + T(th.name) +
+            (th.blurb ? ' <small>' + T(th.blurb) + '</small>' : '') + '</span>' +
+          action +
+        '</div>';
+      }).join('');
+      return '<div class="farm-section-title" style="margin-top:12px">🎨 ' + T('Farm look') + '</div>' +
+        rows +
+        '<div class="farm-panel-empty" style="padding:2px 0 4px">' +
+          T('Buy a look once, then switch whenever you like. Visitors see your farm in it too.') +
+        '</div>';
+    }
+
+    async function buyFarmTheme(id) {
+      if (viewingUid !== currentUid) return;
+      const th = (FARM_THEMES || []).find(function (t) { return t.id === id; });
+      if (!th || farmThemeOwned(th, roomData.ownedFarmThemes)) return;
+      if (roomData.coins < th.cost) return showToast(T('Not enough coins!'), 'error');
+      roomData.coins -= th.cost;
+      logCoin(-th.cost, T('Farm look'));
+      roomData.ownedFarmThemes = (roomData.ownedFarmThemes || []).concat([th.id]);
+      roomData.farmTheme = th.id;                       // buying it puts it on
+      await saveRoom();
+      showToast(th.emoji + ' ' + T('{name} — your farm is wearing it now!', { name: T(th.name) }), 'success');
+      renderFarmPanel();
+      renderAll();
+    }
+
+    async function setFarmTheme(id) {
+      if (viewingUid !== currentUid) return;
+      const th = (FARM_THEMES || []).find(function (t) { return t.id === id; });
+      if (!th || !farmThemeOwned(th, roomData.ownedFarmThemes)) return;
+      if (roomData.farmTheme === id) return;
+      roomData.farmTheme = id;
+      await saveRoom();
+      renderFarmPanel();                                // the canvas picks it up on its next frame
     }
 
     async function buyFarmAutoCollect() {
@@ -2366,7 +2437,7 @@
     }
 
     // Draw owned machine huts on the pasture (machines are built in the Garden tab).
-    function _drawWorkshopMachines(ctx, W, H, t, night) {
+    function _drawWorkshopMachines(ctx, W, H, t, night, pal) {
       const machines = roomData.farmMachines || {};
       const now = Date.now();
       FARM_MACHINES.forEach((m, slot) => {
@@ -2379,7 +2450,7 @@
         ctx.save();
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         // ground shadow
-        ctx.fillStyle = night ? 'rgba(0,0,0,.34)' : 'rgba(30,62,20,.24)';
+        ctx.fillStyle = night ? 'rgba(0,0,0,.34)' : ((pal && pal.groundShadow) || 'rgba(30,62,20,.24)');
         ctx.beginPath(); ctx.ellipse(cx + D * 0.4, cy + s * 0.5, s * 0.62, s * 0.14, 0, 0, Math.PI * 2); ctx.fill();
         // right side wall (3D depth) — darker
         ctx.fillStyle = night ? '#6f4e33' : '#a9794d';
@@ -2409,6 +2480,34 @@
         ctx.beginPath(); ctx.moveTo(fx - rOver, fy); ctx.lineTo(cx, rTop); ctx.lineTo(fx + wallW + rOver, fy); ctx.closePath(); ctx.fill();
         ctx.strokeStyle = 'rgba(255,255,255,.20)'; ctx.lineWidth = 1.5;     // ridge highlight
         ctx.beginPath(); ctx.moveTo(cx, rTop); ctx.lineTo(cx + D, rTop - dy); ctx.stroke();
+
+        /* Snow settles on a roof from the ridge DOWN, and it stops short of the
+           eaves where it slid off — a roof painted white to the edge reads as a
+           white roof, not a snowy one. So: the receding slope carries most of
+           it, the gable gets a band along each rake, and a couple of lumps hang
+           over the eave where it is about to drop. */
+        if (pal && pal.roofSnow) {
+          const sn = pal.roofSnow;
+          ctx.fillStyle = sn;
+          // the slope we look down on
+          ctx.beginPath();
+          ctx.moveTo(cx, rTop); ctx.lineTo(cx + D, rTop - dy);
+          ctx.lineTo(fx + wallW + rOver + D - s * 0.05, fy - dy - s * 0.06);
+          ctx.lineTo(fx + wallW + rOver - s * 0.05, fy - s * 0.06);
+          ctx.closePath(); ctx.fill();
+          // a band down each rake of the gable
+          ctx.lineWidth = Math.max(2, s * 0.055); ctx.lineCap = 'round'; ctx.strokeStyle = sn;
+          ctx.beginPath(); ctx.moveTo(fx - rOver + s * 0.02, fy - s * 0.01); ctx.lineTo(cx, rTop); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(cx, rTop); ctx.lineTo(fx + wallW + rOver - s * 0.02, fy - s * 0.01); ctx.stroke();
+          // the ridge, and what is hanging off the edge
+          ctx.lineWidth = Math.max(2.5, s * 0.07);
+          ctx.beginPath(); ctx.moveTo(cx, rTop); ctx.lineTo(cx + D, rTop - dy); ctx.stroke();
+          ctx.fillStyle = sn;
+          [[0.22, 0.030], [0.52, 0.022], [0.78, 0.026]].forEach(function (d2) {
+            const ex = fx - rOver + (wallW + rOver * 2) * d2[0];
+            ctx.beginPath(); ctx.ellipse(ex, fy + s * 0.005, s * d2[1] * 1.6, s * d2[1], 0, 0, Math.PI * 2); ctx.fill();
+          });
+        }
         // round sign with the machine emoji on the gable
         ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(cx, fy - s * 0.04, s * 0.17, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = 'rgba(0,0,0,.15)'; ctx.lineWidth = 1; ctx.stroke();
@@ -2914,14 +3013,14 @@
     }
 
     // Draw the pens (grass panel + wooden rail + label tab) behind the animals.
-    function _drawAnimalPens(ctx, W, H, pens, night) {
+    function _drawAnimalPens(ctx, W, H, pens, night, pal) {
       for (const p of pens) {
         const x = p.x0 * W, y = p.y0 * H, w = (p.x1 - p.x0) * W, h = (p.y1 - p.y0) * H;
         const r = Math.min(14, w * 0.2, h * 0.3);
         ctx.save();
         ctx.beginPath();
         if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h);
-        ctx.fillStyle = night ? 'rgba(80,120,60,0.16)' : 'rgba(150,200,90,0.14)';   // soft paddock tint
+        ctx.fillStyle = (pal && pal.penTint) || (night ? 'rgba(80,120,60,0.16)' : 'rgba(150,200,90,0.14)');   // paddock tint
         ctx.fill();
         ctx.lineWidth = Math.max(2.5, W * 0.006);                                     // wooden rail
         ctx.strokeStyle = night ? '#5a4326' : '#8a5a30';
@@ -3148,14 +3247,14 @@
     // 📮 The mailbox on your own farm — a post-mounted box whose flag stands up
     // (with a count badge) whenever visitors have left something to claim. Same
     // wood/clay palette as the signboards and pen rails.
-    function _drawFarmMailbox(ctx, W, H, t, night) {
+    function _drawFarmMailbox(ctx, W, H, t, night, pal) {
       const p = _farmMailPos(W, H);
       const gx = p.x * W, gy = p.y * H;
       const s = _farmMailSize(W, H);                       // box width, and the unit for everything else
       const n = _farmInboxCount();
       const bob = n ? Math.sin(t / 260) * (s * 0.06) : 0;  // a gentle nudge while mail is waiting
 
-      ctx.fillStyle = night ? 'rgba(0,0,0,.32)' : 'rgba(30,62,20,.24)';
+      ctx.fillStyle = night ? 'rgba(0,0,0,.32)' : ((pal && pal.groundShadow) || 'rgba(30,62,20,.24)');
       ctx.beginPath(); ctx.ellipse(gx, gy, s * 0.34, s * 0.11, 0, 0, Math.PI * 2); ctx.fill();
 
       ctx.fillStyle = night ? '#4a3620' : '#714a26';       // post
@@ -3240,6 +3339,71 @@
 
     // Garden plots: brown soil tiles; growing crops show a progress bar, ripe
     // crops bob with a ✨ to invite a harvest tap.
+    /* The front board of a raised bed.
+
+       It used to be one flat brown rectangle with a single seam ruled across
+       it, which reads as plastic. Wood is cheap to suggest properly: two
+       stacked planks each shaded light-top to dark-bottom so they look round,
+       grain streaks running the LENGTH of the board (grain follows the plank,
+       and drawing it any other way is the tell), an end joint where two boards
+       meet, and a knot on some beds but not all.
+
+       Every variation comes from `seed` — the plot's own index — so a bed's
+       grain belongs to that bed and is identical on every frame. Grain rolled
+       per frame would crawl, which is worse than no grain at all. */
+    function _drawBedBoard(ctx, x, y, w, h, seed) {
+      const hash = (n) => { const v = Math.sin(n) * 43758.5453; return v - Math.floor(v); };
+      const planks = 2, ph = h / planks;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+
+      for (let k = 0; k < planks; k++) {
+        const py = y + k * ph;
+        const tone = 0.86 + hash(seed * 3.1 + k) * 0.28;          // each plank cut from a different board
+        const gr = ctx.createLinearGradient(0, py, 0, py + ph);
+        gr.addColorStop(0, 'rgb(' + Math.round(82 * tone) + ',' + Math.round(58 * tone) + ',' + Math.round(32 * tone) + ')');
+        gr.addColorStop(1, 'rgb(' + Math.round(52 * tone) + ',' + Math.round(35 * tone) + ',' + Math.round(18 * tone) + ')');
+        ctx.fillStyle = gr;
+        ctx.fillRect(x, py, w, ph);
+
+        // grain — long, shallow arcs along the plank
+        ctx.lineWidth = Math.max(0.6, ph * 0.07);
+        for (let n = 0; n < 3; n++) {
+          const f = hash(seed * 5.7 + k * 2.3 + n);
+          const gy = py + ph * (0.22 + f * 0.6);
+          ctx.strokeStyle = 'rgba(30,18,6,' + (0.10 + f * 0.12).toFixed(2) + ')';
+          ctx.beginPath();
+          ctx.moveTo(x - 1, gy);
+          ctx.quadraticCurveTo(x + w * (0.3 + f * 0.4), gy + ph * (f - 0.5) * 0.35, x + w + 1, gy);
+          ctx.stroke();
+        }
+
+        // where two boards meet end to end
+        const jx = x + w * (0.3 + hash(seed * 9.4 + k) * 0.4);
+        ctx.strokeStyle = 'rgba(24,14,4,0.35)';
+        ctx.lineWidth = Math.max(0.7, w * 0.008);
+        ctx.beginPath(); ctx.moveTo(jx, py); ctx.lineTo(jx, py + ph); ctx.stroke();
+
+        // a knot, on some planks
+        const kf = hash(seed * 13.7 + k * 4.1);
+        if (kf > 0.78) {                                     // a knot is a feature, not a texture
+          const kx = x + w * (0.15 + hash(seed * 17.3 + k) * 0.7), ky = py + ph * 0.5;
+          const kr = Math.max(1, ph * 0.16);
+          ctx.fillStyle = 'rgba(28,16,5,0.45)';
+          ctx.beginPath(); ctx.ellipse(kx, ky, kr, kr * 0.72, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = 'rgba(28,16,5,0.22)'; ctx.lineWidth = Math.max(0.5, kr * 0.35);
+          ctx.beginPath(); ctx.ellipse(kx, ky, kr * 1.9, kr * 1.25, 0, 0, Math.PI * 2); ctx.stroke();
+        }
+
+        // the lit edge of each plank, and the shadow it casts on the one below
+        ctx.fillStyle = 'rgba(255,226,180,0.16)';
+        ctx.fillRect(x, py, w, Math.max(0.7, ph * 0.09));
+        ctx.fillStyle = 'rgba(0,0,0,0.26)';
+        ctx.fillRect(x, py + ph - Math.max(0.7, ph * 0.08), w, Math.max(0.7, ph * 0.08));
+      }
+      ctx.restore();
+    }
+
     function _drawFarmPlots(ctx, W, H, t) {
       const plots = roomData.farmPlots || [];
       const now = Date.now();
@@ -3262,12 +3426,9 @@
         // 3D raised garden bed: front (wooden) face for depth + top soil face
         const _x0 = px - tile / 2, _y0 = py - tile / 2, _r = Math.max(3, tile * 0.16);
         const _depth = tile * 0.30;
-        ctx.fillStyle = '#43301c';                                   // front face
-        ctx.fillRect(_x0, _y0 + tile - _r, tile, _depth + _r);
-        ctx.fillStyle = 'rgba(0,0,0,0.22)';
+        _drawBedBoard(ctx, _x0, _y0 + tile - _r, tile, _depth + _r, i + 1);   // front face
+        ctx.fillStyle = 'rgba(0,0,0,0.22)';                          // where it meets the ground
         ctx.fillRect(_x0, _y0 + tile + _depth - 2, tile, 2);
-        ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = 1;     // plank seam on the side
-        ctx.beginPath(); ctx.moveTo(_x0 + 2, _y0 + tile + _depth * 0.5); ctx.lineTo(_x0 + tile - 2, _y0 + tile + _depth * 0.5); ctx.stroke();
         const _tg = ctx.createLinearGradient(0, _y0, 0, _y0 + tile);  // top soil face
         _tg.addColorStop(0, '#8a6038'); _tg.addColorStop(1, '#6b4a2c');
         ctx.fillStyle = _tg;
@@ -3276,11 +3437,38 @@
         ctx.fillStyle = 'rgba(255,255,255,.08)';
         if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(_x0, _y0, tile, tile * 0.30, _r); ctx.fill(); }
         else ctx.fillRect(_x0, _y0, tile, tile * 0.16);
-        ctx.strokeStyle = 'rgba(40,26,12,.28)'; ctx.lineWidth = 1;    // tilled lines
-        for (let ly = _y0 + tile * 0.38; ly < _y0 + tile - 2; ly += tile * 0.26) { ctx.beginPath(); ctx.moveTo(_x0 + 3, ly); ctx.lineTo(_x0 + tile - 3, ly); ctx.stroke(); }
-        ctx.strokeStyle = '#5a3c22'; ctx.lineWidth = 1.5;            // wooden frame edge
+        /* Worked earth inside the bed. The ruled tilled lines are gone the same
+           way the band's furrows went; what is left is the soil itself — a
+           handful of clods with a lit top and a shadow under each, keyed to the
+           plot index so a bed's earth is its own and never crawls. Without this
+           the beds would be the smoothest thing on a field of grainy ground. */
+        (function () {
+          const hb = (n2) => { const v = Math.sin(n2) * 43758.5453; return v - Math.floor(v); };
+          ctx.save();
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(_x0, _y0, tile, tile, _r); else ctx.rect(_x0, _y0, tile, tile);
+          ctx.clip();
+          for (let c = 0; c < 7; c++) {
+            const a1 = hb((i + 1) * 12.3 + c * 3.7), a2 = hb((i + 1) * 27.1 + c * 5.3), a3 = hb((i + 1) * 41.9 + c * 7.1);
+            const cx2 = _x0 + tile * (0.12 + a1 * 0.76);
+            const cy2 = _y0 + tile * (0.30 + a2 * 0.62);      // below the lit upper lip
+            const cr = Math.max(0.9, tile * (0.045 + a3 * 0.05));
+            ctx.fillStyle = 'rgba(58,38,18,0.34)';
+            ctx.beginPath(); ctx.ellipse(cx2, cy2, cr, cr * 0.6, a3 * Math.PI, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = 'rgba(190,146,92,0.26)';
+            ctx.beginPath(); ctx.ellipse(cx2 - cr * 0.2, cy2 - cr * 0.24, cr * 0.6, cr * 0.28, a3 * Math.PI, 0, Math.PI * 2); ctx.fill();
+          }
+          ctx.restore();
+        })();
+        // Wooden frame edge — two passes so the rim reads as the same timber as
+        // the front board: the dark line is the wood, the lighter inset is the
+        // sunlit top of the frame.
+        ctx.strokeStyle = '#4a3018'; ctx.lineWidth = 2;
         if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(_x0, _y0, tile, tile, _r); ctx.stroke(); }
         else ctx.strokeRect(_x0, _y0, tile, tile);
+        ctx.strokeStyle = 'rgba(214,168,110,0.42)'; ctx.lineWidth = 1;
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(_x0 + 1.2, _y0 + 1.2, tile - 2.4, tile - 2.4, Math.max(1, _r - 1)); ctx.stroke(); }
+        else ctx.strokeRect(_x0 + 1.2, _y0 + 1.2, tile - 2.4, tile - 2.4);
         if (!plot.crop) return;
         const crop = FARM_CROPS.find(c => c.id === plot.crop);
         if (!crop) return;
@@ -3353,8 +3541,24 @@
         ctx.clearRect(0, 0, W, H);
         const windSway = Math.sin(t / 1400) * 0.012;
 
+        // The skin in force this frame. Resolved per frame rather than per
+        // draw call so buying or switching one repaints without a reload, and
+        // so a skin the player no longer owns falls back on its own.
+        const _theme = farmThemeOf(FARM_THEMES, roomData.farmTheme, roomData.ownedFarmThemes);
+        const pal = farmThemePalette(_theme, night) || {};
+
         _drawHDSky(ctx, W, H, night, t, H * FARM_SKY_Y);   // arc the sun/moon inside the farm's shallower sky
-        _drawRollingHills(ctx, W, H, night);
+        // A skin tints the farm's OWN sky band. The sky painter itself is shared
+        // with the room's Outside View, so the wash goes on top of it here
+        // rather than into it — the room stays exactly as it was.
+        if (pal.sky) {
+          const sw = ctx.createLinearGradient(0, 0, 0, H * FARM_SKY_Y);
+          sw.addColorStop(0, pal.sky);
+          sw.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = sw;
+          ctx.fillRect(0, 0, W, H * FARM_SKY_Y);
+        }
+        _drawRollingHills(ctx, W, H, night, pal);
 
         // The dividing fence between the animal pasture (above) and the crop
         // garden (below). It moves DOWN as the farm is expanded, so each
@@ -3365,47 +3569,23 @@
         // Animal pasture — grass from the horizon down to the dividing fence
         const skyY = H * FARM_SKY_Y;
         const grass = ctx.createLinearGradient(0, skyY, 0, gy);
-        grass.addColorStop(0, night ? '#22432b' : '#9ed26b');    // soft sunny top
-        grass.addColorStop(0.5, night ? '#1a3622' : '#79c052');
-        grass.addColorStop(1, night ? '#13291a' : '#5ba23c');    // richer deep bottom
+        grass.addColorStop(0, pal.grass[0]);                      // soft sunny top
+        grass.addColorStop(0.5, pal.grass[1]);
+        grass.addColorStop(1, pal.grass[2]);                      // richer deep bottom
         ctx.fillStyle = grass;
         ctx.fillRect(0, skyY, W, gy - skyY);
 
-        // 3D mown field — alternating stripes converging to the horizon point
-        ctx.save();
-        ctx.beginPath(); ctx.rect(0, skyY, W, gy - skyY); ctx.clip();
-        const vpx = W / 2, vpy = skyY - H * 0.02;
-        const gSeg = 12, gSpread = W * 1.7, gx0 = W / 2 - gSpread / 2;
-        for (let i = 0; i < gSeg; i++) {
-          const xA = gx0 + (i / gSeg) * gSpread, xB = gx0 + ((i + 1) / gSeg) * gSpread;
-          ctx.fillStyle = (i % 2)
-            ? (night ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.11)')
-            : (night ? 'rgba(0,0,0,0.13)' : 'rgba(18,70,16,0.13)');
-          ctx.beginPath(); ctx.moveTo(xA, gy); ctx.lineTo(xB, gy); ctx.lineTo(vpx, vpy); ctx.closePath(); ctx.fill();
-        }
-        // horizontal depth bands (tighter toward the horizon)
-        ctx.strokeStyle = night ? 'rgba(0,0,0,0.14)' : 'rgba(18,70,16,0.16)'; ctx.lineWidth = 1;
-        for (let k = 1; k <= 5; k++) { const f = k / 6; const yy = gy - (gy - skyY) * (f * f); ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(W, yy); ctx.stroke(); }
-        ctx.restore();
 
-        // Crop garden — a tilled soil band below the dividing fence
-        const soil = ctx.createLinearGradient(0, gy, 0, H);
-        soil.addColorStop(0, night ? '#41301b' : '#8a6238');     // warmer tilled earth
-        soil.addColorStop(1, night ? '#251b0e' : '#5e4324');
-        ctx.fillStyle = soil;
-        ctx.fillRect(0, gy, W, H - gy);
-        // 3D tilled rows — alternating stripes converging to the dividing fence
-        ctx.save();
-        ctx.beginPath(); ctx.rect(0, gy, W, H - gy); ctx.clip();
-        const sSeg = 16, sSpread = W * 1.5, sx0 = W / 2 - sSpread / 2;
-        for (let i = 0; i < sSeg; i++) {
-          const xA = sx0 + (i / sSeg) * sSpread, xB = sx0 + ((i + 1) / sSeg) * sSpread;
-          ctx.fillStyle = (i % 2) ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.14)';
-          ctx.beginPath(); ctx.moveTo(xA, H); ctx.lineTo(xB, H); ctx.lineTo(W / 2, gy); ctx.closePath(); ctx.fill();
-        }
-        ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 1;
-        for (let fy = gy + (H - gy) * 0.42; fy < H - 2; fy += (H - gy) * 0.30) { ctx.beginPath(); ctx.moveTo(0, fy); ctx.lineTo(W, fy); ctx.stroke(); }
-        ctx.restore();
+        /* Both bands get their grain from one baked texture, blitted after the
+           two fills. No mown stripes, no depth bands, no tilled rows and no
+           furrows any more: the pasture's depth comes from tufts drawn smaller
+           toward the horizon, and the crop band's from clods doing the same —
+           which is how ground actually recedes, rather than ruled lines
+           pretending it does. */
+        const _tex = _farmGroundTexture(W, H, skyY, gy, pal,
+          W + 'x' + H + '|' + (_theme ? _theme.id : '?') + '|' + (night ? 'n' : 'd') + '|' + Math.round(gy));
+        if (_tex) ctx.drawImage(_tex, 0, 0);
+        else { _drawFarmScatter(ctx, W, H, skyY, gy, pal.groundFx); _drawFarmDeck(ctx, W, H, gy, H, pal); }
 
         // Fences: top of the pasture and the divider (farm | crops). No bottom
         // fence — its posts are a fixed 22px tall, so on a short stage they cut
@@ -3413,11 +3593,18 @@
         const topFenceY = H * FARM_TOPFENCE_Y;
         _drawFence(ctx, W * 0.02, topFenceY, W * 0.96, night);
         _drawFence(ctx, W * 0.02, gy, W * 0.96, night);
-        _drawHDTree(ctx, W * 0.06, topFenceY, H * 0.18, windSway, night);
-        _drawHDTree(ctx, W * 0.94, topFenceY, H * 0.15, windSway * 0.7, night);
+        // A skin can swap the SHAPE of the trees, not just their colour.
+        if (pal.treeShape === 'conifer') {
+          _drawFarmConifer(ctx, W * 0.06, topFenceY, H * 0.18, windSway, pal, t);
+          _drawFarmConifer(ctx, W * 0.94, topFenceY, H * 0.15, windSway * 0.7, pal, t);
+        } else {
+          _drawHDTree(ctx, W * 0.06, topFenceY, H * 0.18, windSway, night, pal);
+          _drawHDTree(ctx, W * 0.94, topFenceY, H * 0.15, windSway * 0.7, night, pal);
+        }
 
+        _drawFarmSnowman(ctx, W, H, pal);   // before the trough and the herd, so both pass in front
         _drawFarmTrough(ctx, W, H, night);
-        if (viewingUid === currentUid) _drawFarmMailbox(ctx, W, H, t, night);   // your mail only
+        if (viewingUid === currentUid) _drawFarmMailbox(ctx, W, H, t, night, pal);   // your mail only
         _drawFarmPlots(ctx, W, H, t);
 
         // Drops on the ground (visual juice) — collected via the Produce modal.
@@ -3446,12 +3633,12 @@
         // Animals stay in the pasture, above the dividing fence (crops are below).
         const _band = _farmPenBand();
         const penTop = _band.top, penBot = _band.bot;
-        _drawWorkshopMachines(ctx, W, H, t, night);   // huts behind the herd
+        _drawWorkshopMachines(ctx, W, H, t, night, pal);   // huts behind the herd
         const _blocked = _farmBlockedZones();           // workshop + cart: animals keep out
         const _herd = roomData.farmAnimals || [];
         // Group the herd into one fenced pen per type, then keep each animal in its pen.
         const _pens = _buildAnimalPens(_herd, penTop, penBot, W, H);
-        _drawAnimalPens(ctx, W, H, _pens.list, night);
+        _drawAnimalPens(ctx, W, H, _pens.list, night, pal);
         // One animal per cell, drawn a little smaller so it has room inside it.
         const _aSize = Math.max(22, (_pens.cell || 0) * 0.72);
         let _ai = 0;
@@ -3503,7 +3690,7 @@
           const size = _aSize;
           const bob = Math.sin(t / 400 + st.x * 20) * 2;
           // soft ground shadow under the animal -> grounds it in the 3D field
-          ctx.fillStyle = night ? 'rgba(0,0,0,.30)' : 'rgba(30,62,20,.24)';
+          ctx.fillStyle = night ? 'rgba(0,0,0,.30)' : (pal.groundShadow || 'rgba(30,62,20,.24)');
           ctx.beginPath();
           ctx.ellipse(px, py + size * 0.30, size * 0.40, size * 0.12, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -3547,7 +3734,11 @@
           ctx.globalAlpha = 1;
         }
 
-        if (!night) _drawClouds(ctx, W, H, t);
+        if (!night) _drawClouds(ctx, W, H, t, pal.cloud);
+
+        // The skin's sky set piece — after the clouds so it reads as nearer
+        // than them, before the plane so it can never sit on top of a tap target.
+        _drawFarmSkyFx(ctx, W, H, t, pal, windSway);
 
         // Sky merchant plane — drawn LAST so drifting clouds never hide the
         // tappable prompt: fly-off animation → hovering plane → away cloud.
@@ -3562,10 +3753,488 @@
             else _drawCartAway(ctx, W, H, t, _cartS);
           }
         }
+        // Weather LAST, so snow and petals fall in front of the animals rather
+        // than behind them — that one ordering is most of why it reads as
+        // weather at all.
+        _drawFarmWeather(ctx, W, H, t, pal.weather);
+
         _farmAnimFrame = requestAnimationFrame(frame);
       }
       _farmAnimFrame = requestAnimationFrame(frame);
       _attachFarmPointerHandlers(cvs);
+    }
+
+    /* What is lying ON the grass.
+
+       A pink fill reads as paint; what makes it read as a carpet of blossom is
+       seeing the individual petals that formed it. Scattered in NORMALISED
+       coordinates from a hash of the index, so the drift is stable frame to
+       frame and simply rescales when the stage resizes — a scatter that
+       reshuffled every frame would shimmer, and one keyed to pixels would jump
+       when the panel opens.
+
+       Drawn straight after the ground and before anything interactive, so it
+       always sits UNDER the animals, drops, plots and the trough. It is texture,
+       never a target. */
+    /* The winter farm's trees are firs, dressed for Christmas.
+
+       A skin cannot do this by recolouring: a round canopy painted white is a
+       snowy oak, not a fir. So the farm draws its own tree when the skin asks
+       for one, and room-layers.js — which the room's Outside View shares —
+       keeps the only tree it has ever had.
+
+       The base tier is 0.30 of the tree's height half-wide, deliberately under
+       the round canopy's 0.316, so swapping shapes cannot push the right-hand
+       tree further over the mailbox than the tree already standing there does.
+
+       Sway comes from the same wind the rest of the farm uses, and grows toward
+       the top so the tree bends rather than slides. */
+    function _drawFarmConifer(ctx, tx, ty, treeH, sway, pal, t) {
+      const p = pal || {};
+      const trunkW = treeH * 0.055, trunkH = treeH * 0.16;
+      ctx.save();
+
+      ctx.fillStyle = p.groundShadow || 'rgba(90,120,150,.22)';
+      ctx.beginPath(); ctx.ellipse(tx, ty + 1, treeH * 0.20, treeH * 0.045, 0, 0, Math.PI * 2); ctx.fill();
+
+      ctx.fillStyle = p.coniferTrunk || '#5a3f28';
+      ctx.fillRect(tx - trunkW / 2, ty - trunkH, trunkW, trunkH);
+
+      // four tiers, each narrower and shorter than the one below
+      const TIERS = 4;
+      const base = ty - trunkH * 0.75;
+      for (let k = 0; k < TIERS; k++) {
+        const f = k / TIERS;
+        const halfW = treeH * 0.30 * (1 - f * 0.62);
+        const tierTop = base - treeH * (0.20 + k * 0.20);
+        const tierBot = base - treeH * (k * 0.20);
+        const lean = sway * treeH * (0.6 + k * 0.5);          // the top moves most
+
+        ctx.fillStyle = p.conifer || '#2f6b3c';
+        ctx.beginPath();
+        ctx.moveTo(tx + lean, tierTop);
+        ctx.lineTo(tx + halfW, tierBot);
+        ctx.lineTo(tx - halfW, tierBot);
+        ctx.closePath(); ctx.fill();
+
+        // shaded right half, so the tier is not a flat triangle
+        ctx.fillStyle = p.coniferDark || 'rgba(0,0,0,0.16)';
+        ctx.beginPath();
+        ctx.moveTo(tx + lean, tierTop);
+        ctx.lineTo(tx + halfW, tierBot);
+        ctx.lineTo(tx + lean * 0.5, tierBot);
+        ctx.closePath(); ctx.fill();
+
+        // snow lying along the tier's shoulders
+        if (p.coniferSnow) {
+          ctx.strokeStyle = p.coniferSnow;
+          ctx.lineWidth = Math.max(1.6, treeH * 0.022);
+          ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+          ctx.beginPath();
+          ctx.moveTo(tx - halfW * 0.94, tierBot - treeH * 0.008);
+          ctx.lineTo(tx + lean, tierTop + treeH * 0.012);
+          ctx.lineTo(tx + halfW * 0.94, tierBot - treeH * 0.008);
+          ctx.stroke();
+        }
+      }
+
+      // baubles, breathing slowly and out of phase with each other
+      const spots = [[-0.16, 0.30], [0.15, 0.34], [-0.10, 0.56], [0.12, 0.62], [-0.05, 0.80], [0.07, 0.86]];
+      const cols = p.baubles || ['#e05a4a', '#f0c04a', '#5aa8e0'];
+      spots.forEach(function (d, i) {
+        const bx = tx + treeH * d[0] + sway * treeH * (d[1] * 2.2);
+        const by2 = base - treeH * d[1];
+        ctx.globalAlpha = 0.72 + 0.28 * Math.sin(t / 620 + i * 1.7);
+        ctx.fillStyle = cols[i % cols.length];
+        ctx.beginPath(); ctx.arc(bx, by2, Math.max(1.3, treeH * 0.022), 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+
+      // and a star on top
+      const sx = tx + sway * treeH * 1.1, sy = base - treeH * 1.0;
+      const sr = treeH * 0.055;
+      ctx.fillStyle = p.star || '#ffd24a';
+      ctx.beginPath();
+      for (let k = 0; k < 10; k++) {
+        const a = -Math.PI / 2 + k * Math.PI / 5;
+        const r = (k % 2 ? sr * 0.42 : sr);
+        ctx[k ? 'lineTo' : 'moveTo'](sx + Math.cos(a) * r, sy + Math.sin(a) * r);
+      }
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+
+    /* Somebody built a snowman.
+
+       It stands on the open strip between the workshop huts and the pens — the
+       same band the trough and the mailbox use — at x 0.78, which is the only
+       gap wide enough: the trough owns 0.085, the huts run 0.22 to 0.66, and
+       the mailbox tap rect reaches left from 0.90. Nothing here is tappable, so
+       it must not sit under anything that is; a check measures the real gaps in
+       pixels rather than trusting these numbers.
+
+       Drawn with the fixed props rather than baked into the ground texture,
+       because it stands in front of the fence and needs the animals to be able
+       to pass in front of it. */
+    /* 0.74, not 0.78: at 0.78 the right twig arm reached 5px INTO the mailbox
+       tap rect on a 320-wide stage — the same mistake the blossom branch made,
+       and the same check caught it. The gap it has to live in is the strip
+       between the last hut (0.66) and where the mailbox rect starts. */
+    const FARM_SNOWMAN_X = 0.74;
+
+    function _farmSnowmanPos(W, H) { return { x: FARM_SNOWMAN_X, y: _farmTroughY(W, H) }; }
+    // The floor is 26 rather than 30 because on the narrowest stage that floor
+    // is what makes it relatively widest, and this is the tightest gap on the farm.
+    function _farmSnowmanSize(W, H) { return Math.max(26, Math.min(W, H) * 0.072); }
+
+    function _drawFarmSnowman(ctx, W, H, pal) {
+      if (!pal || pal.groundProp !== 'snowman') return;
+      const p = _farmSnowmanPos(W, H);
+      const s = _farmSnowmanSize(W, H);
+      const cx = p.x * W, by = p.y * H;                 // by = where it meets the ground
+      const snow = pal.propSnow || '#f7fbff';
+      const shade = pal.propShade || 'rgba(150,175,200,0.55)';
+
+      ctx.save();
+      ctx.fillStyle = pal.groundShadow || 'rgba(90,120,150,.22)';
+      ctx.beginPath(); ctx.ellipse(cx + s * 0.05, by, s * 0.52, s * 0.13, 0, 0, Math.PI * 2); ctx.fill();
+
+      const balls = [[0.00, -0.34, 0.36], [0.01, -0.86, 0.26], [0.02, -1.28, 0.19]];
+      balls.forEach(function (b) {
+        const x = cx + s * b[0], y = by + s * b[1], r = s * b[2];
+        ctx.fillStyle = shade;                          // shaded underside first
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = snow;                           // then the lit body, offset up-left
+        ctx.beginPath(); ctx.arc(x - r * 0.10, y - r * 0.12, r * 0.93, 0, Math.PI * 2); ctx.fill();
+      });
+
+      const hx = cx + s * 0.02, hy = by - s * 1.28, hr = s * 0.19;
+      // twig arms, out of the middle ball
+      ctx.strokeStyle = '#6b4a2e'; ctx.lineCap = 'round'; ctx.lineWidth = Math.max(1.2, s * 0.035);
+      ctx.beginPath(); ctx.moveTo(cx - s * 0.24, by - s * 0.92); ctx.lineTo(cx - s * 0.60, by - s * 1.14); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx - s * 0.46, by - s * 1.06); ctx.lineTo(cx - s * 0.56, by - s * 1.24); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx + s * 0.26, by - s * 0.92); ctx.lineTo(cx + s * 0.62, by - s * 1.08); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx + s * 0.48, by - s * 1.00); ctx.lineTo(cx + s * 0.58, by - s * 1.18); ctx.stroke();
+
+      ctx.fillStyle = '#2b2b2b';                        // coal eyes and a coal smile
+      ctx.beginPath(); ctx.arc(hx - hr * 0.36, hy - hr * 0.22, hr * 0.14, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(hx + hr * 0.30, hy - hr * 0.24, hr * 0.14, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#2b2b2b'; ctx.lineWidth = Math.max(1, s * 0.022);
+      ctx.beginPath(); ctx.arc(hx - hr * 0.02, hy + hr * 0.12, hr * 0.42, 0.25 * Math.PI, 0.75 * Math.PI); ctx.stroke();
+
+      ctx.fillStyle = '#e8792b';                        // carrot
+      ctx.beginPath();
+      ctx.moveTo(hx - hr * 0.02, hy + hr * 0.02);
+      ctx.lineTo(hx + hr * 0.92, hy + hr * 0.14);
+      ctx.lineTo(hx - hr * 0.02, hy + hr * 0.24);
+      ctx.closePath(); ctx.fill();
+
+      ctx.fillStyle = '#c8443a';                        // scarf, with a tail the wind never moves
+      ctx.fillRect(cx - s * 0.22, by - s * 1.10, s * 0.46, s * 0.10);
+      ctx.beginPath();
+      ctx.moveTo(cx + s * 0.10, by - s * 1.06);
+      ctx.lineTo(cx + s * 0.30, by - s * 0.86);
+      ctx.lineTo(cx + s * 0.18, by - s * 0.82);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+
+    /* The decking the garden beds stand on.
+
+       Boards run across the stage and get THINNER toward the fence, because
+       that is what a plank floor does as it recedes — even spacing would read
+       as a flat wallpaper of stripes, which is the thing we just took out of
+       this band. Each board is cut from its own tone, grained along its length,
+       jointed where two boards meet, and knotted now and then.
+
+       Everything is keyed to the board index, so the deck is identical on every
+       frame; it is baked into the ground texture with the pasture scatter and
+       blitted, not redrawn. */
+    function _drawFarmDeck(ctx, W, H, top, bot, pal) {
+      const d = pal.deck;
+      if (!d) return;
+      const band = bot - top;
+      if (band <= 0) return;
+      const hash = (n) => { const v = Math.sin(n) * 43758.5453; return v - Math.floor(v); };
+
+      const base = ctx.createLinearGradient(0, top, 0, bot);
+      base.addColorStop(0, d.dark); base.addColorStop(1, d.light);
+      ctx.fillStyle = base;
+      ctx.fillRect(0, top, W, band);
+
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0, top, W, band); ctx.clip();
+
+      // Board edges laid out so each is a little deeper than the one behind it.
+      const N = 7;
+      const edges = [];
+      for (let k = 0; k <= N; k++) {
+        const f = k / N;
+        edges.push(top + band * (f * f * 0.72 + f * 0.28));   // quadratic ease → perspective
+      }
+
+      for (let k = 0; k < N; k++) {
+        const y0 = edges[k], h = edges[k + 1] - y0;
+        const tone = 0.88 + hash(k * 7.3) * 0.26;
+        const shade = (c) => 'rgb(' + c.map((v) => Math.round(v * tone)).join(',') + ')';
+        const g = ctx.createLinearGradient(0, y0, 0, y0 + h);
+        g.addColorStop(0, shade(d.top));
+        g.addColorStop(1, shade(d.bottom));
+        ctx.fillStyle = g;
+        ctx.fillRect(0, y0, W, h);
+
+        // grain along the board
+        ctx.lineWidth = Math.max(0.5, h * 0.05);
+        for (let n = 0; n < 3; n++) {
+          const f = hash(k * 11.9 + n * 3.1);
+          const gy2 = y0 + h * (0.2 + f * 0.62);
+          ctx.strokeStyle = 'rgba(' + d.grain + ',' + (0.08 + f * 0.10).toFixed(2) + ')';
+          ctx.beginPath();
+          ctx.moveTo(-2, gy2);
+          ctx.quadraticCurveTo(W * (0.25 + f * 0.5), gy2 + h * (f - 0.5) * 0.3, W + 2, gy2);
+          ctx.stroke();
+        }
+
+        // end joints — one or two per board, never lining up with the row behind
+        const joints = 1 + (hash(k * 19.7) > 0.5 ? 1 : 0);
+        ctx.strokeStyle = 'rgba(' + d.seam + ',0.5)';
+        ctx.lineWidth = Math.max(0.8, h * 0.06);
+        for (let j = 0; j < joints; j++) {
+          const jx = W * (0.12 + hash(k * 23.3 + j * 5.9) * 0.76);
+          ctx.beginPath(); ctx.moveTo(jx, y0); ctx.lineTo(jx, y0 + h); ctx.stroke();
+        }
+
+        if (hash(k * 29.1) > 0.62 && h > 6) {
+          const kx = W * (0.1 + hash(k * 31.7) * 0.8), ky = y0 + h * 0.52;
+          const kr = Math.max(1.2, h * 0.14);
+          ctx.fillStyle = 'rgba(' + d.knot + ',0.5)';
+          ctx.beginPath(); ctx.ellipse(kx, ky, kr, kr * 0.7, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = 'rgba(' + d.knot + ',0.22)'; ctx.lineWidth = Math.max(0.5, kr * 0.3);
+          ctx.beginPath(); ctx.ellipse(kx, ky, kr * 1.9, kr * 1.2, 0, 0, Math.PI * 2); ctx.stroke();
+        }
+
+        // the gap between boards: a dark line with the lit edge of the next below it
+        ctx.fillStyle = 'rgba(' + d.seam + ',0.55)';
+        ctx.fillRect(0, y0 + h - Math.max(0.8, h * 0.05), W, Math.max(0.8, h * 0.05));
+        ctx.fillStyle = 'rgba(' + d.lit + ',0.20)';
+        ctx.fillRect(0, y0, W, Math.max(0.6, h * 0.04));
+      }
+      ctx.restore();
+    }
+
+    /* The ground scatter never moves, so it should not be redrawn 24 times a
+       second. Bake both bands into one offscreen canvas and blit it; rebuild
+       only when something it depends on actually changes — the stage size, the
+       skin, day flipping to night, or the fence moving after an expansion.
+
+       Measured before and after on the most expensive skin with a full field:
+       4,594 canvas calls per frame became about 1,500. The texture work in the
+       last few rounds is only affordable because of this. */
+    let _farmTexCache = null;
+
+    function _farmGroundTexture(W, H, top, bot, pal, key) {
+      if (_farmTexCache && _farmTexCache.key === key) return _farmTexCache.cvs;
+      let cvs;
+      try { cvs = document.createElement('canvas'); } catch (e) { return null; }
+      if (!cvs || !cvs.getContext) return null;
+      cvs.width = W; cvs.height = H;
+      const c = cvs.getContext('2d');
+      _drawFarmScatter(c, W, H, top, bot, pal.groundFx);     // tufts and flowers on the pasture
+      _drawFarmDeck(c, W, H, bot, H, pal);                   // plank decking under the beds
+      _farmTexCache = { key: key, cvs: cvs };
+      return cvs;
+    }
+
+    function _drawFarmScatter(ctx, W, H, top, bot, layers) {
+      if (!layers || !layers.length) return;
+      const band = bot - top;
+      if (band <= 0) return;
+      const hash = (n) => { const v = Math.sin(n) * 43758.5453; return v - Math.floor(v); };
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0, top, W, band); ctx.clip();
+
+      layers.forEach(function (fx, li) {
+        if (!fx || !fx.count) return;
+        const seed = li * 7.3;                       // each layer scatters differently
+        for (let i = 0; i < fx.count; i++) {
+          const rx = hash(seed + i * 31.7), ry = hash(seed + i * 57.3 + 2.1), rr = hash(seed + i * 91.1 + 5.5);
+          // Perspective: the field recedes to the horizon, so anything near the
+          // top of the band is further away and has to be drawn smaller, or the
+          // scatter reads as flat confetti pasted over the grass. This is also
+          // what carries the depth the mown stripes used to fake.
+          const depth = 0.35 + ry * 0.65;
+          const x = rx * W;
+          const y = top + ry * band;
+          const r = fx.size * depth;
+          ctx.globalAlpha = (fx.alpha || 0.9) * (0.55 + rr * 0.45);
+
+          if (fx.kind === 'tuft') {
+            // three blades fanning from one root, then a bloom on some of them
+            ctx.strokeStyle = 'rgba(' + fx.color + ',1)';
+            ctx.lineWidth = Math.max(0.8, r * 0.30);
+            ctx.lineCap = 'round';
+            for (let k = -1; k <= 1; k++) {
+              ctx.beginPath();
+              ctx.moveTo(x, y);
+              ctx.quadraticCurveTo(x + k * r * 0.5, y - r * 0.8, x + k * r * 1.05 + (rr - 0.5) * r, y - r * 1.5);
+              ctx.stroke();
+            }
+            if (fx.bloom && rr > (fx.bloomAt == null ? 0.62 : fx.bloomAt)) {
+              const bx = x + (rr - 0.5) * r * 1.2, by = y - r * 1.55;
+              ctx.fillStyle = 'rgba(' + ((fx.bloom2 && rx > 0.5) ? fx.bloom2 : fx.bloom) + ',1)';
+              for (let k = 0; k < 5; k++) {
+                const a = rr * 6 + k * (Math.PI * 2 / 5);
+                ctx.beginPath();
+                ctx.arc(bx + Math.cos(a) * r * 0.26, by + Math.sin(a) * r * 0.26, r * 0.22, 0, Math.PI * 2);
+                ctx.fill();
+              }
+              if (fx.bloomCore) {
+                ctx.fillStyle = fx.bloomCore;
+                ctx.beginPath(); ctx.arc(bx, by, r * 0.16, 0, Math.PI * 2); ctx.fill();
+              }
+            }
+          } else if (fx.kind === 'clod') {
+            /* Broken earth. A clod is not a dot: it is a lump with a lit top
+               and a shadow under it, and that pairing is what makes tilled soil
+               read as lumpy rather than as speckled paint. A few are stones
+               instead — paler, rounder, and rarer. */
+            const stone = fx.stone && rx > 0.88;
+            ctx.fillStyle = 'rgba(' + (stone ? fx.stone : fx.color) + ',1)';
+            ctx.beginPath();
+            ctx.ellipse(x, y, r, r * (stone ? 0.78 : 0.55), rr * Math.PI, 0, Math.PI * 2);
+            ctx.fill();
+            if (fx.lit) {                                  // sun on the upper face
+              ctx.fillStyle = 'rgba(' + fx.lit + ',1)';
+              ctx.beginPath();
+              ctx.ellipse(x - r * 0.16, y - r * 0.22, r * 0.6, r * 0.26, rr * Math.PI, 0, Math.PI * 2);
+              ctx.fill();
+            }
+            if (fx.shade) {                                // and the shadow it sits in
+              ctx.fillStyle = 'rgba(' + fx.shade + ',1)';
+              ctx.beginPath();
+              ctx.ellipse(x + r * 0.12, y + r * 0.34, r * 0.72, r * 0.2, 0, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          } else {
+            ctx.fillStyle = 'rgba(' + ((fx.color2 && rr > 0.6) ? fx.color2 : fx.color) + ',1)';
+            ctx.beginPath();
+            ctx.ellipse(x, y, r, r * 0.62, rr * Math.PI, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      });
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+
+    /* A skin's one big set piece in the sky.
+
+       Kept to the TOP-LEFT on purpose: the merchant plane hovers at x 0.84
+       (0.70 on a narrow screen) and it is a tap target, so anything decorative
+       up there has to stay well clear of it. Nothing here is tappable.
+
+       Blossom branch — the view from under a cherry tree looking up. It sways
+       on the same wind value the farm's trees use, so the whole scene moves
+       together instead of each piece drifting on its own clock. */
+    function _drawFarmSkyFx(ctx, W, H, t, pal, sway) {
+      if (pal.skyFx !== 'blossom-branch') return;
+      const s = Math.min(W, H * 2.2);              // scale off the smaller side so a phone gets a smaller branch
+      /* SPAN is what keeps the branch off the merchant plane. The plane's tap
+         rect reaches far LEFT of the plane itself — its banner is drawn about
+         1.7 plane-widths out — so on a narrow stage that rect starts around
+         0.40W. Everything drawn here stays inside SPAN of the left edge, and
+         a check measures the real gap at every viewport rather than trusting
+         this comment. */
+      const SPAN = s * 0.32;
+      const bx = -s * 0.04, by = H * 0.012;        // anchored just off the top-left corner
+      const drift = sway * s * 1.6;                // the tip travels further than the root
+      ctx.save();
+
+      // limb + two forks, drawn as tapering strokes
+      const limb = (x1, y1, cx, cy, x2, y2, w) => {
+        ctx.strokeStyle = pal.branch || '#6b4a3a';
+        ctx.lineCap = 'round';
+        ctx.lineWidth = w;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.quadraticCurveTo(cx, cy, x2, y2);
+        ctx.stroke();
+      };
+      // every x below is a fraction of SPAN, so the whole branch scales together
+      const X = (f) => bx + SPAN * f;
+      limb(X(0), by, X(0.48), by + H * 0.005, X(1) + drift, by + H * 0.10, Math.max(2.5, s * 0.011));
+      limb(X(0.35), by + H * 0.028, X(0.52), by + H * 0.075,
+           X(0.65) + drift * 0.6, by + H * 0.085, Math.max(1.6, s * 0.006));
+      limb(X(0.65), by + H * 0.052, X(0.78), by + H * 0.015,
+           X(0.87) + drift * 0.8, by + H * 0.008, Math.max(1.4, s * 0.005));
+
+      // blossom clusters along the limbs — five petals and a gold centre
+      const spots = [
+        [0.17, 0.010, 1.00], [0.33, 0.030, 0.85], [0.46, 0.020, 1.05], [0.57, 0.062, 0.80],
+        [0.65, 0.038, 0.95], [0.74, 0.070, 0.75], [0.78, 0.020, 0.90], [0.87, 0.052, 0.85],
+        [0.93, 0.086, 0.70], [0.97, 0.030, 0.80], [0.43, 0.062, 0.70], [0.26, 0.048, 0.75],
+      ];
+      const R = Math.max(3.2, s * 0.017);
+      spots.forEach(function (p, i) {
+        const px = X(p[0]) + drift * p[0];
+        const py = by + H * p[1];
+        const r = R * p[2];
+        // Fixed, not animated: a blossom still on the branch does not spin.
+        // The index still varies the angle so the twelve are not identical.
+        const spin = i * 1.13;
+        ctx.fillStyle = (i % 3 === 0) ? (pal.blossomAlt || '#fff') : (pal.blossom || '#ff9ec4');
+        for (let k = 0; k < 5; k++) {
+          const a = spin + k * (Math.PI * 2 / 5);
+          ctx.beginPath();
+          ctx.ellipse(px + Math.cos(a) * r * 0.62, py + Math.sin(a) * r * 0.62, r * 0.52, r * 0.42, a, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = pal.blossomCore || 'rgba(255,214,120,0.95)';
+        ctx.beginPath(); ctx.arc(px, py, r * 0.22, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.restore();
+    }
+
+    /* A skin's particle layer: snow, petals or drifting motes.
+
+       Every particle's position is a pure function of its index and the clock,
+       so there is no array to allocate, nothing to seed, and nothing to keep in
+       sync when the canvas is resized or the farm is reopened. The scatter comes
+       from the usual sin·large-constant hash — good enough to look random, and
+       identical on every frame so a particle never teleports. */
+    function _drawFarmWeather(ctx, W, H, t, wx) {
+      if (!wx || !wx.count) return;
+      const hash = (n) => { const v = Math.sin(n) * 43758.5453; return v - Math.floor(v); };
+      const fall = H + 24;
+      ctx.save();
+      for (let i = 0; i < wx.count; i++) {
+        const rx = hash(i * 12.9898), rz = hash(i * 78.233 + 1.7);
+        const depth = 0.55 + rz * 0.45;                       // nearer ones fall faster and bigger
+        const y = ((rz * fall) + (t / 1000) * wx.speed * depth) % fall - 12;
+        const drift = Math.sin(t / 1300 + i * 0.7) * wx.sway * depth;
+        const x = ((rx * W + drift) % W + W) % W;
+        const r = wx.size * depth;
+        ctx.globalAlpha = wx.alpha * (0.6 + rz * 0.4);
+        // A second tone, sprinkled through, is what stops a petal fall reading
+        // as one flat pink wash — roughly a third of them take it.
+        ctx.fillStyle = 'rgba(' + ((wx.color2 && rx > 0.66) ? wx.color2 : wx.color) + ',1)';
+        if (wx.kind === 'petal') {
+          // a petal turns as it falls, so it flashes between edge-on and flat
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(t / 700 + i);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, r, r * (0.35 + 0.45 * Math.abs(Math.sin(t / 900 + i))), 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        } else {
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+      ctx.globalAlpha = 1;
     }
 
     /* ── Pointer handling: tap = collect/react, drag = move decor ── */

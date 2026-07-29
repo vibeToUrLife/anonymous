@@ -2430,7 +2430,12 @@ const originalTitle = document.title;
 let notifEnabled = localStorage.getItem('notif_enabled') === '1';
 let soundEnabled = localStorage.getItem('sound_enabled') !== '0'; // on by default
 let isFirstSnapshot = true;
-let unseenCount = 0;
+/* Named for the message board on purpose, not just `unseenCount`. A bare
+   top-level `let` in a classic script is a global LEXICAL binding, and it
+   shadows any same-named property a shared *-logic.js module hangs off
+   globalThis — the other script then reads this number where it expected its
+   own function, and dies on the first call. Keep app-wide names specific. */
+let unreadMsgCount = 0;
 let titleFlashInterval = null;
 
 // Restore saved preferences on load (default = light unless explicitly 'dark')
@@ -2801,7 +2806,7 @@ document.getElementById('clearCacheBtn').addEventListener('click', () => {
 
 // Clear badge when user focuses the tab
 window.addEventListener('focus', () => {
-    unseenCount = 0;
+    unreadMsgCount = 0;
     notifBadge.classList.remove('show');
     document.title = originalTitle;
     clearInterval(titleFlashInterval);
@@ -2821,7 +2826,7 @@ function flashTitle() {
     if (titleFlashInterval) return;
     let on = true;
     titleFlashInterval = setInterval(() => {
-    document.title = on ? T('({n}) New message!', { n: unseenCount }) : originalTitle;
+    document.title = on ? T('({n}) New message!', { n: unreadMsgCount }) : originalTitle;
     on = !on;
     }, 1000);
 }
@@ -2945,7 +2950,7 @@ function applyRemoteReadTs(ts) {
     if (changed) { newestUnseenId = null; updateNewContentPill(); }
     // Drop the hidden-tab badge/title flash if nothing is left unseen.
     if (!unseenNewBubbles.size && !unseenReplyBubbles.size) {
-        unseenCount = 0;
+        unreadMsgCount = 0;
         notifBadge.classList.remove('show');
         document.title = originalTitle;
         clearInterval(titleFlashInterval);
@@ -3039,8 +3044,8 @@ function fireNotification(count, bodyText, title, tag) {
 
     // If tab not focused → badge + title flash
     if (document.hidden) {
-    unseenCount += count;
-    notifBadge.textContent = unseenCount > 99 ? '99+' : unseenCount;
+    unreadMsgCount += count;
+    notifBadge.textContent = unreadMsgCount > 99 ? '99+' : unreadMsgCount;
     notifBadge.classList.add('show');
     flashTitle();
     }
