@@ -1,0 +1,866 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>有什么更新了 · 农场外观</title>
+<style>
+  :root{
+    --bg:#faf3ea; --card:#fffdf9; --ink:#34271c; --soft:#6b5847; --faint:#9b8a78;
+    --primary:#f97316; --border:rgba(154,52,18,.14); --chip:rgba(154,52,18,.07);
+    /* Each slide sets its own --acc (deep, for light pages) and --accL (bright,
+       for dark pages); --label picks whichever one the viewer's theme needs.
+       --label is declared on .slide, not here, so it substitutes each slide's
+       OWN inline --acc rather than the root fallback. */
+    --acc:#a8551a; --accL:#f6a95e;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#1b140e; --card:#241b14; --ink:#f1e8dd; --soft:#c3b3a2; --faint:#8c7c6c;
+      --primary:#fb923c; --border:rgba(255,228,194,.14); --chip:rgba(255,228,194,.08); }
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--ink); overflow:hidden;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;
+    display:flex; flex-direction:column; height:100vh; -webkit-text-size-adjust:100%;
+  }
+  .dots{display:flex; gap:7px; justify-content:center; padding:13px 0 3px; flex:none}
+  .dot{width:7px; height:7px; border-radius:999px; background:var(--border); transition:all .3s; cursor:pointer}
+  .dot.on{width:22px; background:var(--primary)}
+  .track{flex:1; position:relative; overflow:hidden; min-height:0}
+  /* The slide is a scroll box and the content is centred by `margin:auto` on
+     .inner — so on a very short phone nothing is ever cut off the top, it just
+     scrolls. justify-content:center would have clipped it. */
+  .slide{
+    position:absolute; inset:0; display:flex; padding:8px 18px 6px;
+    overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch;
+    opacity:0; transform:translateX(40px); pointer-events:none; visibility:hidden;
+    transition:opacity .4s, transform .4s, visibility 0s linear .4s;
+    --label:var(--acc);
+  }
+  @media (prefers-color-scheme: dark){ .slide{ --label:var(--accL) } }
+  /* visibility (not display) keeps the canvases measurable while taking the
+     off-screen slides' buttons out of the tab order */
+  .slide.on{opacity:1; transform:none; pointer-events:auto; visibility:visible;
+    transition:opacity .4s, transform .4s, visibility 0s linear 0s}
+  .slide.left{transform:translateX(-40px)}
+  .inner{margin:auto; width:100%; display:flex; flex-direction:column; align-items:center;
+         text-align:center; gap:6px}
+
+  /* ── the big preview stage ── */
+  .stage{
+    position:relative; width:100%; max-width:400px; flex:none;
+    height:clamp(140px,30vh,224px); border-radius:18px; overflow:hidden;
+    box-shadow:0 12px 28px rgba(80,50,20,.22); border:1px solid rgba(0,0,0,.18);
+  }
+  .stage canvas{display:block; width:100%; height:100%}
+  /* Solid dark scrim: 🌙 夜晚 has to stay readable sitting on a white snowfield. */
+  .dn{
+    position:absolute; right:7px; top:7px; display:flex; gap:2px; padding:2px;
+    border-radius:999px; background:rgba(14,11,8,.66);
+  }
+  .dn button{
+    border:none; cursor:pointer; font-size:10px; font-weight:800; color:rgba(255,255,255,.88);
+    background:none; border-radius:999px; padding:3px 8px; line-height:1.3; font-family:inherit;
+  }
+  .dn button.on{background:#fff; color:#241a10}
+  /* the same control, sitting on the page instead of on a canvas */
+  .dn.flat{position:static; background:var(--chip); padding:3px; align-self:center}
+  .dn.flat button{color:var(--soft); font-size:11px; padding:5px 12px}
+  .dn.flat button.on{background:var(--primary); color:#fff}
+
+  .kick{font-size:10.5px; font-weight:800; letter-spacing:1.2px; color:var(--label)}
+  h2{font-size:20px; font-weight:900; line-height:1.28}
+  .cap{font-size:11px; color:var(--faint); line-height:1.45}
+  .cap b{color:var(--soft); font-weight:800}
+  .tags{display:flex; flex-wrap:wrap; gap:5px; justify-content:center; align-items:center}
+  /* The pill brings its own background, so white-on-deep reads the same in both
+     themes — and "买一次" rides along with the number, where it is asked. */
+  .price{
+    font-size:12px; font-weight:900; padding:3px 10px; border-radius:999px;
+    color:#fff; background:var(--acc); white-space:nowrap;
+  }
+  .price i{font-style:normal; font-weight:700; opacity:.85; font-size:10.5px; margin-left:3px}
+  .tag{font-size:11px; font-weight:700; color:var(--soft); background:var(--chip); padding:3px 8px; border-radius:999px; white-space:nowrap}
+  p.desc{font-size:13.5px; color:var(--soft); line-height:1.6; max-width:330px}
+  .hint{font-size:11px; color:var(--faint); line-height:1.4}
+  b{color:var(--ink); font-weight:800}
+
+  /* live clock — the page reads the viewer's own hour and applies the farm's
+     own rule (19:00–06:00 = night), so requirement "it follows the real clock"
+     is something the page proves rather than claims. */
+  .clock{
+    display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:700;
+    color:var(--soft); background:var(--chip); border-radius:999px; padding:5px 12px;
+  }
+
+  /* ── slide 1: four mini scenes, live ── */
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; width:100%; max-width:330px}
+  .mini{
+    position:relative; border-radius:11px; overflow:hidden; border:1px solid rgba(0,0,0,.16);
+    box-shadow:0 4px 10px rgba(80,50,20,.14); padding:0; background:none; cursor:pointer;
+    font-family:inherit; display:block; width:100%; -webkit-appearance:none; appearance:none;
+  }
+  .mini:active{transform:scale(.98)}
+  .mini canvas{display:block; width:100%; height:clamp(66px,11.5vh,88px)}
+  .mini span{
+    position:absolute; left:0; right:0; bottom:0; font-size:10px; font-weight:800; color:#fff;
+    padding:7px 4px 3px; background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.68)); text-shadow:0 1px 2px rgba(0,0,0,.6);
+  }
+
+  /* ── last slide: the shop, as it really looks + the four rules ── */
+  .shop{
+    width:100%; max-width:330px; background:var(--card); border:1px solid var(--border);
+    border-radius:14px; padding:9px 11px; text-align:left; box-shadow:0 6px 16px rgba(80,50,20,.10);
+  }
+  .shop h3{font-size:12px; font-weight:900; margin-bottom:5px}
+  .row{display:flex; align-items:center; gap:6px; padding:3.5px 0; font-size:12px; font-weight:700}
+  .row+.row{border-top:1px dashed var(--border)}
+  .sw{width:30px; height:20px; border-radius:4px; border:1px solid rgba(0,0,0,.25); position:relative; overflow:hidden; flex:none}
+  .sw i{position:absolute; left:4px; top:7px; width:8px; height:8px; border-radius:50%}
+  .row em{font-style:normal; margin-left:auto; font-size:11px; font-weight:900; color:var(--primary); white-space:nowrap}
+  .row em.own{color:var(--faint)}
+  .rules{display:flex; flex-direction:column; gap:5px; width:100%; max-width:330px; text-align:left}
+  .rule{
+    display:flex; gap:8px; align-items:flex-start; background:var(--card);
+    border:1px solid var(--border); border-radius:11px; padding:6px 9px;
+  }
+  .rule i{font-style:normal; font-size:14px; line-height:1.4; flex:none}
+  .rule p{font-size:11.5px; color:var(--soft); line-height:1.45}
+
+  .nav{display:flex; align-items:center; justify-content:space-between; gap:12px; flex:none;
+    padding:9px 20px calc(15px + env(safe-area-inset-bottom,0px))}
+  .skip{background:none; border:none; color:var(--faint); font-size:13px; cursor:pointer; padding:8px; font-family:inherit}
+  .next{
+    flex:1; max-width:230px; margin-left:auto; border:none; cursor:pointer; font-family:inherit;
+    padding:12px 20px; border-radius:999px; font-size:15px; font-weight:800; color:#fff;
+    background:linear-gradient(135deg,#fca34a,#f97316); box-shadow:0 8px 20px rgba(249,115,22,.35);
+    transition:transform .1s, filter .15s;
+  }
+  .next:active{transform:translateY(1px)} .next:hover{filter:brightness(1.04)}
+
+  /* Reduced motion: no canvas loop (see REDUCE in the script), no transitions —
+     only a plain cross-fade so the deck is still followable. The ☀️/🌙 control
+     still works, so a night palette is always one tap away. */
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important; transition:none !important}
+    .slide, .slide.on{transition:opacity .2s !important}
+    .slide, .slide.left{transform:none}
+    .mini:active{transform:none}
+  }
+</style>
+</head>
+<body>
+  <div class="dots" id="dots"></div>
+  <div class="track" id="track">
+
+    <!-- 1 · what is this — all four, live, and the real clock -->
+    <section class="slide on" style="--acc:#a8551a; --accL:#f6a95e">
+      <div class="inner">
+        <div class="kick">新上线 · 🎨 农场外观</div>
+        <h2>一座农场，四种样子</h2>
+        <div class="grid" id="grid"></div>
+        <span class="clock" id="clock">☀️ 现在是白天</span>
+        <div class="dn flat"></div>
+        <p class="desc">换的只是农场的<b>样子</b> —— 草地、山坡、泥土、树，天上飘的东西也跟着换。动物、作物、收成全都照旧。每一款还画了<b>两次</b>：一张白天，一张夜里。</p>
+        <div class="hint">点小图看大的 · 点 ☀️ / 🌙 四张一起换</div>
+      </div>
+    </section>
+
+    <!-- 2 · meadow -->
+    <section class="slide" style="--acc:#3f7a1f; --accL:#9ad263">
+      <div class="inner">
+        <div class="stage"><canvas class="cv" data-t="meadow"></canvas><div class="dn"></div></div>
+        <div class="cap">右上角的 <b>☀️ / 🌙</b> 可以换白天夜晚</div>
+        <div class="kick">🌤️ 青草牧场 · Green Pasture</div>
+        <h2>白天是青草，夜里是深绿</h2>
+        <div class="tags"><span class="price">0 🪙 <i>本来就有</i></span><span class="tag">绿草</span><span class="tag">青山</span><span class="tag">木头地</span></div>
+        <p class="desc">你现在看到的农场，就是它。<b>一个像素都没改</b> —— 没买外观的人，看到的一直是这一套。</p>
+      </div>
+    </section>
+
+    <!-- 3 · harvest -->
+    <section class="slide" style="--acc:#8f5c12; --accL:#e8b355">
+      <div class="inner">
+        <div class="stage"><canvas class="cv" data-t="harvest"></canvas><div class="dn"></div></div>
+        <div class="cap">☀️ 白天 <b>⇄</b> 🌙 夜晚 · 买一次，两幅都是你的</div>
+        <div class="kick">🌾 金色麦田 · Golden Harvest</div>
+        <h2>白天是麦色，夜里是暖褐</h2>
+        <div class="tags"><span class="price">3000 🪙 <i>买一次</i></span><span class="tag">麦色草地</span><span class="tag">秋天的树</span></div>
+        <p class="desc">整片草地变成<b>麦子的金黄</b>，山坡也跟着黄了，树叶换成秋天的橙红，空气里飘着一点点金色的光尘。天一黑，金色沉下去，变成安静的深褐。</p>
+      </div>
+    </section>
+
+    <!-- 4 · winter -->
+    <section class="slide" style="--acc:#1f6ea8; --accL:#7cc0ee">
+      <div class="inner">
+        <div class="stage"><canvas class="cv" data-t="winter"></canvas><div class="dn"></div></div>
+        <div class="cap">☀️ 白天 <b>⇄</b> 🌙 夜晚 · 买一次，两幅都是你的</div>
+        <div class="kick">❄️ 雪国农场 · Winter Farm</div>
+        <h2>白天是雪地，夜里是蓝灰</h2>
+        <div class="tags"><span class="price">8000 🪙 <i>买一次</i></span><span class="tag">杉树 + 彩球</span><span class="tag">雪人</span></div>
+        <p class="desc">草地变成<b>一整片雪地</b>，泥土也冻住了。两棵树变成挂着彩球和星星的杉树，旁边还有人堆了个雪人 —— 雪一直在下，晚上照样下。</p>
+      </div>
+    </section>
+
+    <!-- 5 · sakura -->
+    <section class="slide" style="--acc:#b02a63; --accL:#f793bb">
+      <div class="inner">
+        <div class="stage"><canvas class="cv" data-t="sakura"></canvas><div class="dn"></div></div>
+        <div class="cap">☀️ 白天 <b>⇄</b> 🌙 夜晚 · 买一次，两幅都是你的</div>
+        <div class="kick">🌸 樱花田园 · Blossom Season</div>
+        <h2>白天是粉，夜里是夜樱</h2>
+        <div class="tags"><span class="price">15000 🪙 <i>买一次</i></span><span class="tag">花瓣地毯</span><span class="tag">樱花枝</span></div>
+        <p class="desc">地上铺满掉下来的<b>花瓣</b>，所以是最浅的一层；花瓣一片片飘下来，左上角还伸进来一枝开满花的樱花枝。晚上暗下来，但还是粉的 —— 那就是夜樱。</p>
+      </div>
+    </section>
+
+    <!-- 6 · where + the rules -->
+    <section class="slide" style="--acc:#a8551a; --accL:#f6a95e">
+      <div class="inner">
+        <div class="shop">
+          <h3>🎨 农场外观</h3>
+          <div id="shopRows"></div>
+        </div>
+        <div class="kick">四款外观 · 八幅画面</div>
+        <h2>买一次，以后随便换</h2>
+        <div class="rules">
+          <div class="rule"><i>📍</i><p><b>在哪里</b>：房间 → 农场，往下找 🎨 农场外观。</p></div>
+          <div class="rule"><i>🪙</i><p><b>只买一次</b>：3000 / 8000 / 15000 🪙。</p></div>
+          <div class="rule"><i>🔁</i><p><b>换着用</b>：买过的随时换，不用再付钱。</p></div>
+          <div class="rule"><i>🌙</i><p><b>白天夜晚</b>：跟着真实时间自己换。</p></div>
+          <div class="rule"><i>👀</i><p><b>朋友也看得到</b>：他们逛你的农场也是这套。</p></div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="nav">
+    <button class="skip" id="skip">跳过</button>
+    <button class="next" id="next">下一个 →</button>
+  </div>
+
+<script>
+/* ─────────────────────────────────────────────────────────────
+   The four looks. Every value below is copied from FARM_THEMES
+   in games/room/js/room-base.js — day block and night block —
+   so this page cannot promise a colour the farm does not paint.
+   ───────────────────────────────────────────────────────────── */
+var THEMES = {
+  meadow: {
+    emoji:'🌤️', name:'青草牧场', cost:0,
+    day:{
+      grass:['#9ed26b','#79c052','#5ba23c'],
+      deck:{dark:'#5a3d1f',light:'#7a5530',top:[138,99,56],bottom:[96,65,34],grain:'48,30,12',seam:'38,24,10',lit:'255,226,178',knot:'40,24,8'},
+      hillFar:'#7cc25a', hillNear:'#66ad46', groundShadow:'rgba(30,62,20,.24)',
+      groundFx:[{kind:'tuft',count:90,color:'92,168,62',size:7,bloom:'255,255,255',bloom2:'255,226,120',bloomCore:'rgba(255,214,90,0.95)'}],
+      leaf:'#3f9a30', leafLight:'rgba(152,226,112,0.68)', leafMid:'rgba(92,190,70,0.24)', leafDapple:'rgba(195,242,155,0.6)',
+      sky:null, weather:null
+    },
+    night:{
+      grass:['#22432b','#1a3622','#13291a'],
+      deck:{dark:'#2b1d0e',light:'#3b2916',top:[66,47,26],bottom:[44,30,16],grain:'18,10,4',seam:'14,8,3',lit:'180,150,110',knot:'16,9,3'},
+      hillFar:'#1a3a18', hillNear:'#1e4a1a',
+      groundFx:[{kind:'tuft',count:70,color:'38,80,44',size:7,alpha:0.7,bloom:'190,210,190',bloom2:'210,205,160',bloomCore:'rgba(190,175,110,0.7)'}],
+      leaf:'#185016', leafLight:'rgba(95,175,85,0.55)', leafMid:'rgba(40,110,40,0.18)', leafDapple:'rgba(120,200,110,0.4)',
+      sky:null, weather:null
+    }
+  },
+  harvest: {
+    emoji:'🌾', name:'金色麦田', cost:3000,
+    day:{
+      grass:['#e0a83a','#c98c22','#a86f14'],
+      deck:{dark:'#6b4622',light:'#96683a',top:[166,118,64],bottom:[116,78,40],grain:'62,38,12',seam:'48,28,8',lit:'255,232,178',knot:'52,30,8'},
+      hillFar:'#c98f36', hillNear:'#a97420', groundShadow:'rgba(70,40,0,.26)',
+      groundFx:[{kind:'tuft',count:90,color:'168,120,26',size:7.5,bloom:'255,246,196',bloom2:'236,196,90',bloomCore:'rgba(180,120,20,0.9)'}],
+      leaf:'#b5651f', leafLight:'rgba(255,190,90,0.70)', leafMid:'rgba(190,110,30,0.26)', leafDapple:'rgba(255,225,150,0.62)',
+      sky:'rgba(255,150,50,0.26)',
+      weather:{kind:'mote',count:30,color:'255,214,120',size:2.6,speed:12,sway:30,alpha:0.50}
+    },
+    night:{
+      grass:['#3a2a10','#2c200c','#1f1608'],
+      deck:{dark:'#2a1c0b',light:'#3a2712',top:[64,44,22],bottom:[42,28,14],grain:'16,9,3',seam:'12,7,2',lit:'176,146,104',knot:'14,8,2'},
+      hillFar:'#2a1d0c', hillNear:'#352612',
+      groundFx:[{kind:'tuft',count:70,color:'78,58,20',size:7.5,alpha:0.7,bloom:'190,170,120',bloom2:'160,140,95',bloomCore:'rgba(140,110,50,0.7)'}],
+      leaf:'#4a2c0e', leafLight:'rgba(170,120,50,0.48)', leafMid:'rgba(90,58,18,0.20)', leafDapple:'rgba(210,170,100,0.36)',
+      sky:'rgba(150,90,30,0.18)',
+      weather:{kind:'mote',count:22,color:'220,180,110',size:2.2,speed:10,sway:26,alpha:0.28}
+    }
+  },
+  winter: {
+    emoji:'❄️', name:'雪国农场', cost:8000,
+    day:{
+      grass:['#fbfeff','#e2eefb','#bfd6ec'],
+      deck:{dark:'#5c5b55',light:'#7d7a70',top:[142,138,128],bottom:[98,95,88],grain:'52,52,50',seam:'42,44,46',lit:'245,250,255',knot:'44,44,42'},
+      hillFar:'#f2f8fd', hillNear:'#d6e5f2', groundShadow:'rgba(90,120,150,.22)',
+      groundFx:[{kind:'tuft',count:55,color:'122,150,132',size:6,alpha:0.75,bloom:'255,255,255',bloom2:'214,234,250',bloomAt:0.8,bloomCore:'rgba(255,255,255,0.9)'}],
+      leaf:'#33586b', leafLight:'rgba(255,255,255,0.85)', leafMid:'rgba(150,190,215,0.28)', leafDapple:'rgba(255,255,255,0.95)',
+      sky:'rgba(150,195,240,0.30)',
+      groundProp:'snowman', propSnow:'#f7fbff', propShade:'rgba(158,182,206,0.55)',
+      treeShape:'conifer', conifer:'#2f6b3c', coniferDark:'rgba(8,40,20,0.20)', coniferSnow:'rgba(252,254,255,0.92)',
+      coniferTrunk:'#5a3f28', star:'#ffd24a', baubles:['#e05a4a','#f0c04a','#5aa8e0','#c86ad0'],
+      weather:{kind:'snow',count:70,color:'255,255,255',size:3.0,speed:30,sway:24,alpha:0.95}
+    },
+    night:{
+      grass:['#8fa4bd','#6f8098','#4f5d73'],
+      deck:{dark:'#2e3138',light:'#3f434c',top:[72,76,84],bottom:[48,51,58],grain:'20,22,26',seam:'16,18,22',lit:'170,190,210',knot:'18,20,24'},
+      hillFar:'#8ea4bd', hillNear:'#6d7f98',
+      groundFx:[{kind:'tuft',count:45,color:'70,92,110',size:6,alpha:0.6,bloom:'215,235,250',bloomAt:0.82,bloomCore:'rgba(230,242,255,0.7)'}],
+      leaf:'#1d3441', leafLight:'rgba(200,225,245,0.55)', leafMid:'rgba(70,105,135,0.22)', leafDapple:'rgba(235,245,255,0.70)',
+      sky:'rgba(90,130,180,0.20)',
+      groundProp:'snowman', propSnow:'#c9d9ec', propShade:'rgba(70,92,118,0.6)',
+      treeShape:'conifer', conifer:'#173b28', coniferDark:'rgba(0,0,0,0.26)', coniferSnow:'rgba(210,228,246,0.78)',
+      coniferTrunk:'#2e2116', star:'#ffdc72', baubles:['#e0705f','#ffd980','#7cc0ee','#d68ade'],
+      weather:{kind:'snow',count:52,color:'235,245,255',size:2.8,speed:27,sway:22,alpha:0.70}
+    }
+  },
+  sakura: {
+    emoji:'🌸', name:'樱花田园', cost:15000,
+    day:{
+      grass:['#fff0f6','#fbc0d8','#e58cb6'],
+      deck:{dark:'#7a5548',light:'#a0776a',top:[178,138,124],bottom:[124,92,82],grain:'76,48,40',seam:'60,36,30',lit:'255,232,240',knot:'64,38,32'},
+      hillFar:'#ffc3dc', hillNear:'#f79ec4', groundShadow:'rgba(120,60,90,.20)',
+      groundFx:[{kind:'petal',count:150,color:'255,255,255',color2:'255,138,182',size:3.4,alpha:0.85},
+                {kind:'tuft',count:80,color:'150,190,120',size:7,bloom:'255,255,255',bloom2:'255,150,195',bloomCore:'rgba(255,206,110,0.95)'}],
+      leaf:'#ff7fb0', leafLight:'rgba(255,236,245,0.85)', leafMid:'rgba(255,130,185,0.32)', leafDapple:'rgba(255,255,255,0.92)',
+      sky:'rgba(255,168,208,0.30)', cloud:'rgba(255,228,240,0.95)',
+      skyFx:'blossom-branch', branch:'#7a5240', blossom:'#ff8fbb', blossomAlt:'#ffffff', blossomCore:'rgba(255,206,110,0.95)',
+      weather:{kind:'petal',count:64,color:'255,255,255',color2:'255,120,170',size:4.4,speed:18,sway:46,alpha:0.92}
+    },
+    night:{
+      grass:['#6b4a5e','#4b3243','#332030'],
+      deck:{dark:'#3a2a2a',light:'#4d3838',top:[86,64,62],bottom:[58,42,40],grain:'24,15,14',seam:'18,11,10',lit:'200,170,180',knot:'20,13,12'},
+      hillFar:'#6d4560', hillNear:'#7d5070',
+      groundFx:[{kind:'petal',count:110,color:'235,220,232',color2:'198,116,158',size:3.2,alpha:0.55},
+                {kind:'tuft',count:60,color:'92,110,88',size:7,alpha:0.7,bloom:'235,220,232',bloom2:'210,150,180',bloomCore:'rgba(220,180,110,0.8)'}],
+      leaf:'#a35b87', leafLight:'rgba(245,205,230,0.60)', leafMid:'rgba(165,100,145,0.26)', leafDapple:'rgba(255,240,250,0.68)',
+      sky:'rgba(175,105,160,0.22)', cloud:'rgba(210,165,200,0.75)',
+      skyFx:'blossom-branch', branch:'#3f2a24', blossom:'#e08ab4', blossomAlt:'#f6e6f0', blossomCore:'rgba(230,180,110,0.85)',
+      weather:{kind:'petal',count:44,color:'245,235,245',color2:'230,140,180',size:4.0,speed:16,sway:42,alpha:0.62}
+    }
+  }
+};
+var ORDER = ['meadow','harvest','winter','sakura'];
+var REDUCE = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+/* The farm's own night rule, verbatim from drawFarmCanvas():
+   const night = hour >= 19 || hour < 6;  — so the page opens showing the face
+   the player's farm is actually wearing right now. */
+var _d0 = new Date(), HOUR_F = _d0.getHours() + _d0.getMinutes() / 60;
+var REAL_NIGHT = _d0.getHours() >= 19 || _d0.getHours() < 6;
+var NIGHT = REAL_NIGHT;
+
+/* ── the little farm painter ──────────────────────────────────
+   Layout and layer order both come from drawFarmCanvas():
+   FARM_SKY_Y 0.22 (sky → grass), FARM_TOPFENCE_Y 0.26 (fence + the two
+   trees that stand on it), the dividing fence at 0.58–0.68 (0.60 here).
+   sky → sun/moon → skin's sky wash → hills → grass → scatter → deck →
+   fences → trees → snowman → clouds → blossom branch → weather.
+   ──────────────────────────────────────────────────────────── */
+var SKY_Y = 0.22, FENCE_Y = 0.26, DIV_Y = 0.60;
+function hsh(n){ var v = Math.sin(n) * 43758.5453; return v - Math.floor(v); }
+
+// how much of a full-size farm this little canvas is worth
+function amount(area, ref, p){ return Math.pow(Math.max(area, 1) / ref, p); }
+
+function drawStatic(ctx, W, H, pal, t, mini){
+  var gt = H * SKY_Y, fy = H * FENCE_Y, dt = H * DIV_Y;
+  var k = Math.max(0.55, Math.min(1.05, H / 240));      // scatter/particle size vs a full stage
+  ctx.clearRect(0, 0, W, H);
+
+  /* The sky ramp is measured over H*0.70 and only the farm's shallow band is
+     filled from it — exactly what _drawHDSky does — so the farm gets the BLUE
+     top of the ramp, not the peach at the bottom of it. */
+  var sky = ctx.createLinearGradient(0, 0, 0, H * 0.70);
+  if (NIGHT){ sky.addColorStop(0,'#0a0e2a'); sky.addColorStop(.3,'#101840'); sky.addColorStop(.7,'#152850'); sky.addColorStop(1,'#1a3a40'); }
+  else { sky.addColorStop(0,'#6bb6e8'); sky.addColorStop(.42,'#a7daf0'); sky.addColorStop(.72,'#ffe6c8'); sky.addColorStop(1,'#ffd7a6'); }
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, gt);
+
+  /* The sun and moon ride the same arc the room does, at the viewer's OWN hour
+     when that matches the face being shown; otherwise at a plain midday /
+     late-evening hour so the other face still looks like itself. */
+  var hr = NIGHT ? (REAL_NIGHT ? HOUR_F : 21.5) : (REAL_NIGHT ? 13 : HOUR_F);
+  if (NIGHT){
+    for (var i = 0; i < 28; i++){                       // _outsideStars, same seeding
+      var sx = (Math.sin(i * 7.3 + 2.1) * .5 + .5);
+      var sy = (Math.sin(i * 3.7 + 0.9) * .5 + .5) * 0.35;
+      var tw = 0.5 + 0.5 * Math.sin(t / 700 + sx * 18 + sy * 11);
+      ctx.fillStyle = 'rgba(255,255,240,' + (tw * .8).toFixed(2) + ')';
+      ctx.beginPath(); ctx.arc(sx * W, sy * H, 0.8 + (i % 3) * 0.4, 0, 6.284); ctx.fill();
+    }
+    var np = ((hr >= 18 ? hr - 18 : hr + 6) / 12);
+    var mx = W * (0.10 + np * 0.80), my = gt * (0.84 - Math.sin(np * Math.PI) * 0.52);
+    var mr = Math.min(W, H) * 0.05;
+    ctx.fillStyle = 'rgba(200,210,255,0.08)'; ctx.beginPath(); ctx.arc(mx, my, mr * 3, 0, 6.284); ctx.fill();
+    ctx.fillStyle = '#fff9d0'; ctx.beginPath(); ctx.arc(mx, my, mr, 0, 6.284); ctx.fill();
+    ctx.fillStyle = '#101840'; ctx.beginPath(); ctx.arc(mx + mr * .35, my - mr * .1, mr * .8, 0, 6.284); ctx.fill();
+  } else {
+    var dp = Math.max(0, Math.min(1, (hr - 6) / 12));
+    var ux = W * (0.10 + dp * 0.80), uy = gt * (0.88 - Math.sin(dp * Math.PI) * 0.55);
+    var ur = Math.min(W, H) * 0.06;
+    var gl = ctx.createRadialGradient(ux, uy, ur * .2, ux, uy, ur * 3);
+    gl.addColorStop(0,'rgba(255,250,200,0.5)'); gl.addColorStop(.5,'rgba(255,220,140,0.15)'); gl.addColorStop(1,'rgba(255,200,100,0)');
+    ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(ux, uy, ur * 3, 0, 6.284); ctx.fill();
+    ctx.fillStyle = '#ffe868'; ctx.beginPath(); ctx.arc(ux, uy, ur, 0, 6.284); ctx.fill();
+    ctx.fillStyle = '#fff8d0'; ctx.beginPath(); ctx.arc(ux, uy, ur * .55, 0, 6.284); ctx.fill();
+  }
+
+  // the skin's own wash over the farm's sky band
+  if (pal.sky){
+    var w = ctx.createLinearGradient(0, 0, 0, gt);
+    w.addColorStop(0, pal.sky); w.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = w; ctx.fillRect(0, 0, W, gt);
+  }
+
+  /* Two rolling hills. The real farm calls _drawRollingHills with the same
+     palette but its band is then covered by the pasture, so here they are
+     lifted to just above the horizon — the only change made to any layer, and
+     the only way hillFar / hillNear can be seen at all. */
+  var a = H * 0.05;
+  ctx.fillStyle = pal.hillFar;
+  ctx.beginPath();
+  ctx.moveTo(0, gt - a * .45);
+  ctx.quadraticCurveTo(W * .25, gt - a * 1.25, W * .50, gt - a * .55);
+  ctx.quadraticCurveTo(W * .75, gt - a * 1.45, W, gt - a * .70);
+  ctx.lineTo(W, gt); ctx.lineTo(0, gt); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = pal.hillNear;
+  ctx.beginPath();
+  ctx.moveTo(0, gt - a * .18);
+  ctx.quadraticCurveTo(W * .30, gt - a * .82, W * .62, gt - a * .28);
+  ctx.quadraticCurveTo(W * .86, gt - a * .92, W, gt - a * .40);
+  ctx.lineTo(W, gt); ctx.lineTo(0, gt); ctx.closePath(); ctx.fill();
+
+  // the pasture
+  var g = ctx.createLinearGradient(0, gt, 0, dt);
+  g.addColorStop(0, pal.grass[0]); g.addColorStop(.5, pal.grass[1]); g.addColorStop(1, pal.grass[2]);
+  ctx.fillStyle = g; ctx.fillRect(0, gt, W, dt - gt);
+
+  scatter(ctx, W, gt, dt, pal.groundFx, k);
+  deck(ctx, W, H, dt, pal.deck);
+
+  fence(ctx, W, fy, H);
+  if (!mini) fence(ctx, W, dt, H);      // the pasture | crops divider
+
+  var th = H * 0.18, th2 = H * 0.15;
+  if (pal.treeShape === 'conifer'){
+    conifer(ctx, W * 0.06, fy, th, pal, t);
+    conifer(ctx, W * 0.94, fy, th2, pal, t);
+  } else {
+    tree(ctx, W * 0.06, fy, th, pal);
+    tree(ctx, W * 0.94, fy, th2, pal);
+  }
+  if (pal.groundProp === 'snowman') snowman(ctx, W * 0.74, dt - (dt - gt) * 0.14, (dt - gt) * 0.40, pal);
+  if (pal.cloud && !NIGHT) clouds(ctx, W, H, gt, pal.cloud);
+  if (pal.skyFx === 'blossom-branch') branch(ctx, W, H, pal, t);
+}
+
+/* Grass tufts (with the odd flower) or a carpet of fallen petals.
+   A line-for-line port of _drawFarmScatter: three hashes per item, depth from
+   the row it lands on, and the bloom gated on rr > bloomAt (winter sets 0.8 /
+   0.82, so snow gets far fewer flowers than a meadow does). */
+function scatter(ctx, W, gt, dt, layers, k){
+  if (!layers) return;
+  var band = dt - gt;
+  if (band <= 0) return;
+  var share = amount(W * band, 72700, 0.55);      // vs a phone-sized farm's pasture
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, gt, W, band); ctx.clip();
+  layers.forEach(function(fx, li){
+    if (!fx || !fx.count) return;
+    var seed = li * 7.3, n = Math.max(6, Math.round(fx.count * share));
+    for (var i = 0; i < n; i++){
+      var rx = hsh(seed + i * 31.7), ry = hsh(seed + i * 57.3 + 2.1), rr = hsh(seed + i * 91.1 + 5.5);
+      var depth = 0.35 + ry * 0.65;                // smaller toward the horizon
+      var x = rx * W, y = gt + ry * band, r = fx.size * depth * k;
+      ctx.globalAlpha = (fx.alpha || 0.9) * (0.55 + rr * 0.45);
+      if (fx.kind === 'tuft'){
+        ctx.strokeStyle = 'rgba(' + fx.color + ',1)';
+        ctx.lineWidth = Math.max(0.8, r * 0.30); ctx.lineCap = 'round';
+        for (var b = -1; b <= 1; b++){
+          ctx.beginPath(); ctx.moveTo(x, y);
+          ctx.quadraticCurveTo(x + b * r * 0.5, y - r * 0.8, x + b * r * 1.05 + (rr - 0.5) * r, y - r * 1.5);
+          ctx.stroke();
+        }
+        if (fx.bloom && rr > (fx.bloomAt == null ? 0.62 : fx.bloomAt)){
+          var bx = x + (rr - 0.5) * r * 1.2, by = y - r * 1.55;
+          ctx.fillStyle = 'rgba(' + ((fx.bloom2 && rx > 0.5) ? fx.bloom2 : fx.bloom) + ',1)';
+          for (var q = 0; q < 5; q++){
+            var ang = rr * 6 + q * 1.2566;
+            ctx.beginPath(); ctx.arc(bx + Math.cos(ang) * r * .26, by + Math.sin(ang) * r * .26, r * .22, 0, 6.284); ctx.fill();
+          }
+          if (fx.bloomCore){ ctx.fillStyle = fx.bloomCore; ctx.beginPath(); ctx.arc(bx, by, r * .16, 0, 6.284); ctx.fill(); }
+        }
+      } else {                                     // fallen petals
+        ctx.fillStyle = 'rgba(' + ((fx.color2 && rr > 0.6) ? fx.color2 : fx.color) + ',1)';
+        ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.62, rr * Math.PI, 0, 6.284); ctx.fill();
+      }
+    }
+  });
+  ctx.restore(); ctx.globalAlpha = 1;
+}
+
+/* The plank decking the garden beds stand on (_drawFarmDeck): a dark→light
+   base ramp first, then SEVEN boards laid over it with a quadratic ease so
+   each is a little deeper than the one behind, every board cut from its own
+   tone, grained, jointed and knotted. */
+function deck(ctx, W, H, top, d){
+  if (!d) return;
+  var band = H - top;
+  if (band <= 0) return;
+  var base = ctx.createLinearGradient(0, top, 0, H);
+  base.addColorStop(0, d.dark); base.addColorStop(1, d.light);
+  ctx.fillStyle = base; ctx.fillRect(0, top, W, band);
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, top, W, band); ctx.clip();
+  var N = 7, edges = [], f;
+  for (var e = 0; e <= N; e++){ f = e / N; edges.push(top + band * (f * f * 0.72 + f * 0.28)); }
+  for (var kk = 0; kk < N; kk++){
+    var y0 = edges[kk], h = edges[kk + 1] - y0;
+    var tone = 0.88 + hsh(kk * 7.3) * 0.26;
+    var shade = function(c){ return 'rgb(' + c.map(function(v){ return Math.round(Math.min(255, v * tone)); }).join(',') + ')'; };
+    var bg = ctx.createLinearGradient(0, y0, 0, y0 + h);
+    bg.addColorStop(0, shade(d.top)); bg.addColorStop(1, shade(d.bottom));
+    ctx.fillStyle = bg; ctx.fillRect(0, y0, W, h);
+
+    ctx.lineWidth = Math.max(0.5, h * 0.05);          // grain along the board
+    for (var n = 0; n < 3; n++){
+      var gf = hsh(kk * 11.9 + n * 3.1), gy = y0 + h * (0.2 + gf * 0.62);
+      ctx.strokeStyle = 'rgba(' + d.grain + ',' + (0.08 + gf * 0.10).toFixed(2) + ')';
+      ctx.beginPath(); ctx.moveTo(-2, gy);
+      ctx.quadraticCurveTo(W * (0.25 + gf * 0.5), gy + h * (gf - 0.5) * 0.3, W + 2, gy);
+      ctx.stroke();
+    }
+    var joints = 1 + (hsh(kk * 19.7) > 0.5 ? 1 : 0);  // end joints, never in line
+    ctx.strokeStyle = 'rgba(' + d.seam + ',0.5)';
+    ctx.lineWidth = Math.max(0.8, h * 0.06);
+    for (var j = 0; j < joints; j++){
+      var jx = W * (0.12 + hsh(kk * 23.3 + j * 5.9) * 0.76);
+      ctx.beginPath(); ctx.moveTo(jx, y0); ctx.lineTo(jx, y0 + h); ctx.stroke();
+    }
+    if (hsh(kk * 29.1) > 0.62 && h > 6){              // a knot now and then
+      var kx = W * (0.1 + hsh(kk * 31.7) * 0.8), ky = y0 + h * 0.52, kr = Math.max(1.2, h * 0.14);
+      ctx.fillStyle = 'rgba(' + d.knot + ',0.5)';
+      ctx.beginPath(); ctx.ellipse(kx, ky, kr, kr * 0.7, 0, 0, 6.284); ctx.fill();
+      ctx.strokeStyle = 'rgba(' + d.knot + ',0.22)'; ctx.lineWidth = Math.max(0.5, kr * 0.3);
+      ctx.beginPath(); ctx.ellipse(kx, ky, kr * 1.9, kr * 1.2, 0, 0, 6.284); ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(' + d.seam + ',0.55)';      // the gap between boards
+    ctx.fillRect(0, y0 + h - Math.max(0.8, h * 0.05), W, Math.max(0.8, h * 0.05));
+    ctx.fillStyle = 'rgba(' + d.lit + ',0.20)';       // lit edge of the next one
+    ctx.fillRect(0, y0, W, Math.max(0.6, h * 0.04));
+  }
+  ctx.restore();
+}
+
+/* The farm's fences (_drawFence) — plain wood, never palette-tinted, exactly
+   as in the room. Its fixed 22/5/3/18px are read here as fractions of the
+   stage so a 80px-tall preview gets a fence its own size. */
+function fence(ctx, W, y, H){
+  var postH = Math.max(3.5, H * 0.039), postW = Math.max(1.4, H * 0.0089);
+  var railH = Math.max(1, H * 0.0054), gap = Math.max(8, W * 0.05);
+  var x0 = W * 0.02, len = W * 0.96, posts = Math.floor(len / gap);
+  ctx.fillStyle = NIGHT ? 'rgba(0,0,0,0.22)' : 'rgba(0,0,0,0.13)';
+  ctx.fillRect(x0, y + 1, len, Math.max(1, railH));
+  for (var r = 0; r < 2; r++){
+    var ry = y - postH * 0.3 - r * postH * 0.35;
+    ctx.fillStyle = NIGHT ? '#4a3820' : '#b08850'; ctx.fillRect(x0, ry, len, railH);
+    ctx.fillStyle = NIGHT ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.16)'; ctx.fillRect(x0, ry, len, railH * 0.34);
+  }
+  for (var i = 0; i <= posts; i++){
+    var px = x0 + i * gap;
+    if (px > x0 + len) break;
+    ctx.fillStyle = NIGHT ? '#3a2810' : '#a07840'; ctx.fillRect(px - postW / 2, y - postH, postW, postH);
+    ctx.fillStyle = 'rgba(0,0,0,0.30)'; ctx.fillRect(px + postW / 2 - postW * 0.3, y - postH, postW * 0.3, postH);
+    ctx.fillStyle = NIGHT ? '#5a4828' : '#c8a060';
+    ctx.beginPath(); ctx.arc(px, y - postH, postW * 0.7, 0, 6.284); ctx.fill();
+  }
+}
+
+// round clay tree (_drawHDTree, palette leaf colours)
+function tree(ctx, tx, ty, th, pal){
+  var tw = th * 0.06, trunk = th * 0.34, R = th * 0.20, cb = ty - trunk;
+  ctx.fillStyle = pal.groundShadow || (NIGHT ? 'rgba(0,0,0,0.22)' : 'rgba(20,45,12,0.18)');
+  ctx.beginPath(); ctx.ellipse(tx, ty + 1, th * 0.20, th * 0.045, 0, 0, 6.284); ctx.fill();
+  var tg = ctx.createLinearGradient(tx - tw, 0, tx + tw, 0);
+  tg.addColorStop(0, NIGHT ? '#3a2510' : '#7a5430');
+  tg.addColorStop(.5, NIGHT ? '#4a3018' : '#8a6038');
+  tg.addColorStop(1, NIGHT ? '#281607' : '#5e3e20');
+  ctx.fillStyle = tg; ctx.fillRect(tx - tw * 1.15, ty - trunk, tw * 2.3, trunk);
+  var blobs = [[0,R*.10,R*.98],[-R*.80,-R*.04,R*.78],[R*.80,-R*.02,R*.74],[-R*.42,-R*.64,R*.72],[R*.42,-R*.66,R*.70],[0,-R*.98,R*.62]];
+  ctx.fillStyle = pal.leaf;
+  blobs.forEach(function(b){ ctx.beginPath(); ctx.arc(tx + b[0], cb + b[1], b[2], 0, 6.284); ctx.fill(); });
+  ctx.save();
+  ctx.beginPath();
+  blobs.forEach(function(b){ ctx.moveTo(tx + b[0] + b[2], cb + b[1]); ctx.arc(tx + b[0], cb + b[1], b[2], 0, 6.284); });
+  ctx.clip();
+  var lg = ctx.createRadialGradient(tx - R * .5, cb - R * .7, R * .1, tx, cb - R * .2, R * 1.8);
+  lg.addColorStop(0, pal.leafLight); lg.addColorStop(.55, pal.leafMid); lg.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = lg; ctx.fillRect(tx - R * 2.4, cb - R * 2.7, R * 4.8, R * 3.9);
+  var sg = ctx.createLinearGradient(0, cb - R * .2, 0, cb + R * 1.2);
+  sg.addColorStop(0, 'rgba(0,0,0,0)'); sg.addColorStop(1, NIGHT ? 'rgba(0,0,0,0.38)' : 'rgba(8,42,6,0.30)');
+  ctx.fillStyle = sg; ctx.fillRect(tx - R * 2.4, cb - R * .2, R * 4.8, R * 1.6);
+  ctx.restore();
+  ctx.fillStyle = pal.leafDapple;
+  [[-R*.5,-R*.72,R*.13],[-R*.08,-R*.98,R*.09],[R*.32,-R*.7,R*.10],[-R*.74,-R*.12,R*.08]].forEach(function(d){
+    ctx.beginPath(); ctx.arc(tx + d[0], cb + d[1], d[2], 0, 6.284); ctx.fill();
+  });
+}
+
+// fir with snow on its shoulders, baubles and a star (_drawFarmConifer)
+function conifer(ctx, tx, ty, th, pal, t){
+  var tw = th * 0.055, trunkH = th * 0.16;
+  ctx.fillStyle = pal.groundShadow || 'rgba(90,120,150,.22)';
+  ctx.beginPath(); ctx.ellipse(tx, ty + 1, th * 0.20, th * 0.045, 0, 0, 6.284); ctx.fill();
+  ctx.fillStyle = pal.coniferTrunk; ctx.fillRect(tx - tw / 2, ty - trunkH, tw, trunkH);
+  var base = ty - trunkH * 0.75;
+  for (var k = 0; k < 4; k++){
+    var halfW = th * 0.30 * (1 - (k / 4) * 0.62);
+    var top = base - th * (0.20 + k * 0.20), bot = base - th * (k * 0.20);
+    ctx.fillStyle = pal.conifer;
+    ctx.beginPath(); ctx.moveTo(tx, top); ctx.lineTo(tx + halfW, bot); ctx.lineTo(tx - halfW, bot); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = pal.coniferDark;
+    ctx.beginPath(); ctx.moveTo(tx, top); ctx.lineTo(tx + halfW, bot); ctx.lineTo(tx, bot); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = pal.coniferSnow; ctx.lineWidth = Math.max(1.2, th * 0.022);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(tx - halfW * .94, bot - th * .008); ctx.lineTo(tx, top + th * .012); ctx.lineTo(tx + halfW * .94, bot - th * .008);
+    ctx.stroke();
+  }
+  [[-0.16,0.30],[0.15,0.34],[-0.10,0.56],[0.12,0.62],[-0.05,0.80],[0.07,0.86]].forEach(function(d, i){
+    ctx.globalAlpha = 0.72 + 0.28 * Math.sin(t / 620 + i * 1.7);
+    ctx.fillStyle = pal.baubles[i % pal.baubles.length];
+    ctx.beginPath(); ctx.arc(tx + th * d[0], base - th * d[1], Math.max(1.3, th * 0.022), 0, 6.284); ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+  var sy = base - th, sr = Math.max(1.8, th * 0.055);
+  ctx.fillStyle = pal.star; ctx.beginPath();
+  for (var j = 0; j < 10; j++){
+    var an = -Math.PI / 2 + j * Math.PI / 5, rr = (j % 2 ? sr * 0.42 : sr);
+    ctx[j ? 'lineTo' : 'moveTo'](tx + Math.cos(an) * rr, sy + Math.sin(an) * rr);
+  }
+  ctx.closePath(); ctx.fill();
+}
+
+// somebody built a snowman (_drawFarmSnowman)
+function snowman(ctx, cx, by, s, pal){
+  ctx.fillStyle = pal.groundShadow || 'rgba(90,120,150,.22)';
+  ctx.beginPath(); ctx.ellipse(cx + s * .05, by, s * .52, s * .13, 0, 0, 6.284); ctx.fill();
+  [[0,-.34,.36],[.01,-.86,.26],[.02,-1.28,.19]].forEach(function(b){
+    var x = cx + s * b[0], y = by + s * b[1], r = s * b[2];
+    ctx.fillStyle = pal.propShade; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.284); ctx.fill();
+    ctx.fillStyle = pal.propSnow;  ctx.beginPath(); ctx.arc(x - r * .10, y - r * .12, r * .93, 0, 6.284); ctx.fill();
+  });
+  var hx = cx + s * .02, hy = by - s * 1.28, hr = s * .19;
+  ctx.strokeStyle = '#6b4a2e'; ctx.lineCap = 'round'; ctx.lineWidth = Math.max(1, s * .035);
+  [[-.24,-.92,-.60,-1.14],[.26,-.92,.62,-1.08]].forEach(function(a){
+    ctx.beginPath(); ctx.moveTo(cx + s * a[0], by + s * a[1]); ctx.lineTo(cx + s * a[2], by + s * a[3]); ctx.stroke();
+  });
+  ctx.fillStyle = '#2b2b2b';
+  ctx.beginPath(); ctx.arc(hx - hr * .36, hy - hr * .22, Math.max(.8, hr * .16), 0, 6.284); ctx.fill();
+  ctx.beginPath(); ctx.arc(hx + hr * .30, hy - hr * .24, Math.max(.8, hr * .16), 0, 6.284); ctx.fill();
+  ctx.fillStyle = '#e8792b';
+  ctx.beginPath(); ctx.moveTo(hx, hy + hr * .02); ctx.lineTo(hx + hr * .95, hy + hr * .14); ctx.lineTo(hx, hy + hr * .26); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#c8443a'; ctx.fillRect(cx - s * .22, by - s * 1.10, s * .46, s * .10);
+  ctx.beginPath(); ctx.moveTo(cx + s * .10, by - s * 1.06); ctx.lineTo(cx + s * .30, by - s * .86); ctx.lineTo(cx + s * .18, by - s * .82); ctx.closePath(); ctx.fill();
+}
+
+// the skin's cloud tint (_drawClouds), kept clear of the top-left corner —
+// that is where the blossom branch lives
+function clouds(ctx, W, H, gt, tint){
+  ctx.fillStyle = tint;
+  [[0.44, 0.52, 1], [0.80, 0.30, 0.72]].forEach(function(c){
+    var cx = c[0] * W, cy = c[1] * gt, s = Math.min(W, H) * 0.105 * c[2];
+    [[0,0,.7],[-.6,.1,.5],[.6,.05,.55],[-.2,-.25,.5],[.25,-.2,.45]].forEach(function(p){
+      ctx.beginPath(); ctx.arc(cx + p[0] * s, cy + p[1] * s, s * p[2], 0, 6.284); ctx.fill();
+    });
+  });
+}
+
+// the branch reaching in from the top-left corner (_drawFarmSkyFx)
+function branch(ctx, W, H, pal, t){
+  var s = Math.min(W, H * 2.2), SPAN = s * 0.32, bx = -s * 0.04, by = H * 0.012;
+  var drift = Math.sin(t / 1400) * 0.012 * s * 1.6;
+  var X = function(f){ return bx + SPAN * f; };
+  function limb(x1, y1, cx, cy, x2, y2, w){
+    ctx.strokeStyle = pal.branch; ctx.lineCap = 'round'; ctx.lineWidth = w;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(cx, cy, x2, y2); ctx.stroke();
+  }
+  limb(X(0), by, X(.48), by + H * .005, X(1) + drift, by + H * .10, Math.max(2.5, s * .011));
+  limb(X(.35), by + H * .028, X(.52), by + H * .075, X(.65) + drift * .6, by + H * .085, Math.max(1.6, s * .006));
+  limb(X(.65), by + H * .052, X(.78), by + H * .015, X(.87) + drift * .8, by + H * .008, Math.max(1.4, s * .005));
+  var R = Math.max(3.2, s * 0.017);
+  [[.17,.010,1],[.33,.030,.85],[.46,.020,1.05],[.57,.062,.80],[.65,.038,.95],[.74,.070,.75],
+   [.78,.020,.90],[.87,.052,.85],[.93,.086,.70],[.97,.030,.80],[.43,.062,.70],[.26,.048,.75]].forEach(function(p, i){
+    var px = X(p[0]) + drift * p[0], py = by + H * p[1], r = R * p[2], spin = i * 1.13;
+    ctx.fillStyle = (i % 3 === 0) ? pal.blossomAlt : pal.blossom;
+    for (var k = 0; k < 5; k++){
+      var a = spin + k * 1.2566;
+      ctx.beginPath(); ctx.ellipse(px + Math.cos(a) * r * .62, py + Math.sin(a) * r * .62, r * .52, r * .42, a, 0, 6.284); ctx.fill();
+    }
+    ctx.fillStyle = pal.blossomCore;
+    ctx.beginPath(); ctx.arc(px, py, r * .22, 0, 6.284); ctx.fill();
+  });
+}
+
+// snow / petals / motes (_drawFarmWeather) — the ONLY layer redrawn per frame
+function weather(ctx, W, H, t, wx, k){
+  if (!wx || !wx.count) return;
+  var n = Math.max(5, Math.round(wx.count * amount(W * H, 201600, 0.60))), fall = H + 24;
+  ctx.save();
+  for (var i = 0; i < n; i++){
+    var rx = hsh(i * 12.9898), rz = hsh(i * 78.233 + 1.7);
+    var depth = 0.55 + rz * 0.45;                    // nearer ones fall faster and bigger
+    var y = ((rz * fall) + (t / 1000) * wx.speed * depth) % fall - 12;
+    var drift = Math.sin(t / 1300 + i * 0.7) * wx.sway * depth;
+    var x = ((rx * W + drift) % W + W) % W;
+    var r = wx.size * depth * k;
+    ctx.globalAlpha = wx.alpha * (0.6 + rz * 0.4);
+    // roughly a third take the second tone — that is what stops a petal fall
+    // reading as one flat pink wash
+    ctx.fillStyle = 'rgba(' + ((wx.color2 && rx > 0.66) ? wx.color2 : wx.color) + ',1)';
+    if (wx.kind === 'petal'){
+      ctx.save(); ctx.translate(x, y); ctx.rotate(t / 700 + i);
+      ctx.beginPath(); ctx.ellipse(0, 0, r, r * (0.35 + 0.45 * Math.abs(Math.sin(t / 900 + i))), 0, 0, 6.284); ctx.fill();
+      ctx.restore();
+    } else {
+      ctx.beginPath(); ctx.arc(x, y, r, 0, 6.284); ctx.fill();
+    }
+  }
+  ctx.restore(); ctx.globalAlpha = 1;
+}
+
+/* ── canvas plumbing ──────────────────────────────────────────
+   Same trick the farm itself uses (_farmGroundTexture): everything that never
+   moves is baked ONCE per size + look + day/night into an offscreen canvas and
+   blitted; only the weather is redrawn. That is what lets all four minis run
+   live, with their props, instead of sitting frozen. */
+function paint(cv, t){
+  var dpr = Math.min(2, window.devicePixelRatio || 1);
+  var w = cv.clientWidth, h = cv.clientHeight;
+  if (!w || !h) return;
+  var pw = Math.round(w * dpr), ph = Math.round(h * dpr);
+  if (cv.width !== pw || cv.height !== ph){ cv.width = pw; cv.height = ph; cv._key = ''; }
+  var ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  var id = cv.dataset.t, pal = THEMES[id][NIGHT ? 'night' : 'day'];
+  var key = pw + 'x' + ph + '|' + id + '|' + (NIGHT ? 'n' : 'd');
+  if (cv._key !== key){
+    var b = cv._base || (cv._base = document.createElement('canvas'));
+    b.width = pw; b.height = ph;
+    var bc = b.getContext('2d');
+    bc.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawStatic(bc, w, h, pal, 2600, cv.dataset.mini === '1');
+    cv._key = key;
+  }
+  ctx.clearRect(0, 0, w, h);
+  ctx.drawImage(cv._base, 0, 0, w, h);
+  weather(ctx, w, h, t, pal.weather, Math.max(0.55, Math.min(1.05, h / 240)));
+}
+
+/* ── slide 1: four mini scenes, each a shortcut to its own slide ── */
+var grid = document.getElementById('grid');
+ORDER.forEach(function(id, k){
+  var th = THEMES[id];
+  var b = document.createElement('button');
+  b.type = 'button'; b.className = 'mini';
+  b.innerHTML = '<canvas class="cv" data-mini="1" data-t="' + id + '"></canvas><span>' + th.emoji + ' ' + th.name + '</span>';
+  b.addEventListener('click', function(){ go(k + 1); });
+  grid.appendChild(b);
+});
+
+/* ── last slide: the shop rows, swatches built exactly like _farmSwatch ── */
+document.getElementById('shopRows').innerHTML = ORDER.map(function(id){
+  var th = THEMES[id], d = th.day, g = d.grass, dk = d.deck;
+  var sky = d.sky || 'rgba(150,205,245,0.55)';
+  return '<div class="row">' +
+    '<span class="sw" style="background:linear-gradient(180deg,' + sky + ' 0%,' + sky + ' 26%,' +
+      g[0] + ' 26%,' + g[2] + ' 66%,rgb(' + dk.top.join(',') + ') 66%,rgb(' + dk.bottom.join(',') + ') 100%)">' +
+      '<i style="background:' + d.leaf + '"></i></span>' +
+    th.emoji + ' ' + th.name +
+    '<em' + (th.cost ? '' : ' class="own"') + '>' + (th.cost ? th.cost + ' 🪙' : '✓ 使用中') + '</em>' +
+  '</div>';
+}).join('');
+
+/* ── the ☀️ / 🌙 control — one on each look slide, one on the opener where it
+      flips all four minis at once ── */
+Array.prototype.forEach.call(document.querySelectorAll('.dn'), function(box){
+  box.innerHTML = '<button type="button" data-n="0"' + (NIGHT ? '' : ' class="on"') + '>☀️ 白天</button>' +
+                  '<button type="button" data-n="1"' + (NIGHT ? ' class="on"' : '') + '>🌙 夜晚</button>';
+});
+document.addEventListener('click', function(e){
+  var b = e.target.closest ? e.target.closest('.dn button') : null;
+  if (!b) return;
+  NIGHT = b.dataset.n === '1';
+  Array.prototype.forEach.call(document.querySelectorAll('.dn button'), function(x){
+    x.classList.toggle('on', (x.dataset.n === '1') === NIGHT);
+  });
+  repaint();
+});
+
+/* ── the live clock: the farm's own rule, on the viewer's own hour ── */
+var clock = document.getElementById('clock');
+function tellTime(){
+  var d = new Date(), h = d.getHours(), m = d.getMinutes();
+  var n = h >= 19 || h < 6;
+  clock.textContent = (n ? '🌙' : '☀️') + ' 现在 ' + (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m +
+    ' · 你的农场是' + (n ? '夜晚' : '白天') + '的样子';
+}
+tellTime();
+setInterval(tellTime, 30000);
+
+/* ── slides ── */
+var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+var dotsBox = document.getElementById('dots');
+var next = document.getElementById('next');
+var i = 0, live = [], raf = 0, last = 0;
+
+slides.forEach(function(_, k){
+  var d = document.createElement('span');
+  d.className = 'dot' + (k === 0 ? ' on' : '');
+  d.addEventListener('click', function(){ go(k); });
+  dotsBox.appendChild(d);
+});
+var dots = Array.prototype.slice.call(dotsBox.children);
+
+function loop(t){
+  raf = requestAnimationFrame(loop);
+  if (t - last < 42) return;          // ~24fps, the same throttle the farm canvas uses
+  last = t;
+  for (var k = 0; k < live.length; k++) paint(live[k], t);
+}
+function repaint(){ for (var k = 0; k < live.length; k++) paint(live[k], REDUCE ? 2600 : (last || 2600)); }
+
+function go(n){
+  n = Math.max(0, Math.min(slides.length - 1, n));
+  slides.forEach(function(s, k){ s.classList.toggle('on', k === n); s.classList.toggle('left', k < n); });
+  dots.forEach(function(d, k){ d.classList.toggle('on', k === n); });
+  slides[n].scrollTop = 0;
+  i = n;
+  next.textContent = (i === slides.length - 1) ? '去农场看看 🎨' : '下一个 →';
+  cancelAnimationFrame(raf); raf = 0;
+  live = Array.prototype.slice.call(slides[n].querySelectorAll('canvas'));
+  if (!live.length) return;
+  repaint();
+  if (!REDUCE) raf = requestAnimationFrame(loop);
+}
+next.addEventListener('click', function(){ i >= slides.length - 1 ? done() : go(i + 1); });
+document.getElementById('skip').addEventListener('click', done);
+function done(){ try { parent.postMessage('wn-close', '*'); } catch (e) {} }
+
+/* The parent reveals this iframe ~800ms AFTER setting src, so at first paint the
+   page can still have zero size and every canvas would come out blank. Repaint
+   whenever the box actually gets a size, not just on window resize. */
+var rt = 0;
+function repaintSoon(){ clearTimeout(rt); rt = setTimeout(repaint, 120); }
+window.addEventListener('resize', repaintSoon);
+window.addEventListener('load', repaint);
+if (window.ResizeObserver) new ResizeObserver(repaintSoon).observe(document.body);
+else setTimeout(repaint, 900);
+go(0);
+</script>
+</body>
+</html>
