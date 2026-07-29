@@ -4435,71 +4435,6 @@
     let _farmDragStartX = 0, _farmDragStartY = 0;
     const FARM_DRAG_THRESHOLD = 0.03; // dead-zone: finger jitter stays a tap
 
-    /* ══════════════════════════════════════════════════════════════════
-       TEMPORARY — tap diagnostic. Three geometry fixes in a row failed to
-       make the Bakery and the Forge hittable, which means the model was
-       wrong, not the numbers. So stop calculating and read what actually
-       happens on the real device: every tap prints where it landed, what it
-       resolved to, and how far it was from each owned hut.
-
-       DELETE THIS FUNCTION AND ITS ONE CALL IN cvs.onclick once the cause
-       is known. It writes to a fixed panel, never to the canvas.
-       ══════════════════════════════════════════════════════════════════ */
-    const FARM_DBG_BUILD = 'cb108';
-    let _farmDbgLog = [], _farmDbgN = 0;
-
-    function _farmDbgSay(text) {
-      try {
-        let el = document.getElementById('farmTapDebug');
-        if (!el) {
-          el = document.createElement('div');
-          el.id = 'farmTapDebug';
-          el.style.cssText = 'position:fixed;left:4px;right:4px;bottom:4px;z-index:99999;' +
-            'background:rgba(0,0,0,.9);color:#7CFC7C;font:10px/1.45 ui-monospace,monospace;' +
-            'padding:5px 7px;border-radius:8px;white-space:pre;overflow:auto;max-height:44vh;' +
-            'pointer-events:none';
-          document.body.appendChild(el);
-        }
-        _farmDbgLog.unshift(text);
-        if (_farmDbgLog.length > 8) _farmDbgLog.length = 8;
-        el.textContent = _farmDbgLog.join('\n');
-      } catch (err) { /* never let the diagnostic break the thing it watches */ }
-    }
-
-    /* Every touch event AND the click, so the log shows whether a click is
-       actually being synthesised after each touch — if touchend appears with no
-       click behind it, the problem was never the geometry. */
-    function _farmTapDebug(e, cvs, tag) {
-      try {
-        _farmDbgN++;
-        const rect = cvs.getBoundingClientRect();
-        const src = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
-        if (src.clientX == null) { _farmDbgSay('#' + _farmDbgN + ' ' + tag + ' (no coords)'); return; }
-        const W = rect.width, H = rect.height;
-        const cx = (src.clientX - rect.left) / W, cy = (src.clientY - rect.top) / H;
-        let line = '#' + _farmDbgN + ' ' + tag + ' ' + Math.round(cx * W) + ',' + Math.round(cy * H);
-        if (tag === 'click') {
-          const blocked = _farmDragSuppressClick ? 'drag-suppress'
-                        : _cartSheetOpen ? 'cart-open'
-                        : (viewingUid !== currentUid) ? 'visiting' : '';
-          const tg = _farmTargetAt(cx, cy, W, H);
-          line += ' => ' + (blocked ? 'BLOCKED:' + blocked : (tg ? tg.kind + ' ' + _farmTargetId(tg) : 'NOTHING'));
-          const view = document.getElementById('farmView');
-          const pw = view ? view.clientWidth : 0, ph = view ? view.clientHeight : 0;
-          if (Math.abs(pw - W) > 1 || Math.abs(ph - H) > 1) line += ' <<MISMATCH view ' + pw + 'x' + ph;
-          const near = [];
-          FARM_MACHINES.forEach(function (m, slot) {
-            const st = (roomData.farmMachines || {})[m.id];
-            if (!st || !st.owned) return;
-            const p = _workshopPos(slot);
-            near.push(m.emoji + Math.round(Math.hypot((cx - p.x) * W, (cy - p.y) * H)));
-          });
-          line += '\n    dist ' + near.join(' ') + '  reach ' + FARM_TAP_REACH_PX;
-        }
-        _farmDbgSay(line);
-      } catch (err) { _farmDbgSay('ERR ' + (err && err.message)); }
-    }
-
     function _attachFarmPointerHandlers(cvs) {
       function pos(e) {
         const rect = cvs.getBoundingClientRect();
@@ -4601,18 +4536,7 @@
       cvs.ontouchmove = onMove;
       cvs.ontouchend = onUp;
 
-      /* TEMPORARY — watch the raw touches alongside the click, so the log shows
-         whether every touchend is followed by a click. Passive listeners on top
-         of the handlers above; they change nothing. Delete with _farmTapDebug. */
-      if (!cvs.dataset.tapDbg) {
-        cvs.dataset.tapDbg = '1';
-        cvs.addEventListener('touchstart', function (e) { _farmTapDebug(e, cvs, 'touchstart'); }, { passive: true });
-        cvs.addEventListener('touchend', function (e) { _farmTapDebug(e, cvs, 'touchend '); }, { passive: true });
-      }
-      _farmDbgSay('--- farm ready, build ' + FARM_DBG_BUILD + ' — now tap a hut ---');
-
       cvs.onclick = (e) => {
-        _farmTapDebug(e, cvs, 'click');   // TEMPORARY — delete with _farmTapDebug itself
         closeCropPicker();   // any tap dismisses an open picker
         if (_farmDragSuppressClick) { _farmDragSuppressClick = false; return; }
         // Tap outside the sell sheet (anywhere on the farm) closes it — taps on
