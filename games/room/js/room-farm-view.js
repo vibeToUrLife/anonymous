@@ -2448,6 +2448,8 @@
         const wallW = s * 0.78, wallH = s * 0.52, D = s * 0.24, dy = D * 0.5;
         const fx = cx - wallW / 2, fy = cy - s * 0.04;   // front wall top-left
         ctx.save();
+        const _hkM = _farmHoverK('sky', m.id);           // pointed at → grows a little
+        if (_hkM !== 1) { ctx.translate(cx, cy); ctx.scale(_hkM, _hkM); ctx.translate(-cx, -cy); }
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         // ground shadow
         ctx.fillStyle = night ? 'rgba(0,0,0,.34)' : ((pal && pal.groundShadow) || 'rgba(30,62,20,.24)');
@@ -3421,12 +3423,18 @@
         const _rows = farmRowCount(plots.length, _farmPerRow(W));
         for (let _r = 0; _r < _rows; _r++) {
           const _st = farmRowState(farmRowIndices(plots.length, _r, _farmPerRow(W)).map(k => plots[k]), FARM_CROPS, now);
-          _drawFarmSign(ctx, W, H, _r, _st);
+          const _sp = _farmSignPos(_r, W, H);
+          _hoverScaled(ctx, _farmHoverK('sign', _r), _sp.x * W, _sp.y * H, () => _drawFarmSign(ctx, W, H, _r, _st));
         }
       }
       plots.forEach((plot, i) => {
         const pos = _farmPlotPos(i, W, H);
         const px = pos.x * W, py = pos.y * H;
+        /* Pointed at → the bed and its crop grow together. Wrapped as a callback
+           rather than a bare save/restore because the body returns early on an
+           empty bed, and a bare save would leak the transform on that path. The
+           body below keeps its own indentation, so this stays two added lines. */
+        _hoverScaled(ctx, _farmHoverK('plot', i), px, py, () => {
         // 3D raised garden bed: front (wooden) face for depth + top soil face
         const _x0 = px - tile / 2, _y0 = py - tile / 2, _r = Math.max(3, tile * 0.16);
         const _depth = tile * 0.30;
@@ -3525,7 +3533,89 @@
           for (let k = 0; k < 8; k++) { const ang = k * Math.PI / 4; const rr = (k % 2) ? 1.2 : 3.4; ctx.lineTo(spx + Math.cos(ang) * rr, spy + Math.sin(ang) * rr); }
           ctx.closePath(); ctx.fill();
         }
+        });   // end of the hover-scaled bed
       });
+    }
+
+    /* ── What the mouse is pointing at ────────────────────────────────────
+       One resolver answers this, and the CLICK handler asks the same one.
+       That is the whole point: two copies would drift, and the highlight
+       would start promising a bed that the tap hands to a signboard. The
+       farm already states the rule for the cursor further down — "the cursor
+       never promises a mailbox that a click would hand to a hut".
+
+       Only one thing can be pointed at, so a single record and a single clock
+       carry the grow animation. The clock is the frame timestamp rather than
+       performance.now(), so it cannot drift from the loop that draws it. */
+    let _farmHover = null;       // target record below, or null over bare ground
+    let _farmHoverKey = '';      // its identity, so the draw loop can spot a change
+    let _farmHoverSeen = '';     // the key the draw loop last noticed
+    let _farmHoverAt = 0;        // frame time this target was first pointed at
+    let _farmHoverNow = 0;       // this frame's timestamp
+    const FARM_HOVER_SCALE = 0.12;   // how much bigger a pointed-at thing grows
+    const FARM_HOVER_MS = 120;       // how long it takes to get there
+
+    function _farmTargetId(tg) {
+      if (!tg) return null;
+      return tg.id != null ? tg.id : tg.idx != null ? tg.idx : tg.row;
+    }
+    function _farmTargetKey(tg) {
+      return tg ? tg.kind + ':' + _farmTargetId(tg) : '';
+    }
+
+    /* What a tap at (cx, cy) would hit — normalised coords, null for bare
+       ground. This is the click handler's own logic, moved here unchanged and
+       in its original order: sky, then beds/signs but only below the fence,
+       then produce, then animals. */
+    function _farmTargetAt(cx, cy, W, H) {
+      const sky = _farmSkyTarget(cx, cy, W, H);
+      if (sky) return { kind: 'sky', id: sky };
+      const plots = roomData.farmPlots || [];
+      if (plots.length && cy > _farmDivY()) {
+        let row = 0, idx = null, best = Infinity;
+        for (let i = 0; i < plots.length; i++) {
+          const pp = _farmPlotPos(i, W, H);
+          const d = Math.hypot(pp.x - cx, pp.y - cy);
+          if (d < best) { best = d; row = Math.floor(i / _farmPerRow(W)); idx = i; }
+        }
+        if (_farmSignW(W, H) > 0) {
+          const rows = farmRowCount(plots.length, _farmPerRow(W));
+          for (let r = 0; r < rows; r++) {
+            const sp = _farmSignPos(r, W, H);
+            const d = Math.hypot(sp.x - cx, sp.y - cy);
+            if (d < best) { best = d; row = r; idx = null; }   // the row, not one bed
+          }
+        }
+        return idx == null ? { kind: 'sign', row: row } : { kind: 'plot', row: row, idx: idx };
+      }
+      const drops = roomData.farmDrops || [];
+      for (let i = 0; i < drops.length; i++) {
+        if (Math.hypot(drops[i].x - cx, drops[i].y - cy) < 0.07) return { kind: 'drop', idx: i };
+      }
+      let animal = null, aDist = 0.10;
+      for (const a of (roomData.farmAnimals || [])) {
+        const st = _farmAnimStates[a.id];
+        if (!st) continue;
+        const d = Math.hypot(st.x - cx, st.y - cy);
+        if (d < aDist) { aDist = d; animal = a; }
+      }
+      return animal ? { kind: 'animal', id: animal.id } : null;
+    }
+
+    // This frame's scale for one thing: 1 unless it is the pointed-at one.
+    function _farmHoverK(kind, ident) {
+      if (!_farmHover || _farmHover.kind !== kind || _farmTargetId(_farmHover) !== ident) return 1;
+      const p = Math.min(1, Math.max(0, (_farmHoverNow - _farmHoverAt) / FARM_HOVER_MS));
+      return 1 + FARM_HOVER_SCALE * (1 - (1 - p) * (1 - p));    // ease out
+    }
+
+    // Grow `paint` about (px, py). A no-op at rest, so every call site stays cheap.
+    function _hoverScaled(ctx, k, px, py, paint) {
+      if (k === 1) { paint(); return; }
+      ctx.save();
+      ctx.translate(px, py); ctx.scale(k, k); ctx.translate(-px, -py);
+      paint();
+      ctx.restore();
     }
 
     /* An animal costs 63-80 canvas calls, and the herd paid every one of them
@@ -3595,6 +3685,10 @@
         if (!isFarmView) return;
         if (t - lastFrame < 42) { _farmAnimFrame = requestAnimationFrame(frame); return; }
         lastFrame = t;
+        // Hover clock, taken from the frame timestamp so the grow animation can
+        // never drift from the loop drawing it.
+        _farmHoverNow = t;
+        if (_farmHoverKey !== _farmHoverSeen) { _farmHoverSeen = _farmHoverKey; _farmHoverAt = t; }
         const nw = view.clientWidth, nh = view.clientHeight;
         if (nw && nh && (nw !== W || nh !== H)) { W = nw; H = nh; cvs.width = W; cvs.height = H; }
         ctx.clearRect(0, 0, W, H);
@@ -3663,7 +3757,10 @@
 
         _drawFarmSnowman(ctx, W, H, pal);   // before the trough and the herd, so both pass in front
         _drawFarmTrough(ctx, W, H, night);
-        if (viewingUid === currentUid) _drawFarmMailbox(ctx, W, H, t, night, pal);   // your mail only
+        if (viewingUid === currentUid) {                                            // your mail only
+          const _mp = _farmMailPos(W, H);
+          _hoverScaled(ctx, _farmHoverK('sky', '#mail'), _mp.x * W, _mp.y * H, () => _drawFarmMailbox(ctx, W, H, t, night, pal));
+        }
         _drawFarmPlots(ctx, W, H, t);
 
         // Drops on the ground (visual juice) — collected via the Produce modal.
@@ -3674,7 +3771,7 @@
         for (let i = 0; i < Math.min(_dd.length, 14); i++) {
           const def = FARM_ANIMALS.find(f => f.id === _dd[i].type);
           if (!def) continue;
-          const size = Math.max(20, Math.min(W, H) * 0.045) * pulse;
+          const size = Math.max(20, Math.min(W, H) * 0.045) * pulse * _farmHoverK('drop', i);
           ctx.font = Math.round(size) + 'px sans-serif';
           ctx.fillText(def.drop.emoji, _dd[i].x * W, _dd[i].y * H);
         }
@@ -3755,6 +3852,8 @@
           ctx.fill();
           ctx.save();
           ctx.translate(px, py + bob);
+          const _hkA = _farmHoverK('animal', a.id);
+          if (_hkA !== 1) ctx.scale(_hkA, _hkA);   // pointed at → lifts toward the player
           if (!st.facingRight) ctx.scale(-1, 1); // drawers face right
           // RGB coat: animated rainbow shimmer (filter is reset by ctx.restore()).
           // ~1.8s per full color cycle so it visibly shimmers (was t/14 ≈ 5s, too slow).
@@ -3813,8 +3912,9 @@
             _drawMerchantCart(ctx, W, H, t, lp * 0.7, 1 - lp * 0.9);  // fly right + fade
           } else {
             if (_cartLeaveStart) _cartLeaveStart = 0;
-            if (_cartS.present) _drawMerchantCart(ctx, W, H, t);
-            else _drawCartAway(ctx, W, H, t, _cartS);
+            const _cp = _farmCartPos(W, H), _hkC = _farmHoverK('sky', '#cart');
+            if (_cartS.present) _hoverScaled(ctx, _hkC, _cp.x * W, _cp.y * H, () => _drawMerchantCart(ctx, W, H, t));
+            else _hoverScaled(ctx, _hkC, _cp.x * W, _cp.y * H, () => _drawCartAway(ctx, W, H, t, _cartS));
           }
         }
         // Weather LAST, so snow and petals fall in front of the animals rather
@@ -4339,16 +4439,21 @@
           const p = pos(e);
           let tip = '';
           const _twh = _farmWH();
+          // One resolve per move, shared with the click AND with the highlight
+          // the canvas draws — so all three can never disagree.
+          const _tg = _farmTargetAt(p.x, p.y, _twh.W, _twh.H);
+          const _tk = _farmTargetKey(_tg);
+          if (_tk !== _farmHoverKey) { _farmHoverKey = _tk; _farmHover = _tg; }
           if (Math.hypot(p.x - FARM_TROUGH_X, p.y - _farmTroughY(_twh.W, _twh.H)) < 0.08) {
             tip = '🌾 ' + T('Food') + '  ' + Math.floor(roomData.farmFood || 0) + ' / ' + farmFoodMax();
             // Ask the same resolver the tap uses, so the cursor never promises a
             // mailbox that a click would hand to a hut (or the plane).
-          } else if (_farmSkyTarget(p.x, p.y, _twh.W, _twh.H) === '#mail') {
+          } else if (_tg && _tg.kind === 'sky' && _tg.id === '#mail') {
             const _mn = _farmInboxCount();
             tip = '📮 ' + (_mn ? T('Mailbox — {n} unclaimed', { n: _mn }) : T('Mailbox — empty'));
           } else {
             const plots = roomData.farmPlots || [];
-            const _wh = _farmWH();
+            const _wh = _twh;                 // already measured once above
             for (let i = 0; i < plots.length; i++) {
               const pp = _farmPlotPos(i, _wh.W, _wh.H);
               if (Math.hypot(pp.x - p.x, pp.y - p.y) < 0.045) {
@@ -4366,7 +4471,7 @@
             }
           }
           if (tip) _showFarmTip(tip, e); else _hideFarmTip();
-          cvs.style.cursor = tip ? 'pointer' : 'default';
+          cvs.style.cursor = (tip || _tg) ? 'pointer' : 'default';
         }
 
         if (!_farmDragDecorId) return;
@@ -4399,7 +4504,7 @@
       cvs.onmousedown = onDown;
       cvs.onmousemove = onMove;
       cvs.onmouseup = onUp;
-      cvs.onmouseleave = () => { _hideFarmTip(); };
+      cvs.onmouseleave = () => { _hideFarmTip(); _farmHover = null; _farmHoverKey = ''; };
       cvs.ontouchstart = onDown;
       cvs.ontouchmove = onMove;
       cvs.ontouchend = onUp;
@@ -4415,55 +4520,24 @@
         const cx = (e.clientX - rect.left) / rect.width;
         const cy = (e.clientY - rect.top) / rect.height;
 
-        // Everything fixed in the upper half of the farm — huts, mailbox, plane.
-        const _hit = _farmSkyTarget(cx, cy, rect.width, rect.height);
-        if (_hit === '#cart') { openCartSheet(); return; }
-        if (_hit === '#mail') { openFarmInbox(); return; }
-        if (_hit) { openMachineModal(_hit); return; }
+        /* What a tap hits is decided by _farmTargetAt, and the hover highlight
+           asks that same function — so whatever grew under the cursor is
+           exactly what opens here, and no later edit can pull the two apart.
+           The order it walks (huts/mailbox/plane, then the garden strip below
+           the fence, then produce, then animals) is the order that used to be
+           written out here, moved wholesale and otherwise untouched. */
+        const tg = _farmTargetAt(cx, cy, rect.width, rect.height);
+        if (tg && tg.kind === 'sky') {
+          if (tg.id === '#cart') { openCartSheet(); return; }
+          if (tg.id === '#mail') { openFarmInbox(); return; }
+          openMachineModal(tg.id); return;
+        }
         closeCartSheet();   // tapping elsewhere on the farm dismisses the sheet
-
-        // Garden strip: any tap picks the nearest plot OR signboard, then acts on
-        // that whole row (plant / harvest / status). No precision needed on phones.
-        // Anything below the dividing fence is garden — derived, not a literal,
-        // so raising the fence can't leave the top bed row unreachable.
-        const plots = roomData.farmPlots || [];
-        if (plots.length && cy > _farmDivY()) {
-          const _wh = { W: rect.width, H: rect.height };
-          let rowIdx = 0, plotIdx = null, best = Infinity;
-          for (let i = 0; i < plots.length; i++) {
-            const pp = _farmPlotPos(i, _wh.W, _wh.H);
-            const d = Math.hypot(pp.x - cx, pp.y - cy);
-            if (d < best) { best = d; rowIdx = Math.floor(i / _farmPerRow(_wh.W)); plotIdx = i; }
-          }
-          // Signboards are targets only where they're drawn. On a narrow stage
-          // there are none, and every tap resolves to a bed — which is the point:
-          // no invisible target can steal a tap meant for a bed.
-          if (_farmSignW(_wh.W, _wh.H) > 0) {
-            const _rows = farmRowCount(plots.length, _farmPerRow(_wh.W));
-            for (let r = 0; r < _rows; r++) {
-              const sp = _farmSignPos(r, _wh.W, _wh.H);
-              const d = Math.hypot(sp.x - cx, sp.y - cy);
-              if (d < best) { best = d; rowIdx = r; plotIdx = null; }   // signboard means the row, not one bed
-            }
-          }
-          _farmRowClick(rowIdx, plotIdx);
-          return;
-        }
-
-        // Tapping any produce on the ground opens the Produce modal (collect there).
-        for (const d of (roomData.farmDrops || [])) {
-          if (Math.hypot(d.x - cx, d.y - cy) < 0.07) { openProduceModal(); return; }
-        }
-
-        // Tap an animal → open its status panel (stats + pet / butcher)
-        let hitAnimal = null, aDist = 0.10;
-        for (const a of (roomData.farmAnimals || [])) {
-          const st = _farmAnimStates[a.id];
-          if (!st) continue;
-          const dist = Math.hypot(st.x - cx, st.y - cy);
-          if (dist < aDist) { aDist = dist; hitAnimal = a; }
-        }
-        if (hitAnimal) openAnimalModal(hitAnimal.id);
+        if (!tg) return;
+        // A signboard means the whole row, a bed means that one bed.
+        if (tg.kind === 'plot' || tg.kind === 'sign') { _farmRowClick(tg.row, tg.idx != null ? tg.idx : null); return; }
+        if (tg.kind === 'drop') { openProduceModal(); return; }
+        if (tg.kind === 'animal') openAnimalModal(tg.id);
       };
     }
 
