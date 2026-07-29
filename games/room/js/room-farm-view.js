@@ -2389,7 +2389,26 @@
     // Fixed slot position for machine `slot` (its hut), on the grass below the
     // plane's sky lane. Overlap with the plane's tap rect is resolved by
     // _farmSkyTarget, which picks the nearest target rather than the first.
-    function _workshopPos(slot) { return { x: 0.22 + slot * 0.11, y: FARM_HUT_Y }; }
+    /* Where each workshop hut stands. One source for all three users of it —
+       the tap resolver, the animals' keep-out zones, and the painter.
+
+       The old 0.11 step put the five huts CLOSER TOGETHER THAN THEY ARE WIDE on
+       a phone: at 360px that is a 39.6px step against a hut drawn about 42px
+       across, so they overlapped and there was no seam to aim at. Taps resolve
+       nearest-wins, which meant each hut owned only ±19.8px.
+
+       0.14 is the widest step the row can take before its neighbours start
+       arguing with it. Working right to left at 360x520, the tightest stage:
+         · last hut lands at 0.72; the mailbox's tap rect starts at 0.832,
+           which is 40px away — still further than the hut is from itself,
+           so the hut keeps its own tap
+         · the plane's rect stops at y 0.185 and the huts sit at 0.29, 54px
+           below it, so the banner overhead is never in the running
+         · first hut lands at 0.16, clear of the trough at 0.085
+       That takes each hut from ±19.8px to ±25.2px, and opens an 8px seam
+       between them so you can SEE where one ends. */
+    const FARM_HUT_X0 = 0.16, FARM_HUT_DX = 0.14;
+    function _workshopPos(slot) { return { x: FARM_HUT_X0 + slot * FARM_HUT_DX, y: FARM_HUT_Y }; }
 
     // Which fixed target a tap in the farm's upper half lands on: an owned
     // machine hut's id, '#cart' for the merchant plane, '#mail' for the mailbox,
