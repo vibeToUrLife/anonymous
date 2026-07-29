@@ -4445,7 +4445,7 @@
        DELETE THIS FUNCTION AND ITS ONE CALL IN cvs.onclick once the cause
        is known. It writes to a fixed panel, never to the canvas.
        ══════════════════════════════════════════════════════════════════ */
-    const FARM_DBG_BUILD = 'cb107';
+    const FARM_DBG_BUILD = 'cb108';
     let _farmDbgLog = [], _farmDbgN = 0;
 
     function _farmDbgSay(text) {

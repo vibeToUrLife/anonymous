@@ -676,8 +676,23 @@
       if (!cvs || !room) return;
       const isOwner = () => viewingUid === currentUid;
 
+      /* The outside view, the farm and the tank each cover the room completely,
+         and they all live INSIDE #roomView — so these listeners still fire while
+         one of them is on screen, hit-testing decorations nobody can see.
+
+         That was not merely wasted work. On a hit this handler calls
+         preventDefault(), and preventDefault() on touchstart stops the browser
+         ever synthesising the click. So a tap on a farm workshop that happened
+         to land over a placed decoration was swallowed outright — no click, no
+         modal, tap again and hope. It also armed a phantom drag, so a slightly
+         moving finger could shove a room decoration about, unseen, and save it.
+
+         Same rule as the paused render loops: if the room is not on screen, the
+         room does not get the event. */
+      const covered = () => isOutsideView || isFarmView || isAquariumView;
+
       room.addEventListener('mousedown', (e) => {
-        if (!isOwner()) return;
+        if (!isOwner() || covered()) return;
         const rect = cvs.getBoundingClientRect();
         const mx = (e.clientX - rect.left) / rect.width;
         const my = (e.clientY - rect.top) / rect.height;
@@ -698,7 +713,7 @@
       // Hover cursor � listen on room container for same reason
       room.addEventListener('mousemove', (e) => {
         if (decorDrag) return;
-        if (!isOwner()) return;
+        if (!isOwner() || covered()) return;
         const rect = cvs.getBoundingClientRect();
         const mx = (e.clientX - rect.left) / rect.width;
         const my = (e.clientY - rect.top) / rect.height;
@@ -748,7 +763,7 @@
 
       // Touch support — listen on room container to avoid being blocked by pet canvas
       room.addEventListener('touchstart', (e) => {
-        if (!isOwner() || e.touches.length !== 1) return;
+        if (!isOwner() || covered() || e.touches.length !== 1) return;
         const touch = e.touches[0];
         const rect = cvs.getBoundingClientRect();
         const mx = (touch.clientX - rect.left) / rect.width;
@@ -794,11 +809,11 @@
         return (roomData.placedDecors || []).some(p => p.id === 'aquarium' && decorHitTest(mx, my, p));
       };
       room.addEventListener('click', (e) => {
-        if (isOwner()) return;                          // owners use the tap-vs-drag path above
+        if (isOwner() || covered()) return;             // owners use the tap-vs-drag path above
         if (tankUnder(e) && typeof openAquarium === 'function') openAquarium();
       });
       room.addEventListener('mousemove', (e) => {
-        if (isOwner() || decorDrag) return;
+        if (isOwner() || decorDrag || covered()) return;
         cvs.style.cursor = tankUnder(e) ? 'pointer' : '';
       });
     }
