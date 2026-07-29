@@ -371,9 +371,9 @@
       _bgFloorCacheKey = '';
 
       function frame(t) {
-        // The outside view and the farm cover the room completely, so painting it
-        // underneath them is work nobody can see. Idle until the room is back.
-        if (isOutsideView || isFarmView) { bgAnimFrame = requestAnimationFrame(frame); return; }
+        // The outside view, the farm and the tank each cover the room completely,
+        // so painting it underneath them is work nobody can see. Idle till it is back.
+        if (isOutsideView || isFarmView || isAquariumView) { bgAnimFrame = requestAnimationFrame(frame); return; }
         // Throttle to ~30fps to save CPU
         if (t - (_lastBgFrame || 0) < 33) { bgAnimFrame = requestAnimationFrame(frame); return; }
         _lastBgFrame = t;

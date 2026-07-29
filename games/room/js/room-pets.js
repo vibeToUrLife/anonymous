@@ -520,9 +520,9 @@
 
       let _lastPetFrame = 0;
       function frame(t) {
-        // Hidden under the outside view or the farm. The drop regrow below runs
-        // off a clock, so it just catches up on the first frame back inside.
-        if (isOutsideView || isFarmView) { petAnimFrame = requestAnimationFrame(frame); return; }
+        // Hidden under the outside view, the farm or the tank. The drop regrow
+        // below runs off a clock, so it catches up on the first frame back inside.
+        if (isOutsideView || isFarmView || isAquariumView) { petAnimFrame = requestAnimationFrame(frame); return; }
         if (t - _lastPetFrame < 33) { petAnimFrame = requestAnimationFrame(frame); return; }
         _lastPetFrame = t;
         const nw = room.clientWidth, nh = room.clientHeight;

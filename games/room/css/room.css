@@ -753,7 +753,7 @@
     .outside-view{position:absolute;inset:0;z-index:45;border-radius:18px;display:none;overflow:hidden}
     .outside-view.visible{display:block}
     /* Overlaid text controls (z-index above canvas) */
-    .outside-back-btn{position:absolute;top:10px;left:10px;padding:5px 12px;border:1px solid rgba(255,255,255,.25);border-radius:10px;background:rgba(0,0,0,.35);color:rgba(255,255,255,.9);font-size:12px;font-weight:600;cursor:pointer;backdrop-filter:blur(4px);z-index:5}
+    .outside-back-btn{position:absolute;top:10px;left:10px;padding:5px 12px;border:1px solid rgba(255,255,255,.25);border-radius:10px;background:rgba(0,0,0,.35);color:rgba(255,255,255,.9);font-size:12px;font-weight:600;cursor:pointer;z-index:5}
     .outside-back-btn:hover{background:rgba(0,0,0,.55)}
     /* Farm "Collect produce" floating button (top-right) */
     .farm-produce-btn{

@@ -7,8 +7,8 @@
       const W = cvs.width, H = cvs.height;
       let _lastPlantFrame = 0;
       function frame(t) {
-        // Covered by the outside view or the farm — nothing to draw.
-        if (isOutsideView || isFarmView) { plantAnimFrame = requestAnimationFrame(frame); return; }
+        // Covered by the outside view, the farm or the tank — nothing to draw.
+        if (isOutsideView || isFarmView || isAquariumView) { plantAnimFrame = requestAnimationFrame(frame); return; }
         if (t - _lastPlantFrame < 33) { plantAnimFrame = requestAnimationFrame(frame); return; }
         _lastPlantFrame = t;
         ctx.clearRect(0, 0, W, H);

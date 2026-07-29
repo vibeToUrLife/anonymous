@@ -3410,6 +3410,10 @@
       // Tile height is capped to the row slot so beds never overlap the next row
       // (or the animals) when the soil band is compressed at high expansion levels.
       const tile = _farmTile(W, H);
+      // Every bed in a row shares its top edge, so the soil gradient is the same
+      // for all of them. One per row rather than one per bed — there were 30 of
+      // these a frame. Per call, so it cannot go stale when the stage resizes.
+      const _soilGrad = {};
       ctx.textAlign = 'center';
       // Row signboards (left of each row that owns ≥1 plot). A narrow stage has
       // none — _farmSignW returns 0 there and the width goes to the beds.
@@ -3429,8 +3433,12 @@
         _drawBedBoard(ctx, _x0, _y0 + tile - _r, tile, _depth + _r, i + 1);   // front face
         ctx.fillStyle = 'rgba(0,0,0,0.22)';                          // where it meets the ground
         ctx.fillRect(_x0, _y0 + tile + _depth - 2, tile, 2);
-        const _tg = ctx.createLinearGradient(0, _y0, 0, _y0 + tile);  // top soil face
-        _tg.addColorStop(0, '#8a6038'); _tg.addColorStop(1, '#6b4a2c');
+        const _gk = Math.round(_y0);                                  // top soil face
+        let _tg = _soilGrad[_gk];
+        if (!_tg) {
+          _tg = _soilGrad[_gk] = ctx.createLinearGradient(0, _y0, 0, _y0 + tile);
+          _tg.addColorStop(0, '#8a6038'); _tg.addColorStop(1, '#6b4a2c');
+        }
         ctx.fillStyle = _tg;
         if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(_x0, _y0, tile, tile, _r); ctx.fill(); }
         else ctx.fillRect(_x0, _y0, tile, tile);
@@ -3518,6 +3526,17 @@
           ctx.closePath(); ctx.fill();
         }
       });
+    }
+
+    /* Measuring text means shaping the glyphs, and it was the priciest call in
+       the animal loop — once per animal per frame, for a level badge that only
+       changes when the animal levels up. Keyed by font AND text, so a resize
+       (which changes the font size) simply measures each badge once more. */
+    const _lvBadgeW = {};
+    function _lvTextW(ctx, font, txt) {
+      const k = font + '|' + txt;
+      if (_lvBadgeW[k] === undefined) _lvBadgeW[k] = ctx.measureText(txt).width;
+      return _lvBadgeW[k];
     }
 
     function drawFarmCanvas() {
@@ -3711,9 +3730,10 @@
           ctx.fillRect(bx, byy, bw * (h / 100), 4);
           // Level badge above the bar
           const lvTxt = T('Lv {n}', { n: animalLevel(a.collected, FARM_LEVELS) });
-          ctx.font = '800 ' + Math.round(Math.max(9, size * 0.15)) + 'px sans-serif';
+          const lvFont = '800 ' + Math.round(Math.max(9, size * 0.15)) + 'px sans-serif';
+          ctx.font = lvFont;
           ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          const lw = ctx.measureText(lvTxt).width + size * 0.16, lh = Math.max(12, size * 0.2);
+          const lw = _lvTextW(ctx, lvFont, lvTxt) + size * 0.16, lh = Math.max(12, size * 0.2);
           const lx = px - lw / 2, ly = byy - lh - 3;
           ctx.fillStyle = 'rgba(20,12,6,.82)';
           if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(lx, ly, lw, lh, lh / 2); ctx.fill(); } else ctx.fillRect(lx, ly, lw, lh);
