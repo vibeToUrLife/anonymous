@@ -53,133 +53,6 @@
     .feedback-fab:hover { transform: scale(1.1); box-shadow: 0 6px 24px rgba(59,130,246,0.5); }
 
     /* ── Daily Quote Banner (clay card) ── */
-    /* There is no global `.hidden` rule in this codebase — every use of that
-       class is scoped to the element it hides (.cr-banner.hidden,
-       .settings-overlay.hidden, and so on). So these have to be declared, or
-       toggling the class does NOTHING: the sheet never closes, the chip never
-       goes away, and the panel simply sits on the page. That is exactly what
-       happened. */
-    .devboard-sheet.hidden,
-    .devboard-btn.hidden,
-    .devboard-badge.hidden,
-    .dev-board-compose.hidden,
-    .dev-board-more.hidden,
-    .dev-compose-preview.hidden { display: none !important; }
-
-    /* 📣 Dev board — a chip beside the gear, and a sheet behind it.
-       Deliberately NOT a card in the page: this sits above the message board,
-       and anything that lives there is scrolled past on every single visit. */
-    .devboard-btn {
-      /* Under the gear, not beside it. Beside it the chip shared a row with the
-         off-work countdown bubble — centred, up to 360px wide, z 320 — which
-         overlaps this corner at EVERY phone width and swallowed the tap. Simply
-         out-ranking it would have made the chip sit on top of the bubble's text
-         instead, so the chip moves down a row where nothing centred reaches:
-         the "N new" pill at top 60 is the only neighbour and it stops well
-         short of the right edge.
-
-         z 330 anyway, as a belt: still far below every overlay (600+), so the
-         chip can never cover a dialog. */
-      position: fixed; top: 64px; right: 14px; z-index: 330;
-      width: 42px; height: 42px; border: none; border-radius: 12px;
-      background: var(--surface); color: var(--primary-deep);
-      border: 1px solid var(--border); box-shadow: var(--clay-up-sm);
-      font-size: 18px; cursor: pointer; display: grid; place-items: center;
-    }
-    .devboard-btn:hover { box-shadow: var(--clay-up); filter: brightness(1.02); }
-    .devboard-badge {
-      position: absolute; top: -4px; right: -4px;
-      min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
-      background: #e06377; color: #fff; font-size: 11px; font-weight: 700;
-      display: grid; place-items: center;
-    }
-
-    .devboard-sheet {
-      position: fixed; inset: 0; z-index: 9600;
-      background: var(--g-scrim, rgba(20,16,28,.55));
-      backdrop-filter: blur(6px);
-      display: flex; align-items: flex-end; justify-content: center;
-    }
-    .devboard-panel {
-      width: 100%; max-width: 600px; max-height: 86vh;
-      display: flex; flex-direction: column;
-      background: var(--surface); color: var(--ink);
-      border-radius: 20px 20px 0 0; box-shadow: var(--clay-up);
-      animation: devboardUp .22s ease;
-    }
-    @keyframes devboardUp { from { transform: translateY(18px); opacity: 0; } }
-    @media (min-width: 640px) {
-      .devboard-sheet { align-items: center; }
-      .devboard-panel { border-radius: 20px; max-height: 78vh; }
-    }
-    .devboard-bar {
-      display: flex; align-items: center; gap: 8px;
-      padding: 14px 16px; border-bottom: 1px solid rgba(0,0,0,.08);
-    }
-    .devboard-close {
-      margin-left: auto; border: 0; background: transparent; cursor: pointer;
-      font-size: 16px; color: var(--ink-soft); padding: 2px 4px;
-    }
-    .devboard-scroll { overflow-y: auto; padding: 4px 16px 16px; -webkit-overflow-scrolling: touch; }
-    .dev-board-title {
-      font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
-      text-transform: uppercase; color: var(--primary-deep);
-    }
-    .dev-board-empty { font-size: 13px; color: var(--ink-soft); padding: 10px 2px; }
-
-    .dev-post { padding: 10px 0; border-top: 1px solid rgba(0,0,0,.07); }
-    .dev-post:first-child { border-top: 0; padding-top: 0; }
-    /* An unread post is marked by a rail, not a background wash — a wash
-       fights the screenshot sitting inside it. */
-    .dev-post.is-new { border-left: 3px solid #e0574a; padding-left: 9px; margin-left: -12px; }
-    .dev-post-head { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
-    .dev-tag {
-      font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
-      background: rgba(0,0,0,.06); color: var(--ink);
-    }
-    .dev-tag-feature { background: rgba(88,197,181,.22); }
-    .dev-tag-fix     { background: rgba(242,161,84,.22); }
-    .dev-tag-event   { background: rgba(224,99,119,.20); }
-    .dev-post-when { font-size: 11px; color: var(--ink-soft); }
-    .dev-post-del {
-      margin-left:auto; border:0; background:transparent; cursor:pointer;
-      color: var(--ink-soft); font-size: 13px; line-height:1; padding:2px 4px;
-    }
-    .dev-post-title { margin: 0 0 4px; font-size: 15px; font-weight: 800; color: var(--ink); }
-    .dev-post-body  { margin: 0 0 8px; font-size: 13px; line-height:1.6; color: var(--ink-soft); }
-    .dev-post-img {
-      display:block; width:100%; max-height: 260px; object-fit: cover;
-      border-radius: 12px; margin-bottom: 8px;
-    }
-    .dev-post-foot { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-    .dev-react {
-      border:0; cursor:pointer; font-size:12px; padding:4px 9px; border-radius:999px;
-      background: rgba(0,0,0,.05); color: var(--ink);
-    }
-    .dev-react.on { background: rgba(88,197,181,.28); font-weight:700; }
-    .dev-post-link { margin-left:auto; font-size:12px; font-weight:700; color: var(--primary-deep); text-decoration:none; }
-    .dev-board-more {
-      width:100%; margin-top:8px; border:0; background:transparent; cursor:pointer;
-      font-size:12px; font-weight:700; color: var(--primary-deep); padding:6px;
-    }
-
-    .dev-board-compose { margin-top:10px; padding-top:10px; border-top:1px dashed rgba(0,0,0,.14); }
-    .dev-compose-row { display:flex; gap:6px; align-items:center; margin-bottom:6px; }
-    .dev-compose-tag { border-radius:10px; padding:6px; border:1px solid rgba(0,0,0,.12); background:var(--surface); }
-    .dev-compose-title, .dev-compose-link, .dev-compose-body {
-      flex:1; width:100%; border-radius:10px; padding:8px 10px; font-size:13px;
-      border:1px solid rgba(0,0,0,.12); background:var(--surface); color:var(--ink);
-      font-family: inherit; margin-bottom:6px;
-    }
-    .dev-compose-title { margin-bottom:0; }
-    .dev-compose-preview { display:block; width:100%; max-height:180px; object-fit:cover; border-radius:10px; margin-bottom:6px; }
-    .dev-compose-file { cursor:pointer; font-size:12px; font-weight:700; color:var(--primary-deep); }
-    .dev-compose-post {
-      margin-left:auto; border:0; cursor:pointer; border-radius:999px;
-      padding:7px 16px; font-size:13px; font-weight:800;
-      background: var(--primary); color: var(--on-primary);
-    }
-
     .daily-quote-banner {
       max-width: 600px;
       margin: 18px auto 0;
@@ -1733,56 +1606,6 @@
     </div>
   </div>
 
-  <!-- 📣 Dev board — a sheet, not a card.
-
-       It lived inline above the messages and blocked them; even shut it was a
-       strip the reader had to scroll past every visit. Now it costs the page
-       nothing: a chip beside the ⚙️ gear, a dot when something is new, and a
-       full-height sheet when you open it. (dev-board.js) -->
-  <button class="devboard-btn" id="devBoardBtn" type="button"
-          data-i18n-title title="What's new" data-i18n-aria-label aria-label="What's new">
-    📣
-    <span class="devboard-badge hidden" id="devBoardDot">0</span>
-  </button>
-
-  <div class="devboard-sheet hidden" id="devBoardSheet" role="dialog" aria-modal="true">
-    <div class="devboard-panel" id="devBoardCard">
-      <div class="devboard-bar">
-        <span class="dev-board-title" data-i18n>📣 What's new</span>
-        <button class="devboard-close" id="devBoardClose" type="button"
-                data-i18n-aria-label aria-label="Close">✕</button>
-      </div>
-
-      <div class="devboard-scroll">
-        <div class="dev-board-list" id="devBoardList"></div>
-        <button class="dev-board-more hidden" id="devBoardMore" type="button"></button>
-      <div class="dev-board-compose hidden" id="devBoardCompose">
-      <div class="dev-compose-row">
-        <select class="dev-compose-tag" id="devComposeTag">
-          <option value="feature">🆕</option>
-          <option value="fix">🔧</option>
-          <option value="event">🎉</option>
-        </select>
-        <input type="text" class="dev-compose-title" id="devComposeTitle"
-               data-i18n-placeholder placeholder="What changed?" maxlength="80" autocomplete="off">
-      </div>
-      <textarea class="dev-compose-body" id="devComposeBody" rows="2"
-                data-i18n-placeholder placeholder="A line or two about it…" maxlength="600"></textarea>
-      <input type="text" class="dev-compose-link" id="devComposeLink"
-             data-i18n-placeholder placeholder="Link (optional) — e.g. games/room.html?view=farm" autocomplete="off">
-      <img class="dev-compose-preview hidden" id="devComposePreview" alt="">
-      <div class="dev-compose-row">
-        <label class="dev-compose-file">
-          <input type="file" id="devComposeFile" accept="image/*" hidden>
-          <span data-i18n>🖼️ Image</span>
-        </label>
-        <button class="dev-compose-post" id="devComposePost" type="button" data-i18n>Post</button>
-        </div>
-      </div>
-      </div>
-    </div>
-  </div>
-
   <!-- Full-page 8-bit pixel event reminder (filled & toggled by upcoming-events.js) -->
   <div class="ue-reminder hidden" id="ueReminder" role="alertdialog" aria-live="assertive" data-i18n-title title="Tap to close">
     <div class="ue-reminder-box">
@@ -1830,7 +1653,7 @@
   <script src="./src/js/share-to-board.js?v=1"></script>
   <!-- Reply size guard (keeps a thread under Firestore's 1MiB doc cap; used by app.js). -->
   <script src="./src/js/reply-logic.js?v=1"></script>
-  <script src="./src/js/app.js?v=33"></script>
+  <script src="./src/js/app.js?v=34"></script>
   <!-- Access code gate — must load after app.js (uses its shared auth/db). Shows after Google login. -->
   <script src="./src/js/access-code-gate.js?v=2"></script>
   <script src="./src/js/feature-flags.js"></script>
@@ -1846,8 +1669,6 @@
   <script src="./src/js/doodle.js?v=2"></script>
   <script src="./src/js/wall-logic.js?v=6"></script>
   <script src="./src/js/graffiti-wall.js?v=8"></script>
-  <script src="./src/js/dev-board-logic.js?v=2"></script>
-  <script src="./src/js/dev-board.js?v=5"></script>
   <script src="./src/js/coin-rush-logic.js"></script>
   <script src="./src/js/coin-rush.js?v=1"></script>
   <!-- Daily brain-teaser (脑筋急转弯) -->

@@ -236,22 +236,6 @@ service cloud.firestore {
       allow read: if isAuth();
       allow write: if isAuth() && isDeveloper(request.auth.uid);
     }
-    /* 📣 Dev board — one document per update, shown on index.html.
-       A collection rather than a field on app_state/whats_new because each
-       post carries its own screenshot as a data URL, and a single document
-       holding them all would hit the 1 MiB ceiling within a dozen updates.
-
-       Anyone signed in may read, and may increment the reaction tallies —
-       that is the only field a reader is allowed to touch, so a stray client
-       cannot rewrite the post itself. Creating and deleting stays with the
-       developer. */
-    match /dev_updates/{postId} {
-      allow read: if isAuth();
-      allow create, delete: if isAuth() && isDeveloper(request.auth.uid);
-      allow update: if isAuth() && isDeveloper(request.auth.uid)
-                    || (isAuth() && !isBanned(request.auth.uid)
-                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']));
-    }
     match /app_state/whats_new {
       // Anyone logged in can read; only developers can publish updates
       allow read: if isAuth();
