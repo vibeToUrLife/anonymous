@@ -4435,6 +4435,65 @@
     let _farmDragStartX = 0, _farmDragStartY = 0;
     const FARM_DRAG_THRESHOLD = 0.03; // dead-zone: finger jitter stays a tap
 
+    /* ══════════════════════════════════════════════════════════════════
+       TEMPORARY — tap diagnostic. Three geometry fixes in a row failed to
+       make the Bakery and the Forge hittable, which means the model was
+       wrong, not the numbers. So stop calculating and read what actually
+       happens on the real device: every tap prints where it landed, what it
+       resolved to, and how far it was from each owned hut.
+
+       DELETE THIS FUNCTION AND ITS ONE CALL IN cvs.onclick once the cause
+       is known. It writes to a fixed panel, never to the canvas.
+       ══════════════════════════════════════════════════════════════════ */
+    function _farmTapDebug(e, cvs) {
+      try {
+        const rect = cvs.getBoundingClientRect();
+        const src = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
+        const cx = (src.clientX - rect.left) / rect.width;
+        const cy = (src.clientY - rect.top) / rect.height;
+        const W = rect.width, H = rect.height;
+        let el = document.getElementById('farmTapDebug');
+        if (!el) {
+          el = document.createElement('div');
+          el.id = 'farmTapDebug';
+          el.style.cssText = 'position:fixed;left:4px;right:4px;bottom:4px;z-index:99999;' +
+            'background:rgba(0,0,0,.88);color:#7CFC7C;font:11px/1.5 ui-monospace,monospace;' +
+            'padding:6px 8px;border-radius:8px;white-space:pre;overflow-x:auto;pointer-events:none';
+          document.body.appendChild(el);
+        }
+        // The stage the PAINTER used, which is what the huts were drawn against.
+        const view = document.getElementById('farmView');
+        const pw = view ? view.clientWidth : 0, ph = view ? view.clientHeight : 0;
+        const out = [];
+        out.push('rect ' + Math.round(W) + 'x' + Math.round(H) +
+                 '   view ' + pw + 'x' + ph +
+                 (Math.abs(pw - W) > 1 || Math.abs(ph - H) > 1 ? '   << MISMATCH' : ''));
+        out.push('tap  ' + cx.toFixed(3) + ',' + cy.toFixed(3) +
+                 '  = ' + Math.round(cx * W) + ',' + Math.round(cy * H) + 'px');
+        const blocked = _farmDragSuppressClick ? 'drag-suppress'
+                      : _cartSheetOpen ? 'cart-sheet-open'
+                      : (viewingUid !== currentUid) ? 'visiting' : '';
+        if (blocked) out.push('BLOCKED BEFORE HIT-TEST: ' + blocked);
+        const tg = _farmTargetAt(cx, cy, W, H);
+        out.push('HIT  ' + (tg ? tg.kind + ' ' + _farmTargetId(tg) : '--- nothing ---'));
+        out.push('sky  ' + (_farmSkyTarget(cx, cy, W, H) || '(none, reach ' + FARM_TAP_REACH_PX + 'px)'));
+        const s = _workshopSize(W, H);
+        FARM_MACHINES.forEach(function (m, slot) {
+          const st = (roomData.farmMachines || {})[m.id];
+          if (!st || !st.owned) return;
+          const p = _workshopPos(slot);
+          const dx = (cx - p.x) * W, dy = (cy - p.y) * H, d = Math.hypot(dx, dy);
+          out.push(' ' + m.emoji + ' ' + m.id + ' @' + Math.round(p.x * W) +
+                   'px  dx ' + (dx >= 0 ? '+' : '') + Math.round(dx) +
+                   '  dy ' + (dy >= 0 ? '+' : '') + Math.round(dy) +
+                   '  dist ' + Math.round(d) + (d <= FARM_TAP_REACH_PX ? ' <=REACH' : ''));
+        });
+        out.push('hut size ' + Math.round(s) + '  drawn ' + Math.round(1.26 * s) +
+                 'px  slot ' + Math.round(FARM_HUT_DX * W) + 'px');
+        el.textContent = out.join('\n');
+      } catch (err) { /* a diagnostic must never break the tap it is watching */ }
+    }
+
     function _attachFarmPointerHandlers(cvs) {
       function pos(e) {
         const rect = cvs.getBoundingClientRect();
@@ -4537,6 +4596,7 @@
       cvs.ontouchend = onUp;
 
       cvs.onclick = (e) => {
+        _farmTapDebug(e, cvs);   // TEMPORARY — delete with _farmTapDebug itself
         closeCropPicker();   // any tap dismisses an open picker
         if (_farmDragSuppressClick) { _farmDragSuppressClick = false; return; }
         // Tap outside the sell sheet (anywhere on the farm) closes it — taps on
