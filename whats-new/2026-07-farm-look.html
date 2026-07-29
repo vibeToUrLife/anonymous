@@ -132,13 +132,26 @@
   .nav{display:flex; align-items:center; justify-content:space-between; gap:12px; flex:none;
     padding:9px 20px calc(15px + env(safe-area-inset-bottom,0px))}
   .skip{background:none; border:none; color:var(--faint); font-size:13px; cursor:pointer; padding:8px; font-family:inherit}
+  /* Back sits with 下一个 on the right, not next to 跳过 — the two step buttons
+     read as one pair that way. It is disabled rather than hidden on slide 1, so
+     the row never jumps width as you move through the deck. */
+  .prev{
+    margin-left:auto; flex:none; cursor:pointer; font-family:inherit;
+    padding:11px 15px; border-radius:999px; font-size:14px; font-weight:700;
+    color:var(--soft); background:none; border:1px solid var(--border);
+    transition:transform .1s, opacity .15s, filter .15s;
+  }
+  .prev:hover{filter:brightness(1.06)} .prev:active{transform:translateY(1px)}
+  .prev[disabled]{opacity:.3; cursor:default; pointer-events:none}
   .next{
-    flex:1; max-width:230px; margin-left:auto; border:none; cursor:pointer; font-family:inherit;
+    flex:1; max-width:230px; border:none; cursor:pointer; font-family:inherit;
     padding:12px 20px; border-radius:999px; font-size:15px; font-weight:800; color:#fff;
     background:linear-gradient(135deg,#fca34a,#f97316); box-shadow:0 8px 20px rgba(249,115,22,.35);
     transition:transform .1s, filter .15s;
   }
   .next:active{transform:translateY(1px)} .next:hover{filter:brightness(1.04)}
+  /* Very narrow box: drop 上一个's label so three buttons still fit on one row. */
+  @media (max-width: 360px){ .prev span{display:none} .prev{padding:11px 13px} }
 
   /* Reduced motion: no canvas loop (see REDUCE in the script), no transitions —
      only a plain cross-fade so the deck is still followable. The ☀️/🌙 control
@@ -239,6 +252,7 @@
 
   <div class="nav">
     <button class="skip" id="skip">跳过</button>
+    <button class="prev" id="prev" type="button" aria-label="上一个" disabled>←<span> 上一个</span></button>
     <button class="next" id="next">下一个 →</button>
   </div>
 
@@ -816,6 +830,7 @@ setInterval(tellTime, 30000);
 var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
 var dotsBox = document.getElementById('dots');
 var next = document.getElementById('next');
+var prev = document.getElementById('prev');
 var i = 0, live = [], raf = 0, last = 0;
 
 slides.forEach(function(_, k){
@@ -840,6 +855,7 @@ function go(n){
   dots.forEach(function(d, k){ d.classList.toggle('on', k === n); });
   slides[n].scrollTop = 0;
   i = n;
+  prev.disabled = (i === 0);
   next.textContent = (i === slides.length - 1) ? '去农场看看 🎨' : '下一个 →';
   cancelAnimationFrame(raf); raf = 0;
   live = Array.prototype.slice.call(slides[n].querySelectorAll('canvas'));
@@ -848,7 +864,14 @@ function go(n){
   if (!REDUCE) raf = requestAnimationFrame(loop);
 }
 next.addEventListener('click', function(){ i >= slides.length - 1 ? done() : go(i + 1); });
+prev.addEventListener('click', function(){ go(i - 1); });
 document.getElementById('skip').addEventListener('click', done);
+// ← / → step the deck too, for anyone on a keyboard. go() clamps, so ← on the
+// first slide and → on the last are simply no-ops.
+document.addEventListener('keydown', function(e){
+  if (e.key === 'ArrowLeft') { go(i - 1); }
+  else if (e.key === 'ArrowRight' && i < slides.length - 1) { go(i + 1); }
+});
 function done(){ try { parent.postMessage('wn-close', '*'); } catch (e) {} }
 
 /* The parent reveals this iframe ~800ms AFTER setting src, so at first paint the
