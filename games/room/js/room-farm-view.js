@@ -143,6 +143,34 @@
        come from is the sky and the grass above it. */
     const FARM_SKY_Y      = 0.22;   // sky → grass
     const FARM_TOPFENCE_Y = 0.26;   // top fence + the two trees that stand on it
+
+    /* ── The land is wider than the window ────────────────────────────────
+       Nothing that was already on the farm moves. Every pen, bed, hut, tree
+       and the trough keep the exact normalised position they have always had,
+       so with the camera at 0 the view is what it was before this existed —
+       and on a farm that has never been expanded there is nowhere to scroll
+       to at all. What grows is the GROUND: the world runs 0..worldW in the
+       same units the farm has always used, and swiping only ever reveals land
+       that was not there to see.
+
+       Drawing does this with one transform per layer rather than a coordinate
+       change inside each of the 27 painters. Two layers only:
+
+         world  the ground and everything standing on it — it slides
+         fixed  sky, hills, clouds, weather, and the two things you must be
+                able to reach at any time: the mailbox and the merchant plane
+
+       The sky does NOT drift with the ground. Parallax would have to paint
+       wider than the window to avoid a gap opening on the right, and the sky
+       painter lays its sun out against the width it is handed — so a wider
+       sky would move the sun. A still sky costs nothing and reads fine. */
+    const FARM_WORLD_STEP = 0.35;    // extra windows of land per expansion level
+    const FARM_PAN_DEADZONE = 10;    // px of finger travel before a tap becomes a pan
+    let _farmCamX = 0;               // left edge of the view, in window widths
+
+    function _farmWorldW() { return 1 + FARM_WORLD_STEP * (roomData.farmCapLevel || 0); }
+    function _farmCamMax() { return Math.max(0, _farmWorldW() - 1); }
+    function _farmClampCam() { _farmCamX = Math.max(0, Math.min(_farmCamMax(), _farmCamX)); }
     // A hut is about 0.05 of the stage tall either side of its centre, so this
     // leaves ~0.04 of clear grass between the hut bases and the pen rails.
     const FARM_HUT_Y      = 0.29;   // workshop huts sit above the pen band
@@ -1026,6 +1054,7 @@
 
     function openFarm() {
       isFarmView = true;
+      _farmCamX = 0;   // always open on the near end of the land
       document.getElementById('farmView')?.classList.add('visible');
       _setFarmPanelMode(true);
       _syncRoomPanel();   // hide the side panel; widens the stage before we draw
@@ -2427,7 +2456,13 @@
     // circles. The chain used to check huts first with a 0.13 "radius" which on
     // a phone is a 47×68px ellipse — tall enough to reach up into the sky and
     // swallow every tap meant for the plane, banner included.
-    function _farmSkyTarget(cx, cy, W, H) {
+    /* `camX` is where the land has been scrolled to, in window widths. The
+       mailbox and the plane are pinned to the window, so they are already in
+       the tap's own space; the huts stand on the land, so they are shifted by
+       the camera to meet it. Defaults to 0 — which is exactly the farm before
+       any of this existed, and is what room-farm-hit.test.js measures. */
+    function _farmSkyTarget(cx, cy, W, H, camX) {
+      camX = camX || 0;
       const targets = [];
       if (viewingUid === currentUid) {
         // Mail first: on a wide stage the plane's rect clips the mailbox's badge
@@ -2442,7 +2477,7 @@
       FARM_MACHINES.forEach(function (m, slot) {
         if (owned[m.id] && owned[m.id].owned) {
           const p = _workshopPos(slot);
-          targets.push({ id: m.id, x: p.x, y: p.y });
+          targets.push({ id: m.id, x: p.x - camX, y: p.y });   // land → window
         }
       });
       return farmPickTarget({ x: cx, y: cy }, W, H, targets, FARM_TAP_REACH_PX);
@@ -3595,21 +3630,26 @@
        in its original order: sky, then beds/signs but only below the fence,
        then produce, then animals. */
     function _farmTargetAt(cx, cy, W, H) {
-      const sky = _farmSkyTarget(cx, cy, W, H);
+      // The tap arrives in window coordinates. The mailbox and plane live there
+      // too, so _farmSkyTarget takes it as-is and shifts the huts to meet it.
+      // Everything below stands on the land, so the tap moves onto the land
+      // instead — one conversion, here, rather than in each hit-test.
+      const sky = _farmSkyTarget(cx, cy, W, H, _farmCamX);
       if (sky) return { kind: 'sky', id: sky };
+      const wx = cx + _farmCamX;
       const plots = roomData.farmPlots || [];
       if (plots.length && cy > _farmDivY()) {
         let row = 0, idx = null, best = Infinity;
         for (let i = 0; i < plots.length; i++) {
           const pp = _farmPlotPos(i, W, H);
-          const d = Math.hypot(pp.x - cx, pp.y - cy);
+          const d = Math.hypot(pp.x - wx, pp.y - cy);
           if (d < best) { best = d; row = Math.floor(i / _farmPerRow(W)); idx = i; }
         }
         if (_farmSignW(W, H) > 0) {
           const rows = farmRowCount(plots.length, _farmPerRow(W));
           for (let r = 0; r < rows; r++) {
             const sp = _farmSignPos(r, W, H);
-            const d = Math.hypot(sp.x - cx, sp.y - cy);
+            const d = Math.hypot(sp.x - wx, sp.y - cy);
             if (d < best) { best = d; row = r; idx = null; }   // the row, not one bed
           }
         }
@@ -3617,13 +3657,13 @@
       }
       const drops = roomData.farmDrops || [];
       for (let i = 0; i < drops.length; i++) {
-        if (Math.hypot(drops[i].x - cx, drops[i].y - cy) < 0.07) return { kind: 'drop', idx: i };
+        if (Math.hypot(drops[i].x - wx, drops[i].y - cy) < 0.07) return { kind: 'drop', idx: i };
       }
       let animal = null, aDist = 0.10;
       for (const a of (roomData.farmAnimals || [])) {
         const st = _farmAnimStates[a.id];
         if (!st) continue;
-        const d = Math.hypot(st.x - cx, st.y - cy);
+        const d = Math.hypot(st.x - wx, st.y - cy);
         if (d < aDist) { aDist = d; animal = a; }
       }
       return animal ? { kind: 'animal', id: animal.id } : null;
@@ -3721,6 +3761,17 @@
         ctx.clearRect(0, 0, W, H);
         const windSway = Math.sin(t / 1400) * 0.012;
 
+        /* Two layers. `world()` slides the ground and everything standing on
+           it; `fixed()` puts the pen back at the window's own origin for the
+           sky, the weather, and the two targets that must never scroll out of
+           reach. setTransform rather than save/restore, because painters do
+           their own save/restore inside and would otherwise unwind ours. */
+        _farmClampCam();
+        const _camPx = _farmCamX * W;
+        const LAND = _farmWorldW() * W;              // the ground's full width in px
+        const world = function () { ctx.setTransform(1, 0, 0, 1, -_camPx, 0); };
+        const fixed = function () { ctx.setTransform(1, 0, 0, 1, 0, 0); };
+
         // The skin in force this frame. Resolved per frame rather than per
         // draw call so buying or switching one repaints without a reload, and
         // so a skin the player no longer owns falls back on its own.
@@ -3746,6 +3797,9 @@
         const divY = _farmDivY();
         const gy = H * divY;
 
+        // Everything from here to the weather is ground, and slides with it.
+        world();
+
         // Animal pasture — grass from the horizon down to the dividing fence
         const skyY = H * FARM_SKY_Y;
         const grass = ctx.createLinearGradient(0, skyY, 0, gy);
@@ -3753,7 +3807,7 @@
         grass.addColorStop(0.5, pal.grass[1]);
         grass.addColorStop(1, pal.grass[2]);                      // richer deep bottom
         ctx.fillStyle = grass;
-        ctx.fillRect(0, skyY, W, gy - skyY);
+        ctx.fillRect(0, skyY, LAND, gy - skyY);
 
 
         /* Both bands get their grain from one baked texture, blitted after the
@@ -3762,17 +3816,23 @@
            toward the horizon, and the crop band's from clods doing the same —
            which is how ground actually recedes, rather than ruled lines
            pretending it does. */
-        const _tex = _farmGroundTexture(W, H, skyY, gy, pal,
-          W + 'x' + H + '|' + (_theme ? _theme.id : '?') + '|' + (night ? 'n' : 'd') + '|' + Math.round(gy));
+        // Baked at the LAND's width, not the window's, so the new ground carries
+        // the same tufts and clods as the old. The width is in the cache key, so
+        // buying an expansion rebuilds it once and never again.
+        const _tex = _farmGroundTexture(LAND, H, skyY, gy, pal,
+          Math.round(LAND) + 'x' + H + '|' + (_theme ? _theme.id : '?') + '|' + (night ? 'n' : 'd') + '|' + Math.round(gy));
         if (_tex) ctx.drawImage(_tex, 0, 0);
-        else { _drawFarmScatter(ctx, W, H, skyY, gy, pal.groundFx); _drawFarmDeck(ctx, W, H, gy, H, pal); }
+        else { _drawFarmScatter(ctx, LAND, H, skyY, gy, pal.groundFx); _drawFarmDeck(ctx, LAND, H, gy, H, pal); }
 
         // Fences: top of the pasture and the divider (farm | crops). No bottom
         // fence — its posts are a fixed 22px tall, so on a short stage they cut
         // through the last bed row, and the soil band reads fine without it.
         const topFenceY = H * FARM_TOPFENCE_Y;
-        _drawFence(ctx, W * 0.02, topFenceY, W * 0.96, night);
-        _drawFence(ctx, W * 0.02, gy, W * 0.96, night);
+        // Both fences run the length of the land. _drawFence spaces its posts a
+        // fixed 18px apart and derives the count from the length, so a longer
+        // run simply gets more posts — nothing stretches.
+        _drawFence(ctx, LAND * 0.02, topFenceY, LAND * 0.96, night);
+        _drawFence(ctx, LAND * 0.02, gy, LAND * 0.96, night);
         // A skin can swap the SHAPE of the trees, not just their colour.
         if (pal.treeShape === 'conifer') {
           _drawFarmConifer(ctx, W * 0.06, topFenceY, H * 0.18, windSway, pal, t);
@@ -3785,8 +3845,12 @@
         _drawFarmSnowman(ctx, W, H, pal);   // before the trough and the herd, so both pass in front
         _drawFarmTrough(ctx, W, H, night);
         if (viewingUid === currentUid) {                                            // your mail only
+          // Pinned: post can arrive while you are looking at the far end of the
+          // farm, and having to scroll back to claim it would be a nuisance.
+          fixed();
           const _mp = _farmMailPos(W, H);
           _hoverScaled(ctx, _farmHoverK('sky', '#mail'), _mp.x * W, _mp.y * H, () => _drawFarmMailbox(ctx, W, H, t, night, pal));
+          world();
         }
         _drawFarmPlots(ctx, W, H, t);
 
@@ -3924,6 +3988,9 @@
           ctx.globalAlpha = 1;
         }
 
+        // Back to the window for the rest: sky furniture, the plane and the
+        // weather all belong to the view, not to the ground under it.
+        fixed();
         if (!night) _drawClouds(ctx, W, H, t, pal.cloud);
 
         // The skin's sky set piece — after the clouds so it reads as nearer
@@ -3949,6 +4016,7 @@
         // weather at all.
         _drawFarmWeather(ctx, W, H, t, pal.weather);
 
+        ctx.setTransform(1, 0, 0, 1, 0, 0);   // leave the pen where the next frame expects it
         _farmAnimFrame = requestAnimationFrame(frame);
       }
       _farmAnimFrame = requestAnimationFrame(frame);
@@ -4442,7 +4510,19 @@
         return { x: (src.clientX - rect.left) / rect.width, y: (src.clientY - rect.top) / rect.height };
       }
 
+      /* Dragging the land sideways. A visitor may do it too — it moves the
+         camera, never the farm. Nothing happens until the finger clears the
+         dead-zone, so an ordinary tap is still an ordinary tap; once it does
+         move, the click that would follow is suppressed the same way a decor
+         drag used to suppress it. */
+      let _panLive = false, _panMoved = false, _panFrom = 0, _panCam0 = 0;
+
       function onDown(e) {
+        if (_farmCamMax() > 0) {
+          const src = (e.touches && e.touches[0]) || e;
+          _panLive = true; _panMoved = false;
+          _panFrom = src.clientX; _panCam0 = _farmCamX;
+        }
         if (viewingUid !== currentUid) return;
         const p = pos(e);
         let hit = null, hitDist = Infinity;
@@ -4461,6 +4541,17 @@
       }
 
       function onMove(e) {
+        if (_panLive) {
+          const src = (e.touches && e.touches[0]) || e;
+          const dx = src.clientX - _panFrom;
+          if (!_panMoved && Math.abs(dx) < FARM_PAN_DEADZONE) return;   // still a tap
+          _panMoved = true;
+          _farmCamX = _panCam0 - dx / Math.max(1, cvs.getBoundingClientRect().width);
+          _farmClampCam();
+          _hideFarmTip();
+          if (e.cancelable) e.preventDefault();
+          return;
+        }
         // Hover tooltip (mouse only, when not dragging): crop time / trough food.
         if (e.type === 'mousemove' && !_farmDragDecorId) {
           const p = pos(e);
@@ -4517,6 +4608,12 @@
       }
 
       function onUp(e) {
+        if (_panLive) {
+          _panLive = false;
+          // A drag that actually moved must not also count as a tap on whatever
+          // happened to end up under the finger.
+          if (_panMoved) { _panMoved = false; _farmDragSuppressClick = true; }
+        }
         if (!_farmDragDecorId) return;
         if (_farmDragMoved) {
           _farmDragSuppressClick = true;
@@ -4531,7 +4628,17 @@
       cvs.onmousedown = onDown;
       cvs.onmousemove = onMove;
       cvs.onmouseup = onUp;
-      cvs.onmouseleave = () => { _hideFarmTip(); _farmHover = null; _farmHoverKey = ''; };
+      cvs.onmouseleave = () => { _hideFarmTip(); _farmHover = null; _farmHoverKey = ''; _panLive = false; };
+
+      // Desktop: a trackpad swipe or a shift-wheel slides the land too.
+      cvs.onwheel = (e) => {
+        if (_farmCamMax() <= 0) return;
+        const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+        if (!d) return;
+        _farmCamX += d / Math.max(1, cvs.getBoundingClientRect().width);
+        _farmClampCam();
+        if (e.cancelable) e.preventDefault();
+      };
       cvs.ontouchstart = onDown;
       cvs.ontouchmove = onMove;
       cvs.ontouchend = onUp;
