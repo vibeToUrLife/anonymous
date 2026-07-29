@@ -206,6 +206,9 @@
       let lastFrame = 0;
 
       function frame(t) {
+        // The farm opens on top of the outside view without closing it, so pause
+        // here while it is up instead of painting a scene the farm hides.
+        if (isFarmView) { _outsideAnimFrame = requestAnimationFrame(frame); return; }
         // Throttle to ~24fps to save CPU
         if (t - lastFrame < 42) { _outsideAnimFrame = requestAnimationFrame(frame); return; }
         lastFrame = t;
