@@ -2389,26 +2389,34 @@
     // Fixed slot position for machine `slot` (its hut), on the grass below the
     // plane's sky lane. Overlap with the plane's tap rect is resolved by
     // _farmSkyTarget, which picks the nearest target rather than the first.
-    /* Where each workshop hut stands. One source for all three users of it —
-       the tap resolver, the animals' keep-out zones, and the painter.
+    /* Where each workshop hut stands, and how big it is drawn. One source for
+       all four users — the tap resolver, the animals' keep-out zones, the
+       painter, and the size below.
 
-       The old 0.11 step put the five huts CLOSER TOGETHER THAN THEY ARE WIDE on
-       a phone: at 360px that is a 39.6px step against a hut drawn about 42px
-       across, so they overlapped and there was no seam to aim at. Taps resolve
-       nearest-wins, which meant each hut owned only ±19.8px.
+       Taps here resolve nearest-wins, so a hut owns exactly half the step to
+       its neighbour. The bug that made huts feel unhittable was that the hut
+       was drawn WIDER than the half-step it owns: with the roof overhang a hut
+       covers 1.26x its size, which at the old numbers came to 52px of drawing
+       inside a 50px slot. The outer few pixels of every hut you could see
+       belonged to the one next door, so aiming at what you saw missed.
 
-       0.14 is the widest step the row can take before its neighbours start
-       arguing with it. Working right to left at 360x520, the tightest stage:
-         · last hut lands at 0.72; the mailbox's tap rect starts at 0.832,
-           which is 40px away — still further than the hut is from itself,
-           so the hut keeps its own tap
-         · the plane's rect stops at y 0.185 and the huts sit at 0.29, 54px
-           below it, so the banner overhead is never in the running
-         · first hut lands at 0.16, clear of the trough at 0.085
-       That takes each hut from ±19.8px to ±25.2px, and opens an 8px seam
-       between them so you can SEE where one ends. */
-    const FARM_HUT_X0 = 0.16, FARM_HUT_DX = 0.14;
+       So the rule is: the drawing must fit inside the slot, with a seam left
+       over that you can actually see. Three things bound it, and all of them
+       are checked at 360x520, the tightest stage that matters:
+
+         seam    step - 1.26s  must stay positive          → +6.8px
+         forge   the last hut sits nearest the mailbox, whose tap rect starts
+                 at 0.832. Its drawn right edge has to stop short of the
+                 midpoint between them, or the mailbox owns part of it → +5.5px
+         plane   the roof reaches 0.52s above centre and the plane's tap rect
+                 hangs down to y 0.185. They must not meet            → +10px
+         trough  the first hut's left edge clears the trough at 0.085  → +15px
+
+       Those four are why the numbers look arbitrary: they are the solution to
+       the four inequalities, not a guess. Change one and re-check all four. */
+    const FARM_HUT_X0 = 0.17, FARM_HUT_DX = 0.126;
     function _workshopPos(slot) { return { x: FARM_HUT_X0 + slot * FARM_HUT_DX, y: FARM_HUT_Y }; }
+    function _workshopSize(W, H) { return Math.max(28, Math.min(W, H) * 0.085); }
 
     // Which fixed target a tap in the farm's upper half lands on: an owned
     // machine hut's id, '#cart' for the merchant plane, '#mail' for the mailbox,
@@ -2463,7 +2471,7 @@
         const st = machines[m.id];
         if (!st || !st.owned) return;
         const p = _workshopPos(slot);
-        const cx = p.x * W, cy = p.y * H, s = Math.max(38, Math.min(W, H) * 0.115);
+        const cx = p.x * W, cy = p.y * H, s = _workshopSize(W, H);
         const wallW = s * 0.78, wallH = s * 0.52, D = s * 0.24, dy = D * 0.5;
         const fx = cx - wallW / 2, fy = cy - s * 0.04;   // front wall top-left
         ctx.save();
