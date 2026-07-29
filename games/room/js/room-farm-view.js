@@ -3528,6 +3528,46 @@
       });
     }
 
+    /* An animal costs 63-80 canvas calls, and the herd paid every one of them
+       for every animal on every frame — at 20 animals that is more than the
+       whole field costs, and the cap rises by 10 per expansion.
+
+       But almost none of it moves. Only the legs swing (a sine of the walk
+       phase), and a standing animal is identical frame to frame. So each pose
+       is painted ONCE into a small offscreen canvas and blitted from then on:
+       80 calls become 1.
+
+       The walk is quantised into _ANIM_POSES steps around the cycle — at ~750ms
+       per cycle that is about 3 frames a step, which reads as a walk rather
+       than a slideshow. Standing is one extra pose.
+
+       Two things keep the cache small: it is keyed by type + variant (there are
+       only ever 4 x 3 of those), and it is thrown away whenever the drawn size
+       changes, which is the only other thing a sprite depends on. */
+    const _ANIM_POSES = 6;
+    let _animSprites = {};
+    let _animSpriteSize = 0;
+
+    function _farmAnimalSprite(type, variant, size, moving, lp, pal) {
+      const sz = Math.round(size);                     // a sub-pixel wobble must not thrash the cache
+      if (sz !== _animSpriteSize) { _animSprites = {}; _animSpriteSize = sz; }
+      const TAU = Math.PI * 2;
+      const pose = moving ? Math.floor((((lp % TAU) + TAU) % TAU) / TAU * _ANIM_POSES) : -1;
+      const key = type + '|' + variant + '|' + pose;
+      if (_animSprites[key]) return _animSprites[key];
+      // The widest painter reaches about 1.1x its size once offsets stack, so
+      // 1.4 leaves room rather than clipping a horn or a tail.
+      const R = Math.ceil(sz * 1.4);
+      let cvs;
+      try { cvs = document.createElement('canvas'); } catch (e) { return null; }
+      if (!cvs || !cvs.getContext) return null;
+      cvs.width = R * 2; cvs.height = R * 2;
+      const c = cvs.getContext('2d');
+      c.translate(R, R);                               // the painters draw around the origin
+      drawFarmAnimal(c, type, sz, pose < 0 ? 0 : (pose + 0.5) / _ANIM_POSES * TAU, moving, pal);
+      return (_animSprites[key] = { cvs: cvs, R: R });
+    }
+
     /* Measuring text means shaping the glyphs, and it was the priciest call in
        the animal loop — once per animal per frame, for a level badge that only
        changes when the animal levels up. Keyed by font AND text, so a resize
@@ -3719,7 +3759,11 @@
           // RGB coat: animated rainbow shimmer (filter is reset by ctx.restore()).
           // ~1.8s per full color cycle so it visibly shimmers (was t/14 ≈ 5s, too slow).
           if (a.variant === 'rgb') ctx.filter = 'hue-rotate(' + Math.round((t / 5 + idx * 60) % 360) + 'deg) saturate(1.7)';
-          drawFarmAnimal(ctx, a.type, size, t / 120, st.moving, _farmVariantPal(a));
+          // Blit the baked pose. The mirror and the RGB filter still apply here,
+          // so a left-facing or rainbow animal looks exactly as it always did.
+          const _spr = _farmAnimalSprite(a.type, a.variant || '', size, st.moving, t / 120, _farmVariantPal(a));
+          if (_spr) ctx.drawImage(_spr.cvs, -_spr.R, -_spr.R);
+          else drawFarmAnimal(ctx, a.type, size, t / 120, st.moving, _farmVariantPal(a));
           ctx.restore();
           // Mini happiness bar
           const h = Math.max(0, Math.min(100, a.happiness));
