@@ -1226,23 +1226,25 @@
     .achieve-box, .coinhist-box, .lb-box { max-height: 80dvh; }
 
     @media (pointer: coarse) {
-      /* The sticky button supplies the bottom gap itself. */
-      .ws-box, .rgb-box, .crop-picker { padding-bottom: 0; }
+      /* Nothing about the button's own look changes — same width, same margins,
+         same rounded corners, same border. It only stops scrolling away.
+
+         The one thing it does need is an OPAQUE fill: it was a .06 white film,
+         and a see-through button with the list sliding behind it is unreadable.
+         So the card colour goes underneath as background-color and the original
+         film sits on top as a background-image, which paints over it — the exact
+         same shade as before, just no longer transparent. */
       .ws-box > .cp-close, .ws-box > .farm-gift-cancel,
       .rgb-box > .cp-close, .crop-picker > .cp-close {
         position: sticky; bottom: 0; z-index: 1;
-        width: auto; margin-top: 8px; margin-bottom: 0;
-        background: var(--g-card);          /* opaque, so content scrolls UNDER it */
-        border-left: none; border-right: none; border-bottom: none;
       }
-      /* Bleed to the box edge, cancelling that box's own side padding. */
-      .ws-box > .cp-close, .ws-box > .farm-gift-cancel, .rgb-box > .cp-close {
-        margin-left: -18px; margin-right: -18px; padding: 14px 18px;
-        border-radius: 0 0 19px 19px;       /* meets the box's 20px corner */
+      .ws-box > .cp-close, .rgb-box > .cp-close, .crop-picker > .cp-close {
+        background-color: var(--g-card);
+        background-image: linear-gradient(rgba(255,255,255,.06), rgba(255,255,255,.06));
       }
-      .crop-picker > .cp-close {
-        margin-left: -12px; margin-right: -12px; padding: 14px 12px;
-        border-radius: 0 0 15px 15px;       /* the picker's corner is 16px */
+      .ws-box > .farm-gift-cancel {          /* .cp-crop's film is lighter — .04 */
+        background-color: var(--g-card);
+        background-image: linear-gradient(rgba(255,255,255,.04), rgba(255,255,255,.04));
       }
     }
 
