@@ -1200,6 +1200,52 @@
       #petStatusName { min-height: 44px; }
     }
 
+    /* ============================================================
+       Reaching a modal's Close on a phone.
+
+       The buttons were already big enough — .cp-close is 46px tall and the
+       block above lifts everything else to 44. What made Close hard to hit
+       was never its size; it was not being on screen.
+
+       1. `vh` on iOS Safari means the URL-bar-HIDDEN height. A box capped at
+          88vh can therefore hang past what is actually visible, and the last
+          row of these boxes is the Close button — so it sat behind the
+          browser's own bottom bar, untappable at any size. `dvh` measures
+          what is really on screen. Written as a separate later rule, so a
+          browser that does not know `dvh` drops it and keeps the vh above.
+
+       2. Close is the LAST child of a box that scrolls at max-height. On a
+          long modal it was simply below the fold: you had to know to scroll
+          INSIDE the modal before the button existed for you. Sticking it to
+          the bottom of the scrollport keeps it on screen the whole way down.
+
+       Desktop is untouched: dvh only differs where browser chrome overlaps,
+       and the sticky footer is scoped to pointer:coarse.
+       ============================================================ */
+    .ws-box, .rgb-box { max-height: 88dvh; }
+    .achieve-box, .coinhist-box, .lb-box { max-height: 80dvh; }
+
+    @media (pointer: coarse) {
+      /* The sticky button supplies the bottom gap itself. */
+      .ws-box, .rgb-box, .crop-picker { padding-bottom: 0; }
+      .ws-box > .cp-close, .ws-box > .farm-gift-cancel,
+      .rgb-box > .cp-close, .crop-picker > .cp-close {
+        position: sticky; bottom: 0; z-index: 1;
+        width: auto; margin-top: 8px; margin-bottom: 0;
+        background: var(--g-card);          /* opaque, so content scrolls UNDER it */
+        border-left: none; border-right: none; border-bottom: none;
+      }
+      /* Bleed to the box edge, cancelling that box's own side padding. */
+      .ws-box > .cp-close, .ws-box > .farm-gift-cancel, .rgb-box > .cp-close {
+        margin-left: -18px; margin-right: -18px; padding: 14px 18px;
+        border-radius: 0 0 19px 19px;       /* meets the box's 20px corner */
+      }
+      .crop-picker > .cp-close {
+        margin-left: -12px; margin-right: -12px; padding: 14px 12px;
+        border-radius: 0 0 15px 15px;       /* the picker's corner is 16px */
+      }
+    }
+
     /* ── Aquarium roster & completion bars ── */
     .aq-bar-row { display:flex; align-items:center; gap:8px; margin:4px 0; }
     .aq-bar-label { font-size:11px; font-weight:700; min-width:96px; }
