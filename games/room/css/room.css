@@ -1,6 +1,11 @@
 ﻿    * { margin: 0; padding: 0; box-sizing: border-box; }
+    /* The page is one vertical column: header, world button, then the stage
+       taking whatever is left. Nothing below is allowed to guess at the
+       header's height — see .main-wrap. Every overlay on this page is
+       position:fixed, so none of them become flex items here. */
     body {
       min-height: 100vh;
+      display: flex; flex-direction: column;
       background: var(--g-bg); background-attachment: fixed;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       color: var(--g-ink);
@@ -57,19 +62,47 @@
       font-size: 13px; color: var(--g-ink-soft); margin-top: 4px;
     }
 
+    /* Full-screen scenes (outside / farm) hand the stage the whole viewport.
+       Toggled by _syncRoomPanel() in room-layers.js. The fixed back button, coin
+       badge and settings button stay — they float over the canvas as they
+       already do, and the scene draws its own title and back control. */
+    body.stage-full .page-header { display: none; }
+    /* !important because #worldEntry carries an inline display:flex in room.html,
+       and inline beats any selector without it. Forcing `none` is safe in the one
+       direction it matters: feature-flags.js hides the same element inline when
+       the world flag is off, and this can only ever keep it hidden. */
+    body.stage-full #worldEntry { display: none !important; }
+
     /* ── Main layout ── */
+    /* Fill whatever the header leaves, rather than subtracting a guess at it.
+       This used to be `calc(100vh - 60px)`, but the real stack above the stage
+       is .page-header (80px) plus the #worldEntry world button (48px) — 128px
+       measured — so the stage always hung 68px below the fold. On the farm that
+       lands exactly on the bottom crop row: _farmCropBand() in room-farm-view.js
+       pins the beds to 0.95 of the stage, so the third row of beds was the one
+       thing cut off. min-height:0 lets the row shrink instead of being floored
+       by its content. */
     .main-wrap {
-      display: flex; flex-direction: row; min-height: calc(100vh - 60px);
+      display: flex; flex-direction: row;
+      flex: 1 1 auto; min-height: 0;
       position: relative;
     }
 
     /* ── Room canvas ── */
+    /* Height comes from stretching inside .main-wrap — never restate it here,
+       or the guess comes back. */
     .room-container {
       flex: 1; padding: 0; display: flex;
-      min-width: 0; height: calc(100vh - 60px);
+      min-width: 0;
     }
+    /* Stretches inside .room-container rather than using height:100%. A
+       percentage resolves against the PARENT'S COMPUTED height, and once the
+       stage stopped hard-coding one it is `auto` — the percentage then collapses
+       to 0 and the whole stage disappears. Stretching has no such dependency.
+       Every canvas in here is inset:0 absolute, so it follows this box. */
     .room {
-      position: relative; width: 100%; height: 100%;
+      position: relative;
+      flex: 1 1 auto; min-width: 0; align-self: stretch;
       overflow: hidden;
       border: none;
       box-shadow: none;
@@ -117,7 +150,9 @@
     .panel-wrap {
       position: relative;
       display: flex; flex-direction: column; min-width: 0;
-      width: 420px; max-height: calc(100vh - 60px);
+      /* Capped by the row it sits in, so tall panel content scrolls inside
+         .panel-inner instead of stretching the row past the viewport. */
+      width: 420px; max-height: 100%;
       border-left: 1px solid var(--g-border);
       transition: width 0.3s ease;
       flex-shrink: 0;
@@ -436,9 +471,11 @@
 
     /* ── Mobile responsive ── */
     @media (max-width: 768px) {
-      /* Stack layout vertically */
+      /* Stack layout vertically. `1 0 auto` so it still fills the screen when
+         the panel is short, but is never shrunk below its content — the phone
+         layout is meant to scroll, the desktop one is not. */
       .main-wrap {
-        flex-direction: column; min-height: auto;
+        flex-direction: column; min-height: auto; flex: 1 0 auto;
       }
       /* Room takes upper portion */
       .room-container {
@@ -461,8 +498,10 @@
       .panel-wrap.collapsed .panel-inner {
         display: none;
       }
-      /* Outside/farm: room fills the whole screen on mobile too */
-      .main-wrap.no-panel .room-container { height: calc(100vh - 60px); }
+      /* Outside/farm: room fills the whole screen on mobile too. Same fix as
+         desktop — fill the column instead of subtracting a guessed header,
+         which on a phone is taller still (151px) than the 60px assumed. */
+      .main-wrap.no-panel .room-container { height: auto; flex: 1 1 auto; }
       /* The farm's garden needs four rows of 44px beds, which don't fit in 55vh.
          Scoped to the farm so the room and aquarium keep their split. */
       .main-wrap.farm-stage .room-container { height: 66vh; }
@@ -763,6 +802,21 @@
       cursor:pointer;box-shadow:var(--g-shadow-sm);
     }
     .farm-produce-btn:hover{filter:brightness(1.05)}
+    /* Land-pan arrows — the one thing on screen that says the farm continues
+       past the edge. Shown by _syncFarmPanBtns() in room-farm-view.js, and only
+       on the side that still has land. `right:44px` clears the panel toggle,
+       which sits in the stage's last 28px at exactly this height. */
+    .farm-pan-btn{
+      position:absolute;top:50%;transform:translateY(-50%);z-index:6;
+      width:44px;height:64px;align-items:center;justify-content:center;
+      border:1px solid rgba(255,255,255,.25);border-radius:14px;
+      background:rgba(0,0,0,.38);backdrop-filter:blur(6px);
+      color:rgba(255,255,255,.92);font-size:26px;font-weight:700;line-height:1;
+      cursor:pointer;box-shadow:var(--g-shadow-sm);transition:background .2s;
+    }
+    .farm-pan-btn:hover{background:rgba(0,0,0,.6)}
+    .farm-pan-l{left:10px}
+    .farm-pan-r{right:44px}
     .outside-title{position:absolute;top:12px;left:50%;transform:translateX(-50%);font-size:13px;font-weight:700;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.7);pointer-events:none;white-space:nowrap;z-index:5}
     .outside-hint{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);font-size:10px;color:rgba(255,255,255,.45);pointer-events:none;z-index:5;white-space:nowrap}
     /* Farm view — stacked above the outside view */

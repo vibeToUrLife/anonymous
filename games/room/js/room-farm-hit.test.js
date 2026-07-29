@@ -268,3 +268,47 @@ test('open sky and open grass hit nothing', () => {
   assert.equal(sb._farmSkyTarget(0.02, 0.02, WIDE.W, WIDE.H), null, 'top-left corner');
   assert.equal(sb._farmSkyTarget(0.5, 0.95, WIDE.W, WIDE.H), null, 'down in the garden');
 });
+
+/* ── Panning the land ──
+   The mailbox and the plane belong to the farm at their own spot on it, the
+   same as the huts. They used to be pinned to the WINDOW, which meant panning
+   to a bought plot towed them along overhead — so their taps also answered at
+   the same screen position however far the land had scrolled. */
+
+test('the mailbox and the plane travel with the farm, not with the window', () => {
+  const sb = farmSandbox(ALL);
+  const { W, H } = WIDE;
+  const mail = sb._farmMailPos(W, H);
+  const cart = sb._farmCartPos(W, H);
+
+  // At rest on the farm both answer at their own place, as they always have.
+  assert.equal(sb._farmSkyTarget(mail.x, mail.y, W, H, 0), '#mail', 'mailbox at camera 0');
+  assert.equal(sb._farmSkyTarget(cart.x, cart.y, W, H, 0), '#cart', 'plane at camera 0');
+
+  // Pan half a window to the right: each has moved half a window LEFT on screen.
+  const cam = 0.5;
+  assert.equal(sb._farmSkyTarget(mail.x - cam, mail.y, W, H, cam), '#mail',
+    'the mailbox did not shift with the land');
+  assert.equal(sb._farmSkyTarget(cart.x - cam, cart.y, W, H, cam), '#cart',
+    'the plane did not shift with the land');
+
+  // …and the screen position they used to occupy answers for neither of them.
+  assert.notEqual(sb._farmSkyTarget(mail.x, mail.y, W, H, cam), '#mail',
+    'the mailbox still answers where the window used to hold it — it is still pinned');
+  assert.notEqual(sb._farmSkyTarget(cart.x, cart.y, W, H, cam), '#cart',
+    'the plane still answers where the window used to hold it — it is still pinned');
+});
+
+test('panning far enough scrolls both off the screen entirely', () => {
+  const sb = farmSandbox(ALL);
+  const { W, H } = WIDE;
+  const cam = 1.2;                       // the whole farm is off to the left
+  for (let x = 0; x <= 1; x += 0.05) {
+    for (const y of [0.1, 0.2, 0.3, 0.4]) {
+      const hit = sb._farmSkyTarget(x, y, W, H, cam);
+      assert.ok(hit !== '#mail' && hit !== '#cart',
+        'tap at (' + x.toFixed(2) + ',' + y + ') still found ' + hit +
+        ' after panning a whole window past the farm');
+    }
+  }
+});

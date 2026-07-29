@@ -156,21 +156,72 @@
        Drawing does this with one transform per layer rather than a coordinate
        change inside each of the 27 painters. Two layers only:
 
-         world  the ground and everything standing on it — it slides
-         fixed  sky, hills, clouds, weather, and the two things you must be
-                able to reach at any time: the mailbox and the merchant plane
+         world  the ground and everything standing on it — it slides. That is
+                EVERYTHING the farm owns, mailbox and merchant plane included:
+                they belong to the farm at their own spot on it, so panning to a
+                plot leaves them behind exactly as it leaves the pens behind.
+         fixed  sky, hills, clouds, weather — the view, not the ground
 
        The sky does NOT drift with the ground. Parallax would have to paint
        wider than the window to avoid a gap opening on the right, and the sky
        painter lays its sun out against the width it is handed — so a wider
        sky would move the sun. A still sky costs nothing and reads fine. */
-    const FARM_WORLD_STEP = 0.35;    // extra windows of land per expansion level
     const FARM_PAN_DEADZONE = 10;    // px of finger travel before a tap becomes a pan
     let _farmCamX = 0;               // left edge of the view, in window widths
 
-    function _farmWorldW() { return 1 + FARM_WORLD_STEP * (roomData.farmCapLevel || 0); }
-    function _farmCamMax() { return Math.max(0, _farmWorldW() - 1); }
-    function _farmClampCam() { _farmCamX = Math.max(0, Math.min(_farmCamMax(), _farmCamX)); }
+    /* The farm itself is ALWAYS 0..1, and stays there. Land bought either side is
+       added outside that: the world runs -landL .. 1+landR, so the origin never
+       moves and every pen, bed, hut, tree and the trough keeps the exact
+       normalised position it has always had. Camera 0 is the farm, which is where
+       it opens. (This used to be derived from farmCapLevel, so buying a bigger
+       pasture silently grew the ground to the right; the two are separate
+       purchases now — see FARM_LAND_COSTS.) */
+    function _farmLandL() { return roomData.farmLandL ? FARM_LAND_STEP : 0; }
+    function _farmLandR() { return roomData.farmLandR ? FARM_LAND_STEP : 0; }
+    function _farmWorldW() { return _farmLandL() + 1 + _farmLandR(); }   // total width, in windows
+    function _farmCamMin() { return -_farmLandL(); }
+    function _farmCamMax() { return _farmLandR(); }
+    function _farmClampCam() { _farmCamX = Math.max(_farmCamMin(), Math.min(_farmCamMax(), _farmCamX)); }
+    // Is there anywhere to pan to at all? Both plots unbought → no.
+    function _farmCanPan() { return _farmCamMax() > _farmCamMin(); }
+
+    /* Nothing on screen used to say the land continued past the right edge, so a
+       farm expanded four times looked exactly like one that never had been — the
+       only ways across were a drag or a trackpad swipe, and neither announces
+       itself. These two arrows are that affordance. They are DOM rather than
+       canvas for the same reason "🧺 Collect" is: a button over the canvas
+       swallows its own taps, so it can never fight the hit-test underneath. */
+    // One tap crosses exactly one plot, so the camera always comes to rest either
+    // on the farm or squarely on a plot — never straddling the two.
+    const FARM_PAN_STEP = FARM_LAND_STEP;
+    let _farmCamTo = null;       // glide target; null whenever the camera is at rest
+    let _farmPanBtns = '';       // arrows currently shown — so we touch the DOM only on change
+
+    function farmPan(dir) {
+      const from = _farmCamTo == null ? _farmCamX : _farmCamTo;   // tapping twice queues two steps
+      _farmCamTo = Math.max(_farmCamMin(), Math.min(_farmCamMax(), from + dir * FARM_PAN_STEP));
+    }
+
+    // Ease toward the glide target. A drag or a wheel clears _farmCamTo, so a
+    // finger on the land always wins over a button that is still gliding.
+    function _farmStepCam() {
+      if (_farmCamTo == null) return;
+      const d = _farmCamTo - _farmCamX;
+      if (Math.abs(d) < 0.004) { _farmCamX = _farmCamTo; _farmCamTo = null; }
+      else _farmCamX += d * 0.18;
+    }
+
+    // An arrow shows only where there is land left to reach on that side.
+    function _syncFarmPanBtns() {
+      const lo = _farmCamMin(), hi = _farmCamMax();
+      const key = hi <= lo ? ''
+        : (_farmCamX > lo + 0.01 ? 'L' : '') + (_farmCamX < hi - 0.01 ? 'R' : '');
+      if (key === _farmPanBtns) return;
+      _farmPanBtns = key;
+      const l = document.getElementById('farmPanL'), r = document.getElementById('farmPanR');
+      if (l) l.style.display = key.indexOf('L') >= 0 ? 'flex' : 'none';
+      if (r) r.style.display = key.indexOf('R') >= 0 ? 'flex' : 'none';
+    }
     // A hut is about 0.05 of the stage tall either side of its centre, so this
     // leaves ~0.04 of clear grass between the hut bases and the pen rails.
     const FARM_HUT_Y      = 0.29;   // workshop huts sit above the pen band
@@ -1054,7 +1105,7 @@
 
     function openFarm() {
       isFarmView = true;
-      _farmCamX = 0;   // always open on the near end of the land
+      _farmCamX = 0; _farmCamTo = null;   // always open on the near end of the land, at rest
       document.getElementById('farmView')?.classList.add('visible');
       _setFarmPanelMode(true);
       _syncRoomPanel();   // hide the side panel; widens the stage before we draw
@@ -1466,61 +1517,52 @@
       const expandCost = expLvl < FARM_EXPAND_COSTS.length ? FARM_EXPAND_COSTS[expLvl] : null;
       const trLvl = roomData.farmTroughLevel || 0;
       const trCost = trLvl < FARM_TROUGH_COSTS.length ? FARM_TROUGH_COSTS[trLvl] : null;
-      const upgradesHtml =
-        '<div class="farm-section-title">⚙️ ' + T('Upgrades') + '</div>' +
-        '<div class="farm-shop-row">' +
-          '<span class="farm-shop-animal">🏞️ ' + T('Bigger pasture') + ' <small>' +
-            T('Lv {n}/{max} · holds {cap} animals', { n: expLvl, max: FARM_EXPAND_COSTS.length, cap: farmAnimalCap() }) + '</small></span>' +
-          (expandCost == null
-            ? '<span class="farm-shop-drop">' + T('MAX') + '</span>'
-            : '<button class="farm-shop-buy" onclick="expandFarm()"' + (roomData.coins < expandCost ? ' disabled' : '') + '>+10 · ' + expandCost + '🪙</button>') +
-        '</div>' +
-        '<div class="farm-panel-empty" style="padding:2px 0 4px">' + T('Pushes the crop fence down — more grass for a bigger herd.') + '</div>' +
-        '<div class="farm-shop-row">' +
-          '<span class="farm-shop-animal">🪣 ' + T('Bigger trough') + ' <small>' +
-            T('Lv {n}/{max} · holds {cap} food', { n: trLvl, max: FARM_TROUGH_COSTS.length, cap: farmFoodMax() }) + '</small></span>' +
-          (trCost == null
-            ? '<span class="farm-shop-drop">' + T('MAX') + '</span>'
-            : '<button class="farm-shop-buy" onclick="buyFarmTrough()"' + (roomData.coins < trCost ? ' disabled' : '') + '>+' + FARM_TROUGH_STEP + ' · ' + trCost + '🪙</button>') +
-        '</div>' +
-        '<div class="farm-panel-empty" style="padding:2px 0 4px">' + T('A bigger trough holds more food, so it lasts longer between refills.') + '</div>' +
-        '<div class="farm-shop-row">' +
-          '<span class="farm-shop-animal">🤖 ' + T('Auto-Collector') + ' <small>' + T('produce → stock') + '</small></span>' +
-          (roomData.farmAutoCollect
-            ? '<span class="farm-shop-drop">✓ ' + T('ON') + '</span>'
-            : '<button class="farm-shop-buy" onclick="buyFarmAutoCollect()"' + (roomData.coins < FARM_AUTOCOLLECT_COST ? ' disabled' : '') + '>' + FARM_AUTOCOLLECT_COST + '🪙</button>') +
-        '</div>' +
-        // ── automation & storage ──
-        '<div class="farm-shop-row">' +
-          '<span class="farm-shop-animal">🤖 ' + T('Auto-Feeder') + ' <small>' +
-            (roomData.farmAutoFeed
-              ? T('Refills at {pct}% · {cost} per feed', { pct: Math.round(FARM_AUTOFEED_AT * 100), cost: FARM_FOOD_COST + '🪙' })
-              : T('Never top up the trough by hand again')) + '</small></span>' +
-          (roomData.farmAutoFeed
-            ? '<button class="farm-shop-buy" onclick="toggleFarmAutoFeed()">' + (roomData.farmAutoFeedOn ? '✓ ' + T('ON') : T('OFF')) + '</button>'
-            : '<button class="farm-shop-buy" onclick="buyFarmAutoFeed()"' + (roomData.coins < FARM_AUTOFEED_COST ? ' disabled' : '') + '>' + FARM_AUTOFEED_COST + '🪙</button>') +
-        '</div>' +
-        '<div class="farm-panel-empty" style="padding:2px 0 4px">' + T('Buys feed with your coins — it stops when they run out, and never overdraws.') + '</div>' +
-        (function () {
-          const lvl = roomData.farmColdLevel || 0;
-          const cost = lvl < FARM_COLD_COSTS.length ? FARM_COLD_COSTS[lvl] : null;
-          const locked = !roomData.farmAutoCollect;
-          return '<div class="farm-shop-row">' +
-            '<span class="farm-shop-animal">❄️ ' + T('Cold Store') + ' <small>' +
-              T('Lv {n}/{max} · banks {time} offline', { n: lvl, max: FARM_COLD_COSTS.length, time: _fmtFarmTime(farmOfflineCapMs()) }) + '</small></span>' +
-            (cost == null
-              ? '<span class="farm-shop-drop">' + T('MAX') + '</span>'
-              : locked
-              ? '<button class="farm-shop-buy" disabled>🔒 ' + T('Needs 🤖') + '</button>'
-              : '<button class="farm-shop-buy" onclick="buyFarmCold()"' + (roomData.coins < cost ? ' disabled' : '') + '>+' + _fmtFarmTime(FARM_COLD_STEP_MS) + ' · ' + cost + '🪙</button>') +
-          '</div>' +
-          '<div class="farm-panel-empty" style="padding:2px 0 4px">' +
-            T(locked
-              ? 'Install the 🤖 Auto-Collector above first — without it, the longer you bank, the bigger the pile you have to tap through on your way back in.'
-              : "How long your animals keep producing while you're away. Pair it with the 🤖 Auto-Feeder so they don't go hungry.") +
-          '</div>';
-        })() +
-        _farmSkinsHtml();
+      const coldLvl = roomData.farmColdLevel || 0;
+      const coldCost = coldLvl < FARM_COLD_COSTS.length ? FARM_COLD_COSTS[coldLvl] : null;
+      const coldLocked = !roomData.farmAutoCollect;
+
+      /* Two groups instead of one flat list of seven: what the farm HAS (pasture,
+         land, trough) and what it does BY ITSELF (collector, feeder, cold store).
+         They used to be interleaved — the auto-collector sat between the trough
+         and the auto-feeder — so working out what to save up for meant reading
+         the whole tab. Each group is its own card, the way the Animals and Garden
+         tabs are already built. */
+      const scaleHtml =
+        '<div class="farm-section-title">🏞️ ' + T('Room to grow') + '</div>' +
+        _upRow('🏞️', T('Bigger pasture'),
+          T('Lv {n}/{max} · holds {cap} animals', { n: expLvl, max: FARM_EXPAND_COSTS.length, cap: farmAnimalCap() }),
+          expandCost == null ? _upTag(T('MAX'))
+            : _upBuy('expandFarm()', '+10 · ' + expandCost + '🪙', roomData.coins >= expandCost),
+          expandCost == null ? '' : T('Pushes the crop fence down — more grass for a bigger herd.')) +
+        _farmLandHtml(expandCost == null) +
+        _upRow('🪣', T('Bigger trough'),
+          T('Lv {n}/{max} · holds {cap} food', { n: trLvl, max: FARM_TROUGH_COSTS.length, cap: farmFoodMax() }),
+          trCost == null ? _upTag(T('MAX'))
+            : _upBuy('buyFarmTrough()', '+' + FARM_TROUGH_STEP + ' · ' + trCost + '🪙', roomData.coins >= trCost),
+          trCost == null ? '' : T('A bigger trough holds more food, so it lasts longer between refills.'));
+
+      const autoHtml =
+        '<div class="farm-section-title">🤖 ' + T('Automation') + '</div>' +
+        _upRow('🤖', T('Auto-Collector'), T('produce → stock'),
+          roomData.farmAutoCollect ? _upTag('✓ ' + T('ON'))
+            : _upBuy('buyFarmAutoCollect()', FARM_AUTOCOLLECT_COST + '🪙', roomData.coins >= FARM_AUTOCOLLECT_COST),
+          roomData.farmAutoCollect ? '' : T('Produce goes straight to your stock — no tapping it up off the grass.')) +
+        _upRow('🤖', T('Auto-Feeder'),
+          roomData.farmAutoFeed
+            ? T('Refills at {pct}% · {cost} per feed', { pct: Math.round(FARM_AUTOFEED_AT * 100), cost: FARM_FOOD_COST + '🪙' })
+            : T('Never top up the trough by hand again'),
+          roomData.farmAutoFeed
+            ? _upBuy('toggleFarmAutoFeed()', roomData.farmAutoFeedOn ? '✓ ' + T('ON') : T('OFF'), true)
+            : _upBuy('buyFarmAutoFeed()', FARM_AUTOFEED_COST + '🪙', roomData.coins >= FARM_AUTOFEED_COST),
+          roomData.farmAutoFeed ? '' : T('Buys feed with your coins — it stops when they run out, and never overdraws.')) +
+        _upRow('❄️', T('Cold Store'),
+          T('Lv {n}/{max} · banks {time} offline', { n: coldLvl, max: FARM_COLD_COSTS.length, time: _fmtFarmTime(farmOfflineCapMs()) }),
+          coldCost == null ? _upTag(T('MAX'))
+            : coldLocked ? '<button class="farm-shop-buy" disabled>🔒 ' + T('Needs 🤖') + '</button>'
+            : _upBuy('buyFarmCold()', '+' + _fmtFarmTime(FARM_COLD_STEP_MS) + ' · ' + coldCost + '🪙', roomData.coins >= coldCost),
+          coldCost == null ? ''
+            : coldLocked ? T('Install the 🤖 Auto-Collector first — otherwise banking longer just means more to clear by hand.')
+            : T("How long your animals keep producing while you're away. Pair it with the 🤖 Auto-Feeder so they don't go hungry."));
 
       // Built (and subscribed) only when the Visit tab is active, so opening the
       // farm for normal play never spins up the rooms-list listener.
@@ -1543,7 +1585,7 @@
         animals:  card(foodHtml) + card(herdHtml) + card(shopHtml),
         garden:   card(gardenHtml) + card(buildHtml),
         market:   card(stockHtml) + card(ordersHtml),
-        upgrades: card(upgradesHtml),
+        upgrades: card(scaleHtml) + card(autoHtml) + card(_farmSkinsHtml()),
         visit:    card(visitHtml) + card(_farmBoardHtml()),
       };
       const hints = {
@@ -1667,6 +1709,66 @@
       renderAll();
     }
 
+    /* One shape for every upgrade row, so the tab reads as a list instead of six
+       hand-rolled variants. `note` is rendered ONLY while it still tells the
+       player something: a maxed or already-running upgrade drops its line. That
+       is most of what made this tab a wall — seven permanent paragraphs, and on a
+       developed farm four of them described things already finished. */
+    function _upRow(icon, name, sub, action, note) {
+      return '<div class="farm-shop-row">' +
+          '<span class="farm-shop-animal">' + icon + ' ' + name +
+            (sub ? ' <small>' + sub + '</small>' : '') + '</span>' + action +
+        '</div>' +
+        (note ? '<div class="farm-panel-empty" style="padding:2px 0 4px">' + note + '</div>' : '');
+    }
+    const _upTag = (s) => '<span class="farm-shop-drop">' + s + '</span>';
+    const _upBuy = (call, label, afford) =>
+      '<button class="farm-shop-buy" onclick="' + call + '"' + (afford ? '' : ' disabled') + '>' + label + '</button>';
+
+    /* ONE row, shaped like every other upgrade: icon, name, "n/max · what it
+       costs next", action. It was two rows sharing one description — the only
+       entry built that way — and with both sides showing 50000 it read as
+       "100000 for the pair" when the second plot is 120000. The price belongs to
+       the NEXT plot whichever side it is, so it is stated once, where the other
+       rows put their level. Both sides keep their slot whether owned or not, so
+       the row never reshuffles and a lone ✓ can't be read as the wrong side. */
+    function _farmLandHtml(pastureMaxed) {
+      const max = FARM_LAND_COSTS.length;
+      const owned = (roomData.farmLandL ? 1 : 0) + (roomData.farmLandR ? 1 : 0);
+      const cost = owned < max ? FARM_LAND_COSTS[owned] : null;
+      const note = !pastureMaxed ? T('needs a full pasture')
+                 : cost == null ? ''
+                 : T('next {cost}', { cost: cost + '🪙' });
+      const side = (key, dir, label) =>
+        roomData[key] ? _upTag(T(label) + ' ✓')
+        : _upBuy("buyFarmLand('" + dir + "')", T(label), pastureMaxed && roomData.coins >= cost);
+      return _upRow('🗺️', T('Land beside the farm'),
+        owned + '/' + max + (note ? ' · ' + note : ''),
+        cost == null ? _upTag(T('MAX'))
+          : side('farmLandL', 'L', '← left') + side('farmLandR', 'R', 'right →'),
+        cost == null ? '' : T('New ground either side. Nothing already on the farm moves.'));
+    }
+
+    async function buyFarmLand(side) {
+      if (viewingUid !== currentUid) return;
+      if ((roomData.farmCapLevel || 0) < FARM_EXPAND_COSTS.length) {
+        return showToast(T('Fully expand the pasture first!'), 'error');
+      }
+      const key = side === 'L' ? 'farmLandL' : 'farmLandR';
+      if (roomData[key]) return;
+      const cost = FARM_LAND_COSTS[(roomData.farmLandL ? 1 : 0) + (roomData.farmLandR ? 1 : 0)];
+      if (cost == null) return;
+      if (roomData.coins < cost) return showToast(T('Not enough coins!'), 'error');
+      roomData.coins -= cost;
+      logCoin(-cost, T('Farm land'));
+      roomData[key] = true;
+      await saveRoom();
+      showToast('🏞️ ' + (side === 'L' ? T('Opened up the land on the left!') : T('Opened up the land on the right!')), 'success');
+      renderFarmPanel();
+      renderAll();
+      farmPan(side === 'L' ? -1 : 1);   // glide over so the new ground is what you see
+    }
+
     async function expandFarm() {
       if (viewingUid !== currentUid) return;
       const lvl = roomData.farmCapLevel || 0;
@@ -1782,7 +1884,9 @@
           action +
         '</div>';
       }).join('');
-      return '<div class="farm-section-title" style="margin-top:12px">🎨 ' + T('Farm look') + '</div>' +
+      // No margin-top any more: this used to be tacked onto the end of the one
+      // upgrades card and needed to fake a gap. It is its own card now.
+      return '<div class="farm-section-title">🎨 ' + T('Farm look') + '</div>' +
         rows +
         '<div class="farm-panel-empty" style="padding:2px 0 4px">' +
           T('Buy a look once, then switch whenever you like. Visitors see your farm in it too.') +
@@ -2456,22 +2560,25 @@
     // circles. The chain used to check huts first with a 0.13 "radius" which on
     // a phone is a 47×68px ellipse — tall enough to reach up into the sky and
     // swallow every tap meant for the plane, banner included.
-    /* `camX` is where the land has been scrolled to, in window widths. The
-       mailbox and the plane are pinned to the window, so they are already in
-       the tap's own space; the huts stand on the land, so they are shifted by
-       the camera to meet it. Defaults to 0 — which is exactly the farm before
-       any of this existed, and is what room-farm-hit.test.js measures. */
+    /* `camX` is where the land has been scrolled to, in window widths. A tap
+       arrives in WINDOW coordinates; the huts, the mailbox and the plane all
+       stand on the LAND, so every target here is shifted by the camera to meet
+       it. Defaults to 0 — which is exactly the farm before any of this existed,
+       and is what room-farm-hit.test.js measures. */
     function _farmSkyTarget(cx, cy, W, H, camX) {
       camX = camX || 0;
       const targets = [];
+      // Every target here stands on the LAND, so each shifts by the camera to
+      // meet a tap that arrives in window coordinates.
+      const shift = (r) => ({ x0: r.x0 - camX, x1: r.x1 - camX, y0: r.y0, y1: r.y1 });
       if (viewingUid === currentUid) {
         // Mail first: on a wide stage the plane's rect clips the mailbox's badge
         // corner, and an exact tie goes to whoever is listed first. The mailbox
         // is drawn on top there, so it should win there too.
         targets.push(Object.assign({ id: '#mail' },
-          farmMailTapRect(_farmMailPos(W, H), _farmMailSize(W, H), W, H)));
+          shift(farmMailTapRect(_farmMailPos(W, H), _farmMailSize(W, H), W, H))));
         targets.push(Object.assign({ id: '#cart' },
-          farmCartTapRect(_farmCartPos(W, H), _farmCartSize(W, H), W, H, _farmCart().present)));
+          shift(farmCartTapRect(_farmCartPos(W, H), _farmCartSize(W, H), W, H, _farmCart().present))));
       }
       const owned = roomData.farmMachines || {};
       FARM_MACHINES.forEach(function (m, slot) {
@@ -3037,6 +3144,9 @@
       const byType = {}, list = [];
       const padX = 0.012, padTop = 0.036, padBot = 0.012;
       if (!types.length) return { list, byType, cell: 0 };
+      /* Pinned to the WINDOW, never to the land. Expanding the farm widens the
+         ground, and nothing that was already standing on it may move — see the
+         camera notes above. The pens keep the exact span they have always had. */
       const PX0 = 0.05, PX1 = 0.95, GAP = 0.012;
       const span = (PX1 - PX0) - GAP * (types.length - 1);  // widest the pens may total
       // Cell side: as large as the band allows, shrinking only once the whole
@@ -3637,7 +3747,12 @@
       const sky = _farmSkyTarget(cx, cy, W, H, _farmCamX);
       if (sky) return { kind: 'sky', id: sky };
       const wx = cx + _farmCamX;
-      const plots = roomData.farmPlots || [];
+      /* The bed strip is a nearest-wins partition with no distance limit, which
+         is right ON the farm — a tap below the fence always means SOME bed. Off
+         the farm it is not: every bed lives in 0..1, so without this bound a tap
+         on the empty deck of a bought plot would plant in whichever bed happened
+         to be closest, one screen away and out of sight. */
+      const plots = (wx >= 0 && wx <= 1) ? (roomData.farmPlots || []) : [];
       if (plots.length && cy > _farmDivY()) {
         let row = 0, idx = null, best = Infinity;
         for (let i = 0; i < plots.length; i++) {
@@ -3766,9 +3881,12 @@
            sky, the weather, and the two targets that must never scroll out of
            reach. setTransform rather than save/restore, because painters do
            their own save/restore inside and would otherwise unwind ours. */
+        _farmStepCam();
         _farmClampCam();
+        _syncFarmPanBtns();
         const _camPx = _farmCamX * W;
         const LAND = _farmWorldW() * W;              // the ground's full width in px
+        const LEFT = -_farmLandL() * W;              // …and where its left edge is, in world px
         const world = function () { ctx.setTransform(1, 0, 0, 1, -_camPx, 0); };
         const fixed = function () { ctx.setTransform(1, 0, 0, 1, 0, 0); };
 
@@ -3807,7 +3925,7 @@
         grass.addColorStop(0.5, pal.grass[1]);
         grass.addColorStop(1, pal.grass[2]);                      // richer deep bottom
         ctx.fillStyle = grass;
-        ctx.fillRect(0, skyY, LAND, gy - skyY);
+        ctx.fillRect(LEFT, skyY, LAND, gy - skyY);
 
 
         /* Both bands get their grain from one baked texture, blitted after the
@@ -3821,8 +3939,15 @@
         // buying an expansion rebuilds it once and never again.
         const _tex = _farmGroundTexture(LAND, H, skyY, gy, pal,
           Math.round(LAND) + 'x' + H + '|' + (_theme ? _theme.id : '?') + '|' + (night ? 'n' : 'd') + '|' + Math.round(gy));
-        if (_tex) ctx.drawImage(_tex, 0, 0);
-        else { _drawFarmScatter(ctx, LAND, H, skyY, gy, pal.groundFx); _drawFarmDeck(ctx, LAND, H, gy, H, pal); }
+        if (_tex) ctx.drawImage(_tex, LEFT, 0);
+        else {
+          // Same origin shift for the un-baked path, or the fallback scatter would
+          // start at the farm's left edge and leave the left plot bare.
+          ctx.save(); ctx.translate(LEFT, 0);
+          _drawFarmScatter(ctx, LAND, H, skyY, gy, pal.groundFx);
+          _drawFarmDeck(ctx, LAND, H, gy, H, pal);
+          ctx.restore();
+        }
 
         // Fences: top of the pasture and the divider (farm | crops). No bottom
         // fence — its posts are a fixed 22px tall, so on a short stage they cut
@@ -3831,8 +3956,8 @@
         // Both fences run the length of the land. _drawFence spaces its posts a
         // fixed 18px apart and derives the count from the length, so a longer
         // run simply gets more posts — nothing stretches.
-        _drawFence(ctx, LAND * 0.02, topFenceY, LAND * 0.96, night);
-        _drawFence(ctx, LAND * 0.02, gy, LAND * 0.96, night);
+        _drawFence(ctx, LEFT + LAND * 0.02, topFenceY, LAND * 0.96, night);
+        _drawFence(ctx, LEFT + LAND * 0.02, gy, LAND * 0.96, night);
         // A skin can swap the SHAPE of the trees, not just their colour.
         if (pal.treeShape === 'conifer') {
           _drawFarmConifer(ctx, W * 0.06, topFenceY, H * 0.18, windSway, pal, t);
@@ -3845,12 +3970,11 @@
         _drawFarmSnowman(ctx, W, H, pal);   // before the trough and the herd, so both pass in front
         _drawFarmTrough(ctx, W, H, night);
         if (viewingUid === currentUid) {                                            // your mail only
-          // Pinned: post can arrive while you are looking at the far end of the
-          // farm, and having to scroll back to claim it would be a nuisance.
-          fixed();
+          // On the land, like everything else the farm owns: the post stands at
+          // its own spot on the farm and stays there, so panning to a plot
+          // leaves it behind rather than dragging it along overhead.
           const _mp = _farmMailPos(W, H);
           _hoverScaled(ctx, _farmHoverK('sky', '#mail'), _mp.x * W, _mp.y * H, () => _drawFarmMailbox(ctx, W, H, t, night, pal));
-          world();
         }
         _drawFarmPlots(ctx, W, H, t);
 
@@ -3997,9 +4121,13 @@
         // than them, before the plane so it can never sit on top of a tap target.
         _drawFarmSkyFx(ctx, W, H, t, pal, windSway);
 
-        // Sky merchant plane — drawn LAST so drifting clouds never hide the
-        // tappable prompt: fly-off animation → hovering plane → away cloud.
+        /* Sky merchant plane. Still drawn LAST so drifting clouds never hide the
+           tappable prompt — but back on the LAND while it draws: it parks over
+           the farm at FARM_CART_X and stays over the farm, so panning to a plot
+           leaves it behind instead of towing it across the new ground. Order and
+           layer are separate concerns; only the transform changes here. */
         if (viewingUid === currentUid) {
+          world();
           const _cartS = _farmCart();
           if (_cartLeaveStart && Date.now() - _cartLeaveStart < CART_LEAVE_MS) {
             const lp = (Date.now() - _cartLeaveStart) / CART_LEAVE_MS;
@@ -4010,6 +4138,7 @@
             if (_cartS.present) _hoverScaled(ctx, _hkC, _cp.x * W, _cp.y * H, () => _drawMerchantCart(ctx, W, H, t));
             else _hoverScaled(ctx, _hkC, _cp.x * W, _cp.y * H, () => _drawCartAway(ctx, W, H, t, _cartS));
           }
+          fixed();   // weather below belongs to the view again
         }
         // Weather LAST, so snow and petals fall in front of the animals rather
         // than behind them — that one ordering is most of why it reads as
@@ -4518,7 +4647,7 @@
       let _panLive = false, _panMoved = false, _panFrom = 0, _panCam0 = 0;
 
       function onDown(e) {
-        if (_farmCamMax() > 0) {
+        if (_farmCanPan()) {
           const src = (e.touches && e.touches[0]) || e;
           _panLive = true; _panMoved = false;
           _panFrom = src.clientX; _panCam0 = _farmCamX;
@@ -4546,6 +4675,7 @@
           const dx = src.clientX - _panFrom;
           if (!_panMoved && Math.abs(dx) < FARM_PAN_DEADZONE) return;   // still a tap
           _panMoved = true;
+          _farmCamTo = null;                 // a finger on the land beats a gliding arrow
           _farmCamX = _panCam0 - dx / Math.max(1, cvs.getBoundingClientRect().width);
           _farmClampCam();
           _hideFarmTip();
@@ -4632,9 +4762,10 @@
 
       // Desktop: a trackpad swipe or a shift-wheel slides the land too.
       cvs.onwheel = (e) => {
-        if (_farmCamMax() <= 0) return;
+        if (!_farmCanPan()) return;
         const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
         if (!d) return;
+        _farmCamTo = null;                   // same: a real swipe cancels the glide
         _farmCamX += d / Math.max(1, cvs.getBoundingClientRect().width);
         _farmClampCam();
         if (e.cancelable) e.preventDefault();

@@ -6,7 +6,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>My Room — Virtual Pet & Garden</title>
-  <link rel="stylesheet" href="room/css/room.css?v=cb110">
+  <link rel="stylesheet" href="room/css/room.css?v=cb111">
   <link rel="stylesheet" href="theme.css">
 </head>
 <body>
@@ -116,6 +116,10 @@
           <div class="outside-title" data-i18n>🚜 My Farm</div>
           <button class="outside-back-btn" onclick="farmBack()" data-i18n>← Back</button>
           <button class="farm-produce-btn" id="farmProduceBtn" onclick="openProduceModal()" style="display:none"><span data-i18n>🧺 Collect</span> <span id="farmProduceN">0</span></button>
+          <!-- Land-pan arrows. Shown by _syncFarmPanBtns() only once an expansion
+               has made the land wider than the window. -->
+          <button class="farm-pan-btn farm-pan-l" id="farmPanL" onclick="farmPan(-1)" data-i18n-title title="Back along the land" style="display:none">‹</button>
+          <button class="farm-pan-btn farm-pan-r" id="farmPanR" onclick="farmPan(1)" data-i18n-title title="Further along the land" style="display:none">›</button>
           <div class="outside-hint" data-i18n>Tap an empty bed to plant · tap ripe crops to harvest · tap an animal for status</div>
           <div class="farm-tip" id="farmTip" style="display:none"></div>
           <div class="crop-picker" id="cropPicker" style="display:none"></div>
@@ -391,17 +395,17 @@
   <script defer src="../src/js/stay-time.js"></script>
 
   <!-- Pet drawing modules -->
-  <script defer src="pets/shared.js?v=cb110"></script>
-  <script defer src="pets/cat.js?v=cb110"></script>
-  <script defer src="pets/dog.js?v=cb110"></script>
-  <script defer src="pets/bunny.js?v=cb110"></script>
-  <script defer src="pets/hamster.js?v=cb110"></script>
-  <script defer src="pets/fox.js?v=cb110"></script>
-  <script defer src="pets/panda.js?v=cb110"></script>
-  <script defer src="pets/goose.js?v=cb110"></script>
-  <script defer src="pets/tom.js?v=cb110"></script>
-  <script defer src="pets/jerry.js?v=cb110"></script>
-  <script defer src="pets/farm-animals.js?v=cb110"></script>
+  <script defer src="pets/shared.js?v=cb111"></script>
+  <script defer src="pets/cat.js?v=cb111"></script>
+  <script defer src="pets/dog.js?v=cb111"></script>
+  <script defer src="pets/bunny.js?v=cb111"></script>
+  <script defer src="pets/hamster.js?v=cb111"></script>
+  <script defer src="pets/fox.js?v=cb111"></script>
+  <script defer src="pets/panda.js?v=cb111"></script>
+  <script defer src="pets/goose.js?v=cb111"></script>
+  <script defer src="pets/tom.js?v=cb111"></script>
+  <script defer src="pets/jerry.js?v=cb111"></script>
+  <script defer src="pets/farm-animals.js?v=cb111"></script>
 
   <!-- i18n first: every module below renders text through T(). The room's
        dictionary has to register BEFORE i18n-ui.js, which sweeps the static
@@ -411,34 +415,34 @@
        toggled — which is how index.html orders its dictionaries too. -->
   <script src="../src/js/i18n.js?v=3"></script>
   <script src="../src/js/i18n-zh-app.js?v=5"></script>
-  <script defer src="room/js/room-i18n-zh.js?v=cb110"></script>
+  <script defer src="room/js/room-i18n-zh.js?v=cb111"></script>
   <script defer src="../src/js/i18n-ui.js?v=3"></script>
 
   <!-- Room JS modules -->
-  <script defer src="room/js/room-base.js?v=cb110"></script>
-  <script defer src="room/js/room-drops.js?v=cb110"></script>
-  <script defer src="room/js/room-autofeed.js?v=cb110"></script>
-  <script defer src="room/js/room-farm.js?v=cb110"></script>
-  <script defer src="room/js/room-state.js?v=cb110"></script>
-  <script defer src="room/js/room-layers.js?v=cb110"></script>
-  <script defer src="room/js/room-farm-view.js?v=cb110"></script>
-  <script defer src="fish-render.js?v=cb110"></script>
-  <script defer src="room/js/room-aquarium.js?v=cb110"></script>
-  <script defer src="room/js/room-aquarium-view.js?v=cb110"></script>
-  <script defer src="room/js/room-aquarium-games.js?v=cb110"></script>
-  <script defer src="room/js/room-firebase.js?v=cb110"></script>
-  <script defer src="room/js/room-render.js?v=cb110"></script>
-  <script defer src="room/js/room-actions.js?v=cb110"></script>
-  <script defer src="room/js/room-plants.js?v=cb110"></script>
-  <script defer src="room/js/room-decorations.js?v=cb110"></script>
-  <script defer src="room/js/room-bg.js?v=cb110"></script>
-  <script defer src="room/js/room-pets.js?v=cb110"></script>
-  <script defer src="room/js/room-ui.js?v=cb110"></script>
-  <script defer src="room/js/room-accessories.js?v=cb110"></script>
-  <script defer src="room/js/room-jukebox.js?v=cb110"></script>
-  <script defer src="room/js/room-weather.js?v=cb110"></script>
-  <script defer src="room/js/room-gacha.js?v=cb110"></script>
-  <script defer src="room/js/room-leaderboard.js?v=cb110"></script>
+  <script defer src="room/js/room-base.js?v=cb111"></script>
+  <script defer src="room/js/room-drops.js?v=cb111"></script>
+  <script defer src="room/js/room-autofeed.js?v=cb111"></script>
+  <script defer src="room/js/room-farm.js?v=cb111"></script>
+  <script defer src="room/js/room-state.js?v=cb111"></script>
+  <script defer src="room/js/room-layers.js?v=cb111"></script>
+  <script defer src="room/js/room-farm-view.js?v=cb111"></script>
+  <script defer src="fish-render.js?v=cb111"></script>
+  <script defer src="room/js/room-aquarium.js?v=cb111"></script>
+  <script defer src="room/js/room-aquarium-view.js?v=cb111"></script>
+  <script defer src="room/js/room-aquarium-games.js?v=cb111"></script>
+  <script defer src="room/js/room-firebase.js?v=cb111"></script>
+  <script defer src="room/js/room-render.js?v=cb111"></script>
+  <script defer src="room/js/room-actions.js?v=cb111"></script>
+  <script defer src="room/js/room-plants.js?v=cb111"></script>
+  <script defer src="room/js/room-decorations.js?v=cb111"></script>
+  <script defer src="room/js/room-bg.js?v=cb111"></script>
+  <script defer src="room/js/room-pets.js?v=cb111"></script>
+  <script defer src="room/js/room-ui.js?v=cb111"></script>
+  <script defer src="room/js/room-accessories.js?v=cb111"></script>
+  <script defer src="room/js/room-jukebox.js?v=cb111"></script>
+  <script defer src="room/js/room-weather.js?v=cb111"></script>
+  <script defer src="room/js/room-gacha.js?v=cb111"></script>
+  <script defer src="room/js/room-leaderboard.js?v=cb111"></script>
   <!-- Share-to-board helper + wiring for the 📢 button. -->
   <script defer src="../src/js/share-to-board.js?v=1"></script>
   <script>

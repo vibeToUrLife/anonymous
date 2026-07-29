@@ -266,6 +266,13 @@
     const FARM_LEVELS = [0, 10, 30, 70, 150];   // collected thresholds → Lv1..Lv5
     const FARM_LEVEL_SPEEDUP = 0.10;            // +10% production speed per level above 1
     const FARM_EXPAND_COSTS = [5000, 15000, 40000, 90000];  // +10 animal cap & a bigger pasture per expansion
+    /* Land opened up either side of the farm, once that pasture line is finished.
+       One plot per side, bought separately, and the farm itself never moves — the
+       new ground is added OUTSIDE it. The cost is for the next plot whichever side
+       it is, and is deliberately steeper than any rung of the pasture above: this
+       is what there is left to spend coins on once the pasture is maxed. */
+    const FARM_LAND_COSTS = [50000, 120000];    // 1st plot, then the 2nd — either side
+    const FARM_LAND_STEP = 0.5;                 // how wide one plot is, in window widths
     const FARM_AUTOCOLLECT_COST = 4000;         // one-time: auto-collects produce into stock
 
     // Coat variants: each new animal is the common variant unless it rolls the

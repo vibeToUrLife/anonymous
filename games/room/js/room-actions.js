@@ -953,6 +953,8 @@
       roomData.farmStock = d.farmStock || {};
       roomData.farmTotalCollected = d.farmTotalCollected || 0;
       roomData.farmCapLevel = d.farmCapLevel || 0;
+      roomData.farmLandL = d.farmLandL || false;
+      roomData.farmLandR = d.farmLandR || false;
       roomData.farmAutoCollect = d.farmAutoCollect || false;
       roomData.farmVariants = d.farmVariants || {};
       roomData.farmPlots = Array.isArray(d.farmPlots) ? d.farmPlots : [];
