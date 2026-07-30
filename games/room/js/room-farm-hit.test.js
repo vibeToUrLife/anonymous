@@ -168,10 +168,24 @@ test('every owned hut still answers a tap on itself', () => {
   }
 });
 
-test('an unowned hut is not a target — its tap falls through', () => {
+// Locked huts are targets too: every machine stands on the pasture from the
+// start, faded with a padlock, and TAPPING ONE IS HOW IT IS BOUGHT. Skipping
+// unowned huts here would make the lock impossible to open.
+test('an unowned hut is still a target — that tap is how you unlock it', () => {
   const sb = farmSandbox(['dairy']);          // butcher not built
   const p = sb._workshopPos(3);
-  assert.notEqual(sb._farmSkyTarget(p.x, p.y, WIDE.W, WIDE.H), 'butcher');
+  assert.equal(sb._farmSkyTarget(p.x, p.y, WIDE.W, WIDE.H), 'butcher');
+});
+
+test('every hut answers its own tap whether it is built or not', () => {
+  for (const st of [PHONE, NARROW, WIDE]) {
+    const sb = farmSandbox([]);               // nothing built at all
+    ALL.forEach(function (id, slot) {
+      const p = sb._workshopPos(slot);
+      assert.equal(sb._farmSkyTarget(p.x, p.y, st.W, st.H), id,
+        'locked ' + id + ' at ' + st.W + 'x' + st.H);
+    });
+  }
 });
 
 test('a tap between two huts picks the nearer one', () => {

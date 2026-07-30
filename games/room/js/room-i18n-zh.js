@@ -112,13 +112,9 @@
     'Deliver': '交货',
     'Done': '已完成',
 
-    /* ── Farm: workshop ── */
-    'Build Machines': '建造机器',
-    'Built machines appear on your farm — tap one there to make goods.': '造好的机器会出现在农场上 — 点它就能加工。',
-    'makes {list}': '产出 {list}',
-    'needs meat': '需要肉',
-    'on farm': '已建成',
-    'Build · {cost}': '建造 · {cost}',
+    /* ── Farm: workshop ──
+       The "Build Machines" panel card is gone: machines are bought by tapping
+       them on the farm, so its strings went with it. */
     'Make': '加工',
     'Collect': '收取',
     'Still processing…': '还在加工中…',
@@ -254,7 +250,7 @@
     'RGB {name} — jackpot!': 'RGB {name} — 中大奖了！',
     'Rare {variant} {name} joined your farm!': '稀有的{variant}{name}加入了你的农场！',
     '{name} joined your farm!': '{name}加入了你的农场！',
-    'Build the Butcher first — Garden tab → Build Machines.': '先造肉铺 — 菜园页 → 建造机器。',
+    'Unlock the Butcher first — tap its hut on the farm.': '先解锁肉铺 — 点农场上那间小屋。',
     'Butchered {name} → 🥩 ×{n} meat': '宰了{name} → 🥩 ×{n} 生肉',
     'animal': '动物',
     'Farm is fully expanded!': '牧场已经扩到最大了！',
@@ -356,26 +352,65 @@
     'tap a square to sell it; tap a “make” square to go to the workshop that makes it.': '点方块卖出；点「加工」方块会跳到能做它的工坊。',
     'Sell all it wants': '把他要的全卖了',
     'Send it off (new cart in {time})': '送他走（{time} 后来新的）',
-    'Build a workshop first — then the cart buys what it makes.': '先造个工坊 — 商人才会收它做出来的东西。',
+    'Unlock a machine first — tap one on your farm. Then the plane buys what it makes.': '先解锁一台机器 — 点农场上的小屋。之后飞机就会收它做出来的东西。',
 
     /* ── Farm: RGB preview & the animal card ── */
     'Rainbow (RGB) coats': '彩虹（RGB）皮毛',
     '~{pct}% chance on any animal you buy. Cosmetic only — same value as a normal one.': '买任何动物都有约 {pct}% 的概率。纯外观 — 价值和普通的完全一样。',
     'Keep it': '留着',
     'Butcher for meat (🥩×{n})': '宰掉取肉（🥩×{n}）',
-    'Build the Butcher (Garden tab) to butcher animals.': '先在菜园页造肉铺，才能宰动物。',
+    'Unlock the Butcher (tap its hut on the farm) to butcher animals.': '先解锁肉铺（点农场上那间小屋），才能宰动物。',
 
     /* ── Farm: produce & workshop modals ── */
     'No animals yet — buy one in the Animals tab.': '还没有动物 — 去动物页买一只吧。',
     'Collect all ({n})': '全部收取（{n}）',
     'In stock: {list}': '库存：{list}',
-    'Not built yet — build it in the 🌱 Garden tab.': '还没造 — 去 🌱 菜园页建造。',
     'Open · {cost}': '开启 · {cost}',
     'Slot {n} — pick a product': '第 {n} 个槽位 — 选一样产品',
     'Open a new slot for {cost}?': '花 {cost} 开一个新槽位？',
     'Open slot · {cost}': '开启槽位 · {cost}',
     'Get meat by butchering an animal: 🐮 Animals tab → tap 🔪 on it.': '肉来自宰动物：🐮 动物页 → 点它的 🔪。',
     'Makes: {list} · each slot makes one': '产出：{list} · 每个槽位做一样',
+    '{n}h': '{n} 小时',
+
+    /* ── Farm: locked buildings (tap one on the land to unlock it) ── */
+    'Locked — unlock it to start using it.': '未解锁 — 解锁后才能用。',
+    'Unlock · {cost}': '解锁 · {cost}',
+    'Need {n} more': '还差 {n}',
+
+    /* ── Farm: the compost yard (left plot) ── */
+    'Compost bin {n}': '第 {n} 个堆肥桶',
+    'Holds {n} more fertilizer — the yard fills at the same speed, it just takes longer to run out of room.': '多装 {n} 份肥料 — 产速不变，只是更久才装满。',
+    'Yard holds {now} now · {then} with this bin': '现在能装 {now} · 开了这桶能装 {then}',
+    'Open bin {n} first.': '要先开第 {n} 个桶。',
+    'This bin is still filling up.': '这个桶还在装。',
+    'Collected {n} fertilizer!': '收到 {n} 份肥料！',
+    'Bin {n} opened — the yard holds {cap} fertilizer now.': '第 {n} 个桶开了 — 堆肥场现在能装 {cap} 份。',
+    'Compost bin': '堆肥桶',
+    'Sow fertilised — yields ×{n}': '施肥种 — 产量 ×{n}',
+    'using {n} of {have} fertilizer': '用 {n} 份（共有 {have} 份）',
+    '{have} fertilizer in hand': '手上有 {have} 份肥料',
+
+    /* ── Farm: ageing factories & the tier-2 buyer (right plot) ── */
+    'Aged goods sell only at the buyer on this plot — the plane never takes them.': '陈化品只能卖给这块地上的收购站 — 飞机不收。',
+    'Aged goods buyer': '陈化品收购站',
+    'Always open. Takes {n} more today.': '全天营业。今天还能收 {n} 件。',
+    'Sell 1 · {coins}': '卖 1 件 · {coins}',
+    'each': '每件',
+    'Sell what it takes today': '把今天的额度卖满',
+    "That's today's quota — the rest keeps and sells tomorrow.": '今天的额度满了 — 剩下的留着明天卖。',
+    'Nothing aged yet. Load a factory on this plot and come back in a few hours.': '还没有陈化品。先在这块地的工厂放料，过几个小时再来。',
+    'Sold {n} aged goods for {coins}': '卖出 {n} 件陈化品，得 {coins}',
+    'Sold {name}': '卖出{name}',
+    'Sold aged goods': '卖出陈化品',
+    'Cheese Cave': '陈化窖',
+    'Smokehouse': '熏房',
+    'Ham Cellar': '火腿地窖',
+    'Aged Cheese': '陈年芝士',
+    'Cultured Butter': '发酵牛油',
+    'Cured Sausage': '腌香肠',
+    'Smoked Bacon': '烟熏培根',
+    'Aged Ham': '陈年火腿',
 
     /* ══ Room catalogs ══
        Everything below is a `name` / `label` / `desc` / `title` field in

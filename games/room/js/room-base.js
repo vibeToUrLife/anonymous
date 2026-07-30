@@ -305,6 +305,19 @@
       pizza:    { emoji: '🍕', name: 'Pizza',          coins: 150 },   // Bakery: from truffle
       risotto:  { emoji: '🍚', name: 'Truffle Risotto', coins: 290 },  // Bakery: from truffle
     };
+    /* Tier-2 aged goods. Deliberately NOT in FARM_PRODUCTS: three existing paths
+       (sellFarmProduct, sellAllFarm, the plane's wanted list) sell everything
+       they can find at list price, and all three read farmStock/FARM_PRODUCTS.
+       Keeping the aged goods in their own registry and their own inventory
+       (roomData.farmAged) makes selling them anywhere but the tier-2 buyer
+       structurally impossible instead of something three call sites remember. */
+    const FARM_AGED = {
+      agedcheese:  { emoji: '🧀', name: 'Aged Cheese',     coins: 600 },
+      culturedbutter: { emoji: '🧈', name: 'Cultured Butter', coins: 450 },
+      curedsausage: { emoji: '🌭', name: 'Cured Sausage',  coins: 400 },
+      smokedbacon: { emoji: '🥓', name: 'Smoked Bacon',    coins: 540 },
+      agedham:     { emoji: '🍖', name: 'Aged Ham',        coins: 720 },
+    };
     // Base meat from butchering, by tier (the animal's level adds more — see _meatYield).
     const FARM_MEAT_YIELD = { goose: 1, pig: 2, cow: 3, horse: 4 };
 
@@ -368,6 +381,47 @@
     // more (each makes a product independently) up to the max.
     const FARM_SLOT_COST = 10000;  // coins to open one more production slot
     const FARM_MAX_SLOTS = 4;      // most slots a single machine can have
+
+    /* Ageing factories — the right plot's tier-2 layer. Same shape as
+       FARM_MACHINES (id/cost/recipes) so _machineState, startMachineSlot and
+       collectMachineSlot drive both lists; a `store` field says which inventory
+       the output lands in. Only dairy and meat age: bread and cake want to be
+       fresh, and metal doesn't age at all — which is what makes the Dairy and
+       the Butcher, the two cheapest machines, matter late.
+       The first factory comes with the plot; the other two are unlocked by
+       tapping them on the land. Timers are in HOURS against the machines'
+       20–60 minutes, so the two tiers are clearly separate layers. */
+    const HR = 60 * 60 * 1000;   // not `H` — the farm view uses W/H for canvas size
+    const FARM_AGERS = [
+      { id: 'cheesecave', emoji: '🛖', name: 'Cheese Cave', cost: 0, free: true, recipes: [
+        { in: { cheese: 1 }, out: { id: 'agedcheese', qty: 1 }, timeMs: 4 * HR },
+        { in: { butter: 1 }, out: { id: 'culturedbutter', qty: 1 }, timeMs: 3 * HR },
+      ] },
+      { id: 'smokehouse', emoji: '🔥', name: 'Smokehouse', cost: 60000, recipes: [
+        { in: { sausage: 1 }, out: { id: 'curedsausage', qty: 1 }, timeMs: 3 * HR },
+        { in: { bacon: 1 },   out: { id: 'smokedbacon',  qty: 1 }, timeMs: 4 * HR },
+      ] },
+      { id: 'hamcellar', emoji: '🍖', name: 'Ham Cellar', cost: 120000, recipes: [
+        { in: { ham: 1 }, out: { id: 'agedham', qty: 1 }, timeMs: 5 * HR },
+      ] },
+    ];
+    const FARM_AGER_SLOT_COST = 15000;   // above the machines' 10000 — a late-game sink
+    // The tier-2 buyer: always open (unlike the plane), pays full price, but only
+    // takes so many items a day. That quota is the brake on tier 2 flooding the
+    // economy, and it is what makes buying a 4th ageing slot a real decision.
+    const FARM_AGED_DAILY_QUOTA = 20;
+
+    /* Compost yard — the left plot. Three bins stand on the plot from the day it
+       is bought; the first is unlocked, the other two are tapped to unlock.
+       The FILL RATE never changes, only the cap does (10 per unlocked bin), so
+       the unlocks buy patience — how long you can leave it — not speed. At 59
+       animals one bin caps in ~2h and three in ~6.4h. Bins stop filling when
+       full, so the cap is also the offline cap: no separate banking rule. */
+    const FARM_COMPOST_PER_ANIMAL_HR = 0.08;   // fertilizer per animal per hour
+    const FARM_COMPOST_PER_BIN = 10;           // cap added by each unlocked bin
+    const FARM_COMPOST_BINS_MAX = 3;
+    const FARM_COMPOST_BIN_COSTS = [0, 25000, 50000];   // bin 1 comes with the plot
+    const FARM_FERT_MULT = 2;                  // a fertilised bed yields this many times
 
     // Travelling merchant cart: parks on the farm and WAITS until you sell to it,
     // then leaves for a cooldown before returning with a fresh wanted-list. Selling

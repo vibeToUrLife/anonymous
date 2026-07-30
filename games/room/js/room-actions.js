@@ -961,6 +961,16 @@
       roomData.farmOrdersDay = d.farmOrdersDay || '';
       roomData.farmOrdersDone = Array.isArray(d.farmOrdersDone) ? d.farmOrdersDone : [];
       roomData.farmMachines = d.farmMachines || {};
+      // Side land — mirrored so a visitor sees the host's plots drawn correctly.
+      // Nothing here is writable while visiting (every action is owner-gated).
+      roomData.farmCompost = d.farmCompost || 0;
+      roomData.farmCompostAt = d.farmCompostAt || 0;
+      roomData.farmCompostBins = d.farmCompostBins || 0;
+      roomData.farmFertilizer = d.farmFertilizer || 0;
+      roomData.farmAgers = d.farmAgers || {};
+      roomData.farmAged = d.farmAged || {};
+      roomData.farmAgedDay = d.farmAgedDay || '';
+      roomData.farmAgedSold = d.farmAgedSold || 0;
       roomData.farmColdLevel = d.farmColdLevel || 0;
       roomData.farmAutoFeed = d.farmAutoFeed || false;
       roomData.farmAutoFeedOn = d.farmAutoFeedOn || false;

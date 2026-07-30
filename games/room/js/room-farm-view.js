@@ -18,6 +18,7 @@
     let _plantRow = 0;           // grid row the crop picker is planting into
     let _plantPlot = 0;          // the exact plot the tap landed on (used by the 'one' scope)
     let _pendingPlant = null;    // { cropId, count, total } awaiting partial-plant confirm
+    let _plantFert = false;      // sow this batch with fertilizer? deliberately not remembered
     // How much the crop picker plants: one bed, its row, or every empty bed.
     // Remembered across sessions so the choice doesn't reset every visit.
     const FARM_SCOPE_KEY = 'farm_plant_scope';
@@ -41,6 +42,7 @@
     let _lastProduceN = -1;           // last pending-produce count shown on the Collect button
     let _workshopModalOpen = false;   // single-machine modal visible?
     let _workshopModalId = null;      // which machine's modal is open
+    let _binModalIdx = null;          // …or which locked compost bin's, sharing the same box
     let _makeChoiceSlot = null;       // slot index currently choosing a recipe (or null)
     let _slotConfirm = false;         // awaiting confirmation to open (buy) a new slot
 
@@ -238,7 +240,11 @@
        advance, spawned produce lands near its animal. Returns the number
        of drops spawned; caller decides whether to saveRoom(). Owner-only. */
     function runFarmProduction() {
-      if (viewingUid !== currentUid || !(roomData.farmAnimals || []).length) return 0;
+      if (viewingUid !== currentUid) return 0;
+      // Settled before the early return below, so a farm that was empty for a
+      // week doesn't come back to a stale clock and a free instant binful.
+      _settleCompost(Date.now());
+      if (!(roomData.farmAnimals || []).length) return 0;
       roomData.farmDrops = roomData.farmDrops || [];
       // Production is uncapped: an animal never stops because nobody came to
       // collect. What bounds a catch-up is TIME (capMs), not a pile size.
@@ -290,6 +296,54 @@
       }
       if (roomData.farmAutoCollect) _autoCollectAll(); // straight into stock, no tapping
       return added;
+    }
+
+    /* Compost accrues off the herd — the trough's own pattern, settled against
+       farmCompostAt the way food is settled against farmFoodAt. The rate does
+       not change with how many bins are open; only the cap does, so the bin
+       unlocks buy how long you can leave it rather than how fast it fills.
+       Bins stop at the cap, which makes the cap the offline cap too. */
+    function _settleCompost(now) {
+      if (!roomData.farmLandL) return;
+      if (!roomData.farmCompostAt) { roomData.farmCompostAt = now; return; }
+      const hours = Math.max(0, now - roomData.farmCompostAt) / 3600000;
+      roomData.farmCompostAt = now;
+      const herd = (roomData.farmAnimals || []).length;
+      if (!hours || !herd) return;
+      roomData.farmCompost = Math.min(_compostCap(),
+        (roomData.farmCompost || 0) + herd * FARM_COMPOST_PER_ANIMAL_HR * hours);
+    }
+
+    // Tap a bin: collect what is in it, or open the unlock modal if it is locked.
+    // A half-full bin can be taken early rather than having to be waited out.
+    async function tapCompostBin(i) {
+      if (viewingUid !== currentUid) return;
+      if (i >= _compostBins()) { openBinUnlock(i); return; }
+      _settleCompost(Date.now());
+      const got = Math.floor(_binFill(i) * FARM_COMPOST_PER_BIN);
+      if (got < 1) return showToast('🪵 ' + T('This bin is still filling up.'), '');
+      roomData.farmCompost = Math.max(0, (roomData.farmCompost || 0) - got);
+      roomData.farmFertilizer = (roomData.farmFertilizer || 0) + got;
+      await saveRoom();
+      showToast('🌱 ' + T('Collected {n} fertilizer!', { n: got }), 'success');
+      renderFarmPanel();
+    }
+
+    async function unlockCompostBin(i) {
+      if (viewingUid !== currentUid) return;
+      const have = _compostBins();
+      if (!have || i !== have) return;                     // bins open in order
+      const cost = FARM_COMPOST_BIN_COSTS[i];
+      if (cost == null) return;
+      if (roomData.coins < cost) return showToast(T('Not enough coins!'), 'error');
+      roomData.coins -= cost;
+      logCoin(-cost, T('Compost bin'));
+      roomData.farmCompostBins = have + 1;
+      closeWorkshopModal();
+      await saveRoom();
+      showToast('🪵 ' + T('Bin {n} opened — the yard holds {cap} fertilizer now.', { n: have + 1, cap: _compostCap() }), 'success');
+      renderFarmPanel();
+      renderAll();
     }
 
     // Current trough capacity (base + upgrades).
@@ -1496,22 +1550,11 @@
           '⏳ ' + T('Tap a ripe row to harvest everything that\'s ready.') +
         '</div>';
 
-      // Build Machines: buy here; built ones appear on the farm where you operate them.
-      const _bm = roomData.farmMachines || {};
-      const buildHtml =
-        '<div class="farm-section-title">🏭 ' + T('Build Machines') + '</div>' +
-        '<div class="farm-panel-empty" style="padding:0 2px 6px">' + T('Built machines appear on your farm — tap one there to make goods.') + '</div>' +
-        FARM_MACHINES.map(mc => {
-          const owned = _bm[mc.id] && _bm[mc.id].owned;
-          const makes = mc.recipes.map(rc => (meta[rc.out.id] ? meta[rc.out.id].emoji : '?')).join(' ');
-          const note = mc.id === 'butcher' ? ' · ' + T('needs meat') : '';
-          return '<div class="farm-shop-row">' +
-            '<span class="farm-shop-animal">' + mc.emoji + ' ' + T(mc.name) + ' <small>' + T('makes {list}', { list: makes }) + note + '</small></span>' +
-            (owned
-              ? '<span class="farm-shop-drop">✓ ' + T('on farm') + '</span>'
-              : '<button class="farm-shop-buy" onclick="buyFarmMachine(\'' + mc.id + '\')"' + (roomData.coins < mc.cost ? ' disabled' : '') + '>' + T('Build · {cost}', { cost: mc.cost + '🪙' }) + '</button>') +
-            '</div>';
-        }).join('');
+      /* The "🏭 Build Machines" card used to live here. Machines are now bought
+         by tapping them on the farm — every one of them stands on the pasture
+         from the start, locked ones faded with a padlock. A list in the panel
+         hid the farm's future and made a bought machine appear out of nowhere
+         on grass that had looked empty. */
 
       const expLvl = roomData.farmCapLevel || 0;
       const expandCost = expLvl < FARM_EXPAND_COSTS.length ? FARM_EXPAND_COSTS[expLvl] : null;
@@ -1583,7 +1626,7 @@
       ];
       const groups = {
         animals:  card(foodHtml) + card(herdHtml) + card(shopHtml),
-        garden:   card(gardenHtml) + card(buildHtml),
+        garden:   card(gardenHtml),
         market:   card(stockHtml) + card(ordersHtml),
         upgrades: card(scaleHtml) + card(autoHtml) + card(_farmSkinsHtml()),
         visit:    card(visitHtml) + card(_farmBoardHtml()),
@@ -1685,14 +1728,14 @@
       return (FARM_MEAT_YIELD[a.type] || 1) + Math.max(0, animalLevel(a.collected, FARM_LEVELS) - 1);
     }
     function askButcher(id) {
-      if (!_ownsButcher()) { showToast('🔪 ' + T('Build the Butcher first — Garden tab → Build Machines.'), 'error'); switchFarmTab('garden'); return; }
+      if (!_ownsButcher()) { showToast('🔪 ' + T('Unlock the Butcher first — tap its hut on the farm.'), 'error'); return; }
       _farmButcherConfirmId = id; renderFarmPanel();
     }
     function cancelButcher() { _farmButcherConfirmId = null; renderFarmPanel(); }
     async function butcherAnimal(id) {
       if (viewingUid !== currentUid) return;
       _farmButcherConfirmId = null;
-      if (!_ownsButcher()) { renderFarmPanel(); return showToast('🔪 ' + T('Build the Butcher first — Garden tab → Build Machines.'), 'error'); }
+      if (!_ownsButcher()) { renderFarmPanel(); return showToast('🔪 ' + T('Unlock the Butcher first — tap its hut on the farm.'), 'error'); }
       const animals = roomData.farmAnimals || [];
       const a = animals.find(x => x.id === id);
       if (!a) { renderFarmPanel(); return; }
@@ -1958,6 +2001,11 @@
       const m = {};
       FARM_ANIMALS.forEach(a => { m[a.drop.id] = { emoji: a.drop.emoji, name: a.drop.name }; });
       for (const id in FARM_PRODUCTS) m[id] = { emoji: FARM_PRODUCTS[id].emoji, name: FARM_PRODUCTS[id].name };
+      // Aged goods are in here for LABELS only (the ageing modal and the buyer
+      // need an emoji and a name). They are deliberately absent from
+      // farmProductPrices below, so nothing that sells by list price can price
+      // one — see farmAged.
+      for (const id in FARM_AGED) m[id] = { emoji: FARM_AGED[id].emoji, name: FARM_AGED[id].name };
       return m;
     }
     function farmProductPrices() {
@@ -1972,11 +2020,31 @@
     /* ── Social ── */
     // Cheer a friend's farm — cosmetic celebration (no cross-user writes, so no
     // rules change). A coin/host-side reward would need a firestore.rules update.
-    /* ── Workshop (processing machines, parallel slots) ── */
+    /* ── Workshop (processing machines, parallel slots) ──
+       Two lists share this code: FARM_MACHINES on the pasture (tier 1) and
+       FARM_AGERS on the right plot (tier 2). FARM_AGERS has the same
+       id/cost/recipes shape on purpose, so state, unlocking, slots, starting,
+       collecting and the modal are each written ONCE and resolve which list
+       (and which inventory) an id belongs to. The one real difference is where
+       the output lands: tier 1 → farmStock, tier 2 → farmAged, which is what
+       keeps aged goods out of every list-price sell path. */
+    function _farmBuildDef(id) {
+      return FARM_MACHINES.find(m => m.id === id) || FARM_AGERS.find(m => m.id === id) || null;
+    }
+    function _isAger(id) { return FARM_AGERS.some(m => m.id === id); }
+    // The owned-map an id lives in. `create` only when about to write to it, so
+    // merely drawing a visitor's farm never invents state on their data.
+    function _farmBuildMap(id, create) {
+      const key = _isAger(id) ? 'farmAgers' : 'farmMachines';
+      if (create && !roomData[key]) roomData[key] = {};
+      return roomData[key] || {};
+    }
+    function _buildSlotCost(id) { return _isAger(id) ? FARM_AGER_SLOT_COST : FARM_SLOT_COST; }
+
     // Normalize a machine to the slot model, migrating the old single-job shape
     // ({owned, startedAt}) to {owned, slots, jobs:[startedAt,…]}. Returns it or null.
     function _machineState(id) {
-      const m = (roomData.farmMachines || {})[id];
+      const m = _farmBuildMap(id)[id];
       if (!m || !m.owned) return null;
       if (!m.slots) m.slots = 1;
       if (!Array.isArray(m.jobs)) m.jobs = [m.startedAt || 0];   // migrate old single job
@@ -1988,18 +2056,21 @@
       return m;
     }
 
+    // Unlock a building by tapping it on the land — machines and ageing
+    // factories both. Same three lines the panel button used to run.
     async function buyFarmMachine(id) {
       if (viewingUid !== currentUid) return;
-      const mc = FARM_MACHINES.find(m => m.id === id);
+      const mc = _farmBuildDef(id);
       if (!mc) return;
-      roomData.farmMachines = roomData.farmMachines || {};
-      if (roomData.farmMachines[id] && roomData.farmMachines[id].owned) return;
+      const map = _farmBuildMap(id, true);
+      if (map[id] && map[id].owned) return;
       if (roomData.coins < mc.cost) return showToast(T('Not enough coins!'), 'error');
       roomData.coins -= mc.cost;
       logCoin(-mc.cost, T('Built {name}', { name: T(mc.name) }));
-      roomData.farmMachines[id] = { owned: true, slots: 1, jobs: [0] };
+      map[id] = { owned: true, slots: 1, jobs: [0] };
       await saveRoom();
       showToast(mc.emoji + ' ' + T('{name} built! Tap it on your farm to make goods.', { name: T(mc.name) }), 'success');
+      renderWorkshopModal();
       renderFarmPanel();
       renderAll();
     }
@@ -2008,10 +2079,11 @@
       if (viewingUid !== currentUid) return;
       const m = _machineState(id);
       if (!m) return;
+      const cost = _buildSlotCost(id);
       if (m.slots >= FARM_MAX_SLOTS) return showToast(T('All {n} slots are open already.', { n: FARM_MAX_SLOTS }), '');
-      if (roomData.coins < FARM_SLOT_COST) return showToast(T('Not enough coins!') + ' (' + FARM_SLOT_COST + '🪙)', 'error');
-      roomData.coins -= FARM_SLOT_COST;
-      logCoin(-FARM_SLOT_COST, T('Machine slot'));
+      if (roomData.coins < cost) return showToast(T('Not enough coins!') + ' (' + cost + '🪙)', 'error');
+      roomData.coins -= cost;
+      logCoin(-cost, T('Machine slot'));
       m.slots += 1; m.jobs.push(0);
       _slotConfirm = false;
       await saveRoom();
@@ -2021,7 +2093,7 @@
 
     async function startMachineSlot(id, slot, r) {
       if (viewingUid !== currentUid) return;
-      const mc = FARM_MACHINES.find(m => m.id === id), m = _machineState(id);
+      const mc = _farmBuildDef(id), m = _machineState(id);
       if (!mc || !m || m.jobs[slot]) return;
       const recipe = mc.recipes[r]; if (!recipe) return;
       const stockNow = roomData.farmStock || {};
@@ -2038,18 +2110,20 @@
 
     async function collectMachineSlot(id, slot) {
       if (viewingUid !== currentUid) return;
-      const mc = FARM_MACHINES.find(m => m.id === id), m = _machineState(id);
+      const mc = _farmBuildDef(id), m = _machineState(id);
       if (!mc || !m || !m.jobs[slot]) return;
       const job = m.jobs[slot], recipe = mc.recipes[job.r] || mc.recipes[0];
       if (cropProgress(job.at, Date.now(), recipe.timeMs) < 1) return showToast(T('Still processing…'), '');
       // Apply locally, then persist. If the save fails, roll back — otherwise the
       // collected item silently disappears when the next snapshot overwrites it.
-      roomData.farmStock = roomData.farmStock || {};
-      roomData.farmStock[recipe.out.id] = (roomData.farmStock[recipe.out.id] || 0) + recipe.out.qty;
+      // Tier 2 lands in farmAged, which no list-price sell path can reach.
+      const bin = _isAger(id) ? 'farmAged' : 'farmStock';
+      roomData[bin] = roomData[bin] || {};
+      roomData[bin][recipe.out.id] = (roomData[bin][recipe.out.id] || 0) + recipe.out.qty;
       m.jobs[slot] = 0;
       const ok = await saveRoom();
       if (!ok) {
-        roomData.farmStock[recipe.out.id] -= recipe.out.qty;
+        roomData[bin][recipe.out.id] -= recipe.out.qty;
         m.jobs[slot] = job;
         return showToast(T('Could not collect — save failed. Check your connection and try again.'), 'error');
       }
@@ -2125,17 +2199,22 @@
         if (!crop) { plot.crop = null; plot.plantedAt = 0; continue; }
         if (cropProgress(plot.plantedAt, now, crop.growMs) < 1) continue;
         const pos = _farmPlotPos(i, _wh.W, _wh.H);
+        // A bed sown with fertilizer yields ×2. The flag was set at planting and
+        // is spent here along with the crop.
+        const mult = plot.fert ? FARM_FERT_MULT : 1;
         if (crop.yield.food) {
-          roomData.farmFood = Math.min(farmFoodMax(), (roomData.farmFood || 0) + crop.yield.food);
+          const got = crop.yield.food * mult;
+          roomData.farmFood = Math.min(farmFoodMax(), (roomData.farmFood || 0) + got);
           if (!roomData.farmFoodAt) roomData.farmFoodAt = now;
-          _farmParticles.push({ text: '+' + crop.yield.food + ' 🌾', x: pos.x, y: pos.y - 0.05, vy: -0.0009, life: 1200, born: performance.now() });
+          _farmParticles.push({ text: '+' + got + ' 🌾', x: pos.x, y: pos.y - 0.05, vy: -0.0009, life: 1200, born: performance.now() });
         } else {
+          const got = crop.yield.qty * mult;
           roomData.farmStock = roomData.farmStock || {};
-          roomData.farmStock[crop.yield.product] = (roomData.farmStock[crop.yield.product] || 0) + crop.yield.qty;
+          roomData.farmStock[crop.yield.product] = (roomData.farmStock[crop.yield.product] || 0) + got;
           const m = FARM_PRODUCTS[crop.yield.product];
-          _farmParticles.push({ text: '+' + crop.yield.qty + ' ' + (m ? m.emoji : ''), x: pos.x, y: pos.y - 0.05, vy: -0.0009, life: 1200, born: performance.now() });
+          _farmParticles.push({ text: '+' + got + ' ' + (m ? m.emoji : ''), x: pos.x, y: pos.y - 0.05, vy: -0.0009, life: 1200, born: performance.now() });
         }
-        plot.crop = null; plot.plantedAt = 0; n++;
+        plot.crop = null; plot.plantedAt = 0; plot.fert = false; n++;
       }
       if (!n) return showToast(T('Nothing ripe to harvest yet.'), '');
       _farmWeekAddProduce(n);
@@ -2184,6 +2263,10 @@
       return farmRowIndices(plots.length, _plantRow, _farmPerRow()).filter(i => !plots[i].crop);
     }
 
+    // "Sow fertilised" on/off. Not remembered between openings: it spends a
+    // limited resource, so it should be chosen each time rather than left on.
+    function togglePlantFert() { _plantFert = !_plantFert; _renderCropPicker(); }
+
     // Scope switcher in the picker header.
     function setPlantScope(scope) {
       if (scope !== 'one' && scope !== 'row' && scope !== 'all') return;
@@ -2197,6 +2280,7 @@
       _plantRow = row || 0;
       _plantPlot = plotIdx != null ? plotIdx : _plantRow * _farmPerRow();
       _pendingPlant = null;
+      _plantFert = false;
       // The remembered scope may have nothing to plant where this tap landed
       // (e.g. 'one' onto an already-planted bed). Fall back to one that does,
       // without persisting it — only an explicit choice is remembered.
@@ -2225,6 +2309,21 @@
       // Keys, not translations: the render below runs each through T(), so a
       // language change repaints them without rebuilding this table.
       const SCOPES = [['one', '1 bed'], ['row', 'This row'], ['all', 'All empty']];
+      /* Fertilizer is spent AT PLANTING, as part of the plant action — a bed is
+         either sown plain or sown fertilised. There is no separate "spread it on
+         a growing crop" step, so it stays one interaction per bed and the choice
+         is made while you are already deciding what to grow. Only offered when
+         there is some in hand, so the picker is unchanged for anyone without
+         the compost yard. */
+      const fertHave = Math.floor(roomData.farmFertilizer || 0);
+      const fertUse = _plantFert ? Math.min(fertHave, empties) : 0;
+      const fertRow = fertHave > 0
+        ? '<button class="cp-scope-btn' + (_plantFert ? ' active' : '') + '" style="width:100%;margin-bottom:6px" onclick="togglePlantFert()">' +
+            '🌱 ' + T('Sow fertilised — yields ×{n}', { n: FARM_FERT_MULT }) +
+            '<small>' + (_plantFert
+              ? T('using {n} of {have} fertilizer', { n: fertUse, have: fertHave })
+              : T('{have} fertilizer in hand', { have: fertHave })) + '</small></button>'
+        : '';
       picker.innerHTML =
         '<div class="cp-head">🌱 ' + T('Plant') + '</div>' +
         '<div class="cp-scope">' +
@@ -2234,6 +2333,7 @@
               ' onclick="setPlantScope(\'' + s[0] + '\')">' +
               T(s[1]) + '<small>' + T('{n} empty', { n: counts[s[0]] }) + '</small></button>').join('') +
         '</div>' +
+        fertRow +
         '<div class="cp-bulk-info">' +
           I18N.plural(empties, 'Planting <b>1</b> bed', 'Planting <b>{n}</b> beds') +
           ' · ' + T('Coins: {n}', { n: '<b>' + roomData.coins + '</b>' }) + '</div>' +
@@ -2270,11 +2370,16 @@
       if (!crop) { closeCropPicker(); return; }
       const now = Date.now();
       const _wh = _farmWH();
-      let planted = 0;
+      let planted = 0, fertUsed = 0;
       for (const i of idxs) {
         if (roomData.coins < crop.seedCost) break;
         roomData.coins -= crop.seedCost;
         plots[i].crop = crop.id; plots[i].plantedAt = now;
+        // One fertilizer per bed, while it lasts — the beds it doesn't reach are
+        // simply sown plain rather than the whole planting being refused.
+        if (_plantFert && (roomData.farmFertilizer || 0) >= 1) {
+          roomData.farmFertilizer -= 1; plots[i].fert = true; fertUsed++;
+        }
         const pos = _farmPlotPos(i, _wh.W, _wh.H);
         _farmParticles.push({ text: crop.emoji, x: pos.x, y: pos.y - 0.05, vy: -0.0008, life: 900, born: performance.now() });
         planted++;
@@ -2282,7 +2387,8 @@
       closeCropPicker();
       if (planted) {
         saveRoom(); renderFarmPanel(); renderAll();
-        showToast('🌱 ' + I18N.plural(planted, 'Planted 1 {crop}', 'Planted {n} {crop}', { crop: T(crop.name) }), 'success');
+        showToast('🌱 ' + I18N.plural(planted, 'Planted 1 {crop}', 'Planted {n} {crop}', { crop: T(crop.name) }) +
+          (fertUsed ? ' · 🌱×' + fertUsed : ''), 'success');
       }
     }
 
@@ -2580,38 +2686,93 @@
         targets.push(Object.assign({ id: '#cart' },
           shift(farmCartTapRect(_farmCartPos(W, H), _farmCartSize(W, H), W, H, _farmCart().present))));
       }
-      const owned = roomData.farmMachines || {};
+      // Every hut is a target whether built or not — tapping an unbuilt one is
+      // how it is bought, so skipping it would make the lock un-openable.
       FARM_MACHINES.forEach(function (m, slot) {
-        if (owned[m.id] && owned[m.id].owned) {
-          const p = _workshopPos(slot);
-          targets.push({ id: m.id, x: p.x - camX, y: p.y });   // land → window
-        }
+        const p = _workshopPos(slot);
+        targets.push({ id: m.id, x: p.x - camX, y: p.y });     // land → window
       });
+      // Side land, once its plot is owned. Locked buildings are targets for the
+      // same reason the huts are: tapping one is how it is unlocked.
+      // Collecting a bin and selling at the buyer are your own actions, so those
+      // two are targets only on your own farm — the same rule the mailbox and
+      // the plane already follow above.
+      if (roomData.farmLandL && viewingUid === currentUid) {
+        for (let i = 0; i < FARM_COMPOST_BINS_MAX; i++) {
+          const b = _binPos(i);
+          targets.push({ id: '#bin' + i, x: b.x - camX, y: b.y });
+        }
+      }
+      if (roomData.farmLandR) {
+        FARM_AGERS.forEach(function (a, i) {
+          const p = _agerPos(i);
+          targets.push({ id: a.id, x: p.x - camX, y: p.y });
+        });
+        if (viewingUid === currentUid) targets.push({ id: '#buyer', x: FARM_BUYER_POS.x - camX, y: FARM_BUYER_POS.y });
+      }
       return farmPickTarget({ x: cx, y: cy }, W, H, targets, FARM_TAP_REACH_PX);
     }
 
-    // Zones animals must not walk into: owned machine huts. (The merchant is now
-    // an aeroplane that hovers in the sky, so it no longer blocks the pasture.)
+    // Zones animals must not walk into: the machine huts. Locked huts count too —
+    // they are still buildings standing on the grass, so walking through one
+    // would give the game away. (The merchant is now an aeroplane that hovers in
+    // the sky, so it no longer blocks the pasture.)
     function _farmBlockedZones() {
-      const zones = [];
-      const machines = roomData.farmMachines || {};
-      FARM_MACHINES.forEach((m, slot) => {
-        if (machines[m.id] && machines[m.id].owned) { const p = _workshopPos(slot); zones.push({ x: p.x, y: p.y, r: 0.10 }); }
+      return FARM_MACHINES.map((m, slot) => {
+        const p = _workshopPos(slot);
+        return { x: p.x, y: p.y, r: 0.10 };
       });
-      return zones;
     }
     function _inBlocked(x, y, zones, pad) {
       for (const z of zones) if (Math.hypot(z.x - x, z.y - y) < z.r + (pad || 0)) return true;
       return false;
     }
 
-    // Draw owned machine huts on the pasture (machines are built in the Garden tab).
+    /* ── Locked buildings ──
+       Everything buyable stands on the land from the moment its ground is
+       owned; unowned ones draw faded with a padlock, and tapping one opens the
+       unlock modal. The panel used to hide the farm's future: a player who had
+       never built the Forge had no idea a Forge existed, and a bought machine
+       appeared out of nowhere on grass that had looked empty.
+
+       The padlock is DRAWN, not the 🔒 emoji — an emoji renders differently on
+       every device, and it would be the one thing on a faded building that
+       can't be told to stay at full strength. */
+    const FARM_LOCK_ALPHA = 0.42;    // how faded a locked building draws
+    function _drawFarmPadlock(ctx, cx, cy, s) {
+      const bw = s * 0.82, bh = s * 0.62, bx = cx - bw / 2, by = cy - bh * 0.28;
+      ctx.save();
+      ctx.globalAlpha = 1;           // sits on top of a faded building at full strength
+      // shackle, with a shaded left limb so it reads as a loop and not a bar
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#d7dee6'; ctx.lineWidth = Math.max(1.6, s * 0.14);
+      ctx.beginPath(); ctx.arc(cx, by, bw * 0.30, Math.PI, 0); ctx.stroke();
+      ctx.strokeStyle = 'rgba(0,0,0,.22)'; ctx.lineWidth = Math.max(1, s * 0.05);
+      ctx.beginPath(); ctx.arc(cx, by, bw * 0.30, Math.PI, Math.PI * 1.4); ctx.stroke();
+      // brass body
+      const g = ctx.createLinearGradient(0, by, 0, by + bh);
+      g.addColorStop(0, '#ffd76a'); g.addColorStop(1, '#dd9c26');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(bx, by, bw, bh, s * 0.16); else ctx.rect(bx, by, bw, bh);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(80,48,8,.5)'; ctx.lineWidth = 1; ctx.stroke();
+      // keyhole
+      ctx.fillStyle = 'rgba(66,40,8,.85)';
+      ctx.beginPath(); ctx.arc(cx, by + bh * 0.38, s * 0.10, 0, Math.PI * 2); ctx.fill();
+      ctx.fillRect(cx - s * 0.045, by + bh * 0.38, s * 0.09, bh * 0.36);
+      ctx.restore();
+    }
+
+    // Draw the machine huts on the pasture — owned normally, unbuilt faded with
+    // a padlock on the door. All five always have their spot, so nothing shuffles
+    // when one is bought and the farm always shows what it can become.
     function _drawWorkshopMachines(ctx, W, H, t, night, pal) {
       const machines = roomData.farmMachines || {};
       const now = Date.now();
       FARM_MACHINES.forEach((m, slot) => {
         const st = machines[m.id];
-        if (!st || !st.owned) return;
+        const locked = !st || !st.owned;
         const p = _workshopPos(slot);
         const cx = p.x * W, cy = p.y * H, s = _workshopSize(W, H);
         const wallW = s * 0.78, wallH = s * 0.52, D = s * 0.24, dy = D * 0.5;
@@ -2619,6 +2780,7 @@
         ctx.save();
         const _hkM = _farmHoverK('sky', m.id);           // pointed at → grows a little
         if (_hkM !== 1) { ctx.translate(cx, cy); ctx.scale(_hkM, _hkM); ctx.translate(-cx, -cy); }
+        if (locked) ctx.globalAlpha = FARM_LOCK_ALPHA;   // still tappable, plainly inactive
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         // ground shadow
         ctx.fillStyle = night ? 'rgba(0,0,0,.34)' : ((pal && pal.groundShadow) || 'rgba(30,62,20,.24)');
@@ -2683,6 +2845,8 @@
         ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(cx, fy - s * 0.04, s * 0.17, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = 'rgba(0,0,0,.15)'; ctx.lineWidth = 1; ctx.stroke();
         ctx.font = Math.round(s * 0.22) + 'px serif'; ctx.fillText(m.emoji, cx, fy - s * 0.03);
+        // Unbuilt: a padlock on the door, and no job state to show.
+        if (locked) { _drawFarmPadlock(ctx, cx, ddy + dh * 0.42, s * 0.30); ctx.restore(); return; }
         // cooking steam ↑ / ready ✅ (any slot) — jobs are 0 | {at,r} | legacy number
         const jobs = Array.isArray(st.jobs) ? st.jobs : [st.startedAt || 0];
         let anyReady = false, anyCook = false;
@@ -2704,6 +2868,363 @@
         }
         ctx.restore();
       });
+    }
+
+    /* ══ Side land ══════════════════════════════════════════════════════════
+       Left plot: the compost yard. Right plot: three ageing factories with the
+       tier-2 buyer in front of them. Positions are LAND coordinates — the farm
+       itself is 0..1, the left plot -0.5..0 and the right plot 1..1.5 — so they
+       slide with the camera like everything else standing on the ground.
+
+       None of these use an emoji or a sign. The five tier-1 huts share one hut
+       shape and are told apart by a badge on the gable, which works for a row
+       of five identical sheds; here each building is its own silhouette, so it
+       says what it is instead of wearing a label. That also gives the two tiers
+       a visual difference matching the mechanical one, and keeps them legible
+       when they are dimmed and their colour is washed out. */
+    const FARM_BIN_Y = 0.46;
+    const FARM_BIN_X = [-0.40, -0.26, -0.12];
+    const FARM_AGER_Y = 0.40;
+    const FARM_AGER_X = [1.09, 1.25, 1.41];
+    const FARM_BUYER_POS = { x: 1.25, y: 0.58 };
+    function _binPos(i) { return { x: FARM_BIN_X[i], y: FARM_BIN_Y }; }
+    function _agerPos(i) { return { x: FARM_AGER_X[i], y: FARM_AGER_Y }; }
+
+    // Bins unlocked. The plot always comes with one; 0 means the plot is unbought.
+    function _compostBins() {
+      return roomData.farmLandL ? Math.max(1, Math.min(FARM_COMPOST_BINS_MAX, roomData.farmCompostBins || 1)) : 0;
+    }
+    function _compostCap() { return _compostBins() * FARM_COMPOST_PER_BIN; }
+    // How full bin `i` is, 0..1. Compost fills the unlocked bins in order, so a
+    // partly-filled yard reads left to right: full, half, empty.
+    function _binFill(i) {
+      const left = (roomData.farmCompost || 0) - i * FARM_COMPOST_PER_BIN;
+      return Math.max(0, Math.min(1, left / FARM_COMPOST_PER_BIN));
+    }
+
+    // A slow rising wisp — the machines' steam loop, re-coloured and re-timed.
+    // Used by a full compost bin (brown, slow) and the smokehouse (grey).
+    function _drawFarmWisp(ctx, cx, topY, s, t, colour, rate) {
+      ctx.fillStyle = colour;
+      for (let k = 0; k < 3; k++) {
+        const yy = topY - k * s * 0.14 - ((t / rate) % (s * 0.14));
+        ctx.beginPath();
+        ctx.arc(cx + Math.sin(t / 520 + k) * s * 0.05, yy, s * 0.055 - k * s * 0.009, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    // "Something is ready in here" — a small amber lamp with a soft glow, pulsing
+    // slowly. The huts show a ✅; these buildings say it in their own art.
+    function _drawFarmReadyLamp(ctx, cx, cy, s, t) {
+      const pulse = 0.72 + Math.sin(t / 420) * 0.28;
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, s * 0.32);
+      g.addColorStop(0, 'rgba(255,196,84,' + (0.55 * pulse).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(255,196,84,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(cx, cy, s * 0.32, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffd06a';
+      ctx.beginPath(); ctx.arc(cx, cy, s * 0.075, 0, Math.PI * 2); ctx.fill();
+    }
+    // The soft ground shadow every building on the farm stands on.
+    function _drawFarmBaseShadow(ctx, cx, cy, rx, ry, night, pal) {
+      ctx.fillStyle = night ? 'rgba(0,0,0,.34)' : ((pal && pal.groundShadow) || 'rgba(30,62,20,.24)');
+      ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+    }
+
+    /* ── The compost yard (left plot) ──
+       An open slat box. The FILL LEVEL is the readout — no number, no badge: a
+       full bin heaps over the rim and steams, and a full bin is one that has
+       stopped earning, so it should catch the eye from across the plot. */
+    function _drawCompostBin(ctx, cx, cy, s, fill, locked, night, pal, t) {
+      const w = s * 0.94, h = s * 0.56, D = s * 0.24, dy = D * 0.5;
+      const x0 = cx - w / 2, y0 = cy - h * 0.4;          // y0 = top of the front wall
+      ctx.save();
+      if (locked) ctx.globalAlpha = FARM_LOCK_ALPHA;
+      _drawFarmBaseShadow(ctx, cx + D * 0.4, y0 + h + s * 0.03, w * 0.62, s * 0.11, night, pal);
+      // dark interior seen through the open top
+      ctx.fillStyle = night ? '#241a12' : '#3d2b1c';
+      ctx.beginPath();
+      ctx.moveTo(x0, y0); ctx.lineTo(x0 + w, y0);
+      ctx.lineTo(x0 + w + D, y0 - dy); ctx.lineTo(x0 + D, y0 - dy);
+      ctx.closePath(); ctx.fill();
+      // the heap, growing out of the box as it fills
+      if (fill > 0.02) {
+        const hh = s * 0.34 * fill;
+        const mg = ctx.createLinearGradient(0, y0 - dy - hh, 0, y0);
+        mg.addColorStop(0, night ? '#5a4227' : '#7d5c33');
+        mg.addColorStop(1, night ? '#332515' : '#4a3520');
+        ctx.fillStyle = mg;
+        ctx.beginPath();
+        ctx.moveTo(x0 + s * 0.04, y0 - dy * 0.4);
+        ctx.quadraticCurveTo(cx + D * 0.5, y0 - dy - hh, x0 + w + D - s * 0.04, y0 - dy * 0.4);
+        ctx.lineTo(x0 + w - s * 0.02, y0 - dy * 0.1);
+        ctx.lineTo(x0 + s * 0.06, y0 - dy * 0.1);
+        ctx.closePath(); ctx.fill();
+        // a few shoots once it is heaped up
+        if (fill > 0.85) {
+          ctx.strokeStyle = night ? '#5c8a3a' : '#7fc04b';
+          ctx.lineWidth = Math.max(1, s * 0.03); ctx.lineCap = 'round';
+          [[-0.16, 0.72], [0.04, 1], [0.2, 0.8]].forEach(function (sh) {
+            const bx = cx + D * 0.5 + w * sh[0], by = y0 - dy - hh * sh[1] * 0.7;
+            ctx.beginPath(); ctx.moveTo(bx, by + s * 0.08);
+            ctx.quadraticCurveTo(bx + s * 0.03, by, bx + s * 0.07, by - s * 0.02); ctx.stroke();
+          });
+        }
+      }
+      // right-hand face, then the front planks over it
+      ctx.fillStyle = night ? '#5b452e' : '#8d6a44';
+      ctx.beginPath();
+      ctx.moveTo(x0 + w, y0); ctx.lineTo(x0 + w + D, y0 - dy);
+      ctx.lineTo(x0 + w + D, y0 - dy + h); ctx.lineTo(x0 + w, y0 + h);
+      ctx.closePath(); ctx.fill();
+      const pg = ctx.createLinearGradient(0, y0, 0, y0 + h);
+      pg.addColorStop(0, night ? '#8a6a45' : '#c79a63');
+      pg.addColorStop(1, night ? '#6a4f31' : '#a67c4c');
+      ctx.fillStyle = pg; ctx.fillRect(x0, y0, w, h);
+      ctx.strokeStyle = 'rgba(0,0,0,.14)'; ctx.lineWidth = 1;     // plank seams
+      for (let k = 1; k < 3; k++) {
+        const yy = y0 + (h * k) / 3;
+        ctx.beginPath(); ctx.moveTo(x0, yy); ctx.lineTo(x0 + w, yy); ctx.stroke();
+      }
+      // rim board and the two corner posts standing proud of it
+      ctx.fillStyle = night ? '#6d5335' : '#b98b55';
+      ctx.fillRect(x0 - s * 0.02, y0 - s * 0.03, w + s * 0.04, s * 0.055);
+      ctx.fillStyle = night ? '#5b452e' : '#96703f';
+      ctx.fillRect(x0 - s * 0.02, y0 - s * 0.07, s * 0.09, h + s * 0.07);
+      ctx.fillRect(x0 + w - s * 0.07, y0 - s * 0.07, s * 0.09, h + s * 0.07);
+      if (fill > 0.98) _drawFarmWisp(ctx, cx + D * 0.4, y0 - s * 0.42, s, t, 'rgba(158,128,86,.34)', 110);
+      if (locked) _drawFarmPadlock(ctx, cx, y0 + h * 0.5, s * 0.30);
+      ctx.restore();
+    }
+
+    function _drawCompostYard(ctx, W, H, t, night, pal) {
+      if (!roomData.farmLandL) return;
+      const bins = _compostBins(), s = _workshopSize(W, H);
+      for (let i = 0; i < FARM_COMPOST_BINS_MAX; i++) {
+        const p = _binPos(i);
+        _hoverScaled(ctx, _farmHoverK('sky', '#bin' + i), p.x * W, p.y * H, function () {
+          _drawCompostBin(ctx, p.x * W, p.y * H, s, i < bins ? _binFill(i) : 0, i >= bins, night, pal, t);
+        });
+      }
+    }
+
+    /* ── The three ageing factories (right plot) ──
+       Told apart by SHAPE, which is what still works when they are dimmed:
+       a round-topped cave, a tall narrow shed, and a thing with no walls at all. */
+    function _agerJobState(id) {
+      const m = (roomData.farmAgers || {})[id];
+      if (!m || !m.owned || !Array.isArray(m.jobs)) return { ready: false, busy: false };
+      const def = _farmBuildDef(id), now = Date.now();
+      let ready = false, busy = false;
+      m.jobs.forEach(function (j) {
+        if (!j) return;
+        const rec = (def.recipes || [])[j.r || 0] || def.recipes[0];
+        if (now - j.at >= rec.timeMs) ready = true; else busy = true;
+      });
+      return { ready: ready, busy: busy };
+    }
+
+    // 1 — Cheese Cave: a stone arch set into a grassy mound. The only round-topped
+    // building on the farm; everything else is gabled or square.
+    function _drawCheeseCave(ctx, cx, cy, s, night, pal, t, st) {
+      const r = s * 0.72;
+      _drawFarmBaseShadow(ctx, cx, cy + s * 0.34, r * 0.98, s * 0.12, night, pal);
+      // grassy mound
+      const mg = ctx.createLinearGradient(0, cy - r, 0, cy + s * 0.3);
+      mg.addColorStop(0, night ? '#3f5c31' : '#7cae4e');
+      mg.addColorStop(1, night ? '#2d4324' : '#5a8a39');
+      ctx.fillStyle = mg;
+      ctx.beginPath(); ctx.ellipse(cx, cy + s * 0.3, r, r * 0.86, 0, Math.PI, 0); ctx.fill();
+      ctx.fillRect(cx - r, cy + s * 0.28, r * 2, s * 0.06);
+      // arch mouth
+      const aw = s * 0.52, ah = s * 0.56, ax = cx - aw / 2, ay = cy + s * 0.3;
+      ctx.fillStyle = night ? '#100c08' : '#2a1f14';
+      ctx.beginPath();
+      ctx.moveTo(ax, ay); ctx.lineTo(ax, ay - ah * 0.5);
+      ctx.arc(cx, ay - ah * 0.5, aw / 2, Math.PI, 0);
+      ctx.lineTo(ax + aw, ay); ctx.closePath(); ctx.fill();
+      if (st.busy || st.ready) {   // warm light from inside
+        const g = ctx.createRadialGradient(cx, ay - ah * 0.35, 0, cx, ay - ah * 0.35, aw * 0.62);
+        g.addColorStop(0, 'rgba(255,178,86,.42)'); g.addColorStop(1, 'rgba(255,178,86,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, ay - ah * 0.35, aw * 0.62, 0, Math.PI * 2); ctx.fill();
+      }
+      // voussoir stones around the arch
+      ctx.fillStyle = night ? '#6b6560' : '#b9b2a6';
+      ctx.strokeStyle = 'rgba(0,0,0,.18)'; ctx.lineWidth = 1;
+      for (let k = 0; k <= 6; k++) {
+        const a = Math.PI + (Math.PI * k) / 6;
+        const sx = cx + Math.cos(a) * (aw / 2 + s * 0.07), sy = ay - ah * 0.5 + Math.sin(a) * (aw / 2 + s * 0.07);
+        ctx.save(); ctx.translate(sx, sy); ctx.rotate(a + Math.PI / 2);
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(-s * 0.075, -s * 0.055, s * 0.15, s * 0.11, s * 0.02);
+        else ctx.rect(-s * 0.075, -s * 0.055, s * 0.15, s * 0.11);
+        ctx.fill(); ctx.stroke(); ctx.restore();
+      }
+      // two footing stones
+      ctx.fillStyle = night ? '#5f5a55' : '#a79f93';
+      ctx.fillRect(ax - s * 0.11, ay - s * 0.1, s * 0.11, s * 0.1);
+      ctx.fillRect(ax + aw, ay - s * 0.1, s * 0.11, s * 0.1);
+      if (st.ready) _drawFarmReadyLamp(ctx, cx, ay - ah - s * 0.16, s, t);
+    }
+
+    // 2 — Smokehouse: tall and narrow, the inverse of the wide tier-1 huts, so
+    // the two can never be confused at small size.
+    function _drawSmokehouse(ctx, cx, cy, s, night, pal, t, st) {
+      const w = s * 0.54, h = s * 0.92, D = s * 0.2, dy = D * 0.5;
+      const x0 = cx - w / 2, y0 = cy - h * 0.42;
+      _drawFarmBaseShadow(ctx, cx + D * 0.4, y0 + h + s * 0.03, w * 0.95, s * 0.1, night, pal);
+      ctx.fillStyle = night ? '#2e241c' : '#4d3b2c';      // right face
+      ctx.beginPath();
+      ctx.moveTo(x0 + w, y0); ctx.lineTo(x0 + w + D, y0 - dy);
+      ctx.lineTo(x0 + w + D, y0 - dy + h); ctx.lineTo(x0 + w, y0 + h); ctx.closePath(); ctx.fill();
+      const wg = ctx.createLinearGradient(0, y0, 0, y0 + h);   // dark tarred timber
+      wg.addColorStop(0, night ? '#4a382a' : '#6b503a');
+      wg.addColorStop(1, night ? '#31251b' : '#4a3728');
+      ctx.fillStyle = wg; ctx.fillRect(x0, y0, w, h);
+      ctx.strokeStyle = 'rgba(0,0,0,.22)'; ctx.lineWidth = 1;
+      for (let k = 1; k < 5; k++) {
+        const yy = y0 + (h * k) / 5;
+        ctx.beginPath(); ctx.moveTo(x0, yy); ctx.lineTo(x0 + w, yy); ctx.stroke();
+      }
+      // narrow door with a light gap while it works
+      ctx.fillStyle = night ? '#1c150f' : '#2c2016';
+      ctx.fillRect(cx - w * 0.2, y0 + h * 0.42, w * 0.4, h * 0.58);
+      if (st.busy || st.ready) {
+        ctx.fillStyle = 'rgba(255,164,72,.5)';
+        ctx.fillRect(cx - w * 0.04, y0 + h * 0.44, w * 0.08, h * 0.54);
+      }
+      // shallow roof + stone chimney
+      const rTop = y0 - s * 0.2;
+      ctx.fillStyle = night ? '#3a2c21' : '#5c4330';
+      ctx.beginPath();
+      ctx.moveTo(x0 - s * 0.07, y0); ctx.lineTo(cx, rTop); ctx.lineTo(x0 + w + s * 0.07, y0); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = night ? '#4a4540' : '#8f887c';
+      ctx.fillRect(cx + w * 0.12, rTop - s * 0.24, s * 0.16, s * 0.3);
+      if (pal && pal.roofSnow) {
+        ctx.strokeStyle = pal.roofSnow; ctx.lineWidth = Math.max(2, s * 0.05); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(x0 - s * 0.05, y0 - s * 0.01); ctx.lineTo(cx, rTop);
+        ctx.lineTo(x0 + w + s * 0.05, y0 - s * 0.01); ctx.stroke();
+      }
+      if (st.busy || st.ready) _drawFarmWisp(ctx, cx + w * 0.2, rTop - s * 0.3, s, t, 'rgba(96,92,88,.4)', 60);
+      if (st.ready) _drawFarmReadyLamp(ctx, cx - w * 0.46, y0 + h * 0.34, s, t);
+    }
+
+    // 3 — Ham Cellar: half buried. The only building on the farm with nothing
+    // standing above the ground line — it should read as expensive and shut.
+    function _drawHamCellar(ctx, cx, cy, s, night, pal, t, st) {
+      const w = s * 1.02, d = s * 0.46, y0 = cy + s * 0.1;
+      _drawFarmBaseShadow(ctx, cx, y0 + d * 0.62, w * 0.62, s * 0.1, night, pal);
+      // stone collar around the opening
+      ctx.fillStyle = night ? '#565049' : '#9a9184';
+      ctx.beginPath(); ctx.ellipse(cx, y0 + d * 0.2, w * 0.58, d * 0.72, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = night ? '#464039' : '#807768';
+      ctx.beginPath(); ctx.ellipse(cx, y0 + d * 0.24, w * 0.47, d * 0.58, 0, 0, Math.PI * 2); ctx.fill();
+      // two slanted doors meeting at a ridge, lying almost flat
+      const ridge = y0 - d * 0.34;
+      const face = function (x1, x2, lit) {
+        const g = ctx.createLinearGradient(0, ridge, 0, y0 + d * 0.42);
+        g.addColorStop(0, lit ? (night ? '#7a5a38' : '#a6784a') : (night ? '#5c4227' : '#8a6238'));
+        g.addColorStop(1, night ? '#3d2c1a' : '#65482a');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(cx, ridge); ctx.lineTo(x1, y0 + d * 0.1);
+        ctx.lineTo(x2, y0 + d * 0.42); ctx.lineTo(cx, y0 + d * 0.06);
+        ctx.closePath(); ctx.fill();
+      };
+      face(cx - w * 0.46, cx - w * 0.2, false);
+      face(cx + w * 0.46, cx + w * 0.2, true);
+      // iron banding
+      ctx.strokeStyle = night ? '#2a2622' : '#463f36';
+      ctx.lineWidth = Math.max(1.4, s * 0.045);
+      [0.35, 0.7].forEach(function (f) {
+        ctx.beginPath();
+        ctx.moveTo(cx - w * 0.46 * f - w * 0.02, y0 + d * (0.1 + 0.24 * f));
+        ctx.lineTo(cx + w * 0.46 * f + w * 0.02, y0 + d * (0.1 + 0.24 * f));
+        ctx.stroke();
+      });
+      // light in the gap between the doors while it works
+      if (st.busy || st.ready) {
+        ctx.strokeStyle = 'rgba(255,170,74,.55)'; ctx.lineWidth = Math.max(1.2, s * 0.035);
+        ctx.beginPath(); ctx.moveTo(cx, ridge + s * 0.01); ctx.lineTo(cx, y0 + d * 0.06); ctx.stroke();
+      }
+      if (st.ready) _drawFarmReadyLamp(ctx, cx, ridge - s * 0.2, s, t);
+    }
+
+    const _AGER_ART = { cheesecave: _drawCheeseCave, smokehouse: _drawSmokehouse, hamcellar: _drawHamCellar };
+
+    function _drawAgeingFactories(ctx, W, H, t, night, pal) {
+      if (!roomData.farmLandR) return;
+      const owned = roomData.farmAgers || {}, s = _workshopSize(W, H);
+      FARM_AGERS.forEach(function (def, i) {
+        const p = _agerPos(i), cx = p.x * W, cy = p.y * H;
+        const locked = !(owned[def.id] && owned[def.id].owned);
+        const st = locked ? { ready: false, busy: false } : _agerJobState(def.id);
+        _hoverScaled(ctx, _farmHoverK('sky', def.id), cx, cy, function () {
+          ctx.save();
+          if (locked) ctx.globalAlpha = FARM_LOCK_ALPHA;
+          _AGER_ART[def.id](ctx, cx, cy, s, night, pal, t, st);
+          if (locked) _drawFarmPadlock(ctx, cx, cy + s * 0.18, s * 0.32);
+          ctx.restore();
+        });
+      });
+    }
+
+    /* ── The tier-2 buyer (right plot) ──
+       Permanent, always open, and the ONLY outlet for aged goods. Drawn like its
+       neighbours rather than left as an emoji. */
+    function _drawTier2Buyer(ctx, W, H, t, night, pal) {
+      if (!roomData.farmLandR) return;
+      const s = _workshopSize(W, H) * 0.92;
+      const cx = FARM_BUYER_POS.x * W, cy = FARM_BUYER_POS.y * H;
+      const w = s * 1.1, h = s * 0.42, x0 = cx - w / 2, y0 = cy - h * 0.1;
+      ctx.save();
+      _hoverScaled(ctx, _farmHoverK('sky', '#buyer'), cx, cy, function () {
+        _drawFarmBaseShadow(ctx, cx, y0 + h + s * 0.03, w * 0.58, s * 0.1, night, pal);
+        // posts
+        ctx.fillStyle = night ? '#4e3a28' : '#7d5c3c';
+        ctx.fillRect(x0 + s * 0.02, y0 - s * 0.52, s * 0.07, s * 0.6);
+        ctx.fillRect(x0 + w - s * 0.09, y0 - s * 0.52, s * 0.07, s * 0.6);
+        // striped awning, slanting toward the front
+        const aw = w + s * 0.16, ax = cx - aw / 2, ay = y0 - s * 0.56;
+        for (let k = 0; k < 6; k++) {
+          ctx.fillStyle = k % 2 ? (night ? '#7d3a32' : '#d4614c') : (night ? '#c9bda8' : '#f6efe0');
+          ctx.beginPath();
+          ctx.moveTo(ax + (aw * k) / 6, ay);
+          ctx.lineTo(ax + (aw * (k + 1)) / 6, ay);
+          ctx.lineTo(ax + (aw * (k + 1)) / 6, ay + s * 0.17);
+          ctx.lineTo(ax + (aw * k) / 6, ay + s * 0.17);
+          ctx.closePath(); ctx.fill();
+        }
+        // stone counter
+        const cg = ctx.createLinearGradient(0, y0, 0, y0 + h);
+        cg.addColorStop(0, night ? '#6a635b' : '#c2b8a6');
+        cg.addColorStop(1, night ? '#4b453e' : '#8f8676');
+        ctx.fillStyle = cg; ctx.fillRect(x0, y0, w, h);
+        ctx.fillStyle = night ? '#7b736a' : '#d8cebc';
+        ctx.fillRect(x0 - s * 0.03, y0 - s * 0.05, w + s * 0.06, s * 0.07);
+        // a set of scales on the counter
+        const bx = cx, by = y0 - s * 0.09;
+        ctx.strokeStyle = night ? '#9a9284' : '#7d735f';
+        ctx.lineWidth = Math.max(1, s * 0.028); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx, by - s * 0.16); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(bx - s * 0.13, by - s * 0.16); ctx.lineTo(bx + s * 0.13, by - s * 0.16); ctx.stroke();
+        ctx.fillStyle = night ? '#b6ac9a' : '#e6dcc6';
+        [-0.13, 0.13].forEach(function (o) {
+          ctx.beginPath();
+          ctx.ellipse(bx + s * o, by - s * 0.08, s * 0.07, s * 0.035, 0, 0, Math.PI);
+          ctx.fill();
+        });
+        // waiting stock, so a full shelf is visible from the path
+        const n = Math.min(3, Object.keys(roomData.farmAged || {}).filter(k => (roomData.farmAged[k] || 0) > 0).length);
+        for (let k = 0; k < n; k++) {
+          ctx.fillStyle = night ? '#8a6a3e' : '#c99a52';
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(x0 + s * 0.12 + k * s * 0.19, y0 - s * 0.15, s * 0.14, s * 0.1, s * 0.03);
+          else ctx.rect(x0 + s * 0.12 + k * s * 0.19, y0 - s * 0.15, s * 0.14, s * 0.1);
+          ctx.fill();
+        }
+      });
+      ctx.restore();
     }
 
     function openCartSheet() {
@@ -2811,10 +3332,93 @@
             (sellableTotal > 0
               ? '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="sellAllToCart()">💰 ' + T('Sell all it wants') + '</button>'
               : '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="dismissCart()">🐴 ' + T('Send it off (new cart in {time})', { time: _fmtFarmTime(FARM_CART_COOLDOWN_MS) }) + '</button>')
-          : '<div class="ws-status">' + T('Build a workshop first — then the cart buys what it makes.') + '</div>' +
+          : '<div class="ws-status">' + T('Unlock a machine first — tap one on your farm. Then the plane buys what it makes.') + '</div>' +
             '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="dismissCart()">🐴 ' + T('Send it off (new cart in {time})', { time: _fmtFarmTime(FARM_CART_COOLDOWN_MS) }) + '</button>') +
         '<button class="cp-close" onclick="closeCartSheet()">' + T('Close') + '</button>';
       el.style.display = 'block';
+    }
+
+    /* ── The tier-2 buyer ──
+       The only outlet for aged goods. Always open, unlike the plane, and pays
+       full price — but takes at most FARM_AGED_DAILY_QUOTA items a day. That
+       quota is the brake on tier 2 flooding the economy, and it is what turns a
+       4th ageing slot into a decision. Over quota, goods simply keep. */
+    let _buyerOpen = false;
+    function _agedSoldToday() {
+      return roomData.farmAgedDay === _farmToday() ? (roomData.farmAgedSold || 0) : 0;
+    }
+    function _agedQuotaLeft() { return Math.max(0, FARM_AGED_DAILY_QUOTA - _agedSoldToday()); }
+    function openBuyerSheet() { _buyerOpen = true; renderBuyerSheet(); }
+    function closeBuyerSheet() {
+      _buyerOpen = false;
+      const el = document.getElementById('buyerSheet');
+      if (el) el.style.display = 'none';
+    }
+    function renderBuyerSheet() {
+      const el = document.getElementById('buyerSheet');
+      if (!el) return;
+      if (!_buyerOpen) { el.style.display = 'none'; return; }
+      const aged = roomData.farmAged || {}, left = _agedQuotaLeft();
+      const rows = Object.keys(FARM_AGED).filter(id => (aged[id] || 0) > 0).map(id => {
+        const a = FARM_AGED[id];
+        return '<div class="farm-shop-row">' +
+          '<span class="farm-shop-animal">' + a.emoji + ' ' + T(a.name) + ' <small>×' + aged[id] + ' · ' + a.coins + '🪙 ' + T('each') + '</small></span>' +
+          '<button class="farm-shop-buy" onclick="sellAged(\'' + id + '\')"' + (left > 0 ? '' : ' disabled') + '>' +
+            T('Sell 1 · {coins}', { coins: a.coins + '🪙' }) + '</button>' +
+          '</div>';
+      }).join('');
+      const total = Object.keys(aged).reduce((n, k) => n + (aged[k] || 0), 0);
+      el.innerHTML =
+        '<div class="cp-head">🏛️ ' + T('Aged goods buyer') + '</div>' +
+        '<div class="farm-panel-empty" style="padding:0 2px 8px">' +
+          T('Always open. Takes {n} more today.', { n: '<b>' + left + '</b>' }) + '</div>' +
+        (rows
+          ? rows + (left > 0 && total > 0
+              ? '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="sellAllAged()">💰 ' + T('Sell what it takes today') + '</button>'
+              : '<div class="ws-status">' + T("That's today's quota — the rest keeps and sells tomorrow.") + '</div>')
+          : '<div class="ws-status">' + T('Nothing aged yet. Load a factory on this plot and come back in a few hours.') + '</div>') +
+        '<button class="cp-close" onclick="closeBuyerSheet()">' + T('Close') + '</button>';
+      el.style.display = 'block';
+    }
+
+    // One sale, quota-checked. The day key is the daily orders' own rollover.
+    async function sellAged(id) {
+      if (viewingUid !== currentUid) return;
+      const a = FARM_AGED[id];
+      if (!a || !((roomData.farmAged || {})[id] > 0)) return;
+      if (_agedQuotaLeft() <= 0) return showToast('🏛️ ' + T("That's today's quota — the rest keeps and sells tomorrow."), '');
+      // Read the running total BEFORE stamping today's key — stamping it first
+      // would make _agedSoldToday() hand back yesterday's number as if it were
+      // today's, and the quota would start over mid-day.
+      const soldBefore = _agedSoldToday();
+      roomData.farmAged[id] -= 1;
+      roomData.coins += a.coins;
+      logCoin(a.coins, T('Sold {name}', { name: T(a.name) }));
+      roomData.farmAgedDay = _farmToday();
+      roomData.farmAgedSold = soldBefore + 1;
+      await saveRoom();
+      showToast(T('Sold 1 {item} for {coins}', { item: a.emoji + ' ' + T(a.name), coins: a.coins + '🪙' }), 'success');
+      renderBuyerSheet(); renderFarmPanel(); renderAll();
+    }
+
+    async function sellAllAged() {
+      if (viewingUid !== currentUid) return;
+      const aged = roomData.farmAged || {};
+      const soldBefore = _agedSoldToday();       // before today's key is stamped
+      let left = _agedQuotaLeft(), sold = 0, coins = 0;
+      for (const id in FARM_AGED) {
+        while (left > 0 && (aged[id] || 0) > 0) {
+          aged[id] -= 1; left--; sold++; coins += FARM_AGED[id].coins;
+        }
+      }
+      if (!sold) return;
+      roomData.coins += coins;
+      logCoin(coins, T('Sold aged goods'));
+      roomData.farmAgedDay = _farmToday();
+      roomData.farmAgedSold = soldBefore + sold;
+      await saveRoom();
+      showToast('🏛️ ' + T('Sold {n} aged goods for {coins}', { n: sold, coins: coins + '🪙' }), 'success');
+      renderBuyerSheet(); renderFarmPanel(); renderAll();
     }
 
     async function sellOneToCart(prodId) {
@@ -2946,7 +3550,7 @@
       } else if (_ownsButcher()) {
         actions = '<button class="cp-crop" style="justify-content:center;color:#f87171" onclick="askAnimalButcher()">🔪 ' + T('Butcher for meat (🥩×{n})', { n: meat }) + '</button>';
       } else {
-        actions = '<div class="ws-status">🔪 ' + T('Build the Butcher (Garden tab) to butcher animals.') + '</div>';
+        actions = '<div class="ws-status">🔪 ' + T('Unlock the Butcher (tap its hut on the farm) to butcher animals.') + '</div>';
       }
       el.innerHTML =
         '<div class="ws-box">' +
@@ -3019,10 +3623,11 @@
       el.style.display = 'flex';
     }
 
-    // ── Single-machine modal — tap a machine's hut on the farm to make goods with
-    // just THAT machine (start a batch / collect it). Machines are BUILT in the
-    // Garden tab; this modal only operates an already-built one.
-    function openMachineModal(id) { _workshopModalId = id; _makeChoiceSlot = null; _slotConfirm = false; _workshopModalOpen = true; renderWorkshopModal(); }
+    // ── Single-building modal — tap a hut or an ageing factory on the land to
+    // work just THAT one (start a batch / collect it), or to unlock it if it is
+    // still locked. Buying happens here, where the building is, rather than from
+    // a list in the side panel.
+    function openMachineModal(id) { _workshopModalId = id; _binModalIdx = null; _makeChoiceSlot = null; _slotConfirm = false; _workshopModalOpen = true; renderWorkshopModal(); }
 
     // Which workshop makes `prodId`. _cartBuildWanted only ever asks for goods
     // from machines you already own, so this resolves for anything the cart
@@ -3039,8 +3644,33 @@
     }
     function closeWorkshopModal() {
       _workshopModalOpen = false; _workshopModalId = null; _makeChoiceSlot = null; _slotConfirm = false;
+      _binModalIdx = null;
       const el = document.getElementById('workshopModal');
       if (el) el.style.display = 'none';
+    }
+    // A locked compost bin uses the SAME modal box as a locked building, so
+    // "locked" behaves and looks identical wherever you meet it.
+    function openBinUnlock(i) { _binModalIdx = i; _workshopModalOpen = true; _workshopModalId = null; renderWorkshopModal(); }
+    function _renderBinUnlock(el, i) {
+      const have = _compostBins(), cost = FARM_COMPOST_BIN_COSTS[i];
+      const next = i === have;                       // bins open left to right
+      const afford = roomData.coins >= cost;
+      const capNow = _compostCap(), capThen = (have + 1) * FARM_COMPOST_PER_BIN;
+      el.innerHTML =
+        '<div class="ws-box">' +
+          '<div class="ws-head">🪵 ' + T('Compost bin {n}', { n: i + 1 }) + '</div>' +
+          '<div class="ws-sub">' + T('Holds {n} more fertilizer — the yard fills at the same speed, it just takes longer to run out of room.', { n: FARM_COMPOST_PER_BIN }) + '</div>' +
+          '<div class="ws-status">' + T('Yard holds {now} now · {then} with this bin', { now: capNow, then: capThen }) + '</div>' +
+          '<div class="ws-choose">' +
+            (next
+              ? '<button class="farm-shop-buy ws-recipe" onclick="unlockCompostBin(' + i + ')"' + (afford ? '' : ' disabled') + '>' +
+                  (afford ? '🔓 ' + T('Unlock · {cost}', { cost: cost + '🪙' })
+                          : T('Need {n} more', { n: (cost - (roomData.coins || 0)) + '🪙' })) + '</button>'
+              : '<div class="ws-status">' + T('Open bin {n} first.', { n: have + 1 }) + '</div>') +
+          '</div>' +
+          '<button class="cp-close" onclick="closeWorkshopModal()">' + T('Close') + '</button>' +
+        '</div>';
+      el.style.display = 'flex';
     }
     function chooseMake(slot) { _makeChoiceSlot = slot; _slotConfirm = false; renderWorkshopModal(); }
     function cancelMake() { _makeChoiceSlot = null; renderWorkshopModal(); }
@@ -3049,10 +3679,17 @@
     function renderWorkshopModal() {
       const el = document.getElementById('workshopModal');
       if (!el) return;
-      const mc = FARM_MACHINES.find(m => m.id === _workshopModalId);
+      if (_workshopModalOpen && _binModalIdx != null) { _renderBinUnlock(el, _binModalIdx); return; }
+      const mc = _farmBuildDef(_workshopModalId);
       if (!_workshopModalOpen || !mc) { el.style.display = 'none'; return; }
       const meta = farmProductMeta(), stock = roomData.farmStock || {}, now = Date.now();
       const m = _machineState(mc.id);
+      const slotCost = _buildSlotCost(mc.id);
+      // Ageing runs in hours against the machines' 20–60 minutes, so "240m" would
+      // be a worse answer than "4h" for exactly the buildings that need it.
+      const dur = ms => ms >= 90 * 60000
+        ? T('{n}h', { n: Math.round(ms / 3600000) })
+        : T('{n}m', { n: Math.ceil(ms / 60000) });
       const makesStr = mc.recipes.map(rc => (meta[rc.out.id] ? meta[rc.out.id].emoji : '?')).join(' ');
       // What you have of the ingredients this machine uses (e.g. 🥛×3).
       const ingIds = mc.recipes.reduce((a, rc) => { Object.keys(rc.in).forEach(k => { if (a.indexOf(k) < 0) a.push(k); }); return a; }, []);
@@ -3060,16 +3697,29 @@
       const haveLine = '<div class="ws-status" style="margin:2px 0 8px">' + T('In stock: {list}', { list: haveStr }) + '</div>';
       let body;
       if (!m) {
-        body = '<div class="ws-status">' + T('Not built yet — build it in the 🌱 Garden tab.') + '</div>';
+        /* Locked. This IS the shop now — the building is bought here, where you
+           tapped it, instead of from a list in the side panel. One modal serves
+           every locked building, so "locked" behaves the same everywhere. */
+        const afford = roomData.coins >= mc.cost && viewingUid === currentUid;
+        const makesList = mc.recipes.map(rc => {
+          const oM = meta[rc.out.id] || { emoji: '❓', name: rc.out.id };
+          const inStr = Object.keys(rc.in).map(k => (meta[k] ? meta[k].emoji : k) + '×' + rc.in[k]).join('+');
+          return '<div class="ws-status">' + oM.emoji + ' ' + T(oM.name) + ' <small>' + inStr + ' · ' + dur(rc.timeMs) + '</small></div>';
+        }).join('');
+        body = '<div class="ws-status">🔒 ' + T('Locked — unlock it to start using it.') + '</div>' + makesList +
+          '<div class="ws-choose"><button class="farm-shop-buy ws-recipe" onclick="buyFarmMachine(\'' + mc.id + '\')"' + (afford ? '' : ' disabled') + '>' +
+            (afford ? '🔓 ' + T('Unlock · {cost}', { cost: mc.cost + '🪙' })
+                    : T('Need {n} more', { n: (mc.cost - (roomData.coins || 0)) + '🪙' })) +
+          '</button></div>';
       } else {
         // A grid of FARM_MAX_SLOTS squares: locked (buy) · idle (tap to choose) ·
         // making (shows the product + timer) · ready (tap to collect).
         let cells = '';
         for (let i = 0; i < FARM_MAX_SLOTS; i++) {
           if (i >= m.slots) {                                   // not opened yet
-            const afford = roomData.coins >= FARM_SLOT_COST;
+            const afford = roomData.coins >= slotCost;
             cells += '<button class="ws-cell locked"' + (afford ? '' : ' disabled') + ' onclick="askOpenSlot()">' +
-              '<span class="ws-cell-icon">🔒</span><span class="ws-cell-cap">' + T('Open · {cost}', { cost: Math.round(FARM_SLOT_COST / 1000) + 'k🪙' }) + '</span></button>';
+              '<span class="ws-cell-icon">🔒</span><span class="ws-cell-cap">' + T('Open · {cost}', { cost: Math.round(slotCost / 1000) + 'k🪙' }) + '</span></button>';
             continue;
           }
           const job = m.jobs[i];
@@ -3084,7 +3734,7 @@
                 '<span class="ws-cell-icon">' + oM.emoji + '</span><span class="ws-cell-cap">✅ ' + T('Collect') + '</span></button>';
             } else {
               cells += '<div class="ws-cell busy">' +
-                '<span class="ws-cell-icon">' + oM.emoji + '</span><span class="ws-cell-cap">⏳ ' + T('{n}m', { n: Math.ceil((recipe.timeMs - (now - job.at)) / 60000) }) + '</span></div>';
+                '<span class="ws-cell-icon">' + oM.emoji + '</span><span class="ws-cell-cap">⏳ ' + dur(recipe.timeMs - (now - job.at)) + '</span></div>';
             }
           }
         }
@@ -3096,20 +3746,22 @@
             const oM = meta[rc.out.id] || { emoji: '❓', name: rc.out.id };
             const inStr = Object.keys(rc.in).map(k => (meta[k] ? meta[k].emoji : k) + '×' + rc.in[k]).join('+');
             const can = Object.keys(rc.in).every(k => (stock[k] || 0) >= rc.in[k]);
-            return '<button class="farm-shop-buy ws-recipe" onclick="startMachineSlot(\'' + mc.id + '\',' + _makeChoiceSlot + ',' + r + ')"' + (can ? '' : ' disabled') + '>' + oM.emoji + ' ' + T(oM.name) + ' <small>' + inStr + ' · ' + T('{n}m', { n: Math.round(rc.timeMs / 60000) }) + '</small></button>';
+            return '<button class="farm-shop-buy ws-recipe" onclick="startMachineSlot(\'' + mc.id + '\',' + _makeChoiceSlot + ',' + r + ')"' + (can ? '' : ' disabled') + '>' + oM.emoji + ' ' + T(oM.name) + ' <small>' + inStr + ' · ' + dur(rc.timeMs) + '</small></button>';
           }).join('');
           chooser = '<div class="ws-choose"><div class="ws-slot-no">' + T('Slot {n} — pick a product', { n: _makeChoiceSlot + 1 }) + ' <span class="ws-x" onclick="cancelMake()">✕</span></div>' + choices + '</div>';
         }
         // confirmation before spending coins to open a new slot
         let confirmBanner = '';
         if (_slotConfirm) {
-          confirmBanner = '<div class="ws-choose"><div class="ws-slot-no">' + T('Open a new slot for {cost}?', { cost: FARM_SLOT_COST + '🪙' }) + ' <span class="ws-x" onclick="cancelOpenSlot()">✕</span></div>' +
-            '<button class="farm-shop-buy ws-recipe" onclick="buyMachineSlot(\'' + mc.id + '\')"' + (roomData.coins < FARM_SLOT_COST ? ' disabled' : '') + '>✓ ' + T('Open slot · {cost}', { cost: FARM_SLOT_COST + '🪙' }) + '</button></div>';
+          confirmBanner = '<div class="ws-choose"><div class="ws-slot-no">' + T('Open a new slot for {cost}?', { cost: slotCost + '🪙' }) + ' <span class="ws-x" onclick="cancelOpenSlot()">✕</span></div>' +
+            '<button class="farm-shop-buy ws-recipe" onclick="buyMachineSlot(\'' + mc.id + '\')"' + (roomData.coins < slotCost ? ' disabled' : '') + '>✓ ' + T('Open slot · {cost}', { cost: slotCost + '🪙' }) + '</button></div>';
         }
         body = grid + chooser + confirmBanner;
       }
       const butcherNote = mc.id === 'butcher'
-        ? '<div class="ws-status" style="margin-top:8px">🔪 ' + T('Get meat by butchering an animal: 🐮 Animals tab → tap 🔪 on it.') + '</div>' : '';
+        ? '<div class="ws-status" style="margin-top:8px">🔪 ' + T('Get meat by butchering an animal: 🐮 Animals tab → tap 🔪 on it.') + '</div>'
+        : _isAger(mc.id)
+        ? '<div class="ws-status" style="margin-top:8px">🏛️ ' + T('Aged goods sell only at the buyer on this plot — the plane never takes them.') + '</div>' : '';
       el.innerHTML =
         '<div class="ws-box">' +
           '<div class="ws-head">' + mc.emoji + ' ' + T(mc.name) + '</div>' +
@@ -4005,6 +4657,11 @@
         const _band = _farmPenBand();
         const penTop = _band.top, penBot = _band.bot;
         _drawWorkshopMachines(ctx, W, H, t, night, pal);   // huts behind the herd
+        // Side land. Each returns immediately if its plot is unbought, so the
+        // farm before any expansion draws exactly what it always did.
+        _drawCompostYard(ctx, W, H, t, night, pal);
+        _drawAgeingFactories(ctx, W, H, t, night, pal);
+        _drawTier2Buyer(ctx, W, H, t, night, pal);
         const _blocked = _farmBlockedZones();           // workshop + cart: animals keep out
         const _herd = roomData.farmAnimals || [];
         // Group the herd into one fenced pen per type, then keep each animal in its pen.
@@ -4795,9 +5452,12 @@
         if (tg && tg.kind === 'sky') {
           if (tg.id === '#cart') { openCartSheet(); return; }
           if (tg.id === '#mail') { openFarmInbox(); return; }
-          openMachineModal(tg.id); return;
+          if (tg.id === '#buyer') { openBuyerSheet(); return; }
+          if (tg.id.indexOf('#bin') === 0) { tapCompostBin(+tg.id.slice(4)); return; }
+          openMachineModal(tg.id); return;      // hut or ageing factory, locked or not
         }
-        closeCartSheet();   // tapping elsewhere on the farm dismisses the sheet
+        closeCartSheet();   // tapping elsewhere on the farm dismisses the sheets
+        closeBuyerSheet();
         if (!tg) return;
         // A signboard means the whole row, a bed means that one bed.
         if (tg.kind === 'plot' || tg.kind === 'sign') { _farmRowClick(tg.row, tg.idx != null ? tg.idx : null); return; }
@@ -4817,6 +5477,7 @@
       try { if (_farmInboxOpen) renderFarmInbox(); } catch (e) {}
       try { if (_giftOpen) renderGiftPicker(); } catch (e) {}
       try { if (_cartSheetOpen) renderCartSheet(); } catch (e) {}
+      try { if (_buyerOpen) renderBuyerSheet(); } catch (e) {}
       try { if (typeof renderAquariumPanel === 'function' && typeof isAquariumView !== 'undefined' && isAquariumView) renderAquariumPanel(); } catch (e) {}
       // The room's own tabs and overlays render through T() too. A tab panel is
       // open while it carries .active; an overlay while it has NOT got .hidden.

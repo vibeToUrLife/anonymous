@@ -2,9 +2,19 @@
     /* The page is one vertical column: header, world button, then the stage
        taking whatever is left. Nothing below is allowed to guess at the
        header's height — see .main-wrap. Every overlay on this page is
-       position:fixed, so none of them become flex items here. */
+       position:fixed, so none of them become flex items here.
+
+       height:100%, NOT min-height:100vh. The panel caps itself with
+       `max-height:100%` — a percentage of .main-wrap, which is `flex:1 1 auto`
+       and so is only as tall as its tallest child. With an auto-height body
+       that cap is a percentage of a number the panel itself sets: circular, so
+       it never caps, .panel-inner never gets a height to scroll inside, and a
+       long list grows the row until the stretched .room-container drags the
+       farm canvas tall with it. A definite height breaks the loop. The phone
+       stack is meant to grow and scroll, so it restores auto below 768px. */
+    html { height: 100%; }
     body {
-      min-height: 100vh;
+      height: 100%;
       display: flex; flex-direction: column;
       background: var(--g-bg); background-attachment: fixed;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -471,6 +481,11 @@
 
     /* ── Mobile responsive ── */
     @media (max-width: 768px) {
+      /* The desktop fix pins the page to the viewport so the panel scrolls
+         inside itself. Here the whole column is supposed to scroll instead, and
+         the caps below are vh (content-independent) rather than percentages, so
+         the page goes back to growing with its content. */
+      html, body { height: auto; min-height: 100vh; }
       /* Stack layout vertically. `1 0 auto` so it still fills the screen when
          the panel is short, but is never shrunk below its content — the phone
          layout is meant to scroll, the desktop one is not. */
