@@ -969,8 +969,9 @@
       roomData.farmFertilizer = d.farmFertilizer || 0;
       roomData.farmAgers = d.farmAgers || {};
       roomData.farmAged = d.farmAged || {};
-      roomData.farmAgedDay = d.farmAgedDay || '';
-      roomData.farmAgedSold = d.farmAgedSold || 0;
+      roomData.farmBuyerLeftAt = d.farmBuyerLeftAt || 0;
+      roomData.farmBuyerWanted = d.farmBuyerWanted || null;
+      roomData.farmBuyerSold = d.farmBuyerSold || null;
       roomData.farmColdLevel = d.farmColdLevel || 0;
       roomData.farmAutoFeed = d.farmAutoFeed || false;
       roomData.farmAutoFeedOn = d.farmAutoFeedOn || false;

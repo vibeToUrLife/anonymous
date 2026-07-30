@@ -406,10 +406,20 @@
       ] },
     ];
     const FARM_AGER_SLOT_COST = 15000;   // above the machines' 10000 — a late-game sink
-    // The tier-2 buyer: always open (unlike the plane), pays full price, but only
-    // takes so many items a day. That quota is the brake on tier 2 flooding the
-    // economy, and it is what makes buying a 4th ageing slot a real decision.
-    const FARM_AGED_DAILY_QUOTA = 20;
+    /* The tier-2 buyer runs the plane's mechanic, one tier up: a set it wants
+       this visit, then it shuts and reopens with a different set. It replaced a
+       flat "20 items a day" quota, which braked the economy but said nothing —
+       a list you can read, plan around and see coming does the same job and is
+       something to come back FOR.
+
+       A DAY between visits, against the plane's four hours, because tier 2 is
+       measured in hours: a factory slot turns over every 3-5h, so a faster cycle
+       would keep asking for goods the plot cannot have finished yet. The
+       quantities are scaled to match — three kinds of up to eight each is about
+       the same daily throughput as the quota it replaces, but shaped. */
+    const FARM_BUYER_COOLDOWN_MS = 24 * 60 * 60 * 1000; // shut this long after it is cleared out
+    const FARM_BUYER_WANT_COUNT = 3;                    // how many aged kinds it takes per visit
+    const FARM_BUYER_MAX_QTY = 8;                       // most of each kind (quota 1..this)
 
     /* Compost yard — the left plot. Three bins stand on the plot from the day it
        is bought; the first is unlocked, the other two are tapped to unlock.

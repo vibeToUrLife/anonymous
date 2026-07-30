@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>有什么更新了 · 农场左右两块地</title>
+<style>
+  :root{
+    --bg:#faf3ea; --card:#fffdf9; --ink:#34271c; --soft:#6b5847; --faint:#9b8a78;
+    --primary:#f97316; --border:rgba(154,52,18,.14); --chip:rgba(154,52,18,.07);
+    --green:#4e8b1f; --greenL:#8fd45c;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#1b140e; --card:#241b14; --ink:#f1e8dd; --soft:#c3b3a2; --faint:#8c7c6c;
+      --primary:#fb923c; --border:rgba(255,228,194,.14); --chip:rgba(255,228,194,.08);
+      --green:#8fd45c; }
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--ink); overflow:hidden;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;
+    display:flex; flex-direction:column; height:100vh; -webkit-text-size-adjust:100%;
+  }
+
+  /* ── chrome: dots on top, three buttons at the bottom — same as the other
+     What's New decks, so the two feel like one product ── */
+  .dots{display:flex; gap:7px; justify-content:center; padding:13px 0 3px; flex:none}
+  .dot{width:7px; height:7px; border-radius:999px; background:var(--border); transition:all .3s; cursor:pointer}
+  .dot.on{width:22px; background:var(--primary)}
+
+  .track{position:relative; flex:1; min-height:0; overflow:hidden; touch-action:pan-y}
+  .slide{
+    position:absolute; inset:0; overflow-y:auto; overscroll-behavior:contain;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:6px 20px 12px;
+    opacity:0; transform:translateX(26px); pointer-events:none;
+    transition:opacity .28s ease, transform .28s cubic-bezier(.22,.61,.36,1);
+  }
+  .slide.on{opacity:1; transform:none; pointer-events:auto}
+  .slide.left{transform:translateX(-26px)}
+  .inner{width:100%; max-width:430px}
+
+  h2{font-size:clamp(21px,6vw,27px); font-weight:900; line-height:1.3; letter-spacing:-.2px}
+  .lead{color:var(--soft); font-size:14.5px; line-height:1.75; margin-top:11px}
+  .lead b{color:var(--ink); font-weight:800}
+  .lead .hi{color:var(--primary); font-weight:900}
+  .foot{color:var(--faint); font-size:11.5px; line-height:1.6; margin-top:15px}
+  .kick{
+    display:inline-block; font-size:10.5px; font-weight:900; letter-spacing:1.2px;
+    color:var(--primary); background:var(--chip); border-radius:999px;
+    padding:4px 13px; margin-bottom:14px;
+  }
+
+  .nav{display:flex; align-items:center; justify-content:space-between; gap:12px; flex:none;
+    padding:9px 20px calc(15px + env(safe-area-inset-bottom,0px))}
+  .skip{background:none; border:none; color:var(--faint); font-size:13px; cursor:pointer; padding:8px; font-family:inherit}
+  .prev{
+    margin-left:auto; flex:none; cursor:pointer; font-family:inherit;
+    padding:11px 15px; border-radius:999px; font-size:14px; font-weight:700;
+    color:var(--soft); background:none; border:1px solid var(--border);
+    transition:transform .1s, opacity .15s, filter .15s;
+  }
+  .prev:hover{filter:brightness(1.06)} .prev:active{transform:translateY(1px)}
+  .prev[disabled]{opacity:.3; cursor:default; pointer-events:none}
+  .next{
+    flex:1; max-width:230px; border:none; cursor:pointer; font-family:inherit;
+    padding:12px 20px; border-radius:999px; font-size:15px; font-weight:800; color:#fff;
+    background:linear-gradient(135deg,#fca34a,#f97316); box-shadow:0 8px 20px rgba(249,115,22,.35);
+    transition:transform .1s, filter .15s;
+  }
+  .next:active{transform:translateY(1px)} .next:hover{filter:brightness(1.04)}
+  @media (max-width: 360px){ .prev span{display:none} .prev{padding:11px 13px} }
+
+  /* ═══════ the pictures ═══════
+     One moving idea per slide. A page of bullet points is what nobody reads;
+     these are CSS-only and start themselves — a slide that is not `.on` runs
+     nothing, so arriving on it plays the animation from zero. */
+  .scene{position:relative; display:flex; align-items:center; justify-content:center;
+    gap:11px; min-height:142px; margin-bottom:16px}
+  .e{font-size:40px; line-height:1; display:block; filter:drop-shadow(0 3px 6px rgba(60,35,10,.28))}
+  .arrow{color:var(--faint); font-size:21px}
+
+  /* the ×N badge, landing with a thump */
+  .mult{font-size:25px; font-weight:900; color:#fff; border-radius:12px; padding:3px 13px;
+    background:linear-gradient(135deg,#fca34a,#f97316); box-shadow:0 6px 14px rgba(249,115,22,.32)}
+  .mult.green{background:linear-gradient(135deg,#8fd45c,#5da12a); box-shadow:0 6px 14px rgba(93,161,42,.32)}
+  .on .mult{animation:thump .55s 1.9s backwards cubic-bezier(.34,1.6,.5,1)}
+  @keyframes thump{from{opacity:0; transform:scale(1.9) rotate(-9deg)}}
+
+  /* 1 · the land — the middle sits, the two new plots drop in */
+  .land{display:grid; grid-template-columns:1fr 1.1fr 1fr; gap:7px; width:100%}
+  .land div{border:1px solid var(--border); border-radius:14px; padding:13px 4px;
+    background:var(--card); font-size:10.5px; color:var(--faint); box-shadow:0 4px 10px rgba(80,50,20,.08)}
+  .land .mid{background:var(--chip)}
+  .land b{display:block; font-size:25px; margin-bottom:4px}
+  .land span{display:block; color:var(--ink); font-weight:800; font-size:12px}
+  .on .land .l{animation:dropin .5s .1s backwards cubic-bezier(.34,1.4,.5,1)}
+  .on .land .r{animation:dropin .5s .28s backwards cubic-bezier(.34,1.4,.5,1)}
+  @keyframes dropin{from{opacity:0; transform:translateY(14px) scale(.86)}}
+
+  /* 2 · the bin fills, the crop doubles.
+     display:inline-block / block on purpose — an inline box ignores width and
+     height, and the bin collapses to a dot. */
+  .binwrap{display:inline-block; position:relative; padding-top:12px}
+  .bin{display:block; position:relative; width:74px; height:64px; border-radius:3px 3px 9px 9px;
+    background:linear-gradient(180deg,#c79a63,#a67c4c); overflow:hidden;
+    box-shadow:inset 0 6px 10px rgba(0,0,0,.4), 0 4px 10px rgba(60,35,10,.28)}
+  .bin::after{content:''; position:absolute; inset:0; pointer-events:none;
+    background:repeating-linear-gradient(180deg,transparent 0 20px,rgba(0,0,0,.16) 20px 21px)}
+  .bin i{position:absolute; left:0; right:0; bottom:0; height:28%;
+    background:linear-gradient(180deg,#7d5c33,#4a3520)}
+  .on .bin i{animation:fillup 3.6s cubic-bezier(.4,0,.6,1) infinite}
+  @keyframes fillup{0%,6%{height:28%} 54%,74%{height:100%} 94%,100%{height:28%}}
+  .binwrap b{position:absolute; top:8px; left:-5px; right:-5px; height:8px; border-radius:3px;
+    background:#b98b55; box-shadow:0 2px 4px rgba(60,35,10,.32)}
+  .binwrap s{position:absolute; top:3px; width:8px; height:8px; border-radius:50%;
+    background:rgba(150,125,95,.5); opacity:0}
+  .binwrap s:nth-of-type(1){left:22px} .binwrap s:nth-of-type(2){left:42px}
+  .on .binwrap s{animation:rise 2.1s linear infinite}
+  .on .binwrap s:nth-of-type(2){animation-delay:1.05s}
+  @keyframes rise{from{transform:translateY(10px) scale(.5); opacity:0}
+                  35%{opacity:.8} to{transform:translateY(-25px) scale(1.3); opacity:0}}
+  .pair{display:flex; gap:3px}
+  .on .pair .e:nth-child(2){animation:pop .5s 1.7s backwards cubic-bezier(.34,1.5,.5,1)}
+  @keyframes pop{from{opacity:0; transform:scale(.3) translateY(8px)}}
+
+  /* 3 · in cheap, out dear */
+  .chip{display:flex; flex-direction:column; align-items:center; gap:2px;
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    padding:9px 13px; min-width:74px; box-shadow:0 4px 10px rgba(80,50,20,.08)}
+  .chip .v{font-size:13.5px; font-weight:900; color:var(--faint)}
+  .chip.gold{border-color:rgba(249,115,22,.45); background:rgba(249,115,22,.10)}
+  .chip.gold .v{color:var(--primary)}
+  .on .chip.gold{animation:pop .5s 1.4s backwards cubic-bezier(.34,1.5,.5,1)}
+  .clock{font-size:24px}
+  .on .clock{animation:tick 2.4s steps(12) infinite}
+  @keyframes tick{to{transform:rotate(360deg)}}
+
+  /* 4 · the stall sign swaps its list. Fixed dark board in both themes — it is
+     a painted sign on the farm, not a panel of the page. */
+  .sign{position:relative; background:#33220f; border:1px solid rgba(255,228,194,.16);
+    border-radius:14px; padding:12px 18px; min-width:206px; min-height:84px;
+    display:grid; place-items:center; box-shadow:0 6px 16px rgba(60,35,10,.3)}
+  /* opacity:0 as the RESTING state, and `backwards` fill on both faces. The
+     second face is delayed 3s, and without a backwards fill an element sits at
+     its own base style until its animation starts — so for the first three
+     seconds BOTH lists were painted on top of each other. */
+  .sign .face{position:absolute; inset:0; display:grid; place-items:center; gap:2px;
+    align-content:center; opacity:0}
+  .sign .cap{font-size:10.5px; font-weight:800; letter-spacing:.6px; color:#b9a68e}
+  .sign .list{font-size:24px; letter-spacing:2px}
+  .sign .today .cap{color:#fdba74}
+  .on .sign .today{animation:face 6s infinite backwards}
+  .on .sign .morrow{animation:face 6s 3s infinite backwards}
+  @keyframes face{0%{opacity:0; transform:translateY(8px)}
+                  6%,44%{opacity:1; transform:none}
+                  50%,100%{opacity:0; transform:translateY(-8px)}}
+
+  /* 4 · the three factories, painted by the farm's own drawing code */
+  .shops{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; width:100%; align-items:end}
+  .shop{background:var(--card); border:1px solid var(--border); border-radius:13px;
+    padding:4px 3px 7px; box-shadow:0 4px 10px rgba(80,50,20,.08)}
+  .shop canvas{display:block; width:100%; height:auto; aspect-ratio:1/1}
+  .shop span{display:block; font-size:9.5px; color:var(--faint); line-height:1.45; margin-top:2px}
+  .shop b{display:block; font-size:11.5px; font-weight:800; color:var(--ink)}
+
+  /* 5 · a pulse runs down the chain */
+  .flow{display:flex; align-items:center; justify-content:center; gap:5px}
+  .flow .n{font-size:26px; line-height:1}
+  .flow .b{width:10px; height:2px; border-radius:2px; background:var(--border); flex:none}
+  .on .flow .n{animation:lift 2.6s infinite}
+  .on .flow .n:nth-child(3){animation-delay:.18s}
+  .on .flow .n:nth-child(5){animation-delay:.36s}
+  .on .flow .n:nth-child(7){animation-delay:.54s}
+  .on .flow .n:nth-child(9){animation-delay:.72s}
+  .on .flow .n:nth-child(11){animation-delay:.90s}
+  @keyframes lift{0%,62%,100%{transform:none; filter:none}
+                  22%{transform:translateY(-9px) scale(1.16); filter:drop-shadow(0 4px 8px rgba(249,115,22,.5))}}
+
+  /* Reduced motion: nothing loops, the deck still cross-fades so it stays
+     followable, and every picture holds a readable resting state. */
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important}
+    .slide{transition:opacity .2s !important; transform:none}
+    .slide.left{transform:none}
+    .bin i{height:64%}
+    .binwrap s{display:none}
+    .sign .morrow{display:none}
+    .sign .today{opacity:1; transform:none}
+  }
+  @media (max-height: 620px){ .scene{min-height:120px} .e{font-size:34px} .land b{font-size:21px} }
+</style>
+</head>
+<body>
+  <div class="dots" id="dots"></div>
+  <div class="track" id="track">
+
+    <!-- 1 · 两块新地 -->
+    <section class="slide on">
+      <div class="inner">
+        <div class="scene">
+          <div class="land">
+            <div class="l"><b>🪵</b><span>左</span>堆肥场</div>
+            <div class="mid"><b>🚜</b><span>农场</span>原来的地</div>
+            <div class="r"><b>🏛️</b><span>右</span>陈化厂</div>
+          </div>
+        </div>
+        <div class="kick">NEW · 农场扩建</div>
+        <h2>农场左右<br>各开一块新地</h2>
+        <p class="lead">原来的东西<b>一样都不会动</b>。<br>用画面两边的箭头滑过去。</p>
+        <p class="foot">牧场点满后解锁 · 第一块 50,000🪙 · 第二块 120,000🪙</p>
+      </div>
+    </section>
+
+    <!-- 2 · 左边 -->
+    <section class="slide">
+      <div class="inner">
+        <div class="scene">
+          <span class="binwrap"><span class="bin"><i></i></span><b></b><s></s><s></s></span>
+          <span class="arrow">→</span>
+          <span class="pair"><span class="e">🌾</span><span class="e">🌾</span></span>
+          <span class="mult green">×2</span>
+        </div>
+        <h2>左边 · 堆肥场</h2>
+        <p class="lead">动物越多，肥料堆得越快。<br>施过肥的地，<span class="hi">收成翻倍</span>。</p>
+        <p class="foot">拖着肥料袋刷过一整排，一次施好几块地</p>
+      </div>
+    </section>
+
+    <!-- 3 · 右边 -->
+    <section class="slide">
+      <div class="inner">
+        <div class="scene">
+          <span class="chip"><span class="e">🧀</span><span class="v">200</span></span>
+          <span class="clock">🕐</span>
+          <span class="chip gold"><span class="e">🧀</span><span class="v">600</span></span>
+          <span class="mult">×3</span>
+        </div>
+        <h2>右边 · 陈化工厂</h2>
+        <p class="lead">工坊做的东西再放几个小时，<br><span class="hi">值三倍的钱</span>。</p>
+        <p class="foot">奶酪 · 黄油 · 香肠 · 培根 · 火腿，全部 ×3</p>
+      </div>
+    </section>
+
+    <!-- 4 · 三座工厂 -->
+    <section class="slide">
+      <div class="inner">
+        <div class="scene shops">
+          <div class="shop"><canvas data-ager="0" width="200" height="200"></canvas>
+            <span><b>陈化窖</b>买地就送</span></div>
+          <div class="shop"><canvas data-ager="1" width="200" height="200"></canvas>
+            <span><b>熏房</b>60,000🪙</span></div>
+          <div class="shop"><canvas data-ager="2" width="200" height="200"></canvas>
+            <span><b>火腿地窖</b>120,000🪙</span></div>
+        </div>
+        <h2>右边站着三座工厂</h2>
+        <p class="lead">没解锁的也站在地上，<b>点它就能买</b>。</p>
+        <p class="foot">解锁得越多，收购站每天的清单就越丰富 —— 它只点你做得出来的菜</p>
+      </div>
+    </section>
+
+    <!-- 5 · 收购站 -->
+    <section class="slide">
+      <div class="inner">
+        <div class="scene">
+          <div class="sign">
+            <div class="face today"><span class="cap">今天收</span><span class="list">🧀 🥓 🍖</span></div>
+            <div class="face morrow"><span class="cap">明天要收</span><span class="list">🌭 🧈 🧀</span></div>
+          </div>
+        </div>
+        <h2>陈化品收购站</h2>
+        <p class="lead">每天只收 <b>3 种</b>，卖光就关门。<br>关门时会<span class="hi">预告明天要什么</span>。</p>
+        <p class="foot">陈化要 3~5 小时 —— 看到预告，今晚就该放料</p>
+      </div>
+    </section>
+
+    <!-- 6 · 一条链 -->
+    <section class="slide">
+      <div class="inner">
+        <div class="scene">
+          <div class="flow">
+            <span class="n">🐄</span><span class="b"></span>
+            <span class="n">🪵</span><span class="b"></span>
+            <span class="n">🌾</span><span class="b"></span>
+            <span class="n">🧀</span><span class="b"></span>
+            <span class="n">🏛️</span><span class="b"></span>
+            <span class="n">💰</span>
+          </div>
+        </div>
+        <h2>两块地是一条链</h2>
+        <p class="lead">左边决定你<b>能做多少</b>，<br>右边决定每个<b>值多少</b>。</p>
+        <p class="foot">只开右边，工厂会等料；只开左边，收成卖不出高价</p>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="nav">
+    <button class="skip" id="skip">跳过</button>
+    <button class="prev" id="prev" type="button" aria-label="上一个" disabled>←<span> 上一个</span></button>
+    <button class="next" id="next">下一个 →</button>
+  </div>
+
+<script>
+/* ─────────────────────────────────────────────────────────────
+   The three ageing factories, drawn by the SAME functions the farm
+   uses — lifted out of games/room/js/room-farm-view.js unchanged, so
+   this page cannot show a building the plot does not build.
+   ───────────────────────────────────────────────────────────── */
+var PLOT_DEPTH = 0.22, PLOT_RISE = 0.55;
+function _plotD(s) { var D = s * PLOT_DEPTH; return { D: D, dy: D * PLOT_RISE }; }
+
+function _drawFarmWisp(ctx, cx, topY, s, t, colour, rate) {
+  ctx.fillStyle = colour;
+  for (let k = 0; k < 3; k++) {
+    const yy = topY - k * s * 0.14 - ((t / rate) % (s * 0.14));
+    ctx.beginPath();
+    ctx.arc(cx + Math.sin(t / 520 + k) * s * 0.05, yy, s * 0.055 - k * s * 0.009, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function _drawFarmReadyLamp(ctx, cx, cy, s, t) {
+  const pulse = 0.72 + Math.sin(t / 420) * 0.28;
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, s * 0.32);
+  g.addColorStop(0, 'rgba(255,196,84,' + (0.55 * pulse).toFixed(3) + ')');
+  g.addColorStop(1, 'rgba(255,196,84,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx, cy, s * 0.32, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#ffd06a';
+  ctx.beginPath(); ctx.arc(cx, cy, s * 0.075, 0, Math.PI * 2); ctx.fill();
+}
+
+function _drawFarmBaseShadow(ctx, cx, cy, rx, ry, night, pal) {
+  ctx.fillStyle = night ? 'rgba(0,0,0,.34)' : ((pal && pal.groundShadow) || 'rgba(30,62,20,.24)');
+  ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+}
+
+function _plotBox(ctx, x0, y0, w, h, D, dy, front, right, top, edge) {
+  ctx.beginPath();
+  ctx.moveTo(x0 + w, y0); ctx.lineTo(x0 + w + D, y0 - dy);
+  ctx.lineTo(x0 + w + D, y0 - dy + h); ctx.lineTo(x0 + w, y0 + h);
+  ctx.closePath(); ctx.fillStyle = right; ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(x0, y0); ctx.lineTo(x0 + D, y0 - dy);
+  ctx.lineTo(x0 + w + D, y0 - dy); ctx.lineTo(x0 + w, y0);
+  ctx.closePath(); ctx.fillStyle = top; ctx.fill();
+  ctx.fillStyle = front; ctx.fillRect(x0, y0, w, h);
+  if (edge) {
+    ctx.strokeStyle = edge; ctx.lineWidth = Math.max(1, D * 0.1); ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x0, y0); ctx.lineTo(x0 + D, y0 - dy); ctx.lineTo(x0 + w + D, y0 - dy);
+    ctx.stroke();
+  }
+}
+
+function _plotRecess(ctx, shape, D, dy, wall, dark) {
+  ctx.fillStyle = wall;                        // the wall's cut thickness
+  shape(0, 0); ctx.fill();
+  ctx.fillStyle = dark;                        // the inside, set back
+  shape(D * 0.34, -dy * 0.34); ctx.fill();
+}
+
+function _drawCheeseCave(ctx, cx, cy, s, night, pal, t, st) {
+  const r = s * 0.72, D = _plotD(s).D, dy = _plotD(s).dy;
+  const ay = cy + s * 0.3;                     // ground line at the mouth
+  _drawFarmBaseShadow(ctx, cx + D * 0.45, ay + s * 0.04, r * 1.02, s * 0.12, night, pal);
+
+  /* The mound as a DOME. It used to be a half-ellipse under a top-to-bottom
+     gradient, which is the shading a cylinder has, not a hill: evenly lit
+     all the way across, so the thing had a silhouette and no volume. A
+     radial highlight up and to the left — where this plot's sun is — plus a
+     terminator curving away to the right is what turns it round. */
+  const dome = ctx.createRadialGradient(
+    cx - r * 0.34, ay - r * 0.62, r * 0.06, cx - r * 0.1, ay - r * 0.24, r * 1.24);
+  dome.addColorStop(0, night ? '#4e6f3c' : '#a3d16a');
+  dome.addColorStop(0.45, night ? '#3c5830' : '#7cae4e');
+  dome.addColorStop(1, night ? '#243a1d' : '#456d2b');
+  ctx.fillStyle = dome;
+  ctx.beginPath(); ctx.ellipse(cx, ay, r, r * 0.86, 0, Math.PI, 0); ctx.fill();
+  ctx.fillRect(cx - r, ay - 1, r * 2, s * 0.05);
+  // Where the hill meets its own ground: a soft dark band, so it is planted
+  // in the grass rather than sitting on it.
+  ctx.fillStyle = night ? 'rgba(0,0,0,.22)' : 'rgba(28,54,18,.20)';
+  ctx.beginPath(); ctx.ellipse(cx, ay + s * 0.03, r * 0.99, s * 0.055, 0, 0, Math.PI * 2); ctx.fill();
+
+  /* A stone SURROUND, only as wide as the arch needs. A full facade wall was
+     the first attempt and it cost the building its identity: the grey slab
+     covered the hill, and the one round-topped building on the farm became
+     a grey box with a hole in it. The portal is what needs thickness — the
+     hill just needs to be round. */
+  const aw = s * 0.52, ah = s * 0.56, ax = cx - aw / 2;
+  const fw = aw + s * 0.26, fh = ah * 0.62, fx = cx - fw / 2, fyTop = ay - fh;
+  _plotBox(ctx, fx, fyTop, fw, fh, D * 0.5, dy * 0.5,
+    night ? '#6a635b' : '#b6ada0', night ? '#4c463f' : '#8d8477',
+    night ? '#7c746a' : '#cdc4b5', night ? 'rgba(255,240,210,.14)' : 'rgba(255,250,236,.42)');
+
+  // The mouth, cut through that surround: the inner copy is pushed back
+  // along the depth axis, which is what shows the stone's thickness.
+  const mouth = function (ox, oy) {
+    ctx.beginPath();
+    ctx.moveTo(ax + ox, ay + oy); ctx.lineTo(ax + ox, ay + oy - ah * 0.5);
+    ctx.arc(cx + ox, ay + oy - ah * 0.5, aw / 2, Math.PI, 0);
+    ctx.lineTo(ax + aw + ox, ay + oy); ctx.closePath();
+  };
+  _plotRecess(ctx, mouth, D * 0.5, dy * 0.5,
+    night ? '#4a443d' : '#7f776a', night ? '#0d0a06' : '#241a11');
+  if (st.busy || st.ready) {   // warm light from inside
+    const g = ctx.createRadialGradient(cx, ay - ah * 0.35, 0, cx, ay - ah * 0.35, aw * 0.62);
+    g.addColorStop(0, 'rgba(255,178,86,.42)'); g.addColorStop(1, 'rgba(255,178,86,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, ay - ah * 0.35, aw * 0.62, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Voussoirs, lit round the top-left of the arch and shaded round the right.
+  ctx.strokeStyle = 'rgba(0,0,0,.18)'; ctx.lineWidth = 1;
+  for (let k = 0; k <= 6; k++) {
+    const a = Math.PI + (Math.PI * k) / 6;
+    const sx = cx + Math.cos(a) * (aw / 2 + s * 0.07), sy = ay - ah * 0.5 + Math.sin(a) * (aw / 2 + s * 0.07);
+    const lit = Math.cos(a + Math.PI * 0.25) < 0;      // face turned toward the sun
+    ctx.fillStyle = lit ? (night ? '#7d766e' : '#d2c9ba') : (night ? '#5d5750' : '#9d9488');
+    ctx.save(); ctx.translate(sx, sy); ctx.rotate(a + Math.PI / 2);
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(-s * 0.075, -s * 0.055, s * 0.15, s * 0.11, s * 0.02);
+    else ctx.rect(-s * 0.075, -s * 0.055, s * 0.15, s * 0.11);
+    ctx.fill(); ctx.stroke(); ctx.restore();
+  }
+  // Footing stones, each a little box of its own.
+  [-1, 1].forEach(function (side) {
+    const bx = side < 0 ? ax - s * 0.13 : ax + aw + s * 0.02;
+    _plotBox(ctx, bx, ay - s * 0.12, s * 0.11, s * 0.12, D * 0.4, dy * 0.4,
+      night ? '#5f5a55' : '#a79f93', night ? '#494440' : '#867e72',
+      night ? '#6f6a63' : '#bdb5a7', null);
+  });
+  // Grass over the crown, so the hill reads as turf and not a painted lump.
+  ctx.strokeStyle = night ? '#4a6a38' : '#8fc45c';
+  ctx.lineWidth = Math.max(1, s * 0.022); ctx.lineCap = 'round';
+  [[-0.62, 0.34], [-0.36, 0.62], [0.34, 0.60], [0.63, 0.30]].forEach(function (g2) {
+    const gx = cx + r * g2[0], gy = ay - r * 0.86 * Math.sqrt(Math.max(0, 1 - g2[0] * g2[0])) * 0.96;
+    ctx.beginPath(); ctx.moveTo(gx, gy + s * 0.02);
+    ctx.quadraticCurveTo(gx + s * 0.02, gy - s * 0.04, gx + s * 0.05 * g2[1], gy - s * 0.07); ctx.stroke();
+  });
+  if (st.ready) _drawFarmReadyLamp(ctx, cx, fyTop - s * 0.14, s, t);
+}
+
+function _drawSmokehouse(ctx, cx, cy, s, night, pal, t, st) {
+  const w = s * 0.54, h = s * 0.92, dd = _plotD(s), D = dd.D, dy = dd.dy;
+  const x0 = cx - w / 2, y0 = cy - h * 0.42, base = y0 + h;
+  _drawFarmBaseShadow(ctx, cx + D * 0.5, base + s * 0.03, w * 1.05, s * 0.1, night, pal);
+
+  // Stone plinth: a course of footing the timber stands on, which is what
+  // stops the walls looking like they were pasted onto the grass.
+  const pH = s * 0.09;
+  _plotBox(ctx, x0 - s * 0.03, base - pH, w + s * 0.06, pH, D, dy,
+    night ? '#4a4540' : '#918a7e', night ? '#38342f' : '#6e685e',
+    night ? '#585249' : '#a9a194', null);
+
+  // Tarred timber walls. The right face is the shaded one, as everywhere on
+  // this plot; the front carries a soft vertical gradient for the same
+  // reason a real wall does — it is further from the sky at the bottom.
+  const wallH = h - pH;
+  ctx.fillStyle = night ? '#2a211a' : '#453427';       // right face
+  ctx.beginPath();
+  ctx.moveTo(x0 + w, y0); ctx.lineTo(x0 + w + D, y0 - dy);
+  ctx.lineTo(x0 + w + D, y0 - dy + wallH); ctx.lineTo(x0 + w, y0 + wallH); ctx.closePath(); ctx.fill();
+  const wg = ctx.createLinearGradient(0, y0, 0, y0 + wallH);
+  wg.addColorStop(0, night ? '#4f3c2c' : '#74573e');
+  wg.addColorStop(1, night ? '#2f231a' : '#463424');
+  ctx.fillStyle = wg; ctx.fillRect(x0, y0, w, wallH);
+  // Plank seams run across BOTH faces, so the two read as one solid rather
+  // than two flat panels that happen to touch.
+  ctx.strokeStyle = 'rgba(0,0,0,.24)'; ctx.lineWidth = 1;
+  for (let k = 1; k < 5; k++) {
+    const yy = y0 + (wallH * k) / 5;
+    ctx.beginPath(); ctx.moveTo(x0, yy); ctx.lineTo(x0 + w, yy);
+    ctx.lineTo(x0 + w + D, yy - dy); ctx.stroke();
+  }
+
+  // Narrow door, cut INTO the wall — the frame's thickness is what makes it
+  // a doorway rather than a dark rectangle.
+  const dW = w * 0.44, dH = wallH * 0.6, dX = cx - dW / 2, dY = y0 + wallH - dH;
+  const door = function (ox, oy) { ctx.beginPath(); ctx.rect(dX + ox, dY + oy, dW, dH); };
+  _plotRecess(ctx, door, D * 0.5, dy * 0.5,
+    night ? '#584431' : '#8a6845', night ? '#160f0a' : '#241a11');
+  if (st.busy || st.ready) {
+    ctx.fillStyle = 'rgba(255,164,72,.5)';
+    ctx.fillRect(cx - dW * 0.08, dY + dH * 0.04, dW * 0.16, dH * 0.94);
+  }
+
+  /* Gabled roof with its RIGHT SLOPE showing. A single triangle is a gable
+     seen dead-on, which is the one angle nothing else on this plot is seen
+     from — the eye reads it as a cardboard cut-out sitting behind the walls.
+     Two planes meeting at a ridge, with the ridge running back along the
+     same depth axis as everything else, is the whole fix. */
+  const rTop = y0 - s * 0.22, ov = s * 0.08;      // ridge height, eaves overhang
+  const lx = x0 - ov, rx = x0 + w + ov;
+  ctx.fillStyle = night ? '#443327' : '#6d5138';   // front slope (lit side)
+  ctx.beginPath();
+  ctx.moveTo(lx, y0); ctx.lineTo(cx, rTop); ctx.lineTo(rx, y0); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = night ? '#2c2018' : '#4a3524';   // right slope, running back
+  ctx.beginPath();
+  ctx.moveTo(rx, y0); ctx.lineTo(cx, rTop);
+  ctx.lineTo(cx + D, rTop - dy); ctx.lineTo(rx + D, y0 - dy); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = night ? '#5a4433' : '#8a6845';   // ridge cap catching the sky
+  ctx.lineWidth = Math.max(1.2, s * 0.03);
+  ctx.strokeStyle = night ? '#5a4433' : '#8a6845';
+  ctx.beginPath(); ctx.moveTo(cx, rTop); ctx.lineTo(cx + D, rTop - dy); ctx.stroke();
+  // The shadow the eaves throw on the wall below them.
+  ctx.fillStyle = 'rgba(0,0,0,.22)';
+  ctx.fillRect(x0, y0, w, s * 0.035);
+
+  // Chimney, three faces and a cap like everything else.
+  const chW = s * 0.16, chX = cx + w * 0.10, chY = rTop - s * 0.16;
+  _plotBox(ctx, chX, chY, chW, s * 0.30, D * 0.5, dy * 0.5,
+    night ? '#4a4540' : '#8f887c', night ? '#37332e' : '#6b6459',
+    night ? '#585249' : '#a8a094', night ? 'rgba(255,240,210,.12)' : 'rgba(255,250,236,.34)');
+  ctx.fillStyle = night ? '#615a51' : '#b3ab9d';         // flared cap
+  ctx.fillRect(chX - s * 0.02, chY - s * 0.03, chW + s * 0.04, s * 0.035);
+
+  if (pal && pal.roofSnow) {
+    ctx.strokeStyle = pal.roofSnow; ctx.lineWidth = Math.max(2, s * 0.05); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(lx, y0 - s * 0.01); ctx.lineTo(cx, rTop);
+    ctx.lineTo(cx + D, rTop - dy); ctx.stroke();
+  }
+  if (st.busy || st.ready) _drawFarmWisp(ctx, chX + chW * 0.5 + D * 0.25, chY - s * 0.12, s, t, 'rgba(96,92,88,.4)', 60);
+  if (st.ready) _drawFarmReadyLamp(ctx, x0 - s * 0.12, y0 + wallH * 0.34, s, t);
+}
+
+function _drawHamCellar(ctx, cx, cy, s, night, pal, t, st) {
+  const w = s * 1.02, d = s * 0.46, y0 = cy + s * 0.1;
+  const dd = _plotD(s), D = dd.D;
+  _drawFarmBaseShadow(ctx, cx + D * 0.3, y0 + d * 0.66, w * 0.64, s * 0.1, night, pal);
+
+  /* The collar as a raised RING, not two stacked ellipses. Flat ellipse on
+     flat ellipse is how you draw a puddle; a ring has a wall, and the wall
+     is what says the ground opens downward here. Outer wall first, then the
+     cap on top of it, then the shaft going down inside. */
+  const orx = w * 0.58, ory = d * 0.72, lip = s * 0.075;
+  ctx.fillStyle = night ? '#3c3730' : '#6e6659';               // outer wall
+  ctx.beginPath(); ctx.ellipse(cx, y0 + d * 0.2 + lip, orx, ory, 0, 0, Math.PI); ctx.fill();
+  ctx.fillRect(cx - orx, y0 + d * 0.2, orx * 2, lip);
+  ctx.fillStyle = night ? '#5d564d' : '#a49a8b';               // cap, catching the sky
+  ctx.beginPath(); ctx.ellipse(cx, y0 + d * 0.2, orx, ory, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = night ? 'rgba(255,240,210,.10)' : 'rgba(255,250,236,.34)';
+  ctx.lineWidth = Math.max(1, s * 0.02);
+  ctx.beginPath(); ctx.ellipse(cx, y0 + d * 0.2, orx, ory, 0, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke();
+  /* The shaft. DARK AT THE BOTTOM: what you see looking into a hole from
+     above and in front is the far wall catching a little light near the rim,
+     and blackness underneath it. The gradient ran the other way at first —
+     light pooling at the bottom — and the cellar read as a bowl of soup in a
+     stone ring, which is what a filled shape always reads as. */
+  const irx = w * 0.45, iry = d * 0.56, sy = y0 + d * 0.24;
+  ctx.fillStyle = night ? '#0a0806' : '#140e09';
+  ctx.beginPath(); ctx.ellipse(cx, sy, irx, iry, 0, 0, Math.PI * 2); ctx.fill();
+  const far = ctx.createLinearGradient(0, sy - iry, 0, sy + iry * 0.35);
+  far.addColorStop(0, night ? '#332e28' : '#5a5145');
+  far.addColorStop(1, night ? 'rgba(10,8,6,0)' : 'rgba(20,14,9,0)');
+  ctx.fillStyle = far;
+  ctx.beginPath(); ctx.ellipse(cx, sy, irx, iry, 0, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill();
+  // Steps descending AWAY from you along the far wall, each darker than the
+  // one above it. Stacked full ellipses were the other way to draw this and
+  // they build a bowl — the one shape a cellar mouth must not have.
+  [[0.74, 0.34], [0.52, 0.24]].forEach(function (k, i) {
+    ctx.fillStyle = i ? (night ? '#191510' : '#2a2117') : (night ? '#241f19' : '#3d342a');
+    ctx.beginPath();
+    ctx.ellipse(cx, sy - iry * k[1], irx * k[0], iry * k[0], 0, Math.PI, Math.PI * 2);
+    ctx.closePath(); ctx.fill();
+  });
+
+  /* Light climbing out of the shaft, BEFORE the leaves — so the doors are
+     lit from below by their own cellar rather than sitting on the glow. */
+  if (st.busy || st.ready) {
+    // On the far wall near the rim, where a lamp down there would actually
+    // land — not a wash over the whole opening, which just refills the bowl.
+    const g = ctx.createRadialGradient(cx, sy - iry * 0.55, 0, cx, sy - iry * 0.55, irx * 0.8);
+    g.addColorStop(0, 'rgba(255,170,74,.55)'); g.addColorStop(1, 'rgba(255,170,74,0)');
+    ctx.save();
+    ctx.beginPath(); ctx.ellipse(cx, sy, irx, iry, 0, 0, Math.PI * 2); ctx.clip();
+    ctx.fillStyle = g; ctx.fillRect(cx - irx, sy - iry, irx * 2, iry * 2);
+    ctx.restore();
+  }
+
+  /* The two leaves, THROWN OPEN to either side, and the shaft left showing
+     between them. They used to meet at a ridge over the middle of the hole,
+     which drew a four-sided pyramid — from this angle that is the silhouette
+     of a hip roof, and the cellar read as a little tent standing in a stone
+     ring. Open leaves say the same thing the closed ones were trying to
+     (a way down, under the ground) and say it without lying about the form. */
+  const hinge = y0 + d * 0.04;
+  const leaf = function (dir, lit) {
+    const hx = cx + dir * irx * 0.86;                  // hinged at the collar
+    const tipX = cx + dir * w * 0.72, tipY = y0 - d * 0.52;
+    // Deeper at the hinge than at the tip: a slab swung away from you keeps
+    // its near edge tall and foreshortens the far one.
+    const hTop = hinge - d * 0.30, hBot = hinge + d * 0.42;
+    const g = ctx.createLinearGradient(0, tipY, 0, hBot);
+    g.addColorStop(0, lit ? (night ? '#8a6640' : '#bb8a55') : (night ? '#5c4227' : '#8a6238'));
+    g.addColorStop(1, night ? '#3d2c1a' : '#65482a');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(hx, hTop);
+    ctx.lineTo(tipX, tipY);
+    ctx.lineTo(tipX, tipY + d * 0.34);
+    ctx.lineTo(hx, hBot);
+    ctx.closePath(); ctx.fill();
+    // iron banding, running with the leaf rather than across the hole
+    ctx.strokeStyle = night ? '#2a2622' : '#463f36';
+    ctx.lineWidth = Math.max(1.2, s * 0.03);
+    [0.34, 0.72].forEach(function (f) {
+      const ax2 = hx + (tipX - hx) * f;
+      const ay2 = hTop + (tipY - hTop) * f, by2 = hBot + (tipY + d * 0.34 - hBot) * f;
+      ctx.beginPath(); ctx.moveTo(ax2, ay2); ctx.lineTo(ax2, by2); ctx.stroke();
+    });
+    // the leaf's own top edge, catching the sky on the near side
+    ctx.strokeStyle = lit ? (night ? '#a07c50' : '#dcaa6c') : (night ? '#4a361f' : '#75542f');
+    ctx.lineWidth = Math.max(1.2, s * 0.03); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(hx, hTop); ctx.lineTo(tipX, tipY); ctx.stroke();
+  };
+  leaf(-1, false);
+  leaf(1, true);
+  if (st.ready) _drawFarmReadyLamp(ctx, cx, y0 - d * 0.62, s, t);
+}
+
+var AGERS = [_drawCheeseCave, _drawSmokehouse, _drawHamCellar];
+/* One is idle, one is working (lit door + smoke), one has something ready
+   (the amber lamp) — the three states a factory is ever in, all on one screen. */
+var AGER_ST = [{ busy: false, ready: true }, { busy: true, ready: false }, { busy: false, ready: false }];
+
+/* Each building gets its OWN size and ground line. They are deliberately
+   different shapes — a wide mound, a tall chimney, and a hole in the ground —
+   so one shared formula frames exactly one of them and crops the other two:
+   the smokehouse lost its chimney and its smoke off the top of the tile. */
+var AGER_FIT = [
+  { s: 0.60, y: 0.56 },   // cheese cave — wide and low
+  { s: 0.44, y: 0.68 },   // smokehouse  — tall, and the smoke needs headroom
+  { s: 0.58, y: 0.54 },   // ham cellar  — flat, mostly below the ground line
+];
+function paintAger(cv, t) {
+  var i = +cv.getAttribute('data-ager'), f = AGER_FIT[i];
+  var ctx = cv.getContext('2d');
+  var W = cv.width, H = cv.height;
+  var night = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  var pal = { groundShadow: night ? 'rgba(0,0,0,.34)' : 'rgba(30,62,20,.20)' };
+  ctx.clearRect(0, 0, W, H);
+  AGERS[i](ctx, W / 2, H * f.y, W * f.s, night, pal, t, AGER_ST[i]);
+}
+</script>
+
+<script>
+var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+var dotsBox = document.getElementById('dots');
+var track = document.getElementById('track');
+var next = document.getElementById('next');
+var prev = document.getElementById('prev');
+var i = 0;
+
+slides.forEach(function(_, k){
+  var d = document.createElement('span');
+  d.className = 'dot' + (k === 0 ? ' on' : '');
+  d.addEventListener('click', function(){ go(k); });
+  dotsBox.appendChild(d);
+});
+var dots = Array.prototype.slice.call(dotsBox.children);
+
+var REDUCE = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+var live = [], raf = 0, last = 0;
+function loop(t){
+  raf = requestAnimationFrame(loop);
+  if (t - last < 42) return;            // ~24fps, the throttle the farm canvas uses
+  last = t;
+  for (var k = 0; k < live.length; k++) paintAger(live[k], t);
+}
+function repaint(){ for (var k = 0; k < live.length; k++) paintAger(live[k], REDUCE ? 2600 : (last || 2600)); }
+
+function go(n){
+  n = Math.max(0, Math.min(slides.length - 1, n));
+  slides.forEach(function(s, k){ s.classList.toggle('on', k === n); s.classList.toggle('left', k < n); });
+  dots.forEach(function(d, k){ d.classList.toggle('on', k === n); });
+  slides[n].scrollTop = 0;
+  i = n;
+  prev.disabled = (i === 0);
+  next.textContent = (i === slides.length - 1) ? '去农场看看 🚜' : '下一个 →';
+  // Only the visible slide paints; leaving the loop running behind a hidden
+  // slide burns a frame budget nobody can see.
+  cancelAnimationFrame(raf); raf = 0;
+  live = Array.prototype.slice.call(slides[n].querySelectorAll('canvas'));
+  if (!live.length) return;
+  repaint();
+  if (!REDUCE) raf = requestAnimationFrame(loop);
+}
+next.addEventListener('click', function(){ i >= slides.length - 1 ? done() : go(i + 1); });
+prev.addEventListener('click', function(){ go(i - 1); });
+document.getElementById('skip').addEventListener('click', done);
+document.addEventListener('keydown', function(e){
+  if (e.key === 'ArrowLeft') { go(i - 1); }
+  else if (e.key === 'ArrowRight' && i < slides.length - 1) { go(i + 1); }
+});
+
+/* Swipe. The track is touch-action:pan-y, so vertical scrolling inside a slide
+   still belongs to the browser and only sideways movement is ours. */
+var x0 = null, y0 = null, moved = false;
+track.addEventListener('pointerdown', function(e){
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  x0 = e.clientX; y0 = e.clientY; moved = false;
+});
+track.addEventListener('pointermove', function(e){
+  if (x0 === null) return;
+  var dx = Math.abs(e.clientX - x0);
+  if (dx > 12 && dx > Math.abs(e.clientY - y0)) moved = true;
+});
+track.addEventListener('pointerup', function(e){
+  if (x0 === null) return;
+  var dx = e.clientX - x0, dy = e.clientY - y0;
+  x0 = null;
+  if (moved && Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+    if (dx < 0 && i < slides.length - 1) go(i + 1);
+    else if (dx > 0) go(i - 1);
+  }
+});
+track.addEventListener('pointercancel', function(){ x0 = null; });
+
+// The overlay in index.html owns this page — 跳过 and the last button ask it to
+// close rather than navigating anywhere themselves.
+function done(){ try { parent.postMessage('wn-close', '*'); } catch (e) {} }
+
+/* index.html reveals this iframe ~800ms AFTER setting src, so at first paint the
+   canvases can still be zero-sized and would come out blank. Repaint whenever
+   the box actually gets a size, not just on resize. */
+var rt = 0;
+function repaintSoon(){ clearTimeout(rt); rt = setTimeout(repaint, 120); }
+window.addEventListener('resize', repaintSoon);
+window.addEventListener('load', repaint);
+if (window.ResizeObserver) new ResizeObserver(repaintSoon).observe(document.body);
+else setTimeout(repaint, 900);
+
+go(0);
+</script>
+</body>
+</html>

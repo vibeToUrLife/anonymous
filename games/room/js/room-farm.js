@@ -89,20 +89,29 @@
   // 'ripe' if any planted plot is fully grown; 'growing' if planted but none
   // ripe; 'empty' if no plot has a crop. cropId = first planted plot's crop
   // (row label). progress = min progress of growing plots; msLeft = max time left.
+  /* A row may hold several different crops — nothing stops you planting bed by
+     bed. `cropId` is the FIRST one planted, which is all the signboard used to
+     show: a row of wheat, carrot and corn announced itself as wheat, and worse,
+     went "✨ Ready" (any bed ripe) while still naming a crop that was not the
+     ripe one. `kinds` is every distinct crop in the row, in bed order, so the
+     sign can say what is actually there. `cropId` stays for callers that just
+     want one. */
   function farmRowState(rowPlots, crops, now) {
     let cropId = null, anyRipe = false, msLeft = 0, minProg = 1;
+    const kinds = [];
     for (const p of rowPlots) {
       if (!p || !p.crop) continue;
       if (cropId == null) cropId = p.crop;
+      if (kinds.indexOf(p.crop) < 0) kinds.push(p.crop);
       const c = crops.find(x => x.id === p.crop);
       if (!c) continue;
       const prog = cropProgress(p.plantedAt, now, c.growMs);
       if (prog >= 1) anyRipe = true;
       else { msLeft = Math.max(msLeft, c.growMs - (now - p.plantedAt)); minProg = Math.min(minProg, prog); }
     }
-    if (cropId == null) return { state: 'empty', cropId: null, progress: 0, msLeft: 0 };
-    if (anyRipe) return { state: 'ripe', cropId: cropId, progress: 1, msLeft: 0 };
-    return { state: 'growing', cropId: cropId, progress: minProg, msLeft: msLeft };
+    if (cropId == null) return { state: 'empty', cropId: null, kinds: [], progress: 0, msLeft: 0 };
+    if (anyRipe) return { state: 'ripe', cropId: cropId, kinds: kinds, progress: 1, msLeft: 0 };
+    return { state: 'growing', cropId: cropId, kinds: kinds, progress: minProg, msLeft: msLeft };
   }
 
   // How many empty plots you can afford to plant with a given seed.

@@ -1147,10 +1147,20 @@
     /* Herd + jar-style progress bars */
     .farm-herd-emoji{font-size:20px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.45))}
     .farm-herd-info{flex:1;min-width:0}
-    .farm-herd-name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    /* display:block on both. These are emitted as <span>s inside .farm-herd-info,
+       which is a flex ITEM (so it blockifies) but not a flex CONTAINER — its
+       children stay inline, and an inline box ignores height. That silently cost
+       the bar every pixel it has: `height:7px` did nothing, and the inner fill's
+       `height:100%` resolved against an auto-height inline parent, i.e. 0. The
+       food and happiness bars were drawing as nothing at all. */
+    .farm-herd-name{display:block;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .farm-herd-name small{font-family:var(--farm-display);color:var(--g-accent-2);font-weight:800}
-    .farm-herd-bar{height:7px;background:rgba(0,0,0,.32);border-radius:999px;overflow:hidden;margin-top:4px;box-shadow:inset 0 1px 2px rgba(0,0,0,.45)}
+    .farm-herd-bar{display:block;height:7px;background:rgba(0,0,0,.32);border-radius:999px;overflow:hidden;margin-top:4px;box-shadow:inset 0 1px 2px rgba(0,0,0,.45)}
     .farm-herd-bar span{display:block;height:100%;border-radius:999px;transition:width .35s ease}
+    /* The trough's drain rate, under its bar — the count moves too slowly to
+       watch, so the panel says the rate outright instead of hoping you notice. */
+    .farm-food-rate{display:block;font-size:10px;color:var(--g-ink-faint);margin-top:4px;font-variant-numeric:tabular-nums}
+    .farm-food-rate.hungry{color:#f0857a;font-weight:700}
     .farm-herd-drops{font-size:10px;color:var(--g-accent-2);white-space:nowrap;font-weight:700;font-variant-numeric:tabular-nums}
     .farm-herd-meat{font-size:10px;color:#f0857a;white-space:nowrap;font-weight:700;font-variant-numeric:tabular-nums}
 
