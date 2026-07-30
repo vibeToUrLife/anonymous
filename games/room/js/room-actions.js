@@ -975,6 +975,14 @@
       roomData.farmColdLevel = d.farmColdLevel || 0;
       roomData.farmAutoFeed = d.farmAutoFeed || false;
       roomData.farmAutoFeedOn = d.farmAutoFeedOn || false;
+      // The skin the farm is wearing follows the host as well — without this the
+      // canvas kept painting the VISITOR's look, so every farm you walked into
+      // wore your own theme. ownedFarmThemes comes along because farmThemeOf()
+      // drops back to the default skin for an id the owner list doesn't cover.
+      // Safe to overwrite our own values: saveRoom() is owner-gated, the skins
+      // shop is never rendered in visitor mode, and goHome() re-loads our room.
+      roomData.farmTheme = d.farmTheme || 'meadow';
+      roomData.ownedFarmThemes = Array.isArray(d.ownedFarmThemes) ? d.ownedFarmThemes : [];
       // Popularity + weekly board numbers follow whoever's farm we're looking at
       // (the visitor panel shows the host's 🔥 count). farmHelpDay/farmHelpCount
       // are deliberately NOT mirrored — those are the VISITOR's own daily

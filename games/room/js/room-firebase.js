@@ -257,8 +257,9 @@
         roomData.farmAnimals = Array.isArray(d.farmAnimals) ? d.farmAnimals : [];
         roomData.aquariumFish = Array.isArray(d.aquariumFish) ? d.aquariumFish : [];
         roomData.aquariumTheme = d.aquariumTheme || 'tropical';
-        // Visiting loads the HOST's document into roomData, so these two make
-        // their farm paint in THEIR skin rather than in mine.
+        // My own skin, kept live with my document. This handler returns early
+        // while visiting, so it is NOT what paints a host's farm — visitRoom()
+        // mirrors farmTheme/ownedFarmThemes for that.
         roomData.farmTheme = d.farmTheme || 'meadow';
         roomData.ownedFarmThemes = Array.isArray(d.ownedFarmThemes) ? d.ownedFarmThemes : [];
         roomData.aquariumLastCollect = d.aquariumLastCollect || 0;
