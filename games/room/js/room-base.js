@@ -495,6 +495,33 @@
     const AQUARIUM_FRENZY_MS = 15000;                    // Feeding Frenzy round length (ms)
     const AQUARIUM_BUBBLE_MS = 20000;                    // Bubble Pop round length (ms)
     const AQUARIUM_RACE_STAKES = [10, 50, 100];          // Fish Race bet options
+
+    /* ── Aquarium equipment ──
+       Three devices standing in the tank, bought by tapping them. Index 0 of
+       every table is the UNBOUGHT behaviour, so a player who buys nothing gets
+       exactly the tank that existed before any of this.
+
+       The filter is the one that matters: a full tank idles at 207🪙/hr and used
+       to stop banking after three hours, so a work day earned what a nap earned.
+       The light is a flat multiplier on idle earnings only — never on mini-game
+       payouts, which already out-earn the tank tenfold. The pump buys extra
+       plays of the two games that are capped at once a day, where the ceiling is
+       a hard count that cannot be ground. */
+    const AQUARIUM_EQUIP_MAX = 3;
+    const AQUARIUM_FILTER_CAPS_MS = [3, 6, 12, 24].map(function (h) { return h * 60 * 60 * 1000; });
+    const AQUARIUM_FILTER_COSTS = [0, 1500, 5000, 15000];
+    const AQUARIUM_LIGHT_MULT   = [1, 1.15, 1.3, 1.5];
+    const AQUARIUM_LIGHT_COSTS  = [0, 2000, 6000, 18000];
+    const AQUARIUM_PUMP_COSTS   = [0, 800, 3000, 9000];
+    // One list so the tank, the hit-test and the buy box all walk the same three.
+    const AQUARIUM_EQUIP = [
+      { id: 'filter', field: 'aquariumFilter', emoji: '🫙', name: 'Filter',
+        blurb: 'Banks what your fish earn while you are away.', costs: AQUARIUM_FILTER_COSTS },
+      { id: 'light',  field: 'aquariumLight',  emoji: '💡', name: 'Light',
+        blurb: 'Warmer water, busier fish — they earn faster.', costs: AQUARIUM_LIGHT_COSTS },
+      { id: 'pump',   field: 'aquariumPump',   emoji: '🔋', name: 'Pump',
+        blurb: 'More oxygen, more play in them.', costs: AQUARIUM_PUMP_COSTS },
+    ];
     const AQUARIUM_THEMES = [
       { id: 'tropical', name: '🏝️ Tropical',   grad: ['#1a3a5c', '#15406a', '#0a1e38'], caustic: '100,200,255' },
       { id: 'abyss',    name: '🌑 Deep Abyss',  grad: ['#0a2230', '#06303a', '#02141c'], caustic: '70,170,180' },

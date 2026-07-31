@@ -75,6 +75,59 @@ test('aquariumIdleCoins is 0 for an empty or all-junk tank', () => {
   assert.equal(A.aquariumIdleCoins(['Old Boot', 'Seaweed'], TYPES, 5 * HOUR, 3 * HOUR, RATES), 0);
 });
 
+/* ── Equipment: filter, light, pump ──
+   Three levelled devices standing in the tank. The maths lives here rather than
+   in the view so the cap, the multiplier and the daily allowance are checkable
+   without a canvas. */
+
+test('aquariumLevelValue reads a level off its table and clamps both ends', () => {
+  const CAPS = [3, 6, 12, 24];
+  assert.equal(A.aquariumLevelValue(0, CAPS), 3, 'unbought is the first entry');
+  assert.equal(A.aquariumLevelValue(2, CAPS), 12);
+  assert.equal(A.aquariumLevelValue(3, CAPS), 24);
+  assert.equal(A.aquariumLevelValue(9, CAPS), 24, 'a level past the table stops at the top');
+  assert.equal(A.aquariumLevelValue(-1, CAPS), 3, 'and a negative one at the bottom');
+  assert.equal(A.aquariumLevelValue(undefined, CAPS), 3, 'a missing level is unbought');
+});
+
+test('the light multiplies the earning rate, and no light means no change', () => {
+  const tank = ['Sardine', 'Salmon', 'Whale'];               // 1 + 3 + 12 = 16/hr
+  assert.equal(A.aquariumCoinsPerHour(tank, TYPES, RATES), 16,
+    'every existing caller passes no multiplier and must be unaffected');
+  assert.equal(A.aquariumCoinsPerHour(tank, TYPES, RATES, 1), 16);
+  assert.equal(A.aquariumCoinsPerHour(tank, TYPES, RATES, 1.5), 24);
+});
+
+test('the light multiplies banked idle coins too', () => {
+  // 12/hr × 2h = 24, then ×1.5
+  assert.equal(A.aquariumIdleCoins(['Whale'], TYPES, 2 * HOUR, 99 * HOUR, RATES, 1.5), 36);
+  // …and it is still whole coins after the multiplier, never a fraction.
+  assert.equal(A.aquariumIdleCoins(['Salmon'], TYPES, 1 * HOUR, 99 * HOUR, RATES, 1.15), 3);
+});
+
+test('the pump buys EXTRA plays a day, so an unbought one is still one a day', () => {
+  assert.equal(A.aquariumPlaysPerDay(0), 1, "today's behaviour must survive the update");
+  assert.equal(A.aquariumPlaysPerDay(1), 2);
+  assert.equal(A.aquariumPlaysPerDay(3), 4);
+  assert.equal(A.aquariumPlaysPerDay(undefined), 1);
+});
+
+/* The counter has to survive documents written before it existed. Those hold a
+   day string and nothing else, and the string was only ever set by playing —
+   so on the day of the release "today, no count" means one play used, not none.
+   Reading it as none hands every player who had already played a free extra. */
+test('a pre-update document that already played today reads as one play used', () => {
+  assert.equal(A.aquariumPlaysUsed('2026-8-1', '2026-8-1', undefined), 1);
+  assert.equal(A.aquariumPlaysUsed('2026-8-1', '2026-8-1', 0), 0,
+    'but an explicit 0 written by the new code is honoured');
+  assert.equal(A.aquariumPlaysUsed('2026-8-1', '2026-8-1', 2), 2);
+});
+
+test('a stored day that is not today has used nothing', () => {
+  assert.equal(A.aquariumPlaysUsed('2026-7-31', '2026-8-1', 3), 0);
+  assert.equal(A.aquariumPlaysUsed('', '2026-8-1', undefined), 0, 'never played at all');
+});
+
 test('frenzyPayout rewards bites and combo', () => {
   assert.equal(A.frenzyPayout(0, 0), 0);
   assert.equal(A.frenzyPayout(10, 4), 10 * 3 + 4 * 5); // 50

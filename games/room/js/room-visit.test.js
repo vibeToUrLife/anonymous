@@ -56,6 +56,38 @@ test('visitRoom paints the host farm in the HOST skin, not mine', async () => {
   assert.deepEqual(sb.roomData.ownedFarmThemes, []);
 });
 
+/* The aquarium's three devices are DRAWN IN THE TANK, so a visit that forgets
+   them stands the visitor's own filter, light and pump in someone else's water —
+   and reports the host's earnings at the visitor's multiplier. Same shape as the
+   farm-skin bug above, one room over. */
+test('visitAquarium paints the HOST equipment, not mine', async () => {
+  const sb = visitSandbox({ aquariumFilter: 3, aquariumLight: 2, aquariumPump: 1 });
+  sb.roomData = {
+    aquariumFilter: 0, aquariumLight: 0, aquariumPump: 0,
+    pets: [], layerData: {},
+  };
+
+  await sb.visitRoom('host');
+
+  assert.equal(sb.roomData.aquariumFilter, 3);
+  assert.equal(sb.roomData.aquariumLight, 2);
+  assert.equal(sb.roomData.aquariumPump, 1);
+});
+
+test('a host with no equipment blanks mine rather than leaving it standing', async () => {
+  const sb = visitSandbox({ aquariumFish: [] });          // host bought nothing
+  sb.roomData = {
+    aquariumFilter: 3, aquariumLight: 3, aquariumPump: 3,
+    pets: [], layerData: {},
+  };
+
+  await sb.visitRoom('host');
+
+  assert.equal(sb.roomData.aquariumFilter, 0);
+  assert.equal(sb.roomData.aquariumLight, 0);
+  assert.equal(sb.roomData.aquariumPump, 0);
+});
+
 // The other direction: a paid skin I don't own still has to show, which is why
 // the host's ownedFarmThemes is mirrored alongside the id (farmThemeOf() drops
 // an unowned id back to the default).

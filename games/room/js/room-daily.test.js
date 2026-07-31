@@ -102,6 +102,10 @@ function dailySandbox(opts) {
   sandbox.toasts = [];
   sandbox.showToast = (msg, kind) => { sandbox.toasts.push({ msg, kind }); };
   sandbox.getActivePets = () => [];
+  // The snapshot handler normalises the aquarium's daily play counters on the
+  // way in; both of these ship in files room.html loads before room-firebase.js.
+  sandbox._aqGameToday = () => '2026-8-1';
+  sandbox.aquariumPlaysUsed = require('./room-aquarium.js').aquariumPlaysUsed;
   sandbox.migratePets = (d) => d.pets || [];
   sandbox.getTotalPlantIncome = () => null;
   sandbox.planOfflineAutoFeed = () => ({ pets: [], coinsSpent: 0 });

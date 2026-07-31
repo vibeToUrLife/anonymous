@@ -45,8 +45,39 @@
     return { placed, total, pct, byRarity, trash };
   }
 
-  // Coins-per-hour a tank earns: sum of each placed species' rarity rate.
-  function aquariumCoinsPerHour(aquariumFish, fishTypes, rates) {
+  /* ── Equipment: filter, light, pump ──
+     Each device is a level indexing a table of what that level buys. One reader
+     serves all of them, and it clamps, so a level from a document written by a
+     newer build (or a corrupted one) reads as the nearest real level instead of
+     undefined. Level 0 is always "unbought", so table[0] must be the behaviour
+     the tank had before any of this existed. */
+  function aquariumLevelValue(level, table) {
+    if (!Array.isArray(table) || !table.length) return 0;
+    const i = Math.max(0, Math.min(table.length - 1, Math.floor(level || 0)));
+    return table[i];
+  }
+
+  // Extra plays the pump buys: the allowance is 1 + level, so no pump is still
+  // the one-a-day the two capped games have always had.
+  function aquariumPlaysPerDay(pumpLevel) {
+    return 1 + Math.max(0, Math.floor(pumpLevel || 0));
+  }
+
+  /* How many plays a stored (day, count) pair has used up today.
+
+     Documents written before the counter existed carry a day string and no
+     count, and that string was only ever set BY playing — so "today, no count"
+     means one play used. Reading it as none would hand a free extra to everyone
+     who had already played on the day this shipped. */
+  function aquariumPlaysUsed(storedDay, today, storedN) {
+    if (!storedDay || storedDay !== today) return 0;
+    return typeof storedN === 'number' ? storedN : 1;
+  }
+
+  // Coins-per-hour a tank earns: sum of each placed species' rarity rate, times
+  // whatever the light is worth (1 when there is no light, and for every caller
+  // that predates it).
+  function aquariumCoinsPerHour(aquariumFish, fishTypes, rates, mult) {
     const byName = {};
     for (const f of fishTypes) byName[f.name] = f;
     let total = 0;
@@ -54,12 +85,12 @@
       const f = byName[name];
       if (f) total += (rates[f.rarity] || 0);
     }
-    return total;
+    return total * (mult == null ? 1 : mult);
   }
 
   // Whole coins earned over an elapsed window, capped at capMs.
-  function aquariumIdleCoins(aquariumFish, fishTypes, elapsedMs, capMs, rates) {
-    const perHour = aquariumCoinsPerHour(aquariumFish, fishTypes, rates);
+  function aquariumIdleCoins(aquariumFish, fishTypes, elapsedMs, capMs, rates, mult) {
+    const perHour = aquariumCoinsPerHour(aquariumFish, fishTypes, rates, mult);
     const ms = Math.max(0, Math.min(elapsedMs, capMs));
     return Math.floor(perHour * (ms / 3600000));
   }
@@ -89,5 +120,6 @@
     return Math.min(0.10, 0.02 + 0.02 * (legendaryCount || 0));
   }
 
-  return { catchableSpecies, aquariumCompletion, aquariumCoinsPerHour, aquariumIdleCoins, frenzyPayout, raceOdds, bubbleJackpotChance };
+  return { catchableSpecies, aquariumCompletion, aquariumCoinsPerHour, aquariumIdleCoins, frenzyPayout, raceOdds, bubbleJackpotChance,
+           aquariumLevelValue, aquariumPlaysPerDay, aquariumPlaysUsed };
 });

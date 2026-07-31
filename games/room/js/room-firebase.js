@@ -66,7 +66,12 @@
         ownedFarmThemes: roomData.ownedFarmThemes || [],
         aquariumLastCollect: roomData.aquariumLastCollect || 0,
         aquariumRaceDay: roomData.aquariumRaceDay || '',
+        aquariumRaceN: roomData.aquariumRaceN || 0,
         aquariumBubbleDay: roomData.aquariumBubbleDay || '',
+        aquariumBubbleN: roomData.aquariumBubbleN || 0,
+        aquariumFilter: roomData.aquariumFilter || 0,
+        aquariumLight: roomData.aquariumLight || 0,
+        aquariumPump: roomData.aquariumPump || 0,
         aquariumFrenzyAt: roomData.aquariumFrenzyAt || 0,
         // NOTE: aquariumLikes is intentionally NOT written here — only visitors
         // change it (via increment), so an owner save must never clobber it.
@@ -265,6 +270,19 @@
         roomData.aquariumLastCollect = d.aquariumLastCollect || 0;
         roomData.aquariumRaceDay = d.aquariumRaceDay || '';
         roomData.aquariumBubbleDay = d.aquariumBubbleDay || '';
+        // Play counters, normalised HERE rather than where they are read. A
+        // document written before the counters existed carries a day and no
+        // count, and that day was only ever set by playing — aquariumPlaysUsed
+        // turns that into "one play used". It has to happen on the way in,
+        // because the first saveRoom would otherwise write the missing count out
+        // as a 0 and hand back a play that was already spent.
+        const _aqDay = _aqGameToday();
+        roomData.aquariumRaceN = aquariumPlaysUsed(d.aquariumRaceDay || '', _aqDay, d.aquariumRaceN);
+        roomData.aquariumBubbleN = aquariumPlaysUsed(d.aquariumBubbleDay || '', _aqDay, d.aquariumBubbleN);
+        // The three equipment levels.
+        roomData.aquariumFilter = d.aquariumFilter || 0;
+        roomData.aquariumLight = d.aquariumLight || 0;
+        roomData.aquariumPump = d.aquariumPump || 0;
         roomData.aquariumFrenzyAt = d.aquariumFrenzyAt || 0;
         roomData.aquariumLikes = d.aquariumLikes || 0;
         roomData.farmDrops = Array.isArray(d.farmDrops) ? d.farmDrops : [];
@@ -497,7 +515,7 @@
       _unsubscribeRoomSnap();
       if (unsubVisitList) { unsubVisitList(); unsubVisitList = null; }
       // Reset roomData to defaults for clean account switch
-      roomData = { coins: 0, petDrops: [], petCollections: {}, autoFeeder: false, autoFeedOn: false, farmAnimals: [], farmDrops: [], farmDecors: [], farmFood: 0, farmFoodAt: 0, farmStock: {}, farmTotalCollected: 0, farmCapLevel: 0, farmLandL: false, farmLandR: false, farmAutoCollect: false, farmVariants: {}, farmPlots: [], farmOrdersDay: '', farmOrdersDone: [], farmMachines: {}, farmCompost: 0, farmCompostAt: 0, farmCompostBins: 0, farmFertilizer: 0, farmAgers: {}, farmAged: {}, farmBuyerLeftAt: 0, farmBuyerWanted: null, farmBuyerSold: null, farmCartLeftAt: 0, farmTroughLevel: 0, farmColdLevel: 0, farmAutoFeed: false, farmAutoFeedOn: false, farmTheme: 'meadow', ownedFarmThemes: [], farmCheersTotal: 0, farmWeekId: '', farmWeekCheers: 0, farmWeekProduce: 0, farmWeekPrevId: '', farmWeekPrevCheers: 0, farmWeekPrevProduce: 0, farmHelpDay: '', farmHelpCount: 0, aquariumFish: [], aquariumTheme: 'tropical', aquariumLastCollect: 0, aquariumRaceDay: '', aquariumBubbleDay: '', aquariumFrenzyAt: 0, aquariumLikes: 0, pets: [], plant: null, plantLevels: {}, plantPosition: null, ownedPlants: [], ownedDecors: [], placedDecors: [], ownedWalls: ['wall_default'], wallPattern: 'wall_default', ownedWindows: ['win_none','win_classic'], windowStyle: 'win_classic', ownedFloors: ['floor_wood'], floorStyle: 'floor_wood', ownedAccessories: [], displayName: getPlayerName(), lastCoinCollect: 0, loginStreak: 0, lastLoginDay: '', achievements: [], gachaPulls: 0, giftsGiven: 0, giftsReceived: 0, jukeboxTrack: null, jukeboxVol: 0.5, unlockedLayers: 1, layerData: {} };
+      roomData = { coins: 0, petDrops: [], petCollections: {}, autoFeeder: false, autoFeedOn: false, farmAnimals: [], farmDrops: [], farmDecors: [], farmFood: 0, farmFoodAt: 0, farmStock: {}, farmTotalCollected: 0, farmCapLevel: 0, farmLandL: false, farmLandR: false, farmAutoCollect: false, farmVariants: {}, farmPlots: [], farmOrdersDay: '', farmOrdersDone: [], farmMachines: {}, farmCompost: 0, farmCompostAt: 0, farmCompostBins: 0, farmFertilizer: 0, farmAgers: {}, farmAged: {}, farmBuyerLeftAt: 0, farmBuyerWanted: null, farmBuyerSold: null, farmCartLeftAt: 0, farmTroughLevel: 0, farmColdLevel: 0, farmAutoFeed: false, farmAutoFeedOn: false, farmTheme: 'meadow', ownedFarmThemes: [], farmCheersTotal: 0, farmWeekId: '', farmWeekCheers: 0, farmWeekProduce: 0, farmWeekPrevId: '', farmWeekPrevCheers: 0, farmWeekPrevProduce: 0, farmHelpDay: '', farmHelpCount: 0, aquariumFish: [], aquariumTheme: 'tropical', aquariumLastCollect: 0, aquariumRaceDay: '', aquariumRaceN: 0, aquariumBubbleDay: '', aquariumBubbleN: 0, aquariumFrenzyAt: 0, aquariumLikes: 0, aquariumFilter: 0, aquariumLight: 0, aquariumPump: 0, pets: [], plant: null, plantLevels: {}, plantPosition: null, ownedPlants: [], ownedDecors: [], placedDecors: [], ownedWalls: ['wall_default'], wallPattern: 'wall_default', ownedWindows: ['win_none','win_classic'], windowStyle: 'win_classic', ownedFloors: ['floor_wood'], floorStyle: 'floor_wood', ownedAccessories: [], displayName: getPlayerName(), lastCoinCollect: 0, loginStreak: 0, lastLoginDay: '', achievements: [], gachaPulls: 0, giftsGiven: 0, giftsReceived: 0, jukeboxTrack: null, jukeboxVol: 0.5, unlockedLayers: 1, layerData: {} };
       // Reset to floor 1 when re-initialising (e.g. account switch)
       currentLayer = 1;
       isOutsideView = false;

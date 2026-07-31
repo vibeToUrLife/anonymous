@@ -998,6 +998,12 @@
       roomData.aquariumFish = Array.isArray(d.aquariumFish) ? d.aquariumFish : [];
       roomData.aquariumTheme = d.aquariumTheme || 'tropical';
       roomData.aquariumLikes = d.aquariumLikes || 0;
+      // The three devices are drawn IN the tank and the light scales the rate we
+      // report, so a visit that skipped them would stand MY equipment in someone
+      // else's water. Blanked when the host owns none, never left at mine.
+      roomData.aquariumFilter = d.aquariumFilter || 0;
+      roomData.aquariumLight = d.aquariumLight || 0;
+      roomData.aquariumPump = d.aquariumPump || 0;
       // Load multi-layer data for visited room (visitor starts on floor 1)
       roomData.unlockedLayers = d.unlockedLayers ?? 1;
       const rawLayerData = d.layerData ? JSON.parse(JSON.stringify(d.layerData)) : {};
