@@ -1094,6 +1094,8 @@
     "Claim Today's Reward!": '领取今日奖励！',
     'Daily reward': '每日奖励',
     'Claimed {coins} coins! Streak: {n}': '领到 {coins} 金币！已连续 {n} 天',
+    'Already claimed today on another device.': '今天已经在另一台设备上领过了。',
+    'Could not reach the server — try again in a moment.': '连不上服务器 —— 等一下再试。',
     'Achievement: {name}!': '成就达成：{name}！',
     'Leave a message...': '留句话…',
     'Post': '发布',

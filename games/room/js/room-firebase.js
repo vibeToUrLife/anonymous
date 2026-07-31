@@ -414,7 +414,14 @@
       // One-time post-load hooks — gated on the room data actually being applied
       // (_roomLoaded), NOT a blind timer, so the daily reward can never re-prompt
       // against empty/default roomData after a refresh.
-      if (!_postLoadHooksDone && _roomLoaded) {
+      //
+      // …and gated on that data having come from the SERVER. Persistence means
+      // the first snapshot is answered out of THIS device's IndexedDB copy,
+      // which on a second device is whatever it last saw — so asking it "was
+      // today's reward claimed?" re-popped a reward the other device had already
+      // taken. Offline the whole session the modal simply doesn't auto-open;
+      // Settings → 🎁 Daily Reward still does.
+      if (!_postLoadHooksDone && _roomLoaded && !(snap.metadata && snap.metadata.fromCache)) {
         _postLoadHooksDone = true;
         checkDailyOnLogin();
         checkAchievements();
