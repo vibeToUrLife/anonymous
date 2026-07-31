@@ -4173,15 +4173,17 @@
          _hoverScaled so pointing at the stall never scales the text, and outside
          the dimming so a shut stall can still say when to come back. */
       const fs = Math.max(10, Math.min(15, s * 0.22));
-      const sign = open
-        ? (b.wanted.map(function (w) {
-            return (FARM_AGED[w.id] || { emoji: '❓' }).emoji + '×' + _buyerRemaining(w);
-          }).join(' ') || T('Open'))
-        : '🕐 ' + _fmtFarmTime(b.nextInMs);
       // Clamped to the plot's own west edge (world x = W), for the same reason
       // the trough's badge is clamped to the farm's: a list of three goods is
-      // wider than the stall, and the stall stands near that edge.
-      const bx = _drawMeterBadge(ctx, cx, cy - s * 0.92, sign, 0, fs, night, !open, null, W + 2);
+      // wider than the stall, and the stall stands near that edge. Open with a
+      // list → the drawn icons; open-but-empty or shut → a plain text pill.
+      let bx;
+      if (open && b.wanted.length) {
+        bx = _drawBuyerWantsBadge(ctx, cx, cy - s * 0.92, b.wanted, fs, night, W + 2);
+      } else {
+        const sign = open ? T('Open') : '🕐 ' + _fmtFarmTime(b.nextInMs);
+        bx = _drawMeterBadge(ctx, cx, cy - s * 0.92, sign, 0, fs, night, !open, null, W + 2);
+      }
       // The same amber lamp the rest of the farm uses for "something to do here":
       // lit only when a sale can actually be made right now.
       if (open && b.wanted.some(function (w) { return _buyerSellable(w) > 0; })) {
@@ -4393,6 +4395,73 @@
       if (!art) return (FARM_AGED[id] || { emoji: '❓' }).emoji;
       return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 64 64" ' +
         'style="vertical-align:middle;overflow:visible" aria-hidden="true">' + art + '</svg>';
+    }
+    /* An aged good draws its own icon; every other product keeps its emoji.
+       Lets the workshop modal — one function serving both the tier-1 machines
+       and the tier-2 factories — swap only the aged OUTPUTS to drawings without
+       a branch at each call site (an ageing factory's inputs are tier-1 goods,
+       which stay emoji). `m` is the caller's already-resolved meta entry. */
+    function _prodIcon(id, size, m) {
+      if (FARM_AGED_ART[id]) return _agedIcon(id, size);
+      return (m && m.emoji) || (farmProductMeta()[id] || { emoji: '❓' }).emoji;
+    }
+
+    /* ── The same drawings, on the canvas ──
+       The stall sign floating over the tier-2 buyer lists what it is taking
+       today, and it was the last place aged goods were still an emoji — drawn
+       with ctx.fillText, where an inline <svg> cannot reach. So each aged icon
+       is rasterised once (SVG → data-URL Image, cached) and drawn into the sign
+       in place of the glyph. An Image not yet decoded falls back to the emoji
+       for that one frame rather than leaving a gap; the farm's animation loop
+       repaints it as a drawing the moment it is ready. */
+    const _agedImgCache = {};
+    function _agedImage(id) {
+      if (id in _agedImgCache) return _agedImgCache[id];
+      const art = FARM_AGED_ART[id];
+      if (!art) { _agedImgCache[id] = null; return null; }
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">' + art + '</svg>');
+      _agedImgCache[id] = img;
+      return img;
+    }
+    // The buyer's "taking today" sign, drawn as icon + ×N per good in one pill —
+    // same shape and return as _drawMeterBadge so the ready-lamp still lands.
+    function _drawBuyerWantsBadge(ctx, cx, topY, wanted, fs, night, minX) {
+      ctx.save();
+      ctx.font = '800 ' + Math.round(fs) + 'px sans-serif';
+      ctx.textBaseline = 'middle';
+      const icon = fs * 1.4, gap = fs * 0.12, sep = fs * 0.5, pad = 8;
+      let contentW = 0;
+      const toks = wanted.map(function (w) {
+        const cnt = '×' + _buyerRemaining(w), cw = ctx.measureText(cnt).width;
+        contentW += icon + gap + cw;
+        return { id: w.id, cnt: cnt, cw: cw };
+      });
+      contentW += sep * Math.max(0, toks.length - 1);
+      const bw = contentW + pad * 2, bh = Math.max(fs + 7, icon + 6);
+      const bx = minX != null ? Math.max(minX, cx - bw / 2) : cx - bw / 2, by = topY;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(bx, by, bw, bh, bh / 2); else ctx.rect(bx, by, bw, bh);
+      ctx.fillStyle = night ? 'rgba(20,14,6,0.82)' : 'rgba(40,26,12,0.78)';
+      ctx.fill();
+      let x = bx + pad; const midY = by + bh / 2;
+      ctx.fillStyle = '#ffe9b0'; ctx.textAlign = 'left';
+      toks.forEach(function (tk) {
+        const img = _agedImage(tk.id);
+        if (img && img.complete && img.naturalWidth > 0) {
+          ctx.drawImage(img, x, midY - icon / 2, icon, icon);
+        } else {
+          ctx.save(); ctx.font = Math.round(icon * 0.9) + 'px serif';
+          ctx.fillText((FARM_AGED[tk.id] || { emoji: '❓' }).emoji, x, midY); ctx.restore();
+        }
+        x += icon + gap;
+        ctx.fillText(tk.cnt, x, midY + 0.5);
+        x += tk.cw + sep;
+      });
+      ctx.restore();
+      return { bx: bx, by: by, bw: bw, bh: bh };
     }
 
     let _buyerOpen = false;
@@ -4864,7 +4933,7 @@
       const dur = ms => ms >= 90 * 60000
         ? T('{n}h', { n: Math.round(ms / 3600000) })
         : T('{n}m', { n: Math.ceil(ms / 60000) });
-      const makesStr = mc.recipes.map(rc => (meta[rc.out.id] ? meta[rc.out.id].emoji : '?')).join(' ');
+      const makesStr = mc.recipes.map(rc => _prodIcon(rc.out.id, 18, meta[rc.out.id])).join(' ');
       // What you have of the ingredients this machine uses (e.g. 🥛×3).
       const ingIds = mc.recipes.reduce((a, rc) => { Object.keys(rc.in).forEach(k => { if (a.indexOf(k) < 0) a.push(k); }); return a; }, []);
       const haveStr = ingIds.map(id => (meta[id] ? meta[id].emoji : id) + '×' + (stock[id] || 0)).join('   ');
@@ -4878,7 +4947,7 @@
         const makesList = mc.recipes.map(rc => {
           const oM = meta[rc.out.id] || { emoji: '❓', name: rc.out.id };
           const inStr = Object.keys(rc.in).map(k => (meta[k] ? meta[k].emoji : k) + '×' + rc.in[k]).join('+');
-          return '<div class="ws-status">' + oM.emoji + ' ' + T(oM.name) + ' <small>' + inStr + ' · ' + dur(rc.timeMs) + '</small></div>';
+          return '<div class="ws-status">' + _prodIcon(rc.out.id, 18, oM) + ' ' + T(oM.name) + ' <small>' + inStr + ' · ' + dur(rc.timeMs) + '</small></div>';
         }).join('');
         body = '<div class="ws-status">🔒 ' + T('Locked — unlock it to start using it.') + '</div>' + makesList +
           '<div class="ws-choose"><button class="farm-shop-buy ws-recipe" onclick="buyFarmMachine(\'' + mc.id + '\')"' + (afford ? '' : ' disabled') + '>' +
@@ -4905,10 +4974,10 @@
             const oM = meta[recipe.out.id] || { emoji: '❓' };
             if (cropProgress(job.at, now, recipe.timeMs) >= 1) {
               cells += '<button class="ws-cell ready" onclick="collectMachineSlot(\'' + mc.id + '\',' + i + ')">' +
-                '<span class="ws-cell-icon">' + oM.emoji + '</span><span class="ws-cell-cap">✅ ' + T('Collect') + '</span></button>';
+                '<span class="ws-cell-icon">' + _prodIcon(recipe.out.id, 30, oM) + '</span><span class="ws-cell-cap">✅ ' + T('Collect') + '</span></button>';
             } else {
               cells += '<div class="ws-cell busy">' +
-                '<span class="ws-cell-icon">' + oM.emoji + '</span><span class="ws-cell-cap">⏳ ' + dur(recipe.timeMs - (now - job.at)) + '</span></div>';
+                '<span class="ws-cell-icon">' + _prodIcon(recipe.out.id, 30, oM) + '</span><span class="ws-cell-cap">⏳ ' + dur(recipe.timeMs - (now - job.at)) + '</span></div>';
             }
           }
         }
@@ -4920,7 +4989,7 @@
             const oM = meta[rc.out.id] || { emoji: '❓', name: rc.out.id };
             const inStr = Object.keys(rc.in).map(k => (meta[k] ? meta[k].emoji : k) + '×' + rc.in[k]).join('+');
             const can = Object.keys(rc.in).every(k => (stock[k] || 0) >= rc.in[k]);
-            return '<button class="farm-shop-buy ws-recipe" onclick="startMachineSlot(\'' + mc.id + '\',' + _makeChoiceSlot + ',' + r + ')"' + (can ? '' : ' disabled') + '>' + oM.emoji + ' ' + T(oM.name) + ' <small>' + inStr + ' · ' + dur(rc.timeMs) + '</small></button>';
+            return '<button class="farm-shop-buy ws-recipe" onclick="startMachineSlot(\'' + mc.id + '\',' + _makeChoiceSlot + ',' + r + ')"' + (can ? '' : ' disabled') + '>' + _prodIcon(rc.out.id, 20, oM) + ' ' + T(oM.name) + ' <small>' + inStr + ' · ' + dur(rc.timeMs) + '</small></button>';
           }).join('');
           chooser = '<div class="ws-choose"><div class="ws-slot-no">' + T('Slot {n} — pick a product', { n: _makeChoiceSlot + 1 }) + ' <span class="ws-x" onclick="cancelMake()">✕</span></div>' + choices + '</div>';
         }
