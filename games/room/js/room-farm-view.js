@@ -3411,6 +3411,20 @@
       return Math.max(0, Math.min(1, left / FARM_COMPOST_PER_BIN));
     }
 
+    /* Whether the yard has a +1 to show. The +1 means "a whole unit was just
+       GAINED", and it is derived rather than remembered: _unitCrossedAgo reads
+       a value sitting on a whole number as a crossing that happened this
+       instant. Collecting empties the yard onto exactly 0 — a whole number —
+       so tapping a full bin threw a +1 up at the same moment the toast said it
+       had collected ten, over a yard that had just gone DOWN by ten.
+
+       You cannot have just gained your zeroth unit. Hold the pop until the yard
+       is carrying a whole one, which is also the first honest thing it can
+       announce. The trough holds its −1 after a refill for the same reason. */
+    function _compostPopDue(yard) {
+      return Math.floor(yard) >= 1;
+    }
+
     // A slow rising wisp — the machines' steam loop, re-coloured and re-timed.
     // Used by a full compost bin (brown, slow) and the smokehouse (grey).
     function _drawFarmWisp(ctx, cx, topY, s, t, colour, rate) {
@@ -3763,7 +3777,7 @@
         }
       });
       // +1 off the badge of the bin taking it, when the yard gains a whole unit.
-      if (fillingBadge) {
+      if (fillingBadge && _compostPopDue(yard)) {
         const fs = Math.max(10, Math.min(15, fillingBadge.s * 0.24));
         _drawUnitPop(ctx, fillingBadge.box.bx + fillingBadge.box.bw / 2,
           fillingBadge.box.by - fs * 0.45, fs * 3.4,

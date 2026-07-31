@@ -517,6 +517,41 @@ test('collecting empties the whole yard, and every bin shows it', async () => {
   }
 });
 
+/* Tapping a FULL bin threw a "+1" up off the bin at the same moment the toast
+   said it had collected ten. The +1 means "the yard just gained a whole unit",
+   and it is DERIVED: _unitCrossedAgo reads a value sitting on a whole number as
+   a crossing that happened this instant. A collect empties the yard onto exactly
+   0 — a whole number — so the accrual cue fired over a yard that had just gone
+   DOWN by ten, and the player read it as "I only got 1".
+
+   The trough already holds its −1 after a refill for exactly this reason. */
+test('collecting the yard does not fire the +1 that means "one gained"', async () => {
+  const sb = meterSandbox(20);
+  sb.roomData.farmCompostBins = 1;            // cap 10
+  sb.roomData.farmCompost = 10;               // full, so a collect lands it on exactly 0
+  sb.roomData.farmFertilizer = 0;
+  sb.roomData.farmCompostAt = Date.now();
+
+  await sb.tapCompostBin(0);
+
+  assert.equal(sb.roomData.farmFertilizer, 10, 'precondition: ten really were collected');
+  const yard = sb._compostNow();
+  assert.ok(sb._compostPerHr() > 0,
+    'the yard is under its cap again, so the pop is live — this is the moment it fired');
+  assert.ok(sb._unitCrossedAgo(yard, sb._compostPerHr(), true) < 50,
+    'precondition: an emptied yard does read as "just crossed a unit"');
+  assert.equal(sb._compostPopDue(yard), false,
+    'so a +1 went up beside a toast that said 10');
+});
+
+test('the +1 still fires when the yard really does gain a unit', () => {
+  const sb = meterSandbox(20);
+  assert.equal(sb._compostPopDue(3), true, 'crossing into the third unit must still pop');
+  assert.equal(sb._compostPopDue(1), true, 'the very first whole unit counts');
+  assert.equal(sb._compostPopDue(0.98), false, 'not yet — nothing whole has been gained');
+  assert.equal(sb._compostPopDue(0), false, 'you cannot have just gained your zeroth unit');
+});
+
 test('an empty yard says so instead of silently doing nothing', async () => {
   const sb = plotSandbox();
   sb.roomData.farmCompost = 0.4;              // under one whole unit
