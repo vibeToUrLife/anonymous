@@ -1074,16 +1074,23 @@
     .ws-slot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 4px;border-top:1px dotted var(--g-border)}
     .ws-slot:first-of-type{border-top:none}
     .ws-slot-state{font-weight:700;font-size:13px;color:var(--g-ink)}
-    /* 4-square slot grid */
-    .ws-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0 12px}
+    /* Slot grid — two big squares a row. It used to be four across, which on a
+       phone made each slot a ~66px target with an 8.5px caption; the "make" tap
+       and its label were the smallest things in the whole farm. Two columns with
+       a min-height doubles the target and lets the icon and caption grow. */
+    .ws-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:8px 0 12px}
     .ws-cell{
-      aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-      border-radius:14px;border:2px dashed var(--g-border);background:rgba(255,255,255,.04);
-      color:var(--g-ink-soft);font:inherit;cursor:pointer;padding:4px;transition:border-color .15s,background .15s;
+      min-height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+      border-radius:16px;border:2px dashed var(--g-border);background:rgba(255,255,255,.04);
+      color:var(--g-ink-soft);font:inherit;cursor:pointer;padding:8px;transition:border-color .15s,background .15s,transform .08s;
     }
-    .ws-cell-icon{font-size:26px;line-height:1}
-    .ws-cell-cap{font-size:8.5px;font-weight:800;text-align:center;line-height:1.1;letter-spacing:.2px}
-    .ws-cell.idle:hover,.ws-cell.idle.picking{border-color:var(--g-accent);color:var(--g-accent);background:rgba(251,146,60,.08)}
+    .ws-cell-icon{font-size:38px;line-height:1}
+    .ws-cell-cap{font-size:12px;font-weight:800;text-align:center;line-height:1.15;letter-spacing:.2px}
+    /* An empty slot IS the "make" button, so accent it at rest — it should read
+       as the thing to tap, not an empty box you have to guess at. */
+    .ws-cell.idle{border-color:rgba(251,146,60,.5);color:var(--g-accent)}
+    .ws-cell.idle:hover,.ws-cell.idle.picking{border-color:var(--g-accent);color:var(--g-accent);background:rgba(251,146,60,.10)}
+    .ws-cell.idle:active{transform:scale(.96)}
     .ws-cell.locked{border-style:solid;border-color:var(--g-border)}
     .ws-cell.locked:disabled{opacity:.45;cursor:not-allowed}
     .ws-cell.busy{border-style:solid;cursor:default;color:var(--cream)}
@@ -1121,6 +1128,11 @@
     .ws-x{cursor:pointer;float:right;color:var(--g-ink-soft);font-weight:700}
     .ws-recipe{display:block;width:100%;text-align:left;margin-top:6px}
     .ws-recipe small{opacity:.7;font-weight:600}
+    /* Bigger than a plain shop button: this is the second half of "make", so it
+       gets a comfortable tap height and wraps instead of clipping a long recipe.
+       Scoped under .ws-choose to beat .farm-shop-buy's 11px / nowrap. */
+    .ws-choose .ws-recipe{padding:11px 13px;font-size:14px;line-height:1.35;white-space:normal;border-radius:12px}
+    .ws-choose .ws-recipe small{display:inline-block;margin-top:1px}
 
     /* Rows — dotted separators, quiet by default */
     .farm-shop-row,.farm-herd-row,.farm-food-row{

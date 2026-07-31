@@ -4947,7 +4947,7 @@
         const makesList = mc.recipes.map(rc => {
           const oM = meta[rc.out.id] || { emoji: '❓', name: rc.out.id };
           const inStr = Object.keys(rc.in).map(k => (meta[k] ? meta[k].emoji : k) + '×' + rc.in[k]).join('+');
-          return '<div class="ws-status">' + _prodIcon(rc.out.id, 18, oM) + ' ' + T(oM.name) + ' <small>' + inStr + ' · ' + dur(rc.timeMs) + '</small></div>';
+          return '<div class="ws-status">' + _prodIcon(rc.out.id, 20, oM) + ' ' + T(oM.name) + ' <small>' + inStr + ' · ' + dur(rc.timeMs) + '</small></div>';
         }).join('');
         body = '<div class="ws-status">🔒 ' + T('Locked — unlock it to start using it.') + '</div>' + makesList +
           '<div class="ws-choose"><button class="farm-shop-buy ws-recipe" onclick="buyFarmMachine(\'' + mc.id + '\')"' + (afford ? '' : ' disabled') + '>' +
@@ -4974,10 +4974,10 @@
             const oM = meta[recipe.out.id] || { emoji: '❓' };
             if (cropProgress(job.at, now, recipe.timeMs) >= 1) {
               cells += '<button class="ws-cell ready" onclick="collectMachineSlot(\'' + mc.id + '\',' + i + ')">' +
-                '<span class="ws-cell-icon">' + _prodIcon(recipe.out.id, 30, oM) + '</span><span class="ws-cell-cap">✅ ' + T('Collect') + '</span></button>';
+                '<span class="ws-cell-icon">' + _prodIcon(recipe.out.id, 40, oM) + '</span><span class="ws-cell-cap">✅ ' + T('Collect') + '</span></button>';
             } else {
               cells += '<div class="ws-cell busy">' +
-                '<span class="ws-cell-icon">' + _prodIcon(recipe.out.id, 30, oM) + '</span><span class="ws-cell-cap">⏳ ' + dur(recipe.timeMs - (now - job.at)) + '</span></div>';
+                '<span class="ws-cell-icon">' + _prodIcon(recipe.out.id, 40, oM) + '</span><span class="ws-cell-cap">⏳ ' + dur(recipe.timeMs - (now - job.at)) + '</span></div>';
             }
           }
         }
@@ -4989,7 +4989,7 @@
             const oM = meta[rc.out.id] || { emoji: '❓', name: rc.out.id };
             const inStr = Object.keys(rc.in).map(k => (meta[k] ? meta[k].emoji : k) + '×' + rc.in[k]).join('+');
             const can = Object.keys(rc.in).every(k => (stock[k] || 0) >= rc.in[k]);
-            return '<button class="farm-shop-buy ws-recipe" onclick="startMachineSlot(\'' + mc.id + '\',' + _makeChoiceSlot + ',' + r + ')"' + (can ? '' : ' disabled') + '>' + _prodIcon(rc.out.id, 20, oM) + ' ' + T(oM.name) + ' <small>' + inStr + ' · ' + dur(rc.timeMs) + '</small></button>';
+            return '<button class="farm-shop-buy ws-recipe" onclick="startMachineSlot(\'' + mc.id + '\',' + _makeChoiceSlot + ',' + r + ')"' + (can ? '' : ' disabled') + '>' + _prodIcon(rc.out.id, 24, oM) + ' ' + T(oM.name) + ' <small>' + inStr + ' · ' + dur(rc.timeMs) + '</small></button>';
           }).join('');
           chooser = '<div class="ws-choose"><div class="ws-slot-no">' + T('Slot {n} — pick a product', { n: _makeChoiceSlot + 1 }) + ' <span class="ws-x" onclick="cancelMake()">✕</span></div>' + choices + '</div>';
         }
