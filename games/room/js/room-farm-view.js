@@ -928,7 +928,7 @@
           const spent = done(id);
           return '<button class="farm-gift-item' + (id === _giftProd ? ' on' : '') + (spent ? ' done' : '') + '"' +
             (spent ? ' disabled' : ' onclick="pickGiftProd(\'' + id + '\')"') + '>' +
-            '<span class="farm-gift-emoji">' + m.emoji + '</span>' +
+            '<span class="farm-gift-emoji">' + _prodIcon(id, 30, m) + '</span>' +
             '<span class="farm-gift-name">' + escapeHtml(T(m.name)) + '</span>' +
             '<span class="farm-gift-have">' + (spent ? T('Sent today') : '×' + stock[id]) + '</span>' +
           '</button>';
@@ -936,10 +936,10 @@
         (_giftProd && !done(_giftProd)
           ? '<div class="farm-gift-qty">' +
               '<button onclick="setGiftQty(-1)"' + (_giftQty <= 1 ? ' disabled' : '') + '>−</button>' +
-              '<span>' + (meta[_giftProd] || {}).emoji + ' ×' + _giftQty + '</span>' +
+              '<span>' + _prodIcon(_giftProd, 18, meta[_giftProd]) + ' ×' + _giftQty + '</span>' +
               '<button onclick="setGiftQty(1)"' + (_giftQty >= max ? ' disabled' : '') + '>+</button>' +
             '</div>' +
-            '<button class="cp-crop farm-gift-send" onclick="sendFarmGift()">🎁 ' + T('Send {item}', { item: (meta[_giftProd] || {}).emoji + ' ×' + _giftQty }) + '</button>'
+            '<button class="cp-crop farm-gift-send" onclick="sendFarmGift()">🎁 ' + T('Send {item}', { item: _prodIcon(_giftProd, 18, meta[_giftProd]) + ' ×' + _giftQty }) + '</button>'
           : !left.length
           ? '<div class="farm-panel-empty">' + T("You've already sent this farm everything in your barn today — try tomorrow.") + '</div>'
           : '<div class="farm-panel-empty">' + T('Pick something to send (one of each per day, up to {max}).', { max: FARM_GIFT_MAX_QTY }) + '</div>');
@@ -1028,7 +1028,7 @@
         else if (it.kind === 'feed') what = '🌾 ' + T('topped up your trough');
         else if (it.kind === 'gift') {
           const m = meta[it.prod] || { emoji: '🎁', name: it.prod };
-          what = '🎁 ' + T('sent {item}', { item: m.emoji + ' ×' + (it.qty || 0) });
+          what = '🎁 ' + T('sent {item}', { item: _prodIcon(it.prod, 16, m) + ' ×' + (it.qty || 0) });
         } else what = '❓';
         return '<div class="ws-slot"><span class="ws-slot-no">' + who + '</span><span class="ws-slot-state">' + what + '</span></div>';
       }).join('');
@@ -1373,7 +1373,7 @@
       const meta = farmProductMeta();
       const rows = Object.keys(off.batch).map(function (pid) {
         const m = meta[pid] || { emoji: '❓', name: pid };
-        return '<div class="ws-slot"><span class="ws-slot-no">' + m.emoji + ' ' + T(m.name) + '</span>' +
+        return '<div class="ws-slot"><span class="ws-slot-no">' + _prodIcon(pid, 20, m) + ' ' + T(m.name) + '</span>' +
                '<span class="ws-slot-state">×' + off.batch[pid] + '</span></div>';
       }).join('');
       el.innerHTML =
@@ -1536,7 +1536,7 @@
       const stockIds = Object.keys(stock).filter(k => stock[k] > 0)
         .sort((a, b) => { const ia = _order.indexOf(a), ib = _order.indexOf(b); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
       const cart = _farmCart();
-      const wantMeta = cart.wanted.map(w => (meta[w.id] || { emoji: '❓' }).emoji + '×' + w.qty).join('  ');
+      const wantMeta = cart.wanted.map(w => _prodIcon(w.id, 16, meta[w.id]) + '×' + w.qty).join('  ');
       const cartHtml =
         '<div class="farm-section-title">🛒 ' + T('Merchant Cart') + '</div>' +
         (cart.present
@@ -1561,7 +1561,7 @@
               const m = meta[id] || { emoji: '❓', name: id };
               const wanted = cart.present && cart.wanted.some(w => w.id === id);
               return '<div class="farm-shop-row">' +
-                '<span class="farm-shop-animal">' + m.emoji + ' ' + T(m.name) + ' <small>×' + stock[id] + '</small>' + (wanted ? ' <span class="farm-want-tag">' + T('cart wants') + '</span>' : '') + '</span>' +
+                '<span class="farm-shop-animal">' + _prodIcon(id, 20, m) + ' ' + T(m.name) + ' <small>×' + stock[id] + '</small>' + (wanted ? ' <span class="farm-want-tag">' + T('cart wants') + '</span>' : '') + '</span>' +
                 '<span class="farm-shop-drop">' + (prices[id] || 0) + '🪙 ' + T('ea') + '</span>' +
                 '</div>';
             }).join(''));
@@ -1574,7 +1574,7 @@
         ordersList.map((o, i) => {
           const isDone = ordersDone.includes(i);
           const canDo = !isDone && o.items.every(it => (stock[it.id] || 0) >= it.qty);
-          const itemsStr = o.items.map(it => { const mm = meta[it.id] || { emoji: '❓' }; return mm.emoji + '×' + it.qty; }).join('  ');
+          const itemsStr = o.items.map(it => { const mm = meta[it.id] || { emoji: '❓' }; return _prodIcon(it.id, 18, mm) + '×' + it.qty; }).join('  ');
           return '<div class="farm-shop-row">' +
             '<span class="farm-shop-animal">' + itemsStr + '</span>' +
             '<span class="farm-shop-drop">+' + o.reward + '🪙</span>' +
@@ -4249,7 +4249,7 @@
         // Away: countdown + a preview of what the NEXT cart will want.
         const want = cart.wanted.map(w => {
           const m = meta[w.id] || { emoji: '❓', name: w.id };
-          return '<div class="cart-sq" style="cursor:default;border-style:dashed;border-color:var(--g-border);background:rgba(255,255,255,.04)"><span class="cart-sq-icon">' + m.emoji + '</span><span class="cart-sq-cap" style="color:var(--g-ink-soft)">×' + w.qty + '</span></div>';
+          return '<div class="cart-sq" style="cursor:default;border-style:dashed;border-color:var(--g-border);background:rgba(255,255,255,.04)"><span class="cart-sq-icon">' + _prodIcon(w.id, 34, m) + '</span><span class="cart-sq-cap" style="color:var(--g-ink-soft)">×' + w.qty + '</span></div>';
         }).join('');
         el.innerHTML =
           '<div class="cp-head">🛒 ' + T('Cart is away') + '</div>' +
@@ -4274,19 +4274,19 @@
         for (let k = 0; k < remaining; k++) {
           if (k < sellable) {
             squares += '<button class="cart-sq" onclick="sellOneToCart(\'' + w.id + '\')">' +
-              '<span class="cart-sq-icon">' + m.emoji + '</span><span class="cart-sq-cap">+' + (prices[w.id] || 0) + '🪙</span></button>';
+              '<span class="cart-sq-icon">' + _prodIcon(w.id, 34, m) + '</span><span class="cart-sq-cap">+' + (prices[w.id] || 0) + '🪙</span></button>';
             continue;
           }
           // Don't have it yet — send them to the workshop that makes it rather
           // than leaving a dead square that only says "make".
           squares += mk
             ? '<button class="cart-sq make" onclick="goMakeForCart(\'' + mk.id + '\')" title="' + T('Make {product} in the {machine}', { product: T(m.name), machine: T(mk.name) }) + '">' +
-                '<span class="cart-sq-icon">' + m.emoji + '</span><span class="cart-sq-cap">' + mk.emoji + ' ' + T('make') + '</span></button>'
+                '<span class="cart-sq-icon">' + _prodIcon(w.id, 34, m) + '</span><span class="cart-sq-cap">' + mk.emoji + ' ' + T('make') + '</span></button>'
             : '<div class="cart-sq locked" title="' + T('Make this in the workshop, then sell it') + '">' +
-                '<span class="cart-sq-icon">' + m.emoji + '</span><span class="cart-sq-cap">' + T('make') + '</span></div>';
+                '<span class="cart-sq-icon">' + _prodIcon(w.id, 34, m) + '</span><span class="cart-sq-cap">' + T('make') + '</span></div>';
         }
       });
-      const wantsLine = cart.wanted.map(w => (meta[w.id] || { emoji: '❓' }).emoji + '×' + Math.max(0, w.qty - (_cartSold[w.id] || 0))).join('  ');
+      const wantsLine = cart.wanted.map(w => _prodIcon(w.id, 16, meta[w.id]) + '×' + Math.max(0, w.qty - (_cartSold[w.id] || 0))).join('  ');
       el.innerHTML =
         '<div class="cp-head">🛒 ' + T('Merchant Cart') + '</div>' +
         (cart.wanted.length
@@ -4386,24 +4386,54 @@
         '<path d="M31 27 q6 2 4 8.5" fill="none" stroke="#e8dcc0" stroke-width="2"/>' +
         '<path d="M33 43 q7 1 11 5" stroke="#d98b7f" stroke-width="1.6" fill="none" opacity=".7"/>',
     };
-    /* The drawing for an aged good at a given pixel size. Falls back to the
-       good's emoji if it has no art yet, so adding a sixth aged good never
-       renders a blank square before its drawing is made. vertical-align keeps
-       it seated next to the "×3" text in the wants line. */
-    function _agedIcon(id, size) {
-      const art = FARM_AGED_ART[id];
-      if (!art) return (FARM_AGED[id] || { emoji: '❓' }).emoji;
-      return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 64 64" ' +
-        'style="vertical-align:middle;overflow:visible" aria-hidden="true">' + art + '</svg>';
+    /* ── Drawn tier-1 workshop products ──
+       The same treatment for what the machines make, so a good is a drawing
+       wherever it shows — the workshop, the market list, the plane's cart. Each
+       fresh good is drawn DISTINCT from its aged twin (fresh cheese is a bright
+       wedge, not the rinded wheel; fresh bacon is pink rashers, not the smoked
+       slab), so the two tiers never read alike. Raw crops and animal drops keep
+       their emoji — they are ingredients, not products. Same 64×64 box and warm
+       outline as the aged set. */
+    const FARM_PROD_ART = {
+      cheese: '<ellipse cx="33" cy="51" rx="20" ry="4" fill="rgba(0,0,0,.14)"/><path d="M11 32 L38 22 L55 33 L28 43 Z" fill="#ffe07a"/><path d="M11 32 L11 42 L28 49 L28 43 Z" fill="#eeb52a"/><path d="M28 43 L28 49 L55 39 L55 33 Z" fill="#ffcf3f"/><path d="M11 32 L38 22 L55 33 L55 39 L28 49 L11 42 Z" fill="none" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M11 32 L28 43 L55 33 M28 43 L28 49" fill="none" stroke="#5a3418" stroke-width="2.2" stroke-linejoin="round"/><circle cx="37" cy="41" r="2.3" fill="#e0a91e"/><circle cx="45" cy="37" r="1.8" fill="#e0a91e"/><circle cx="34" cy="45" r="1.5" fill="#e0a91e"/>',
+      yogurt: '<ellipse cx="32" cy="52" rx="16" ry="3.5" fill="rgba(0,0,0,.14)"/><path d="M18 31 L46 31 L43 50 Q32 53 21 50 Z" fill="#f4eee1" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><ellipse cx="32" cy="31" rx="14" ry="4.6" fill="#fff" stroke="#5a3418" stroke-width="2.4"/><path d="M24 30 q4 -5 8 0 q4 5 8 0" fill="none" stroke="#f0a0bc" stroke-width="2.6" stroke-linecap="round"/><circle cx="32" cy="24" r="3.2" fill="#e0567e" stroke="#5a3418" stroke-width="1.6"/><path d="M31 21 q1 -2.5 3 -1.5" stroke="#5a8a3a" stroke-width="1.6" fill="none" stroke-linecap="round"/>',
+      butter: '<ellipse cx="32" cy="49" rx="20" ry="4" fill="rgba(0,0,0,.14)"/><path d="M11 45 Q9 41 15 41 L49 41 Q55 41 53 45 Q52 48 32 48 Q12 48 11 45 Z" fill="#eae3d3" stroke="#5a3418" stroke-width="2.2" stroke-linejoin="round"/><path d="M18 41 L44 41 L44 33 L18 33 Z" fill="#ffd86b"/><path d="M18 33 L24 28 L50 28 L44 33 Z" fill="#ffe89a"/><path d="M44 33 L50 28 L50 36 L44 41 Z" fill="#f0c247"/><path d="M18 33 L24 28 L50 28 L50 36 L44 41 L18 41 Z" fill="none" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M18 33 L44 33 L44 41 M44 33 L50 28" fill="none" stroke="#5a3418" stroke-width="1.6"/>',
+      bread: '<ellipse cx="32" cy="50" rx="21" ry="4" fill="rgba(0,0,0,.14)"/><path d="M10 47 Q7 31 20 27 Q32 24 44 27 Q57 31 54 47 Z" fill="#dfa155"/><path d="M14 47 Q13 34 22 31 Q32 29 42 31 Q51 34 50 47 Z" fill="#f4cd8a"/><path d="M10 47 Q7 31 20 27 Q32 24 44 27 Q57 31 54 47" fill="none" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M22 31 l-3 5 M31 29 l-3 5 M40 31 l-3 5" stroke="#a86a2e" stroke-width="2.2" stroke-linecap="round"/><path d="M10 46 L54 46" stroke="#5a3418" stroke-width="2.4"/>',
+      cookie: '<ellipse cx="32" cy="50" rx="18" ry="3.5" fill="rgba(0,0,0,.14)"/><circle cx="32" cy="31" r="19" fill="#d99a4e" stroke="#5a3418" stroke-width="2.4"/><circle cx="26" cy="25" r="2.6" fill="#4a2c14"/><circle cx="38" cy="23" r="2.2" fill="#4a2c14"/><circle cx="41" cy="34" r="2.6" fill="#4a2c14"/><circle cx="24" cy="37" r="2.2" fill="#4a2c14"/><circle cx="33" cy="40" r="2" fill="#4a2c14"/><circle cx="32" cy="30" r="1.8" fill="#4a2c14"/><path d="M21 24 q4 -4 9 -3" stroke="#eec084" stroke-width="2" fill="none" stroke-linecap="round"/>',
+      pie: '<ellipse cx="32" cy="52" rx="21" ry="4" fill="rgba(0,0,0,.14)"/><path d="M10 40 Q10 30 32 30 Q54 30 54 40 L52 46 Q32 51 12 46 Z" fill="#e6b061" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><ellipse cx="32" cy="34" rx="21" ry="8" fill="#f0c67e" stroke="#5a3418" stroke-width="2.4"/><ellipse cx="32" cy="34" rx="14.5" ry="5.2" fill="#c6552c"/><path d="M22 31 L28 39 M30 29.5 L36 40 M38 31 L43 39" stroke="#eebf74" stroke-width="2.4" stroke-linecap="round"/><path d="M19 34.5 L45 34.5" stroke="#eebf74" stroke-width="2.4"/>',
+      baguette: '<ellipse cx="32" cy="50" rx="22" ry="4" fill="rgba(0,0,0,.14)"/><path d="M11 45 Q5 41 11 35 Q19 27 40 24 Q55 22.5 57 30 Q58 37.5 46 43 Q30 49 11 45 Z" fill="#dca558" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M22 33 l4 4 M30 31 l4 4 M38 30 l4 4" stroke="#8a5522" stroke-width="2.2" stroke-linecap="round"/><path d="M16 37 q10 -6 30 -8" stroke="#f0cd8e" stroke-width="2" fill="none" opacity=".55"/>',
+      pizza: '<ellipse cx="32" cy="52" rx="17" ry="3.5" fill="rgba(0,0,0,.14)"/><path d="M32 10 L52 48 Q32 54 12 48 Z" fill="#f2c568" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M32 16 L47 45 Q32 50 17 45 Z" fill="#e05a2e"/><path d="M32 21 L44 43 Q32 47 20 43 Z" fill="#ffce6a" opacity=".55"/><circle cx="30" cy="30" r="3" fill="#b83322"/><circle cx="37" cy="38" r="3" fill="#b83322"/><circle cx="27" cy="41" r="2.6" fill="#b83322"/><path d="M32 10 L52 48 Q32 54 12 48 Z" fill="none" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/>',
+      risotto: '<ellipse cx="32" cy="51" rx="20" ry="4" fill="rgba(0,0,0,.14)"/><path d="M12 35 Q32 31 52 35 Q50 49 32 51 Q14 49 12 35 Z" fill="#e6ddca" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><ellipse cx="32" cy="34.5" rx="20" ry="6" fill="#f5eeda" stroke="#5a3418" stroke-width="2.4"/><g fill="#dccca4"><ellipse cx="26" cy="33.5" rx="2" ry="1"/><ellipse cx="35" cy="35.5" rx="2" ry="1"/><ellipse cx="38" cy="32.5" rx="2" ry="1"/><ellipse cx="30" cy="36" rx="2" ry="1"/></g><ellipse cx="42" cy="31" rx="3.4" ry="2.2" fill="#3a2418"/><path d="M36 30 l6 -1" stroke="#3a2418" stroke-width="1.6" stroke-linecap="round"/>',
+      cake: '<ellipse cx="32" cy="51" rx="18" ry="3.5" fill="rgba(0,0,0,.14)"/><path d="M16 46 L16 30 L52 34 L46 48 Z" fill="#f6e3c4"/><path d="M16 34 L52 38" stroke="#e6547e" stroke-width="3.4"/><path d="M16 40 L49 43" stroke="#fff6ea" stroke-width="3.4"/><path d="M16 30 L30 25 L54 29 L52 34 Z" fill="#fdeede"/><path d="M16 46 L16 30 L30 25 L54 29 L52 34 L46 48 Z" fill="none" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M16 30 L52 34" fill="none" stroke="#5a3418" stroke-width="2"/><circle cx="34" cy="21" r="4.6" fill="#e83b55" stroke="#5a3418" stroke-width="1.6"/><path d="M32 17 q2 -3 4 0" fill="none" stroke="#4e8a34" stroke-width="2" stroke-linecap="round"/>',
+      pancake: '<ellipse cx="32" cy="52" rx="19" ry="3.5" fill="rgba(0,0,0,.14)"/><ellipse cx="32" cy="44" rx="18" ry="6" fill="#e3a552" stroke="#5a3418" stroke-width="2.2"/><ellipse cx="32" cy="38" rx="18" ry="6" fill="#efb45f" stroke="#5a3418" stroke-width="2.2"/><ellipse cx="32" cy="32" rx="18" ry="6" fill="#f3bd68" stroke="#5a3418" stroke-width="2.2"/><path d="M16 31 Q19 41 23 34 Q26 43 31 33 Q35 44 41 33 Q45 41 48 31" fill="#b5701f" opacity=".85"/><rect x="27" y="24" width="10" height="7.5" rx="1.6" fill="#ffe07a" stroke="#5a3418" stroke-width="1.6"/>',
+      carrotcake: '<ellipse cx="32" cy="52" rx="15" ry="3.5" fill="rgba(0,0,0,.14)"/><path d="M20 34 L44 34 L40 50 Q32 52 24 50 Z" fill="#c9762e" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M24 37 L22 49 M28 36 L27 51 M32 36 L32 51 M36 36 L37 51 M40 37 L42 49" stroke="#a85f22" stroke-width="1.4"/><path d="M18 35 Q19 22 32 22 Q45 22 46 35 Z" fill="#f3ead8" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M23 31 q9 -6 18 0" stroke="#e0d3b8" stroke-width="1.6" fill="none"/><path d="M32 22 l-2.5 -7 l5 0 Z" fill="#f08a2e" stroke="#5a3418" stroke-width="1.4" stroke-linejoin="round"/><path d="M31 15 l-1.5 -3 M33 15 l1.5 -3" stroke="#5a8a3a" stroke-width="1.6" stroke-linecap="round"/>',
+      sausage: '<ellipse cx="32" cy="50" rx="20" ry="4" fill="rgba(0,0,0,.14)"/><path d="M14 41 Q9 31 19 26 Q29 21 34 30 Q38 37 30 43 Q21 48 14 41 Z" fill="#c06a4a" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M31 45 Q26 34 36 29 Q46 24 51 33 Q55 40 47 46 Q38 51 31 45 Z" fill="#b85f40" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M18 33 q6 -4 12 -2" stroke="#d98f6e" stroke-width="2" fill="none" opacity=".6"/><path d="M35 35 q6 -3 12 -1" stroke="#cf8464" stroke-width="2" fill="none" opacity=".6"/>',
+      bacon: '<ellipse cx="32" cy="50" rx="21" ry="4" fill="rgba(0,0,0,.14)"/><path d="M9 27 Q21 21 33 27 Q45 33 55 27 L55 35 Q45 41 33 35 Q21 29 9 35 Z" fill="#d96a5a" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M9 35 Q21 29 33 35 Q45 41 55 35 L55 43 Q45 49 33 43 Q21 37 9 43 Z" fill="#e07a68" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M10 30 Q21 24 33 30 Q45 36 54 30" stroke="#f5ddc9" stroke-width="2.4" fill="none"/><path d="M10 38 Q21 32 33 38 Q45 44 54 38" stroke="#f5ddc9" stroke-width="2.4" fill="none"/>',
+      ham: '<ellipse cx="32" cy="52" rx="18" ry="3.5" fill="rgba(0,0,0,.14)"/><path d="M21 45 Q12 37 18 26 Q24 16 37 20 Q51 25 49 39 Q48 49 34 49 Q26 49 21 45 Z" fill="#c65a4e" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M25 26 q9 -4 15 3" stroke="#e08a7a" stroke-width="2.4" fill="none" opacity=".6"/><path d="M22 44 L14 51" stroke="#5a3418" stroke-width="7.5" stroke-linecap="round"/><path d="M22 44 L14 51" stroke="#f2e8d5" stroke-width="5" stroke-linecap="round"/><circle cx="12.5" cy="52" r="3.4" fill="#f2e8d5" stroke="#5a3418" stroke-width="1.6"/><circle cx="16" cy="49" r="2.6" fill="#f2e8d5" stroke="#5a3418" stroke-width="1.6"/>',
+      tools: '<ellipse cx="32" cy="53" rx="16" ry="3.5" fill="rgba(0,0,0,.14)"/><path d="M16 49 L31 34" stroke="#c8792f" stroke-width="6.5" stroke-linecap="round"/><path d="M31 34 L41 24" stroke="#b9c0c8" stroke-width="4" stroke-linecap="round"/><path d="M41 24 l4.5 -0.5 -1.5 4 Z" fill="#b9c0c8" stroke="#5a3418" stroke-width="1.4" stroke-linejoin="round"/><path d="M48 49 L34 35" stroke="#9aa3ad" stroke-width="5.5" stroke-linecap="round"/><path d="M34 35 a6.5 6.5 0 1 1 -9 -9 l3.5 4 1.5 -1.5 4 3.5 Z" fill="#9aa3ad" stroke="#5a3418" stroke-width="2" stroke-linejoin="round"/>',
+      bell: '<ellipse cx="32" cy="52" rx="15" ry="3.5" fill="rgba(0,0,0,.14)"/><circle cx="32" cy="13" r="2.8" fill="#e0a828" stroke="#5a3418" stroke-width="2"/><path d="M32 15 Q34 15 34 18 Q47 23 47 42 L17 42 Q17 23 30 18 Q30 15 32 15 Z" fill="#f0b93e" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M14 42 Q32 38 50 42 L50 46 Q32 50 14 46 Z" fill="#d99a26" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><circle cx="32" cy="50" r="3.4" fill="#c98a1e" stroke="#5a3418" stroke-width="2"/><path d="M26 25 q3 -4 8 -3" stroke="#ffe9a8" stroke-width="2" fill="none" opacity=".7"/>',
+    };
+    // The drawing for ANY product (tier-1 workshop good or tier-2 aged good),
+    // or null when it has none — raw crops and animal drops, which keep emoji.
+    function _prodArtOf(id) { return FARM_PROD_ART[id] || FARM_AGED_ART[id] || null; }
+
+    // The <svg> markup for a product that has art, else null. vertical-align
+    // keeps it seated next to any "×N" text it sits beside.
+    function _iconSvg(id, size) {
+      const art = _prodArtOf(id);
+      return art ? '<svg width="' + size + '" height="' + size + '" viewBox="0 0 64 64" ' +
+        'style="vertical-align:middle;overflow:visible" aria-hidden="true">' + art + '</svg>' : null;
     }
-    /* An aged good draws its own icon; every other product keeps its emoji.
-       Lets the workshop modal — one function serving both the tier-1 machines
-       and the tier-2 factories — swap only the aged OUTPUTS to drawings without
-       a branch at each call site (an ageing factory's inputs are tier-1 goods,
-       which stay emoji). `m` is the caller's already-resolved meta entry. */
+    // Aged-good icon for the buyer sheet — the drawing, or the good's emoji.
+    function _agedIcon(id, size) {
+      return _iconSvg(id, size) || (FARM_AGED[id] || { emoji: '❓' }).emoji;
+    }
+    /* Any product draws its own icon if it has one; raw crops and animal drops
+       (no art) keep their emoji. One helper for EVERY product render site —
+       workshop in/out, market list, plane cart, orders — so a good looks the
+       same wherever it shows. `m` is the caller's already-resolved meta entry. */
     function _prodIcon(id, size, m) {
-      if (FARM_AGED_ART[id]) return _agedIcon(id, size);
-      return (m && m.emoji) || (farmProductMeta()[id] || { emoji: '❓' }).emoji;
+      return _iconSvg(id, size) || (m && m.emoji) || (farmProductMeta()[id] || { emoji: '❓' }).emoji;
     }
 
     /* ── The same drawings, on the canvas ──
@@ -4414,16 +4444,16 @@
        in place of the glyph. An Image not yet decoded falls back to the emoji
        for that one frame rather than leaving a gap; the farm's animation loop
        repaints it as a drawing the moment it is ready. */
-    const _agedImgCache = {};
-    function _agedImage(id) {
-      if (id in _agedImgCache) return _agedImgCache[id];
-      const art = FARM_AGED_ART[id];
-      if (!art) { _agedImgCache[id] = null; return null; }
+    const _prodImgCache = {};
+    function _prodImage(id) {
+      if (id in _prodImgCache) return _prodImgCache[id];
+      const art = _prodArtOf(id);
+      if (!art) { _prodImgCache[id] = null; return null; }
       const img = new Image();
       img.decoding = 'async';
       img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
         '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">' + art + '</svg>');
-      _agedImgCache[id] = img;
+      _prodImgCache[id] = img;
       return img;
     }
     // The buyer's "taking today" sign, drawn as icon + ×N per good in one pill —
@@ -4449,7 +4479,7 @@
       let x = bx + pad; const midY = by + bh / 2;
       ctx.fillStyle = '#ffe9b0'; ctx.textAlign = 'left';
       toks.forEach(function (tk) {
-        const img = _agedImage(tk.id);
+        const img = _prodImage(tk.id);
         if (img && img.complete && img.naturalWidth > 0) {
           ctx.drawImage(img, x, midY - icon / 2, icon, icon);
         } else {
@@ -4936,7 +4966,7 @@
       const makesStr = mc.recipes.map(rc => _prodIcon(rc.out.id, 18, meta[rc.out.id])).join(' ');
       // What you have of the ingredients this machine uses (e.g. 🥛×3).
       const ingIds = mc.recipes.reduce((a, rc) => { Object.keys(rc.in).forEach(k => { if (a.indexOf(k) < 0) a.push(k); }); return a; }, []);
-      const haveStr = ingIds.map(id => (meta[id] ? meta[id].emoji : id) + '×' + (stock[id] || 0)).join('   ');
+      const haveStr = ingIds.map(id => _prodIcon(id, 16, meta[id]) + '×' + (stock[id] || 0)).join('   ');
       const haveLine = '<div class="ws-status" style="margin:2px 0 8px">' + T('In stock: {list}', { list: haveStr }) + '</div>';
       let body;
       if (!m) {
@@ -4946,7 +4976,7 @@
         const afford = roomData.coins >= mc.cost && viewingUid === currentUid;
         const makesList = mc.recipes.map(rc => {
           const oM = meta[rc.out.id] || { emoji: '❓', name: rc.out.id };
-          const inStr = Object.keys(rc.in).map(k => (meta[k] ? meta[k].emoji : k) + '×' + rc.in[k]).join('+');
+          const inStr = Object.keys(rc.in).map(k => _prodIcon(k, 16, meta[k]) + '×' + rc.in[k]).join('+');
           return '<div class="ws-status">' + _prodIcon(rc.out.id, 20, oM) + ' ' + T(oM.name) + ' <small>' + inStr + ' · ' + dur(rc.timeMs) + '</small></div>';
         }).join('');
         body = '<div class="ws-status">🔒 ' + T('Locked — unlock it to start using it.') + '</div>' + makesList +
@@ -4987,7 +5017,7 @@
         if (_makeChoiceSlot != null && _makeChoiceSlot < m.slots && !m.jobs[_makeChoiceSlot]) {
           const choices = mc.recipes.map((rc, r) => {
             const oM = meta[rc.out.id] || { emoji: '❓', name: rc.out.id };
-            const inStr = Object.keys(rc.in).map(k => (meta[k] ? meta[k].emoji : k) + '×' + rc.in[k]).join('+');
+            const inStr = Object.keys(rc.in).map(k => _prodIcon(k, 16, meta[k]) + '×' + rc.in[k]).join('+');
             const can = Object.keys(rc.in).every(k => (stock[k] || 0) >= rc.in[k]);
             return '<button class="farm-shop-buy ws-recipe" onclick="startMachineSlot(\'' + mc.id + '\',' + _makeChoiceSlot + ',' + r + ')"' + (can ? '' : ' disabled') + '>' + _prodIcon(rc.out.id, 24, oM) + ' ' + T(oM.name) + ' <small>' + inStr + ' · ' + dur(rc.timeMs) + '</small></button>';
           }).join('');
