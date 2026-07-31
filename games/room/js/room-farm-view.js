@@ -1592,8 +1592,8 @@
         FARM_ANIMALS.map(def => {
           const afford = roomData.coins >= def.cost;
           return '<div class="farm-shop-row">' +
-            '<span class="farm-shop-animal">' + def.emoji + ' ' + T(def.name) + ' <small>×' + (counts[def.id] || 0) + '</small></span>' +
-            '<span class="farm-shop-drop">' + def.drop.emoji + ' ' + def.drop.coins + '🪙</span>' +
+            '<span class="farm-shop-animal">' + _animIcon(def.id, 20, def) + ' ' + T(def.name) + ' <small>×' + (counts[def.id] || 0) + '</small></span>' +
+            '<span class="farm-shop-drop">' + _prodIcon(def.drop.id, 16, def.drop) + ' ' + def.drop.coins + '🪙</span>' +
             '<button class="farm-shop-buy" onclick="buyFarmAnimal(\'' + def.id + '\')"' + (full || !afford ? ' disabled' : '') + '>' + def.cost + '🪙</button>' +
             '</div>';
         }).join('');
@@ -1614,16 +1614,16 @@
               const meat = _meatYield(a);   // 🥩 yield if butchered now (tier base + level bonus)
               const mark = a.variant === 'rgb' ? ' 🌈' : ((FARM_VARIANTS[a.type] || []).some(v => v.id === a.variant && v.rare) ? ' ✨' : '');
               const butcherCtl = _farmButcherConfirmId === a.id
-                ? '<span class="farm-butcher-confirm"><button class="farm-mini-btn danger" onclick="butcherAnimal(\'' + a.id + '\')">✓ 🥩×' + meat + '</button><button class="farm-mini-btn" onclick="cancelButcher()">✗</button></span>'
-                : '<span class="farm-herd-meat" title="' + T('Butcher → this much meat') + '">🥩×' + meat + '</span>' +
+                ? '<span class="farm-butcher-confirm"><button class="farm-mini-btn danger" onclick="butcherAnimal(\'' + a.id + '\')">✓ ' + _prodIcon('meat', 14) + '×' + meat + '</button><button class="farm-mini-btn" onclick="cancelButcher()">✗</button></span>'
+                : '<span class="farm-herd-meat" title="' + T('Butcher → this much meat') + '">' + _prodIcon('meat', 14) + '×' + meat + '</span>' +
                   '<button class="farm-mini-btn" title="' + T('Butcher for meat') + '" onclick="askButcher(\'' + a.id + '\')">🔪</button>';
               return '<div class="farm-herd-row">' +
-                '<span class="farm-herd-emoji">' + def.emoji + '</span>' +
+                '<span class="farm-herd-emoji">' + _animIcon(def.id, 22, def) + '</span>' +
                 '<span class="farm-herd-info">' +
                   '<span class="farm-herd-name">' + T(def.name) + mark + ' <small>' + T('Lv {n}', { n: lvl }) + '</small> · ' + h + '%</span>' +
                   '<span class="farm-herd-bar"><span style="width:' + h + '%;background:' + color + '"></span></span>' +
                 '</span>' +
-                (waiting ? '<span class="farm-herd-drops">' + def.drop.emoji + ' ×' + waiting + '</span>' : '') +
+                (waiting ? '<span class="farm-herd-drops">' + _prodIcon(def.drop.id, 14, def.drop) + ' ×' + waiting + '</span>' : '') +
                 butcherCtl +
                 '</div>';
             }).join(''));
@@ -2031,7 +2031,7 @@
           : '<button class="farm-shop-buy" onclick="buyFarmTheme(\'' + th.id + '\')"' +
             (roomData.coins < th.cost ? ' disabled' : '') + '>' + th.cost + '🪙</button>';
         return '<div class="farm-shop-row">' +
-          '<span class="farm-shop-animal">' + _farmSwatch(th) + th.emoji + ' ' + T(th.name) +
+          '<span class="farm-shop-animal">' + _farmSwatch(th) + _skinIcon(th.id, 20, th) + ' ' + T(th.name) +
             (th.blurb ? ' <small>' + T(th.blurb) + '</small>' : '') + '</span>' +
           action +
         '</div>';
@@ -3257,10 +3257,16 @@
             ctx.beginPath(); ctx.ellipse(ex, fy + s * 0.005, s * d2[1] * 1.6, s * d2[1], 0, 0, Math.PI * 2); ctx.fill();
           });
         }
-        // round sign with the machine emoji on the gable
+        // round sign on the gable, carrying the machine's own little drawing
+        // (churn / oven / cleaver …) instead of an emoji.
         ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(cx, fy - s * 0.04, s * 0.17, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = 'rgba(0,0,0,.15)'; ctx.lineWidth = 1; ctx.stroke();
-        ctx.font = Math.round(s * 0.22) + 'px serif'; ctx.fillText(m.emoji, cx, fy - s * 0.03);
+        const _gimg = _buildImage(m.id), _gs = s * 0.30;
+        if (_gimg && _gimg.complete && _gimg.naturalWidth > 0) {
+          ctx.drawImage(_gimg, cx - _gs / 2, fy - s * 0.04 - _gs / 2, _gs, _gs);
+        } else {
+          ctx.font = Math.round(s * 0.22) + 'px serif'; ctx.fillText(m.emoji, cx, fy - s * 0.03);
+        }
         // Unbuilt: a padlock on the door, and no job state to show.
         if (locked) { _drawFarmPadlock(ctx, cx, ddy + dh * 0.42, s * 0.30); ctx.restore(); return; }
         // cooking steam ↑ / ready ✅ (any slot) — jobs are 0 | {at,r} | legacy number
@@ -4281,7 +4287,7 @@
           // than leaving a dead square that only says "make".
           squares += mk
             ? '<button class="cart-sq make" onclick="goMakeForCart(\'' + mk.id + '\')" title="' + T('Make {product} in the {machine}', { product: T(m.name), machine: T(mk.name) }) + '">' +
-                '<span class="cart-sq-icon">' + _prodIcon(w.id, 34, m) + '</span><span class="cart-sq-cap">' + mk.emoji + ' ' + T('make') + '</span></button>'
+                '<span class="cart-sq-icon">' + _prodIcon(w.id, 34, m) + '</span><span class="cart-sq-cap">' + _buildIcon(mk.id, 15, mk) + ' ' + T('make') + '</span></button>'
             : '<div class="cart-sq locked" title="' + T('Make this in the workshop, then sell it') + '">' +
                 '<span class="cart-sq-icon">' + _prodIcon(w.id, 34, m) + '</span><span class="cart-sq-cap">' + T('make') + '</span></div>';
         }
@@ -4412,17 +4418,59 @@
       ham: '<ellipse cx="32" cy="52" rx="18" ry="3.5" fill="rgba(0,0,0,.14)"/><path d="M21 45 Q12 37 18 26 Q24 16 37 20 Q51 25 49 39 Q48 49 34 49 Q26 49 21 45 Z" fill="#c65a4e" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M25 26 q9 -4 15 3" stroke="#e08a7a" stroke-width="2.4" fill="none" opacity=".6"/><path d="M22 44 L14 51" stroke="#5a3418" stroke-width="7.5" stroke-linecap="round"/><path d="M22 44 L14 51" stroke="#f2e8d5" stroke-width="5" stroke-linecap="round"/><circle cx="12.5" cy="52" r="3.4" fill="#f2e8d5" stroke="#5a3418" stroke-width="1.6"/><circle cx="16" cy="49" r="2.6" fill="#f2e8d5" stroke="#5a3418" stroke-width="1.6"/>',
       tools: '<ellipse cx="32" cy="53" rx="16" ry="3.5" fill="rgba(0,0,0,.14)"/><path d="M16 49 L31 34" stroke="#c8792f" stroke-width="6.5" stroke-linecap="round"/><path d="M31 34 L41 24" stroke="#b9c0c8" stroke-width="4" stroke-linecap="round"/><path d="M41 24 l4.5 -0.5 -1.5 4 Z" fill="#b9c0c8" stroke="#5a3418" stroke-width="1.4" stroke-linejoin="round"/><path d="M48 49 L34 35" stroke="#9aa3ad" stroke-width="5.5" stroke-linecap="round"/><path d="M34 35 a6.5 6.5 0 1 1 -9 -9 l3.5 4 1.5 -1.5 4 3.5 Z" fill="#9aa3ad" stroke="#5a3418" stroke-width="2" stroke-linejoin="round"/>',
       bell: '<ellipse cx="32" cy="52" rx="15" ry="3.5" fill="rgba(0,0,0,.14)"/><circle cx="32" cy="13" r="2.8" fill="#e0a828" stroke="#5a3418" stroke-width="2"/><path d="M32 15 Q34 15 34 18 Q47 23 47 42 L17 42 Q17 23 30 18 Q30 15 32 15 Z" fill="#f0b93e" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M14 42 Q32 38 50 42 L50 46 Q32 50 14 46 Z" fill="#d99a26" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><circle cx="32" cy="50" r="3.4" fill="#c98a1e" stroke="#5a3418" stroke-width="2"/><path d="M26 25 q3 -4 8 -3" stroke="#ffe9a8" stroke-width="2" fill="none" opacity=".7"/>',
+      // Raw materials — garden crops, the butcher's meat, and the animal drops.
+      // Kept in the product registry so _prodIcon draws them at every recipe /
+      // market / gift site with no extra plumbing; they read as ingredients.
+      wheat: '<ellipse cx="32" cy="56" rx="11" ry="2.5" fill="rgba(0,0,0,.14)"/><path d="M32 54 L25 22 M32 54 L32 16 M32 54 L39 22" stroke="#c79a34" stroke-width="2.4" fill="none" stroke-linecap="round"/><g fill="#e8b84a" stroke="#5a3418" stroke-width="0.9"><ellipse cx="25" cy="21" rx="4" ry="7" transform="rotate(-12 25 21)"/><ellipse cx="32" cy="16" rx="4.2" ry="7.6"/><ellipse cx="39" cy="21" rx="4" ry="7" transform="rotate(12 39 21)"/></g><path d="M25 15 v12 M32 10 v13 M39 15 v12" stroke="#a87e28" stroke-width="0.8" opacity=".55"/><path d="M22 55 q10 4 20 0" stroke="#a87e28" stroke-width="2.2" fill="none"/>',
+      carrot: '<ellipse cx="30" cy="54" rx="12" ry="3" fill="rgba(0,0,0,.14)"/><path d="M22 22 L38 24 L30 53 Z" fill="#f0842e" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M25 29 h9 M26 35 h8 M27 41 h6" stroke="#d16a1e" stroke-width="1.4"/><path d="M28 22 q-2 -8 -6 -10 M31 21 q0 -9 1 -12 M34 22 q2 -8 6 -10" stroke="#4e8a34" stroke-width="2.6" fill="none" stroke-linecap="round"/>',
+      corn: '<ellipse cx="32" cy="54" rx="12" ry="3" fill="rgba(0,0,0,.14)"/><path d="M32 14 q9 2 9 18 q0 18 -9 20 q-9 -2 -9 -20 q0 -16 9 -18 z" fill="#f6cf49" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><g stroke="#caa128" stroke-width="1" fill="none" opacity=".8"><path d="M24 26 h16 M23 33 h18 M23 40 h18 M25 47 h14"/><path d="M28 16 v36 M32 14 v40 M36 16 v36"/></g><path d="M23 45 Q15 51 19 58 Q26 54 26 47 Z" fill="#6faa3e" stroke="#5a3418" stroke-width="1.6" stroke-linejoin="round"/><path d="M41 45 Q49 51 45 58 Q38 54 38 47 Z" fill="#7cb84a" stroke="#5a3418" stroke-width="1.6" stroke-linejoin="round"/>',
+      meat: '<ellipse cx="32" cy="50" rx="20" ry="4" fill="rgba(0,0,0,.14)"/><path d="M14 34 Q12 22 26 20 Q44 17 50 28 Q54 38 44 44 Q30 50 18 44 Q13 40 14 34 Z" fill="#d15a4e" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M18 33 Q30 29 44 34" stroke="#f0d9c4" stroke-width="3" fill="none" opacity=".85"/><path d="M22 40 Q32 37 42 40" stroke="#e8b8a4" stroke-width="1.6" fill="none" opacity=".6"/><path d="M46 23 q7 -2 9 3 q-3 5 -9 2 Z" fill="#f2e8d5" stroke="#5a3418" stroke-width="1.8" stroke-linejoin="round"/>',
+      egg: '<ellipse cx="32" cy="53" rx="12" ry="3" fill="rgba(0,0,0,.14)"/><path d="M32 14 Q44 26 44 40 Q44 52 32 52 Q20 52 20 40 Q20 26 32 14 Z" fill="#fbf3e2" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><ellipse cx="27" cy="30" rx="3.2" ry="5" fill="#fff" opacity=".75"/>',
+      milk: '<ellipse cx="32" cy="53" rx="11" ry="3" fill="rgba(0,0,0,.14)"/><path d="M23 20 L41 20 L38 50 Q32 53 26 50 Z" fill="#eef4f7" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M24.6 31 L39.4 31 L38 50 Q32 53 26 50 Z" fill="#fff"/><path d="M24.6 31 Q32 28 39.4 31" stroke="#dbe6ec" stroke-width="1.5" fill="none"/><path d="M23 20 L41 20 L38 50 Q32 53 26 50 Z" fill="none" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/>',
+      truffle: '<ellipse cx="32" cy="53" rx="12" ry="3" fill="rgba(0,0,0,.14)"/><path d="M28 38 L36 38 L35 50 Q32 52 29 50 Z" fill="#f2e6cf" stroke="#5a3418" stroke-width="2.2" stroke-linejoin="round"/><path d="M16 38 Q16 22 32 22 Q48 22 48 38 Q40 42 32 42 Q24 42 16 38 Z" fill="#c0492f" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><circle cx="24" cy="31" r="2.6" fill="#f7ecd8"/><circle cx="34" cy="28" r="3" fill="#f7ecd8"/><circle cx="41" cy="33" r="2.2" fill="#f7ecd8"/>',
+      horseshoe: '<ellipse cx="32" cy="52" rx="13" ry="3" fill="rgba(0,0,0,.14)"/><path d="M20 47 Q15 24 32 22 Q49 24 44 47" fill="none" stroke="#9aa3ad" stroke-width="7.5" stroke-linecap="round"/><path d="M24 45 Q20 28 32 26" stroke="#cfd6de" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="22" cy="41" r="1.4" fill="#4a3020"/><circle cx="23.5" cy="32" r="1.4" fill="#4a3020"/><circle cx="40.5" cy="32" r="1.4" fill="#4a3020"/><circle cx="42" cy="41" r="1.4" fill="#4a3020"/>',
     };
-    // The drawing for ANY product (tier-1 workshop good or tier-2 aged good),
-    // or null when it has none — raw crops and animal drops, which keep emoji.
+    // Animals, buildings and farm skins each get their own registry — same
+    // 64×64 SVG, drawn wherever they show as a label (shop rows, the workshop
+    // header, the skin picker) and rasterised (_animImage/_buildImage) for the
+    // farm canvas. Not products, so they live apart from _prodArtOf.
+    const FARM_ANIM_ART = {
+      goose: '<ellipse cx="32" cy="54" rx="15" ry="3.5" fill="rgba(0,0,0,.14)"/><path d="M26 52 Q15 48 18 36 Q21 26 34 27 Q47 28 46 41 Q45 51 35 52 Z" fill="#fdfdfb" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M24 32 Q19 16 26 11 Q31 13 29 22 Q28 29 31 31 Z" fill="#fdfdfb" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M22 15 l-7 1 l6 3.5 Z" fill="#f0a02e" stroke="#5a3418" stroke-width="1.4" stroke-linejoin="round"/><circle cx="26" cy="14" r="1.6" fill="#3a2418"/><path d="M31 41 q8 -3 13 1" stroke="#e6e2d8" stroke-width="1.6" fill="none"/>',
+      pig: '<ellipse cx="32" cy="53" rx="15" ry="3.5" fill="rgba(0,0,0,.14)"/><path d="M19 27 l-3 -7 l7 3 Z" fill="#f3a6b4" stroke="#5a3418" stroke-width="1.8" stroke-linejoin="round"/><path d="M45 27 l3 -7 l-7 3 Z" fill="#f3a6b4" stroke="#5a3418" stroke-width="1.8" stroke-linejoin="round"/><ellipse cx="32" cy="38" rx="17" ry="13" fill="#f3a6b4" stroke="#5a3418" stroke-width="2.4"/><ellipse cx="32" cy="42" rx="7.5" ry="5.5" fill="#e88a9c" stroke="#5a3418" stroke-width="1.8"/><circle cx="30" cy="42" r="1.2" fill="#7a3b48"/><circle cx="34" cy="42" r="1.2" fill="#7a3b48"/><circle cx="25" cy="34" r="1.7" fill="#3a2418"/><circle cx="39" cy="34" r="1.7" fill="#3a2418"/>',
+      cow: '<ellipse cx="32" cy="53" rx="16" ry="3.5" fill="rgba(0,0,0,.14)"/><path d="M21 25 q-4 -4 -7 -3 q1 4 5 6 M43 25 q4 -4 7 -3 q-1 4 -5 6" stroke="#5a3418" stroke-width="2.4" fill="none" stroke-linecap="round"/><ellipse cx="32" cy="38" rx="17.5" ry="13.5" fill="#fbfbf7" stroke="#5a3418" stroke-width="2.4"/><path d="M20 30 q-3 5 0 10 q6 0 8 -5 q-3 -4 -8 -5 z" fill="#3a2a1c"/><path d="M44 43 q5 -1 6 4 q-4 4 -8 1 q-1 -3 2 -5 z" fill="#3a2a1c"/><ellipse cx="32" cy="45" rx="6.5" ry="4.5" fill="#f3c0c8" stroke="#5a3418" stroke-width="1.8"/><circle cx="30" cy="45" r="1" fill="#b07a86"/><circle cx="34" cy="45" r="1" fill="#b07a86"/><circle cx="26" cy="34" r="1.7" fill="#3a2418"/><circle cx="38" cy="34" r="1.7" fill="#3a2418"/>',
+      horse: '<ellipse cx="34" cy="54" rx="13" ry="3.5" fill="rgba(0,0,0,.14)"/><path d="M26 51 Q21 39 23 30 Q25 20 35 18 Q41 17 43 22 L47 35 Q48 41 43 43 L39 51 Z" fill="#b5763e" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M35 18 q3 -6 1 -12 q6 4 7 12 z" fill="#8a5628" stroke="#5a3418" stroke-width="1.6" stroke-linejoin="round"/><path d="M23 31 Q14 29 12 35 Q19 35 23 39 Z" fill="#6e4420" stroke="#5a3418" stroke-width="1.6" stroke-linejoin="round"/><circle cx="36" cy="28" r="1.8" fill="#2e1c10"/><ellipse cx="44" cy="37" rx="2.4" ry="3" fill="#8a5628"/><circle cx="44" cy="38" r="0.9" fill="#2e1c10"/>',
+    };
+    const FARM_BUILD_ART = {
+      dairy: '<ellipse cx="32" cy="54" rx="14" ry="3.5" fill="rgba(0,0,0,.14)"/><path d="M22 24 L42 24 L44 50 Q32 54 20 50 Z" fill="#c9d2d8" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M21 38 h22 M20.5 44 h23" stroke="#9aa3ad" stroke-width="2"/><ellipse cx="32" cy="24" rx="10" ry="3.6" fill="#e2e8ec" stroke="#5a3418" stroke-width="2.2"/><circle cx="32" cy="20" r="2.4" fill="#c9d2d8" stroke="#5a3418" stroke-width="1.6"/>',
+      bakery: '<ellipse cx="32" cy="53" rx="16" ry="3.5" fill="rgba(0,0,0,.14)"/><rect x="12" y="49" width="40" height="4" rx="1.5" fill="#a85636" stroke="#5a3418" stroke-width="1.6"/><path d="M14 49 L14 34 Q14 22 32 22 Q50 22 50 34 L50 49 Z" fill="#c86a44" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M22 49 L22 38 Q22 32 32 32 Q42 32 42 38 L42 49 Z" fill="#3a2418"/><path d="M26 44 q6 -3 12 0" stroke="#e8a24a" stroke-width="2.4" fill="none"/><path d="M40 22 q3 -6 -1 -10" stroke="#cfc4bb" stroke-width="1.8" fill="none" opacity=".55" stroke-linecap="round"/>',
+      oven: '<ellipse cx="32" cy="54" rx="15" ry="3.5" fill="rgba(0,0,0,.14)"/><rect x="16" y="20" width="32" height="32" rx="4" fill="#d8dde0" stroke="#5a3418" stroke-width="2.4"/><rect x="20" y="22" width="24" height="4" rx="1.5" fill="#eef1f3" stroke="#5a3418" stroke-width="1.2"/><circle cx="22" cy="24" r="1.6" fill="#f08a3a"/><circle cx="42" cy="24" r="1.6" fill="#9aa3ad"/><rect x="20" y="30" width="24" height="18" rx="3" fill="#3a2c22" stroke="#5a3418" stroke-width="2"/><path d="M24 44 q8 -4 16 0" stroke="#f0a24a" stroke-width="2.6" fill="none"/>',
+      butcher: '<ellipse cx="32" cy="54" rx="15" ry="3.5" fill="rgba(0,0,0,.14)"/><rect x="16" y="40" width="32" height="12" rx="2" fill="#c58f52" stroke="#5a3418" stroke-width="2.4"/><path d="M18 44 h28 M18 48 h28" stroke="#a5722f" stroke-width="1" opacity=".55"/><rect x="28" y="15" width="15" height="13" rx="2" fill="#c9d2d8" stroke="#5a3418" stroke-width="2.2"/><path d="M43 19 L52 17 L52 24 L43 26 Z" fill="#8a5628" stroke="#5a3418" stroke-width="2" stroke-linejoin="round"/><circle cx="33" cy="21" r="1.5" fill="#9aa3ad"/>',
+      forge: '<ellipse cx="32" cy="54" rx="15" ry="3.5" fill="rgba(0,0,0,.14)"/><path d="M14 40 Q9 38 12 33 L27 33 L27 40 Z" fill="#7a828a" stroke="#5a3418" stroke-width="2.2" stroke-linejoin="round"/><path d="M14 40 L50 40 L44 44 L45 46 L50 51 L18 51 L23 46 L20 44 Z" fill="#7a828a" stroke="#5a3418" stroke-width="2.2" stroke-linejoin="round"/><rect x="30" y="16" width="13" height="7" rx="1.5" fill="#9aa3ad" stroke="#5a3418" stroke-width="2"/><path d="M36 23 L34 34" stroke="#8a5628" stroke-width="3" stroke-linecap="round"/><path d="M28 30 l-3 -3 M30 26 l-1 -4 M23 32 l-4 -1" stroke="#f0a83a" stroke-width="1.8" stroke-linecap="round"/>',
+      cheesecave: '<ellipse cx="32" cy="53" rx="17" ry="3.5" fill="rgba(0,0,0,.14)"/><path d="M12 50 Q12 26 32 26 Q52 26 52 50 Z" fill="#7cae4e" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M22 50 Q22 36 32 36 Q42 36 42 50 Z" fill="#3a2c22" stroke="#5a3418" stroke-width="2" stroke-linejoin="round"/><ellipse cx="32" cy="46" rx="6" ry="4" fill="#edbb4f" stroke="#5a3418" stroke-width="1.6"/><path d="M18 31 q6 -3 12 -2 M36 30 q5 0 9 3" stroke="#9ad46a" stroke-width="1.8" fill="none" opacity=".5"/>',
+      smokehouse: '<ellipse cx="32" cy="53" rx="15" ry="3.5" fill="rgba(0,0,0,.14)"/><rect x="18" y="32" width="28" height="20" fill="#a5714a" stroke="#5a3418" stroke-width="2.4"/><path d="M14 33 L32 17 L50 33 Z" fill="#8a4a30" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><rect x="37" y="13" width="6" height="11" fill="#7a4a2c" stroke="#5a3418" stroke-width="2"/><path d="M40 11 q-4 -4 0 -8 q4 -3 1 -7" stroke="#cfc4bb" stroke-width="2.2" fill="none" stroke-linecap="round" opacity=".7"/><rect x="27" y="40" width="10" height="12" rx="1.5" fill="#3a2418"/>',
+      hamcellar: '<ellipse cx="32" cy="53" rx="15" ry="3.5" fill="rgba(0,0,0,.14)"/><path d="M16 51 L16 34 Q16 22 32 22 Q48 22 48 34 L48 51 Z" fill="#8a5a34" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M22 51 L22 36 Q22 28 32 28 Q42 28 42 36 L42 51 Z" fill="#2e2016" stroke="#5a3418" stroke-width="2" stroke-linejoin="round"/><path d="M30 34 q5 1 5 7 q0 5 -5 6 q-5 -1 -5 -6 q0 -6 5 -7 z" fill="#c25a4e" stroke="#5a3418" stroke-width="1.6"/><path d="M30 32 v3" stroke="#e8dcc0" stroke-width="1.6"/><path d="M16 40 h6 M42 40 h6" stroke="#6e4628" stroke-width="1.2" opacity=".55"/>',
+    };
+    const FARM_SKIN_ART = {
+      meadow: '<circle cx="43" cy="21" r="8" fill="#ffd54a" stroke="#5a3418" stroke-width="2"/><path d="M43 9 v-4 M55 21 h4 M51 13 l3 -3 M51 29 l3 3" stroke="#f0b83a" stroke-width="2" stroke-linecap="round"/><path d="M6 50 Q24 33 40 42 Q52 47 58 50 Z" fill="#7cae4e" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M16 46 v-4 M24 44 v-4 M32 45 v-4" stroke="#4e8a34" stroke-width="1.6" stroke-linecap="round"/>',
+      harvest: '<path d="M6 50 Q24 40 40 44 Q52 47 58 50 Z" fill="#e0a83a" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><g stroke="#c79a34" stroke-width="2.2" stroke-linecap="round"><path d="M22 44 L22 26"/><path d="M32 44 L32 22"/><path d="M42 44 L42 26"/></g><g fill="#e8b84a" stroke="#5a3418" stroke-width="1"><ellipse cx="22" cy="24" rx="3.6" ry="6"/><ellipse cx="32" cy="20" rx="3.8" ry="6.6"/><ellipse cx="42" cy="24" rx="3.6" ry="6"/></g>',
+      winter: '<path d="M6 50 Q24 40 40 44 Q52 47 58 50 Z" fill="#eaf2f7" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><path d="M13 44 L18 33 L23 44 Z" fill="#4e8a34" stroke="#5a3418" stroke-width="1.6" stroke-linejoin="round"/><g stroke="#7cc0ee" stroke-width="2.6" stroke-linecap="round"><path d="M40 12 v20 M31 17 l18 10 M49 17 l-18 10"/></g><g stroke="#7cc0ee" stroke-width="1.6" stroke-linecap="round"><path d="M40 15 l-3 3 M40 15 l3 3 M40 29 l-3 -3 M40 29 l3 -3"/></g>',
+      sakura: '<path d="M6 50 Q24 40 40 44 Q52 47 58 50 Z" fill="#f3d0dd" stroke="#5a3418" stroke-width="2.4" stroke-linejoin="round"/><g fill="#f48fb4" stroke="#5a3418" stroke-width="1.4"><ellipse cx="32" cy="17" rx="4" ry="6.2"/><ellipse cx="42" cy="24" rx="4" ry="6.2" transform="rotate(72 42 24)"/><ellipse cx="38" cy="35" rx="4" ry="6.2" transform="rotate(144 38 35)"/><ellipse cx="26" cy="35" rx="4" ry="6.2" transform="rotate(216 26 35)"/><ellipse cx="22" cy="24" rx="4" ry="6.2" transform="rotate(288 22 24)"/></g><circle cx="32" cy="26" r="3" fill="#ffe08a" stroke="#5a3418" stroke-width="1.2"/>',
+    };
+    function _svgWrap(art, size) {
+      return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 64 64" ' +
+        'style="vertical-align:middle;overflow:visible" aria-hidden="true">' + art + '</svg>';
+    }
+    function _animIcon(id, size, m)  { const a = FARM_ANIM_ART[id];  return a ? _svgWrap(a, size) : ((m && m.emoji) || '❓'); }
+    function _buildIcon(id, size, m) { const a = FARM_BUILD_ART[id]; return a ? _svgWrap(a, size) : ((m && m.emoji) || '❓'); }
+    function _skinIcon(id, size, m)  { const a = FARM_SKIN_ART[id];  return a ? _svgWrap(a, size) : ((m && m.emoji) || '❓'); }
+
+    // The drawing for ANY product or ingredient that has one, else null.
     function _prodArtOf(id) { return FARM_PROD_ART[id] || FARM_AGED_ART[id] || null; }
 
-    // The <svg> markup for a product that has art, else null. vertical-align
-    // keeps it seated next to any "×N" text it sits beside.
+    // The <svg> markup for a product that has art, else null.
     function _iconSvg(id, size) {
       const art = _prodArtOf(id);
-      return art ? '<svg width="' + size + '" height="' + size + '" viewBox="0 0 64 64" ' +
-        'style="vertical-align:middle;overflow:visible" aria-hidden="true">' + art + '</svg>' : null;
+      return art ? _svgWrap(art, size) : null;
     }
     // Aged-good icon for the buyer sheet — the drawing, or the good's emoji.
     function _agedIcon(id, size) {
@@ -4444,18 +4492,20 @@
        in place of the glyph. An Image not yet decoded falls back to the emoji
        for that one frame rather than leaving a gap; the farm's animation loop
        repaints it as a drawing the moment it is ready. */
-    const _prodImgCache = {};
-    function _prodImage(id) {
-      if (id in _prodImgCache) return _prodImgCache[id];
-      const art = _prodArtOf(id);
-      if (!art) { _prodImgCache[id] = null; return null; }
+    const _imgCache = {};
+    function _artImage(key, art) {
+      if (key in _imgCache) return _imgCache[key];
+      if (!art) { _imgCache[key] = null; return null; }
       const img = new Image();
       img.decoding = 'async';
       img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
         '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">' + art + '</svg>');
-      _prodImgCache[id] = img;
+      _imgCache[key] = img;
       return img;
     }
+    function _prodImage(id)  { return _artImage('p:' + id, _prodArtOf(id)); }
+    function _buildImage(id) { return _artImage('b:' + id, FARM_BUILD_ART[id]); }
+    function _animImage(id)  { return _artImage('a:' + id, FARM_ANIM_ART[id]); }
     // The buyer's "taking today" sign, drawn as icon + ×N per good in one pill —
     // same shape and return as _drawMeterBadge so the ready-lamp still lands.
     function _drawBuyerWantsBadge(ctx, cx, topY, wanted, fs, night, minX) {
@@ -4608,7 +4658,7 @@
           }
           squares += ag
             ? '<button class="cart-sq make" onclick="goAgeForBuyer(\'' + ag.id + '\')" title="' + T('Age {product} in the {machine}', { product: T(a.name), machine: T(ag.name) }) + '">' +
-                '<span class="cart-sq-icon">' + _agedIcon(w.id, 34) + '</span><span class="cart-sq-cap">' + ag.emoji + ' ' + T('age') + '</span></button>'
+                '<span class="cart-sq-icon">' + _agedIcon(w.id, 34) + '</span><span class="cart-sq-cap">' + _buildIcon(ag.id, 15, ag) + ' ' + T('age') + '</span></button>'
             : '<div class="cart-sq locked"><span class="cart-sq-icon">' + _agedIcon(w.id, 34) + '</span><span class="cart-sq-cap">' + T('age') + '</span></div>';
         }
       });
@@ -4806,7 +4856,7 @@
       const cycleMs = farmCycleMs(a.happiness, FARM_CYCLE_SLOW_MS, FARM_CYCLE_FAST_MS) / (1 + FARM_LEVEL_SPEEDUP * (lvl - 1));
       const next = Math.max(0, (a.lastDropTime || Date.now()) + cycleMs - Date.now());
       const prodLine = T('Makes {item} every ~{cycle} · next in {next}',
-          { item: def.drop.emoji + ' ' + T(def.drop.name), cycle: _fmtFarmTime(cycleMs),
+          { item: _prodIcon(def.drop.id, 16, def.drop) + ' ' + T(def.drop.name), cycle: _fmtFarmTime(cycleMs),
             next: next <= 0 ? T('soon') : _fmtFarmTime(next) }) +
         (waiting ? ' · ' + T('{n} waiting', { n: waiting }) : '');
       const nextThresh = FARM_LEVELS[lvl];                                  // threshold for next level
@@ -4827,7 +4877,7 @@
       }
       el.innerHTML =
         '<div class="ws-box">' +
-          '<div class="ws-head">' + def.emoji + ' ' + T(def.name) + mark + '</div>' +
+          '<div class="ws-head">' + _animIcon(def.id, 22, def) + ' ' + T(def.name) + mark + '</div>' +
           '<div class="ws-sub">' + T('Lv {n}', { n: lvl }) + ' · ' + lvlInfo + '</div>' +
           '<div class="ws-status" style="margin:2px 0 6px">' + T('Happiness') + ' <b style="color:' + color + '">' + h + '%</b></div>' +
           '<div style="height:8px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden;margin:0 0 8px"><div style="height:100%;width:' + h + '%;background:' + color + '"></div></div>' +
@@ -4879,7 +4929,7 @@
         const def = FARM_ANIMALS.find(f => f.id === type) || { drop: { emoji: '❓', name: type } };
         const n = counts[type] || 0;
         return '<div class="ws-slot">' +
-          '<span class="ws-slot-no">' + def.drop.emoji + ' ' + T(def.drop.name) + '</span>' +
+          '<span class="ws-slot-no">' + _prodIcon(def.drop.id, 18, def.drop) + ' ' + T(def.drop.name) + '</span>' +
           '<span class="ws-slot-state">×' + n + '</span>' +
           '<button class="farm-shop-buy" onclick="collectProduceType(\'' + type + '\')"' + (n > 0 ? '' : ' disabled') + '>' + T('Collect') + '</button>' +
           '</div>';
@@ -5037,7 +5087,7 @@
         ? '<div class="ws-status" style="margin-top:8px">🏛️ ' + T('Aged goods sell only at the buyer on this plot — the plane never takes them.') + '</div>' : '';
       el.innerHTML =
         '<div class="ws-box">' +
-          '<div class="ws-head">' + mc.emoji + ' ' + T(mc.name) + '</div>' +
+          '<div class="ws-head">' + _buildIcon(mc.id, 24, mc) + ' ' + T(mc.name) + '</div>' +
           '<div class="ws-sub">' + T('Makes: {list} · each slot makes one', { list: makesStr }) + '</div>' +
           haveLine + body + butcherNote +
           '<button class="cp-close" onclick="closeWorkshopModal()">' + T('Close') + '</button>' +
@@ -5144,23 +5194,30 @@
       // matches whatever the herd looks like. It sits in the pen's padTop strip,
       // which _buildAnimalPens already keeps clear of animal anchors.
       const fs = Math.max(10, Math.min(14, W * 0.026));
-      const pad = 6, inset = 4;
+      const pad = 6, inset = 4, gap = 3, icon = fs * 1.5;
       ctx.font = '800 ' + Math.round(fs) + 'px sans-serif';
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       for (const p of pens) {
         const penW = (p.x1 - p.x0) * W;
-        // The species is already obvious from the animals inside, so the emoji
-        // is the first thing to go if even that won't fit.
-        let txt = p.emoji + ' ' + p.count;
-        if (ctx.measureText(txt).width + pad * 2 + inset * 2 > penW) txt = String(p.count);
-        const bw = ctx.measureText(txt).width + pad * 2, bh = fs + 6;
-        const bx = p.x1 * W - inset - bw, by = p.y0 * H + inset;
+        const cnt = String(p.count), cntW = ctx.measureText(cnt).width;
+        const img = _animImage(p.type);
+        // Prefer the drawn animal + count; fall back to the emoji, then — if even
+        // that won't fit — to a bare count, since the herd itself names the pen.
+        let mode = (img && img.complete && img.naturalWidth > 0) ? 'icon' : 'emoji';
+        let contentW = mode === 'icon' ? icon + gap + cntW : ctx.measureText(p.emoji + ' ' + cnt).width;
+        if (contentW + pad * 2 + inset * 2 > penW) { mode = 'count'; contentW = cntW; }
+        const bh = mode === 'icon' ? Math.max(fs + 6, icon + 4) : fs + 6;
+        const bw = contentW + pad * 2;
+        const bx = p.x1 * W - inset - bw, by = p.y0 * H + inset, midY = by + bh / 2;
         ctx.fillStyle = night ? 'rgba(20,14,6,0.82)' : 'rgba(40,26,12,0.78)';
         ctx.beginPath();
         if (ctx.roundRect) ctx.roundRect(bx, by, bw, bh, bh / 2); else ctx.rect(bx, by, bw, bh);
         ctx.fill();
         ctx.fillStyle = '#ffe9b0';
-        ctx.fillText(txt, bx + pad, by + bh / 2 + 0.5);
+        let tx = bx + pad;
+        if (mode === 'icon') { ctx.drawImage(img, tx, midY - icon / 2, icon, icon); tx += icon + gap; ctx.fillText(cnt, tx, midY + 0.5); }
+        else if (mode === 'emoji') ctx.fillText(p.emoji + ' ' + cnt, tx, midY + 0.5);
+        else ctx.fillText(cnt, tx, midY + 0.5);
       }
     }
 
@@ -5958,8 +6015,13 @@
           const def = FARM_ANIMALS.find(f => f.id === _dd[i].type);
           if (!def) continue;
           const size = Math.max(20, Math.min(W, H) * 0.045) * pulse * _farmHoverK('drop', i);
-          ctx.font = Math.round(size) + 'px sans-serif';
-          ctx.fillText(def.drop.emoji, _dd[i].x * W, _dd[i].y * H);
+          const dx = _dd[i].x * W, dy = _dd[i].y * H, dimg = _prodImage(def.drop.id);
+          if (dimg && dimg.complete && dimg.naturalWidth > 0) {
+            ctx.drawImage(dimg, dx - size / 2, dy - size / 2, size, size);
+          } else {
+            ctx.font = Math.round(size) + 'px sans-serif';
+            ctx.fillText(def.drop.emoji, dx, dy);
+          }
         }
         // Floating "Collect" button reflects total pending produce
         if (_dd.length !== _lastProduceN) {
