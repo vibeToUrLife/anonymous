@@ -4312,6 +4312,89 @@
        have until a counter stopped you. A list does the same braking while
        being a reason to come back, and it makes the ageing factories a planning
        problem instead of a queue to empty. */
+
+    /* ── Drawn aged-good icons ──
+       The five aged goods used to borrow their tier-1 emoji (aged cheese wore
+       the plain 🧀, cultured butter the plain 🧈…), so in the buyer they were
+       indistinguishable from the everyday goods they are made from — and from
+       each other where two came from one machine. An emoji is a shared label;
+       these are the farm's most valuable goods, so each gets its OWN little
+       drawing instead, the same reasoning that gives every side-land building
+       its own silhouette rather than a badge (see _drawWorkshopMachines).
+
+       Inline SVG (like coinSVG), so it scales crisply from the 34px sell square
+       down to the 16px wants line, greys out cleanly under .cart-sq.locked's
+       filter, and needs no image asset. viewBox is a shared 64×64; one warm
+       outline holds them together on both the dark panel and the cream theme. */
+    const _AGED_OUT = '#5a3418';   // shared outline — reads on cream and on dark
+    const FARM_AGED_ART = {
+      // Rinded cheese WHEEL with a cut wedge (holes), not the flat fresh emoji.
+      agedcheese:
+        '<ellipse cx="30" cy="53" rx="22" ry="4.5" fill="rgba(0,0,0,.16)"/>' +
+        '<path d="M10 28 v10 a16 8 0 0 0 32 0 v-10 z" fill="#c08a2a"/>' +
+        '<ellipse cx="26" cy="28" rx="16" ry="8" fill="#edbb4f"/>' +
+        '<ellipse cx="22" cy="27" rx="2.5" ry="1.5" fill="#cf9a35"/>' +
+        '<ellipse cx="31" cy="30" rx="1.9" ry="1.1" fill="#cf9a35"/>' +
+        '<path d="M10 28 v10 a16 8 0 0 0 32 0 v-10" fill="none" stroke="' + _AGED_OUT + '" stroke-width="2.4" stroke-linejoin="round"/>' +
+        '<ellipse cx="26" cy="28" rx="16" ry="8" fill="none" stroke="' + _AGED_OUT + '" stroke-width="2.4"/>' +
+        '<path d="M32 33 L55 42 L42 56 Z" fill="#f2c85f" stroke="' + _AGED_OUT + '" stroke-width="2.4" stroke-linejoin="round"/>' +
+        '<path d="M32 33 L55 42" stroke="#c08a2a" stroke-width="4.6" stroke-linecap="round"/>' +
+        '<path d="M32 33 L55 42" stroke="' + _AGED_OUT + '" stroke-width="2.4" stroke-linecap="round"/>' +
+        '<circle cx="43" cy="45" r="2.2" fill="#d3a13a"/>' +
+        '<circle cx="46" cy="50" r="1.6" fill="#d3a13a"/>',
+      // Cultured-butter block on peeled wax paper, with a curl on top.
+      culturedbutter:
+        '<ellipse cx="32" cy="53" rx="22" ry="4.5" fill="rgba(0,0,0,.16)"/>' +
+        '<path d="M7 41 L13 20 L53 24 L48 51 Z" fill="#f3ecdb" stroke="#c9bda3" stroke-width="2" stroke-linejoin="round"/>' +
+        '<path d="M16 35 L44 35 L44 48 L16 48 Z" fill="#f1d271"/>' +
+        '<path d="M16 35 L24 28 L52 28 L44 35 Z" fill="#f9e6a0"/>' +
+        '<path d="M44 35 L52 28 L52 41 L44 48 Z" fill="#e4bd52"/>' +
+        '<path d="M16 35 L24 28 L52 28 L52 41 L44 48 L16 48 Z" fill="none" stroke="' + _AGED_OUT + '" stroke-width="2.4" stroke-linejoin="round"/>' +
+        '<path d="M16 35 H44 M44 35 L44 48 M44 35 L52 28" fill="none" stroke="' + _AGED_OUT + '" stroke-width="1.6"/>' +
+        '<path d="M27 32 q4 -4.5 9 0 q-4.5 3.3 -9 0 z" fill="#fff1c1" stroke="' + _AGED_OUT + '" stroke-width="1.5" stroke-linejoin="round"/>',
+      // Cured salami hung by twine, mottled casing + a cut slice beside it.
+      curedsausage:
+        '<path d="M32 5 q-7 3.5 0 9" fill="none" stroke="#cbb48b" stroke-width="2.6"/>' +
+        '<path d="M32 12 q14 4 13 23 q-1 17 -13 21 q-12 -4 -13 -21 q-1 -19 13 -23 z" fill="#9a3f30" stroke="' + _AGED_OUT + '" stroke-width="2.4" stroke-linejoin="round"/>' +
+        '<path d="M23 16 q9 -4 18 0" fill="none" stroke="#e8d9b6" stroke-width="2.2"/>' +
+        '<path d="M22 27 h20 M21 35 h22 M22 43 h20" stroke="#772d22" stroke-width="1.3" opacity=".55"/>' +
+        '<path d="M28 15 V54 M37 15 V54" stroke="#772d22" stroke-width="1.1" opacity=".4"/>' +
+        '<circle cx="27" cy="31" r="1" fill="#dcccb4"/><circle cx="38" cy="37" r="1.1" fill="#dcccb4"/><circle cx="31" cy="47" r="1" fill="#dcccb4"/>' +
+        '<circle cx="50" cy="49" r="8.5" fill="#b5473a" stroke="' + _AGED_OUT + '" stroke-width="2.3"/>' +
+        '<circle cx="50" cy="49" r="8.5" fill="none" stroke="#ecd9c8" stroke-width="1.6"/>' +
+        '<circle cx="47" cy="47" r="1.3" fill="#eddcce"/><circle cx="52" cy="50" r="1.5" fill="#eddcce"/><circle cx="49" cy="52" r="1.1" fill="#eddcce"/>',
+      // Smoked, streaky slab: dark smoked crust, fat bands, a smoke wisp.
+      smokedbacon:
+        '<ellipse cx="31" cy="52" rx="22" ry="4.5" fill="rgba(0,0,0,.16)"/>' +
+        '<path d="M12 31 L48 31 L48 49 L12 49 Z" fill="#b0402f"/>' +
+        '<path d="M12 35 H48 M12 40 H48 M12 45 H48" stroke="#f0d9c4" stroke-width="2.6"/>' +
+        '<path d="M12 31 L20 25 L56 25 L48 31 Z" fill="#5e2b1c"/>' +
+        '<path d="M48 31 L56 25 L56 43 L48 49 Z" fill="#7d2c1e"/>' +
+        '<path d="M12 31 L20 25 L56 25 L56 43 L48 49 L12 49 Z" fill="none" stroke="' + _AGED_OUT + '" stroke-width="2.4" stroke-linejoin="round"/>' +
+        '<path d="M12 31 H48 M48 31 V49 M48 31 L56 25" fill="none" stroke="' + _AGED_OUT + '" stroke-width="1.7"/>' +
+        '<path d="M23 23 q-3.5 -5 1 -8 q3.5 -3 0 -6" fill="none" stroke="#cfc4bb" stroke-width="1.8" opacity=".6" stroke-linecap="round"/>',
+      // Whole cured leg (jamón) clamped on a wooden ham stand: hoof, fat cap, string.
+      agedham:
+        '<rect x="11" y="50" width="36" height="5.5" rx="2.5" fill="#9b6a38" stroke="' + _AGED_OUT + '" stroke-width="2"/>' +
+        '<rect x="14" y="19" width="5.5" height="32" rx="2.5" fill="#9b6a38" stroke="' + _AGED_OUT + '" stroke-width="2"/>' +
+        '<path d="M17 23 q11 -7 21 -2" fill="none" stroke="#9b6a38" stroke-width="4" stroke-linecap="round"/>' +
+        '<path d="M23 31 q6 -11 20 -6 q14 6 11 21 q-3 12 -17 12 q-16 0 -16 -14 q0 -8 2 -13 z" fill="#c25a4e" stroke="' + _AGED_OUT + '" stroke-width="2.4" stroke-linejoin="round"/>' +
+        '<path d="M25 31 q8 -8 20 -5 q6 2 9 7" fill="none" stroke="#f0dcc4" stroke-width="4" stroke-linecap="round"/>' +
+        '<path d="M18 22 q4 -3 8.5 0 l-2 6.5 q-3.5 1.5 -6.5 -1 z" fill="#3a2418" stroke="#241209" stroke-width="1.6" stroke-linejoin="round"/>' +
+        '<path d="M31 27 q6 2 4 8.5" fill="none" stroke="#e8dcc0" stroke-width="2"/>' +
+        '<path d="M33 43 q7 1 11 5" stroke="#d98b7f" stroke-width="1.6" fill="none" opacity=".7"/>',
+    };
+    /* The drawing for an aged good at a given pixel size. Falls back to the
+       good's emoji if it has no art yet, so adding a sixth aged good never
+       renders a blank square before its drawing is made. vertical-align keeps
+       it seated next to the "×3" text in the wants line. */
+    function _agedIcon(id, size) {
+      const art = FARM_AGED_ART[id];
+      if (!art) return (FARM_AGED[id] || { emoji: '❓' }).emoji;
+      return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 64 64" ' +
+        'style="vertical-align:middle;overflow:visible" aria-hidden="true">' + art + '</svg>';
+    }
+
     let _buyerOpen = false;
     let _buyerSold = {};        // this visit's progress, id → units sold
     let _buyerVisitKey = null;  // which visit _buyerSold belongs to
@@ -4395,9 +4478,8 @@
         // Shut → the NEXT list, dashed out. The whole point of showing it is
         // that ageing takes hours: you need to know today what to load tonight.
         const want = b.wanted.map(w => {
-          const a = FARM_AGED[w.id] || { emoji: '❓' };
           return '<div class="cart-sq" style="cursor:default;border-style:dashed;border-color:var(--g-border);background:rgba(255,255,255,.04)">' +
-            '<span class="cart-sq-icon">' + a.emoji + '</span>' +
+            '<span class="cart-sq-icon">' + _agedIcon(w.id, 34) + '</span>' +
             '<span class="cart-sq-cap" style="color:var(--g-ink-soft)">×' + w.qty + '</span></div>';
         }).join('');
         el.innerHTML =
@@ -4422,16 +4504,16 @@
         for (let k = 0; k < _buyerRemaining(w); k++) {
           if (k < sellable) {
             squares += '<button class="cart-sq" onclick="sellOneToBuyer(\'' + w.id + '\')">' +
-              '<span class="cart-sq-icon">' + a.emoji + '</span><span class="cart-sq-cap">+' + a.coins + '🪙</span></button>';
+              '<span class="cart-sq-icon">' + _agedIcon(w.id, 34) + '</span><span class="cart-sq-cap">+' + a.coins + '🪙</span></button>';
             continue;
           }
           squares += ag
             ? '<button class="cart-sq make" onclick="goAgeForBuyer(\'' + ag.id + '\')" title="' + T('Age {product} in the {machine}', { product: T(a.name), machine: T(ag.name) }) + '">' +
-                '<span class="cart-sq-icon">' + a.emoji + '</span><span class="cart-sq-cap">' + ag.emoji + ' ' + T('age') + '</span></button>'
-            : '<div class="cart-sq locked"><span class="cart-sq-icon">' + a.emoji + '</span><span class="cart-sq-cap">' + T('age') + '</span></div>';
+                '<span class="cart-sq-icon">' + _agedIcon(w.id, 34) + '</span><span class="cart-sq-cap">' + ag.emoji + ' ' + T('age') + '</span></button>'
+            : '<div class="cart-sq locked"><span class="cart-sq-icon">' + _agedIcon(w.id, 34) + '</span><span class="cart-sq-cap">' + T('age') + '</span></div>';
         }
       });
-      const wantsLine = b.wanted.map(w => (FARM_AGED[w.id] || { emoji: '❓' }).emoji + '×' + _buyerRemaining(w)).join('  ');
+      const wantsLine = b.wanted.map(w => _agedIcon(w.id, 16) + '×' + _buyerRemaining(w)).join('  ');
       el.innerHTML =
         '<div class="cp-head">🏛️ ' + T('Aged goods buyer') + '</div>' +
         (b.wanted.length
