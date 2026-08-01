@@ -722,7 +722,7 @@ function go(n){
   repaint();
   if (!REDUCE) raf = requestAnimationFrame(loop);
 }
-next.addEventListener('click', function(){ i >= slides.length - 1 ? done() : go(i + 1); });
+next.addEventListener('click', function(){ i >= slides.length - 1 ? goFarm() : go(i + 1); });
 prev.addEventListener('click', function(){ go(i - 1); });
 document.getElementById('skip').addEventListener('click', done);
 document.addEventListener('keydown', function(e){
@@ -753,9 +753,16 @@ track.addEventListener('pointerup', function(e){
 });
 track.addEventListener('pointercancel', function(){ x0 = null; });
 
-// The overlay in index.html owns this page — 跳过 and the last button ask it to
-// close rather than navigating anywhere themselves.
+// The overlay in index.html owns this page — 跳过 asks it to close rather than
+// navigating anywhere itself.
 function done(){ try { parent.postMessage('wn-close', '*'); } catch (e) {} }
+// The last button says 去农场看看, so it must actually GO there: ask the parent to
+// close and route, since routing the app from inside its iframe isn't ours to do.
+// Opened standalone (no parent), walk there ourselves.
+function goFarm(){
+  if (window.parent === window) { location.href = '../games/room.html?view=farm'; return; }
+  try { parent.postMessage('wn-go-farm', '*'); } catch (e) {}
+}
 
 /* index.html reveals this iframe ~800ms AFTER setting src, so at first paint the
    canvases can still be zero-sized and would come out blank. Repaint whenever

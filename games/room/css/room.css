@@ -82,6 +82,19 @@
        direction it matters: feature-flags.js hides the same element inline when
        the world flag is off, and this can only ever keep it hidden. */
     body.stage-full #worldEntry { display: none !important; }
+    /* …but "float over the canvas" was only ever true for the LEFT column. With
+       the header folded away the RIGHT column starts at y=0 too, so the panel's
+       first row — the farm/aquarium sign header — slid up underneath that same
+       fixed cluster (coin badge at right:14, ⚙ 140, 🏆 190, 📢 240, all top:14,
+       z-index 50). The coin badge covered the head's orange cap pill outright.
+       Reserve the cluster's height (14px offset + 40px control + 8px breathing)
+       at the top of the column. It goes on .panel-wrap, not on the .panel-inner
+       scroller, so the strip is structural and can't scroll away and put the
+       header back under the badge. Desktop only: below 768px the panel is a
+       bottom sheet under the stage and never meets the cluster. */
+    @media (min-width: 769px) {
+      body.stage-full .panel-wrap { padding-top: 62px; }
+    }
 
     /* ── Main layout ── */
     /* Fill whatever the header leaves, rather than subtracting a guess at it.

@@ -863,7 +863,7 @@ function go(n){
   repaint();
   if (!REDUCE) raf = requestAnimationFrame(loop);
 }
-next.addEventListener('click', function(){ i >= slides.length - 1 ? done() : go(i + 1); });
+next.addEventListener('click', function(){ i >= slides.length - 1 ? goFarm() : go(i + 1); });
 prev.addEventListener('click', function(){ go(i - 1); });
 document.getElementById('skip').addEventListener('click', done);
 // ← / → step the deck too, for anyone on a keyboard. go() clamps, so ← on the
@@ -873,6 +873,13 @@ document.addEventListener('keydown', function(e){
   else if (e.key === 'ArrowRight' && i < slides.length - 1) { go(i + 1); }
 });
 function done(){ try { parent.postMessage('wn-close', '*'); } catch (e) {} }
+// The last button says 去农场看看 — it has to actually go there. This page lives in
+// the parent's iframe, so it asks the parent to close and route; opened standalone
+// (no parent) it walks there itself.
+function goFarm(){
+  if (window.parent === window) { location.href = '../games/room.html?view=farm'; return; }
+  try { parent.postMessage('wn-go-farm', '*'); } catch (e) {}
+}
 
 /* The parent reveals this iframe ~800ms AFTER setting src, so at first paint the
    page can still have zero size and every canvas would come out blank. Repaint
