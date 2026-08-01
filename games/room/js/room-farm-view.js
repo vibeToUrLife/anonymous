@@ -4171,6 +4171,35 @@
             night ? '#8a6a3e' : '#c99a52', night ? '#63492a' : '#9d7439',
             night ? '#a1804f' : '#e2b46a', null);
         }
+        /* What the stall is taking, painted on its own front — icons only.
+           This used to hang above the awning as a ×N pill, which is the one
+           place on this plot where a readout floated free of the thing it
+           described. The counter face is where a market stall says what it
+           deals in, and the counts belong in the sheet you open, not over the
+           plot: the amounts move with every sale, and a number nobody can act
+           on from here is just noise on the sky. Inside _hoverScaled, so this
+           scales WITH the stall — it is part of the object now, not a sign. */
+        if (open && b.wanted.length) {
+          const gn = b.wanted.length, ggap = s * 0.04;
+          const gs = Math.min(s * 0.22, h * 0.62, (w - s * 0.14 - ggap * (gn - 1)) / gn);
+          let gx = cx - (gs * gn + ggap * (gn - 1)) / 2;
+          const gy = y0 + (h - gs) / 2;
+          b.wanted.forEach(function (wd) {
+            const gimg = _prodImage(wd.id);
+            if (gimg && gimg.complete && gimg.naturalWidth > 0) {
+              ctx.drawImage(gimg, gx, gy, gs, gs);
+            } else {
+              // Same one-frame fallback the rest of the farm uses while an SVG decodes.
+              ctx.save();
+              ctx.font = Math.round(gs * 0.9) + 'px serif';
+              ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+              ctx.fillText((FARM_AGED[wd.id] || { emoji: '❓' }).emoji, gx, gy + gs / 2);
+              ctx.restore();
+            }
+            gx += gs + ggap;
+          });
+        }
+
         /* Shutters. The stall now keeps hours, so it has to LOOK shut from
            across the plot — dimming alone reads as "not unlocked yet", which is
            what every locked building on this plot already means. */
@@ -4189,25 +4218,18 @@
         }
       });
 
-      /* The sign over the stall: what it is taking, or when it opens. Outside
-         _hoverScaled so pointing at the stall never scales the text, and outside
-         the dimming so a shut stall can still say when to come back. */
-      const fs = Math.max(10, Math.min(15, s * 0.22));
-      // Clamped to the plot's own west edge (world x = W), for the same reason
-      // the trough's badge is clamped to the farm's: a list of three goods is
-      // wider than the stall, and the stall stands near that edge. Open with a
-      // list → the drawn icons; open-but-empty or shut → a plain text pill.
-      let bx;
-      if (open && b.wanted.length) {
-        bx = _drawBuyerWantsBadge(ctx, cx, cy - s * 0.92, b.wanted, fs, night, W + 2);
-      } else {
-        const sign = open ? T('Open') : '🕐 ' + _fmtFarmTime(b.nextInMs);
-        bx = _drawMeterBadge(ctx, cx, cy - s * 0.92, sign, 0, fs, night, !open, null, W + 2);
-      }
+      /* No sign over the stall any more — what it takes is painted on the
+         counter, and the shutters already say it is shut. Both of the things
+         that pill used to spell out stay one point away: the hover/tap hint on
+         #buyer reads "Taking today: …" or "Closed — opens in …".
+
+         The ready lamp used to hang off the pill's right edge, so it needs its
+         own anchor now: just clear of the awning's right end (which reaches
+         x0 + w + s*0.08), at the height of the shutter line. */
       // The same amber lamp the rest of the farm uses for "something to do here":
       // lit only when a sale can actually be made right now.
       if (open && b.wanted.some(function (w) { return _buyerSellable(w) > 0; })) {
-        _drawFarmReadyLamp(ctx, bx.bx + bx.bw + s * 0.14, bx.by + bx.bh / 2, s, t);
+        _drawFarmReadyLamp(ctx, x0 + w + s * 0.18, y0 - s * 0.5, s, t);
       }
       ctx.restore();
     }
@@ -4520,44 +4542,6 @@
     function _prodImage(id)  { return _artImage('p:' + id, _prodArtOf(id)); }
     function _buildImage(id) { return _artImage('b:' + id, FARM_BUILD_ART[id]); }
     function _animImage(id)  { return _artImage('a:' + id, FARM_ANIM_ART[id]); }
-    // The buyer's "taking today" sign, drawn as icon + ×N per good in one pill —
-    // same shape and return as _drawMeterBadge so the ready-lamp still lands.
-    function _drawBuyerWantsBadge(ctx, cx, topY, wanted, fs, night, minX) {
-      ctx.save();
-      ctx.font = '800 ' + Math.round(fs) + 'px sans-serif';
-      ctx.textBaseline = 'middle';
-      const icon = fs * 1.4, gap = fs * 0.12, sep = fs * 0.5, pad = 8;
-      let contentW = 0;
-      const toks = wanted.map(function (w) {
-        const cnt = '×' + _buyerRemaining(w), cw = ctx.measureText(cnt).width;
-        contentW += icon + gap + cw;
-        return { id: w.id, cnt: cnt, cw: cw };
-      });
-      contentW += sep * Math.max(0, toks.length - 1);
-      const bw = contentW + pad * 2, bh = Math.max(fs + 7, icon + 6);
-      const bx = minX != null ? Math.max(minX, cx - bw / 2) : cx - bw / 2, by = topY;
-      ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(bx, by, bw, bh, bh / 2); else ctx.rect(bx, by, bw, bh);
-      ctx.fillStyle = night ? 'rgba(20,14,6,0.82)' : 'rgba(40,26,12,0.78)';
-      ctx.fill();
-      let x = bx + pad; const midY = by + bh / 2;
-      ctx.fillStyle = '#ffe9b0'; ctx.textAlign = 'left';
-      toks.forEach(function (tk) {
-        const img = _prodImage(tk.id);
-        if (img && img.complete && img.naturalWidth > 0) {
-          ctx.drawImage(img, x, midY - icon / 2, icon, icon);
-        } else {
-          ctx.save(); ctx.font = Math.round(icon * 0.9) + 'px serif';
-          ctx.fillText((FARM_AGED[tk.id] || { emoji: '❓' }).emoji, x, midY); ctx.restore();
-        }
-        x += icon + gap;
-        ctx.fillText(tk.cnt, x, midY + 0.5);
-        x += tk.cw + sep;
-      });
-      ctx.restore();
-      return { bx: bx, by: by, bw: bw, bh: bh };
-    }
-
     let _buyerOpen = false;
     let _buyerSold = {};        // this visit's progress, id → units sold
     let _buyerVisitKey = null;  // which visit _buyerSold belongs to
