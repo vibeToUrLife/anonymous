@@ -119,7 +119,7 @@
 
     const PET_SIZES = {
       cat: 72, dog: 80, bunny: 64, hamster: 58, fox: 76, panda: 86, goose: 74,
-      tom: 78, jerry: 64, capybara: 88
+      tom: 92, jerry: 64, capybara: 88
     };
 
     const PET_COLORS = {

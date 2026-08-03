@@ -44,7 +44,11 @@
       const cell = document.createElement('div');
       cell.className = 'cell';
       const cvs = document.createElement('canvas');
-      cvs.width = box; cvs.height = box;
+      // Match the room: buffer in device pixels, drawing in CSS pixels. Without
+      // this the preview would show its own blur rather than the game's.
+      const dpr = Math.min(window.devicePixelRatio || 1, 3);
+      cvs.width = Math.round(box * dpr); cvs.height = Math.round(box * dpr);
+      cvs.style.width = box + 'px'; cvs.style.height = box + 'px';
       cell.appendChild(cvs);
       const cap = document.createElement('div');
       cap.textContent = label;
@@ -52,6 +56,7 @@
       document.getElementById(parent).appendChild(cell);
 
       const ctx = cvs.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       (function frame(t) {
         ctx.clearRect(0, 0, box, box);
         ctx.save();
@@ -78,13 +83,13 @@
     addCell('hero', 'Walking left', { s: 180, moving: true, flip: true });
     addCell('hero', 'Standing still', { s: 180 });
 
-    addCell('sizes', 'In the room (78) — walking', { s: 78, moving: true });
-    addCell('sizes', 'In the room (78) — standing', { s: 78 });
-    addCell('sizes', 'Far side of the room (~55)', { s: 55, moving: true });
+    addCell('sizes', 'In the room (92) — walking', { s: 92, moving: true });
+    addCell('sizes', 'In the room (92) — standing', { s: 92 });
+    addCell('sizes', 'Front of the room (~114)', { s: 114, moving: true });
+    addCell('sizes', 'Far side of the room (~74)', { s: 74, moving: true });
 
     // Labels straight off full2.jpeg, so a cell here matches a cell there.
-    const POSE = ['contact L', 'down', 'passing', 'up', 'contact R', 'down',
-                  'passing', 'up', 'contact L', 'down', 'passing', 'up'];
+    const POSE = ['contact', 'down', 'passing', 'up'];
     addCell('frames', '0 stand', { s: 92, frame: 0 });
     for (let i = 1; i <= TOM_WALK; i++) addCell('frames', i + ' ' + POSE[i - 1], { s: 92, frame: i });
   </script>

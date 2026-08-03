@@ -7,13 +7,19 @@
    left is the room's own flip.
    `pal` and `view` are both ignored: Tom ships in his own coat, and the art
    only knows two states, standing and walking. */
-const TOM_CELL_W = 97;
-const TOM_CELL_H = 130;
-const TOM_WALK = 12;       // walk cells, starting at index 1
+/* Cells are packed at the source drawings' own resolution rather than shrunk to
+   fit: at the size Tom is drawn on a high-DPI screen, a smaller cell has to be
+   scaled back UP and the art goes soft. The walk is four cells, not the twelve
+   on full2.jpeg — those twelve are the same four poses drawn three times over
+   (their silhouettes overlap 80-93%), so dropping the repeats bought the
+   resolution back for less than the sheet cost before. */
+const TOM_CELL_W = 183;
+const TOM_CELL_H = 246;
+const TOM_WALK = 4;        // walk cells, starting at index 1
 const TOM_DRAW_H = 1.34;   // Tom's height, as a fraction of the pet size
 const TOM_FEET_Y = 0.52;   // where the floor sits below the origin, same fraction
-// Walk cells per unit of the room's leg phase, which advances 10 a second. The
-// loop reads as four poses, so this is roughly a step every 0.57s.
+// Walk cells per unit of the room's leg phase, which advances 10 a second —
+// so the four-cell loop is a step every 0.57s.
 const TOM_STEP_RATE = 0.7;
 
 // Resolved against this file's own URL, because the pages that load it sit at
