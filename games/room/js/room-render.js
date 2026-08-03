@@ -217,6 +217,12 @@
       const size = 18;
       drawPetCanvas(ctx, petType, size, 0, false, 100, 0, null, 0);
       ctx.restore();
+      // Sprite-drawn pets paint nothing until their sheet lands, and this card is
+      // painted once — so repaint it when the art arrives.
+      const art = petType === 'tom' && typeof tomSheet === 'function' ? tomSheet() : null;
+      if (art && !art.naturalWidth) {
+        art.addEventListener('load', () => drawPetPreview(cvs, petType), { once: true });
+      }
     }
 
     function renderPetShop() {

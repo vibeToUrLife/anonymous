@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tom Preview</title>
+<style>
+  body { margin:0; background:#eae4d8; font-family:sans-serif; color:#3d3a34; }
+  h1 { text-align:center; padding:14px 12px 4px; margin:0; font-size:20px; }
+  h2 { text-align:center; margin:22px 0 2px; font-size:14px; letter-spacing:1px; opacity:.65; text-transform:uppercase; }
+  .grid { display:flex; flex-wrap:wrap; justify-content:center; align-items:flex-end; gap:12px; padding:12px 16px; }
+  .cell { background:#f7f3ea; border:2px solid #c9c0ac; border-radius:16px; padding:8px; text-align:center; box-shadow:0 4px 10px rgba(80,70,50,.12); }
+  .cell canvas { display:block; background:linear-gradient(#cfe0ec 74%, #b79b72 74%); border-radius:10px; }
+  .cell div { font-weight:700; margin-top:6px; font-size:12px; }
+  .note { text-align:center; font-size:12px; opacity:.65; padding:8px 20px 26px; line-height:1.7; }
+</style>
+</head>
+<body>
+  <h1>🐱 Tom Preview</h1>
+
+  <h2>Hero</h2>
+  <div class="grid" id="hero"></div>
+
+  <h2>Real in-game sizes</h2>
+  <div class="grid" id="sizes"></div>
+
+  <h2>Every cell on the sheet</h2>
+  <div class="grid" id="frames"></div>
+
+  <p class="note">
+    Standalone preview — no login needed, just open this file in the browser.<br>
+    It loads the real <code>pets/tom.js</code>, so what you see here is exactly what
+    the room draws. To retune the walk, edit <code>TOM_STEP_RATE</code> in that file
+    and reload.
+  </p>
+
+  <script src="pets/tom.js"></script>
+  <script>
+    // One animated cell. `opts` mirrors what the room passes to the drawer;
+    // `frame` pins a single sheet cell so the raw art can be inspected.
+    function addCell(parent, label, opts) {
+      const o = Object.assign({ s: 120, moving: false, frame: -1, flip: false }, opts);
+      const box = Math.round(o.s * 1.8);
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      const cvs = document.createElement('canvas');
+      cvs.width = box; cvs.height = box;
+      cell.appendChild(cvs);
+      const cap = document.createElement('div');
+      cap.textContent = label;
+      cell.appendChild(cap);
+      document.getElementById(parent).appendChild(cell);
+
+      const ctx = cvs.getContext('2d');
+      (function frame(t) {
+        ctx.clearRect(0, 0, box, box);
+        ctx.save();
+        ctx.translate(box / 2, box * 0.76);
+        if (o.flip) ctx.scale(-1, 1);            // the room mirrors him to walk left
+        if (o.frame >= 0) {
+          const art = tomSheet();
+          if (art.naturalWidth) {
+            const h = o.s * TOM_DRAW_H, w = h * TOM_CELL_W / TOM_CELL_H;
+            ctx.drawImage(art, o.frame * TOM_CELL_W, 0, TOM_CELL_W, TOM_CELL_H,
+              -w / 2, o.s * TOM_FEET_Y - h, w, h);
+          }
+        } else {
+          // The gentle idle/walk bob the room applies around the drawer
+          ctx.translate(0, o.moving ? Math.sin(t / 100) * 2 : Math.sin(t / 800) * 1.2);
+          drawTomPet(ctx, o.s, t / 100, o.moving, 100, '', 0, t, null, '');
+        }
+        ctx.restore();
+        requestAnimationFrame(frame);
+      })(0);
+    }
+
+    addCell('hero', 'Walking right', { s: 180, moving: true });
+    addCell('hero', 'Walking left', { s: 180, moving: true, flip: true });
+    addCell('hero', 'Standing still', { s: 180 });
+
+    addCell('sizes', 'In the room (78) — walking', { s: 78, moving: true });
+    addCell('sizes', 'In the room (78) — standing', { s: 78 });
+    addCell('sizes', 'Far side of the room (~55)', { s: 55, moving: true });
+
+    // Labels straight off full2.jpeg, so a cell here matches a cell there.
+    const POSE = ['contact L', 'down', 'passing', 'up', 'contact R', 'down',
+                  'passing', 'up', 'contact L', 'down', 'passing', 'up'];
+    addCell('frames', '0 stand', { s: 92, frame: 0 });
+    for (let i = 1; i <= TOM_WALK; i++) addCell('frames', i + ' ' + POSE[i - 1], { s: 92, frame: i });
+  </script>
+</body>
+</html>

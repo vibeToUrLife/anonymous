@@ -172,21 +172,15 @@
         { key: 'blue',    name: 'Sky Blue', body: '#8fb6ef', patch: '#333333' },
         { key: 'mint',    name: 'Mint',     body: '#8ed9b2', patch: '#333333' },
       ],
-      tom: [
-        { key: 'classic', name: 'Classic', body: '#9099a0', dark: '#5f676e', belly: '#f3ecd9', inner: '#d99faa', muzzle: '#f3ecd9' },
-        { key: 'grey',    name: 'Grey',    body: '#a6abb0', dark: '#787d82', belly: '#eef0ec', inner: '#d99faa', muzzle: '#eef0ec' },
-        { key: 'butch',   name: 'Butch',   body: '#3f444b', dark: '#23262b', belly: '#c9cdd3', inner: '#c98ba0', muzzle: '#c9cdd3' },
-        { key: 'cream',   name: 'Cream',   body: '#d8c7a4', dark: '#a48f6a', belly: '#f7efdd', inner: '#d99faa', muzzle: '#f7efdd' },
-      ],
       jerry: [
         { key: 'ochre',   name: 'Ochre',   body: '#c8893f', belly: '#f4e0b8', inner: '#eab595', tail: '#b87c34' },
         { key: 'brown',   name: 'Brown',   body: '#9c6b42', belly: '#e7cca7', inner: '#e2a887', tail: '#8a5c38' },
         { key: 'grey',    name: 'Grey',    body: '#9aa0a6', belly: '#e5e7eb', inner: '#e2b0b0', tail: '#8f959b' },
         { key: 'white',   name: 'White',   body: '#e6e0d4', belly: '#fbf7ee', inner: '#f0c4b2', tail: '#d8d2c6' },
       ],
-      // No capybara entry on purpose: it is the one pet drawn from artwork
-      // (games/pets/img/capybara.png) rather than canvas paths, so it ships in
-      // a single coat. The status bar hides the colour dots when a type has no
+      // No tom or capybara entry on purpose: those two are drawn from artwork
+      // (games/pets/img/*.png) rather than canvas paths, so they ship in a
+      // single coat. The status bar hides the colour dots when a type has no
       // palette, which is exactly what we want here.
     };
 

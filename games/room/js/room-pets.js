@@ -699,8 +699,8 @@
 
           ctx.save();
           ctx.translate(px, py);
-          // Upright pets (Tom/Jerry) turn to face travel direction; only their side
-          // view mirrors L/R. Quadruped pets mirror by facing as before.
+          // Jerry turns to face his travel direction; only his side view mirrors
+          // L/R. Every other pet mirrors by facing as before.
           const petView = FACING_PETS[p.type]
             ? (st.stopped ? 'front' : 'side')
             : petViewForState(p.type, st, moving);
@@ -1503,8 +1503,9 @@
         case 'fox':    drawFoxPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
         case 'panda':  drawPandaPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
         case 'goose':  drawGoosePet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
-        // Tom & Jerry are upright characters with three views (front/side/back).
+        // Sprite-based; picks its own frame from `moving`, so it ignores `view`.
         case 'tom':    drawTomPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
+        // Upright character with three views (front/side/back).
         case 'jerry':  drawJerryPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
         // Sprite-based; `view` switches it to the front-facing sitting pose.
         case 'capybara': drawCapybaraPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
@@ -1512,10 +1513,11 @@
       }
     }
 
-    // Upright pets (Tom/Jerry) face their travel direction: across → side (mirrored
-    // by facingRight), toward the viewer → front, away → back. Idle keeps the last view.
-    // Quadruped pets always report 'front' (their draw fns ignore the view arg).
-    const DIRECTIONAL_PETS = { tom: true, jerry: true };
+    // Jerry is upright and faces his travel direction: across → side (mirrored by
+    // facingRight), toward the viewer → front, away → back. Idle keeps the last view.
+    // Every other pet reports 'front' and mirrors by facing — including Tom, whose
+    // artwork is side-on whenever he walks, so it must follow facingRight.
+    const DIRECTIONAL_PETS = { jerry: true };
     // Pets that stop and turn to face the player while they are selected. Kept
     // separate from DIRECTIONAL_PETS because this is not about travel direction:
     // the capybara's front artwork is a SITTING pose, so it may only be shown

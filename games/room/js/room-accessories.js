@@ -195,9 +195,13 @@
       // entry head-worn accessories fell back to the default and floated over the
       // body instead of the head. Values taken straight from the goose geometry.
       goose:   { hx:  0.42, hy: -0.66, r: 0.16 },
-      // Tom & Jerry are upright with a big head centred over the body (front view).
-      // Values taken from their head geometry (tom: arc 0,-0.32 r0.37; jerry: 0,-0.26 r0.30).
-      tom:     { hx:  0,    hy: -0.34, r: 0.34 },
+      // Tom comes from artwork (pets/img/tom.png), so these were measured off the
+      // sheet, not read from path geometry. His head sits lower while he walks
+      // than while he stands (eye line -0.46 vs -0.60), so the values split the
+      // difference: tuned to either pose alone, a hat floats in the other.
+      tom:     { hx:  0,    hy: -0.52, r: 0.14 },
+      // Jerry is upright with a big head centred over the body (front view).
+      // Values taken from his head geometry (arc 0,-0.26 r0.30).
       jerry:   { hx:  0,    hy: -0.28, r: 0.28 },
       // Read off the sprite's side pose: the head sits forward and high, and
       // the sheet is drawn 1.15x the pet size with its feet at +0.40.
