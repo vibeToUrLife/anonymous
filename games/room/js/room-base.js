@@ -810,7 +810,7 @@
       { id: 'decor_goose_pond',        emoji: '⛲', name: 'Goose Pond',          cost: 0, category: 'floor', dx: 0.62, dy: 0.88, unlockOnly: true },
       { id: 'decor_tom_armchair',      emoji: '🛋️', name: "Tom's Armchair",      cost: 0, category: 'floor', dx: 0.28, dy: 0.82, unlockOnly: true },
       { id: 'decor_jerry_mousehole',   emoji: '🧀', name: "Jerry's Cheese Wedge", cost: 0, category: 'floor', dx: 0.66, dy: 0.84, unlockOnly: true },
-      { id: 'decor_capybara_onsen',    emoji: '♨️', name: 'Hot Spring',          cost: 0, category: 'floor', dx: 0.48, dy: 0.86, unlockOnly: true },
+      { id: 'decor_capybara_onsen',    emoji: '♨️', name: 'Hot Spring',          cost: 0, category: 'floor', dx: 0.52, dy: 0.86, unlockOnly: true },
     ];
 
     const WALL_PATTERNS = [

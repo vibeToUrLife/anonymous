@@ -11,6 +11,33 @@
       return p || (def ? { id, x: def.dx, y: def.dy } : { id, x: 0.5, y: 0.5 });
     }
 
+    /* The hot spring is a picture, not canvas paths. Loaded on FIRST DRAW, not
+       on page load: only a player who finished the capybara's collection ever
+       places it, so nobody else pays for the download. */
+    const ONSEN_W = 0.42;      // drawn width, as a fraction of the room width
+    const ONSEN_WATER = 0.42;  // water surface, as a fraction of the spring height
+    let _onsenImg = null;
+    function onsenArt() {
+      if (!_onsenImg) {
+        _onsenImg = new Image();
+        _onsenImg.src = 'room/img/hotspring.png';
+      }
+      return _onsenImg;
+    }
+
+    /* The spring's water surface, which is where a soaking pet is parked — its
+       cropped artwork is cut off exactly at that line. The height depends on
+       the room's width and the picture's shape, both of which live here, so
+       the pet code asks instead of guessing an offset. Null with no spring. */
+    function onsenSoakPoint(rw, rh) {
+      if (!hasDecor('decor_capybara_onsen')) return null;
+      const art = onsenArt();
+      if (!art.naturalWidth) return null;
+      const pos = getDecorPos('decor_capybara_onsen');
+      const h = rw * ONSEN_W * art.naturalHeight / art.naturalWidth;
+      return { x: pos.x, y: pos.y - h * ONSEN_WATER / rh };
+    }
+
     function drawRug(ctx, rw, rh, floorY) {
       // Find placed rug
       const placedRug = (roomData.placedDecors || []).find(d => d.id.startsWith('rug_'));
@@ -2727,8 +2754,21 @@
         ctx.restore();
       }
 
+      // The capybara's collection reward — the one decoration made of artwork
+      // rather than canvas paths, so it matches the pet it comes with.
+      if (hasDecor('decor_capybara_onsen')) {
+        const art = onsenArt();
+        if (art.naturalWidth) {
+          const pos = getDecorPos('decor_capybara_onsen');
+          const w = rw * ONSEN_W;
+          const h = w * art.naturalHeight / art.naturalWidth;
+          // pos.y is the base line, same convention the other floor decors use
+          ctx.drawImage(art, pos.x * rw - w / 2, pos.y * rh - h, w, h);
+        }
+      }
+
       // Generic emoji fallback for new floor decorations without specific drawing code
-      const knownFloorDecors = ['floorlamp','sidetable','cushion','toybox','bookcase','aquarium','guitar','globe','trashcan','fan','beanpillow','tv','piano','telescope','cactus','candles','skateboard','vinylplayer','umbrella','terrarium','xmastree','coffeemaker','gaming','camera','fountain','chessset','bonsai','speaker2','shoe_rack','rocket','minifridge'];
+      const knownFloorDecors = ['floorlamp','sidetable','cushion','toybox','bookcase','aquarium','guitar','globe','trashcan','fan','beanpillow','tv','piano','telescope','cactus','candles','skateboard','vinylplayer','umbrella','terrarium','xmastree','coffeemaker','gaming','camera','fountain','chessset','bonsai','speaker2','shoe_rack','rocket','minifridge','decor_capybara_onsen'];
       (roomData.placedDecors || []).filter(d => {
         const def = DECORATIONS.find(x => x.id === d.id);
         return def && def.category === 'floor' && !knownFloorDecors.includes(d.id);

@@ -1471,6 +1471,17 @@
         ctx.strokeStyle = 'rgba(255,215,0,0.3)'; ctx.lineWidth = 0.6;
         ctx.beginPath(); ctx.moveTo(cx - 8, base - 14); ctx.quadraticCurveTo(cx, base - 18, cx + 6, base - 15); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(cx - 5, base - 22); ctx.quadraticCurveTo(cx, base - 25, cx + 4, base - 22); ctx.stroke();
+      } else if (decorId === 'decor_capybara_onsen') {
+        // Made of artwork rather than paths — the card has to show the same
+        // picture the room draws, or the shop would promise a ♨️ and deliver a pool.
+        const art = onsenArt();
+        if (art.naturalWidth) {
+          const iw = w - 6, ih = iw * art.naturalHeight / art.naturalWidth;
+          ctx.drawImage(art, 3, cy - ih / 2, iw, ih);
+        } else {
+          // Still downloading — repaint this card once it lands.
+          art.addEventListener('load', () => drawDecorPreview(cvs, decorId, category), { once: true });
+        }
       } else {
         // Generic fallback: draw the emoji
         const item = DECORATIONS.find(d => d.id === decorId);

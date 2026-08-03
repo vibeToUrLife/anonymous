@@ -249,6 +249,27 @@
       capybara:['yawn', 'sit', 'headtilt', 'groom', 'stretch']
     };
 
+    /* ── Hot spring ──
+       The capybara's collection reward is the one decoration a pet reacts to:
+       once it is in the room the capybara wanders over and soaks in it. Only
+       the capybara does — the spring is what its own collection unlocks. */
+    const SOAK_PETS = { capybara: true };
+    const SOAK_CHANCE = 0.35;   // odds a wander picks the spring over anywhere
+    const SOAK_DUR = 7000;      // ms; the actual soak runs SOAK_DUR .. 2×
+
+    // The spot to stand on, or null when there is nothing to soak in. The
+    // spring works out where its own water line is; this only clamps the result
+    // into the area a pet is allowed to walk on.
+    function soakSpotFor(type, rw, rh) {
+      if (!SOAK_PETS[type]) return null;
+      const p = onsenSoakPoint(rw, rh);
+      if (!p) return null;
+      return {
+        x: Math.max(0.06, Math.min(0.68, p.x)),
+        y: Math.max(0.70, Math.min(0.92, p.y))
+      };
+    }
+
     let _lastPetAction = {};
     function pickAction(type) {
       const acts = PET_ACTIONS[type] || PET_ACTIONS.cat;
@@ -600,10 +621,16 @@
                 st.actionEnd = now + st.actionDur;
               }
 
-              // Wander
+              // Wander — sometimes towards the hot spring instead of anywhere
               if (now > st.nextWander) {
-                st.tx = 0.06 + Math.random() * 0.60;
-                st.ty = 0.72 + Math.random() * 0.18;
+                const soak = soakSpotFor(p.type, rw, rh);
+                st.soakOnArrive = !!soak && Math.random() < SOAK_CHANCE;
+                if (st.soakOnArrive) {
+                  st.tx = soak.x; st.ty = soak.y;
+                } else {
+                  st.tx = 0.06 + Math.random() * 0.60;
+                  st.ty = 0.72 + Math.random() * 0.18;
+                }
                 st.nextWander = now + 4000 + Math.random() * 6000;
                 if (Math.random() < 0.35) {
                   st.pauseUntil = now + 800 + Math.random() * 1500;
@@ -638,6 +665,16 @@
                   st.x += st.vx;
                   st.y += st.vy;
                   moving = Math.abs(st.vx) > 0.00005 || Math.abs(st.vy) > 0.00005;
+                  // Arrived at the spring — settle in. Pushing nextWander past
+                  // the soak keeps it from wandering off the moment it sits down.
+                  if (st.soakOnArrive && !moving) {
+                    st.soakOnArrive = false;
+                    st.action = 'soak';
+                    st.actionDur = SOAK_DUR + Math.random() * SOAK_DUR;
+                    st.actionEnd = now + st.actionDur;
+                    st.actionCooldown = st.actionEnd + 3000;
+                    st.nextWander = st.actionEnd + 1500;
+                  }
                 }
               }
             }
