@@ -1,6 +1,21 @@
 ﻿    * { margin: 0; padding: 0; box-sizing: border-box; }
+    /* The page is one vertical column: header, world button, then the stage
+       taking whatever is left. Nothing below is allowed to guess at the
+       header's height — see .main-wrap. Every overlay on this page is
+       position:fixed, so none of them become flex items here.
+
+       height:100%, NOT min-height:100vh. The panel caps itself with
+       `max-height:100%` — a percentage of .main-wrap, which is `flex:1 1 auto`
+       and so is only as tall as its tallest child. With an auto-height body
+       that cap is a percentage of a number the panel itself sets: circular, so
+       it never caps, .panel-inner never gets a height to scroll inside, and a
+       long list grows the row until the stretched .room-container drags the
+       farm canvas tall with it. A definite height breaks the loop. The phone
+       stack is meant to grow and scroll, so it restores auto below 768px. */
+    html { height: 100%; }
     body {
-      min-height: 100vh;
+      height: 100%;
+      display: flex; flex-direction: column;
       background: var(--g-bg); background-attachment: fixed;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       color: var(--g-ink);
@@ -57,19 +72,60 @@
       font-size: 13px; color: var(--g-ink-soft); margin-top: 4px;
     }
 
+    /* Full-screen scenes (outside / farm) hand the stage the whole viewport.
+       Toggled by _syncRoomPanel() in room-layers.js. The fixed back button, coin
+       badge and settings button stay — they float over the canvas as they
+       already do, and the scene draws its own title and back control. */
+    body.stage-full .page-header { display: none; }
+    /* !important because #worldEntry carries an inline display:flex in room.html,
+       and inline beats any selector without it. Forcing `none` is safe in the one
+       direction it matters: feature-flags.js hides the same element inline when
+       the world flag is off, and this can only ever keep it hidden. */
+    body.stage-full #worldEntry { display: none !important; }
+    /* …but "float over the canvas" was only ever true for the LEFT column. With
+       the header folded away the RIGHT column starts at y=0 too, so the panel's
+       first row — the farm/aquarium sign header — slid up underneath that same
+       fixed cluster (coin badge at right:14, ⚙ 140, 🏆 190, 📢 240, all top:14,
+       z-index 50). The coin badge covered the head's orange cap pill outright.
+       Reserve the cluster's height (14px offset + 40px control + 8px breathing)
+       at the top of the column. It goes on .panel-wrap, not on the .panel-inner
+       scroller, so the strip is structural and can't scroll away and put the
+       header back under the badge. Desktop only: below 768px the panel is a
+       bottom sheet under the stage and never meets the cluster. */
+    @media (min-width: 769px) {
+      body.stage-full .panel-wrap { padding-top: 62px; }
+    }
+
     /* ── Main layout ── */
+    /* Fill whatever the header leaves, rather than subtracting a guess at it.
+       This used to be `calc(100vh - 60px)`, but the real stack above the stage
+       is .page-header (80px) plus the #worldEntry world button (48px) — 128px
+       measured — so the stage always hung 68px below the fold. On the farm that
+       lands exactly on the bottom crop row: _farmCropBand() in room-farm-view.js
+       pins the beds to 0.95 of the stage, so the third row of beds was the one
+       thing cut off. min-height:0 lets the row shrink instead of being floored
+       by its content. */
     .main-wrap {
-      display: flex; flex-direction: row; min-height: calc(100vh - 60px);
+      display: flex; flex-direction: row;
+      flex: 1 1 auto; min-height: 0;
       position: relative;
     }
 
     /* ── Room canvas ── */
+    /* Height comes from stretching inside .main-wrap — never restate it here,
+       or the guess comes back. */
     .room-container {
       flex: 1; padding: 0; display: flex;
-      min-width: 0; height: calc(100vh - 60px);
+      min-width: 0;
     }
+    /* Stretches inside .room-container rather than using height:100%. A
+       percentage resolves against the PARENT'S COMPUTED height, and once the
+       stage stopped hard-coding one it is `auto` — the percentage then collapses
+       to 0 and the whole stage disappears. Stretching has no such dependency.
+       Every canvas in here is inset:0 absolute, so it follows this box. */
     .room {
-      position: relative; width: 100%; height: 100%;
+      position: relative;
+      flex: 1 1 auto; min-width: 0; align-self: stretch;
       overflow: hidden;
       border: none;
       box-shadow: none;
@@ -117,7 +173,9 @@
     .panel-wrap {
       position: relative;
       display: flex; flex-direction: column; min-width: 0;
-      width: 420px; max-height: calc(100vh - 60px);
+      /* Capped by the row it sits in, so tall panel content scrolls inside
+         .panel-inner instead of stretching the row past the viewport. */
+      width: 420px; max-height: 100%;
       border-left: 1px solid var(--g-border);
       transition: width 0.3s ease;
       flex-shrink: 0;
@@ -436,9 +494,16 @@
 
     /* ── Mobile responsive ── */
     @media (max-width: 768px) {
-      /* Stack layout vertically */
+      /* The desktop fix pins the page to the viewport so the panel scrolls
+         inside itself. Here the whole column is supposed to scroll instead, and
+         the caps below are vh (content-independent) rather than percentages, so
+         the page goes back to growing with its content. */
+      html, body { height: auto; min-height: 100vh; }
+      /* Stack layout vertically. `1 0 auto` so it still fills the screen when
+         the panel is short, but is never shrunk below its content — the phone
+         layout is meant to scroll, the desktop one is not. */
       .main-wrap {
-        flex-direction: column; min-height: auto;
+        flex-direction: column; min-height: auto; flex: 1 0 auto;
       }
       /* Room takes upper portion */
       .room-container {
@@ -461,8 +526,10 @@
       .panel-wrap.collapsed .panel-inner {
         display: none;
       }
-      /* Outside/farm: room fills the whole screen on mobile too */
-      .main-wrap.no-panel .room-container { height: calc(100vh - 60px); }
+      /* Outside/farm: room fills the whole screen on mobile too. Same fix as
+         desktop — fill the column instead of subtracting a guessed header,
+         which on a phone is taller still (151px) than the 60px assumed. */
+      .main-wrap.no-panel .room-container { height: auto; flex: 1 1 auto; }
       /* The farm's garden needs four rows of 44px beds, which don't fit in 55vh.
          Scoped to the farm so the room and aquarium keep their split. */
       .main-wrap.farm-stage .room-container { height: 66vh; }
@@ -763,6 +830,21 @@
       cursor:pointer;box-shadow:var(--g-shadow-sm);
     }
     .farm-produce-btn:hover{filter:brightness(1.05)}
+    /* Land-pan arrows — the one thing on screen that says the farm continues
+       past the edge. Shown by _syncFarmPanBtns() in room-farm-view.js, and only
+       on the side that still has land. `right:44px` clears the panel toggle,
+       which sits in the stage's last 28px at exactly this height. */
+    .farm-pan-btn{
+      position:absolute;top:50%;transform:translateY(-50%);z-index:6;
+      width:44px;height:64px;align-items:center;justify-content:center;
+      border:1px solid rgba(255,255,255,.25);border-radius:14px;
+      background:rgba(0,0,0,.38);backdrop-filter:blur(6px);
+      color:rgba(255,255,255,.92);font-size:26px;font-weight:700;line-height:1;
+      cursor:pointer;box-shadow:var(--g-shadow-sm);transition:background .2s;
+    }
+    .farm-pan-btn:hover{background:rgba(0,0,0,.6)}
+    .farm-pan-l{left:10px}
+    .farm-pan-r{right:44px}
     .outside-title{position:absolute;top:12px;left:50%;transform:translateX(-50%);font-size:13px;font-weight:700;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.7);pointer-events:none;white-space:nowrap;z-index:5}
     .outside-hint{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);font-size:10px;color:rgba(255,255,255,.45);pointer-events:none;z-index:5;white-space:nowrap}
     /* Farm view — stacked above the outside view */
@@ -1005,16 +1087,23 @@
     .ws-slot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 4px;border-top:1px dotted var(--g-border)}
     .ws-slot:first-of-type{border-top:none}
     .ws-slot-state{font-weight:700;font-size:13px;color:var(--g-ink)}
-    /* 4-square slot grid */
-    .ws-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0 12px}
+    /* Slot grid — two big squares a row. It used to be four across, which on a
+       phone made each slot a ~66px target with an 8.5px caption; the "make" tap
+       and its label were the smallest things in the whole farm. Two columns with
+       a min-height doubles the target and lets the icon and caption grow. */
+    .ws-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:8px 0 12px}
     .ws-cell{
-      aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-      border-radius:14px;border:2px dashed var(--g-border);background:rgba(255,255,255,.04);
-      color:var(--g-ink-soft);font:inherit;cursor:pointer;padding:4px;transition:border-color .15s,background .15s;
+      min-height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+      border-radius:16px;border:2px dashed var(--g-border);background:rgba(255,255,255,.04);
+      color:var(--g-ink-soft);font:inherit;cursor:pointer;padding:8px;transition:border-color .15s,background .15s,transform .08s;
     }
-    .ws-cell-icon{font-size:26px;line-height:1}
-    .ws-cell-cap{font-size:8.5px;font-weight:800;text-align:center;line-height:1.1;letter-spacing:.2px}
-    .ws-cell.idle:hover,.ws-cell.idle.picking{border-color:var(--g-accent);color:var(--g-accent);background:rgba(251,146,60,.08)}
+    .ws-cell-icon{font-size:38px;line-height:1}
+    .ws-cell-cap{font-size:12px;font-weight:800;text-align:center;line-height:1.15;letter-spacing:.2px}
+    /* An empty slot IS the "make" button, so accent it at rest — it should read
+       as the thing to tap, not an empty box you have to guess at. */
+    .ws-cell.idle{border-color:rgba(251,146,60,.5);color:var(--g-accent)}
+    .ws-cell.idle:hover,.ws-cell.idle.picking{border-color:var(--g-accent);color:var(--g-accent);background:rgba(251,146,60,.10)}
+    .ws-cell.idle:active{transform:scale(.96)}
     .ws-cell.locked{border-style:solid;border-color:var(--g-border)}
     .ws-cell.locked:disabled{opacity:.45;cursor:not-allowed}
     .ws-cell.busy{border-style:solid;cursor:default;color:var(--cream)}
@@ -1052,6 +1141,11 @@
     .ws-x{cursor:pointer;float:right;color:var(--g-ink-soft);font-weight:700}
     .ws-recipe{display:block;width:100%;text-align:left;margin-top:6px}
     .ws-recipe small{opacity:.7;font-weight:600}
+    /* Bigger than a plain shop button: this is the second half of "make", so it
+       gets a comfortable tap height and wraps instead of clipping a long recipe.
+       Scoped under .ws-choose to beat .farm-shop-buy's 11px / nowrap. */
+    .ws-choose .ws-recipe{padding:11px 13px;font-size:14px;line-height:1.35;white-space:normal;border-radius:12px}
+    .ws-choose .ws-recipe small{display:inline-block;margin-top:1px}
 
     /* Rows — dotted separators, quiet by default */
     .farm-shop-row,.farm-herd-row,.farm-food-row{
@@ -1078,10 +1172,20 @@
     /* Herd + jar-style progress bars */
     .farm-herd-emoji{font-size:20px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.45))}
     .farm-herd-info{flex:1;min-width:0}
-    .farm-herd-name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    /* display:block on both. These are emitted as <span>s inside .farm-herd-info,
+       which is a flex ITEM (so it blockifies) but not a flex CONTAINER — its
+       children stay inline, and an inline box ignores height. That silently cost
+       the bar every pixel it has: `height:7px` did nothing, and the inner fill's
+       `height:100%` resolved against an auto-height inline parent, i.e. 0. The
+       food and happiness bars were drawing as nothing at all. */
+    .farm-herd-name{display:block;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .farm-herd-name small{font-family:var(--farm-display);color:var(--g-accent-2);font-weight:800}
-    .farm-herd-bar{height:7px;background:rgba(0,0,0,.32);border-radius:999px;overflow:hidden;margin-top:4px;box-shadow:inset 0 1px 2px rgba(0,0,0,.45)}
+    .farm-herd-bar{display:block;height:7px;background:rgba(0,0,0,.32);border-radius:999px;overflow:hidden;margin-top:4px;box-shadow:inset 0 1px 2px rgba(0,0,0,.45)}
     .farm-herd-bar span{display:block;height:100%;border-radius:999px;transition:width .35s ease}
+    /* The trough's drain rate, under its bar — the count moves too slowly to
+       watch, so the panel says the rate outright instead of hoping you notice. */
+    .farm-food-rate{display:block;font-size:10px;color:var(--g-ink-faint);margin-top:4px;font-variant-numeric:tabular-nums}
+    .farm-food-rate.hungry{color:#f0857a;font-weight:700}
     .farm-herd-drops{font-size:10px;color:var(--g-accent-2);white-space:nowrap;font-weight:700;font-variant-numeric:tabular-nums}
     .farm-herd-meat{font-size:10px;color:#f0857a;white-space:nowrap;font-weight:700;font-variant-numeric:tabular-nums}
 

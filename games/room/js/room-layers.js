@@ -30,6 +30,12 @@
       // have to stay individually tappable, and four rows of 44px beds don't fit
       // in 55vh. Only the farm gets it — the room and aquarium are unaffected.
       wrap.classList.toggle('farm-stage', !!farm);
+      /* Outside and the farm are full-screen scenes: give them the page's whole
+         height by folding away the title block and the Pet World button, which
+         together eat 128px of it. The farm needs that height most — its beds are
+         pinned to the bottom of the stage — and it loses nothing, since the
+         scene draws its own "🚜 My Farm" title and its own ← Back. */
+      document.body.classList.toggle('stage-full', !!(out || farm));
     }
 
     /**

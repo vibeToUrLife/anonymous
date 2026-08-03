@@ -13,6 +13,20 @@ function _aqGameToday() {
   const d = new Date();
   return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
 }
+
+/* Spend one play of a capped game ('bubble' | 'race'). Stamps the day and bumps
+   the count together — the day alone used to BE the record, so the two must
+   never be written apart or a stale day would resurrect a spent allowance. */
+function _aqSpendPlay(kind) {
+  const isRace = kind === 'race';
+  const dayField = isRace ? 'aquariumRaceDay' : 'aquariumBubbleDay';
+  const nField = isRace ? 'aquariumRaceN' : 'aquariumBubbleN';
+  const today = _aqGameToday();
+  const used = aquariumPlaysUsed(roomData[dayField] || '', today, roomData[nField]);
+  roomData[dayField] = today;
+  roomData[nField] = used + 1;
+  saveRoom();
+}
 function _aqCanvasEl() { return document.getElementById('aquariumCanvas'); }
 function _aqCanvasPos(e, cvs) {
   const r = cvs.getBoundingClientRect();
@@ -181,9 +195,11 @@ function startFeedingFrenzy() {
 /* ── Bubble Pop ── */
 function startBubblePop() {
   if (viewingUid !== currentUid || _aqGame) return;
-  if ((roomData.aquariumBubbleDay || '') === _aqGameToday()) { showToast('🫧 ' + T('Bubble Pop — come back tomorrow!'), ''); return; }
+  // One a day, plus whatever the pump bought. Counted rather than flagged, so
+  // the allowance can grow without the day string meaning two different things.
+  if (aquariumPlaysLeft('bubble') <= 0) { showToast('🫧 ' + T('Bubble Pop — come back tomorrow!'), ''); return; }
   if (!(roomData.aquariumFish || []).length) { showToast(T('Place some fish first!') + ' 🐠', ''); return; }
-  roomData.aquariumBubbleDay = _aqGameToday(); saveRoom();
+  _aqSpendPlay('bubble');
   const legendaries = (roomData.aquariumFish || []).filter(n => { const f = FISH_TYPES.find(x => x.name === n); return f && f.rarity === 'legendary'; }).length;
   const jackChance = bubbleJackpotChance(legendaries);
   const cvs = _aqGameBegin('bubble'); if (!cvs) return;
@@ -231,7 +247,9 @@ function startBubblePop() {
 /* ── Fish Race & Bet ── */
 function startFishRace() {
   if (viewingUid !== currentUid || _aqGame) return;
-  if ((roomData.aquariumRaceDay || '') === _aqGameToday()) { showToast('🏁 ' + T('Fish Race — once a day! Come back tomorrow.'), ''); return; }
+  // Not "once a day" any more — the pump can buy more, so the message says what
+  // is true at every pump level.
+  if (aquariumPlaysLeft('race') <= 0) { showToast('🏁 ' + T('Fish Race — come back tomorrow!'), ''); return; }
   const placed = (roomData.aquariumFish || []);
   if (placed.length < 3) { showToast(T('Need at least 3 fish in your tank to race!'), ''); return; }
   const racers = placed.slice(0, 4);
@@ -268,8 +286,10 @@ function _aqShowRaceBet(racers, odds) {
 function _aqRunRace(racers, odds, pickIdx, stake) {
   roomData.coins = Math.max(0, roomData.coins - stake);
   logCoin(-stake, T('Game stake'));
-  roomData.aquariumRaceDay = _aqGameToday();
-  saveRoom(); if (typeof renderAll === 'function') renderAll();
+  // Spent here rather than in startFishRace: backing out of the bet sheet must
+  // not cost the play, so the day is only stamped once a stake is down.
+  _aqSpendPlay('race');
+  if (typeof renderAll === 'function') renderAll();
   const cvs = _aqGameBegin('race'); if (!cvs) return;
   const ctx = cvs.getContext('2d');
   const W = cvs.width, H = cvs.height, finish = W - 40;

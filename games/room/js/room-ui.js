@@ -89,9 +89,15 @@
     /* ═══════════════════════════════
        1. DAILY LOGIN REWARDS
        ═══════════════════════════════ */
-    function getTodayStr() {
-      const d = new Date();
-      return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    /* The reward day is a FIXED zone for every device, not the local calendar
+       day. On local time two devices on one account in different timezones
+       disagreed about what "today" was: the second one re-armed the button, and
+       because its own "yesterday" no longer matched lastLoginDay it reset the
+       streak to 1. Pass a timestamp to ask about another day. */
+    const GAME_DAY_OFFSET_MIN = 480;                      // UTC+8, no DST to straddle
+    function getTodayStr(ts) {
+      const d = new Date((ts == null ? Date.now() : ts) + GAME_DAY_OFFSET_MIN * 60000);
+      return d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0') + '-' + String(d.getUTCDate()).padStart(2,'0');
     }
 
     function showDailyReward() {
@@ -117,21 +123,65 @@
       btn.textContent = alreadyClaimed ? '✓ ' + T('Claimed Today') : T('Claim Today\'s Reward!');
     }
 
-    document.getElementById('dailyClaimBtn').addEventListener('click', async () => {
+    /* Claiming is a TRANSACTION against the server document, not a local edit
+       followed by a save. Both "has today been claimed?" and the streak come
+       from the read inside the transaction, so a second device holding a stale
+       lastLoginDay loses the check and walks away with nothing instead of paying
+       itself a second time. It also means the streak can't be rewound by a
+       device that has been asleep for a week.
+
+       A transaction needs the server, so this fails while offline rather than
+       queueing a write that would double-pay on reconnect. The caller says so. */
+    async function claimDailyReward() {
       const today = getTodayStr();
-      if (roomData.lastLoginDay === today) return;
-      // Check if streak continues (yesterday)
-      const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
-      const yStr = yesterday.getFullYear() + '-' + String(yesterday.getMonth()+1).padStart(2,'0') + '-' + String(yesterday.getDate()).padStart(2,'0');
-      let newStreak = (roomData.lastLoginDay === yStr) ? (roomData.loginStreak || 0) + 1 : 1;
-      if (newStreak > 7) newStreak = ((newStreak - 1) % 7) + 1;
-      const reward = DAILY_REWARDS[Math.min(newStreak, 7) - 1];
-      roomData.loginStreak = newStreak;
+      const yStr = getTodayStr(Date.now() - 86400000);
+      const ref = userDocRef();
+      let out = { claimed: false, reason: 'already' };
+      await db.runTransaction(async (tx) => {
+        const snap = await tx.get(ref);
+        const d = (snap && snap.exists) ? (snap.data() || {}) : {};
+        if (d.lastLoginDay === today) {
+          out = { claimed: false, reason: 'already', streak: d.loginStreak || 0, balance: Math.floor(d.coins || 0) };
+          return;
+        }
+        let streak = (d.lastLoginDay === yStr) ? (d.loginStreak || 0) + 1 : 1;
+        if (streak > 7) streak = ((streak - 1) % 7) + 1;
+        const reward = DAILY_REWARDS[Math.min(streak, 7) - 1];
+        const balance = Math.floor(d.coins || 0) + reward.coins;
+        tx.set(ref, { lastLoginDay: today, loginStreak: streak, coins: balance }, { merge: true });
+        out = { claimed: true, reason: 'ok', coins: reward.coins, streak: streak, balance: balance };
+      });
+      // The transaction is the source of truth for all three numbers — mirror
+      // it rather than adding to whatever this device happened to be holding.
+      // That runs on the refused path too: the server just said today is taken,
+      // so leaving lastLoginDay stale would re-arm the button behind us.
       roomData.lastLoginDay = today;
-      roomData.coins += reward.coins;
-      logCoin(reward.coins, T('Daily reward') + ' 🎁');
-      await saveRoom();
-      showToast('🎁 ' + T('Claimed {coins} coins! Streak: {n}', { coins: reward.coins, n: newStreak }), 'success');
+      roomData.loginStreak = out.streak;
+      roomData.coins = out.balance;
+      if (out.claimed) {
+        logCoin(out.coins, T('Daily reward') + ' 🎁');
+        await saveRoom();
+      }
+      return out;
+    }
+
+    document.getElementById('dailyClaimBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('dailyClaimBtn');
+      if (btn.disabled) return;
+      btn.disabled = true;                       // no second tap while the write is in flight
+      let out;
+      try {
+        out = await claimDailyReward();
+      } catch (e) {
+        btn.disabled = false;
+        return showToast('🎁 ' + T('Could not reach the server — try again in a moment.'), 'error');
+      }
+      if (!out.claimed) {
+        // Another device got there first. Re-render so the button tells the truth.
+        showDailyReward();
+        return showToast('🎁 ' + T('Already claimed today on another device.'), '');
+      }
+      showToast('🎁 ' + T('Claimed {coins} coins! Streak: {n}', { coins: out.coins, n: out.streak }), 'success');
       checkAchievements();
       // Re-render so today's cell flips to "claimed" and the streak updates,
       // then auto-dismiss. Once the reward is claimed there's nothing left to do

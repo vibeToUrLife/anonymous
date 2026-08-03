@@ -683,3 +683,44 @@ test('the palette follows the clock, and a skin with no night block still paints
   assert.deepEqual(F.farmThemePalette(THEMES[2], true).grass, ['c']);   // falls back to day
   assert.equal(F.farmThemePalette(null, false), null);
 });
+
+/* ── A row can hold more than one crop ──
+   Nothing stops planting bed by bed, so a row of wheat + carrot + corn is legal.
+   The signboard used to name only `cropId`, the first crop planted, which meant
+   a mixed row announced itself as whichever crop happened to be in the lowest
+   bed — and could read "✨ Ready" while naming a crop that was still growing. */
+
+test('farmRowState: a mixed row reports every crop in it, in bed order', () => {
+  const now = 0.5 * HOUR;
+  const s = F.farmRowState([
+    { crop: 'wheat',  plantedAt: now - 0.2 * HOUR },
+    { crop: 'carrot', plantedAt: now - 0.2 * HOUR },
+    { crop: 'corn',   plantedAt: now - 0.2 * HOUR },
+  ], CROPS, now);
+  assert.deepEqual(s.kinds, ['wheat', 'carrot', 'corn']);
+  assert.equal(s.cropId, 'wheat', 'cropId stays the first, for callers that want just one');
+});
+
+test('farmRowState: a kind planted twice is only listed once', () => {
+  const now = 0.5 * HOUR;
+  const s = F.farmRowState([
+    { crop: 'wheat', plantedAt: now - 0.2 * HOUR },
+    { crop: 'corn',  plantedAt: now - 0.2 * HOUR },
+    { crop: 'wheat', plantedAt: now - 0.1 * HOUR },
+  ], CROPS, now);
+  assert.deepEqual(s.kinds, ['wheat', 'corn']);
+});
+
+test('farmRowState: a single-crop row lists exactly that one', () => {
+  const now = 0.5 * HOUR;
+  const s = F.farmRowState([
+    { crop: 'wheat', plantedAt: now - 0.2 * HOUR },
+    { crop: 'wheat', plantedAt: now - 0.1 * HOUR },
+  ], CROPS, now);
+  assert.deepEqual(s.kinds, ['wheat']);
+});
+
+test('farmRowState: an empty row lists nothing', () => {
+  const s = F.farmRowState([{ crop: null }, {}], CROPS, 5 * HOUR);
+  assert.deepEqual(s.kinds, []);
+});

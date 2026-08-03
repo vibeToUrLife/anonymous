@@ -953,15 +953,36 @@
       roomData.farmStock = d.farmStock || {};
       roomData.farmTotalCollected = d.farmTotalCollected || 0;
       roomData.farmCapLevel = d.farmCapLevel || 0;
+      roomData.farmLandL = d.farmLandL || false;
+      roomData.farmLandR = d.farmLandR || false;
       roomData.farmAutoCollect = d.farmAutoCollect || false;
       roomData.farmVariants = d.farmVariants || {};
       roomData.farmPlots = Array.isArray(d.farmPlots) ? d.farmPlots : [];
       roomData.farmOrdersDay = d.farmOrdersDay || '';
       roomData.farmOrdersDone = Array.isArray(d.farmOrdersDone) ? d.farmOrdersDone : [];
       roomData.farmMachines = d.farmMachines || {};
+      // Side land — mirrored so a visitor sees the host's plots drawn correctly.
+      // Nothing here is writable while visiting (every action is owner-gated).
+      roomData.farmCompost = d.farmCompost || 0;
+      roomData.farmCompostAt = d.farmCompostAt || 0;
+      roomData.farmCompostBins = d.farmCompostBins || 0;
+      roomData.farmFertilizer = d.farmFertilizer || 0;
+      roomData.farmAgers = d.farmAgers || {};
+      roomData.farmAged = d.farmAged || {};
+      roomData.farmBuyerLeftAt = d.farmBuyerLeftAt || 0;
+      roomData.farmBuyerWanted = d.farmBuyerWanted || null;
+      roomData.farmBuyerSold = d.farmBuyerSold || null;
       roomData.farmColdLevel = d.farmColdLevel || 0;
       roomData.farmAutoFeed = d.farmAutoFeed || false;
       roomData.farmAutoFeedOn = d.farmAutoFeedOn || false;
+      // The skin the farm is wearing follows the host as well — without this the
+      // canvas kept painting the VISITOR's look, so every farm you walked into
+      // wore your own theme. ownedFarmThemes comes along because farmThemeOf()
+      // drops back to the default skin for an id the owner list doesn't cover.
+      // Safe to overwrite our own values: saveRoom() is owner-gated, the skins
+      // shop is never rendered in visitor mode, and goHome() re-loads our room.
+      roomData.farmTheme = d.farmTheme || 'meadow';
+      roomData.ownedFarmThemes = Array.isArray(d.ownedFarmThemes) ? d.ownedFarmThemes : [];
       // Popularity + weekly board numbers follow whoever's farm we're looking at
       // (the visitor panel shows the host's 🔥 count). farmHelpDay/farmHelpCount
       // are deliberately NOT mirrored — those are the VISITOR's own daily
@@ -977,6 +998,12 @@
       roomData.aquariumFish = Array.isArray(d.aquariumFish) ? d.aquariumFish : [];
       roomData.aquariumTheme = d.aquariumTheme || 'tropical';
       roomData.aquariumLikes = d.aquariumLikes || 0;
+      // The three devices are drawn IN the tank and the light scales the rate we
+      // report, so a visit that skipped them would stand MY equipment in someone
+      // else's water. Blanked when the host owns none, never left at mine.
+      roomData.aquariumFilter = d.aquariumFilter || 0;
+      roomData.aquariumLight = d.aquariumLight || 0;
+      roomData.aquariumPump = d.aquariumPump || 0;
       // Load multi-layer data for visited room (visitor starts on floor 1)
       roomData.unlockedLayers = d.unlockedLayers ?? 1;
       const rawLayerData = d.layerData ? JSON.parse(JSON.stringify(d.layerData)) : {};

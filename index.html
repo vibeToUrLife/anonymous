@@ -1758,21 +1758,77 @@
       var editorStatus   = document.getElementById('wnEditorStatus');
       if (!overlay || !closeBtn) return;
 
+      // ── "Already seen" is a fact about the ACCOUNT, not about the device ──
+      // It used to live only in localStorage, so every new phone/laptop/browser
+      // replayed the same announcement. It now settles against rooms/{uid}, with
+      // localStorage kept as a local cache so the usual case costs no read.
+      function _wnSeenKey(v) { return 'seen_whats_new_' + v; }
+
+      function _wnMarkSeen(version) {
+        if (!version) return Promise.resolve();
+        try { localStorage.setItem(_wnSeenKey(version), 'true'); } catch (e) {}
+        var uid = auth.currentUser && auth.currentUser.uid;
+        if (!uid) return Promise.resolve();
+        // A banned user can't write their room — the local cache still holds.
+        return db.collection('rooms').doc(uid)
+          .set({ seenWhatsNew: version }, { merge: true })
+          .catch(function () {});
+      }
+
+      // Resolves true when THIS ACCOUNT has already seen `version` anywhere.
+      function _wnHasSeen(version) {
+        try {
+          if (localStorage.getItem(_wnSeenKey(version))) {
+            // Backfill: this device knows, the account may not (it was dismissed
+            // before the seen flag moved to the server, or on a signed-out visit).
+            // One write per version per device, then the flag below silences it.
+            if (!localStorage.getItem('synced_whats_new_' + version)) {
+              _wnMarkSeen(version).then(function () {
+                try { localStorage.setItem('synced_whats_new_' + version, 'true'); } catch (e) {}
+              });
+            }
+            return Promise.resolve(true);
+          }
+        } catch (e) {}
+        var uid = auth.currentUser && auth.currentUser.uid;
+        if (!uid) return Promise.resolve(false);
+        return db.collection('rooms').doc(uid).get().then(function (d) {
+          var seen = d.exists && d.data().seenWhatsNew === version;
+          // Mirror the server's answer so the next open on this device is instant.
+          if (seen) { try { localStorage.setItem(_wnSeenKey(version), 'true'); } catch (e) {} }
+          return seen;
+        }).catch(function () { return false; });
+      }
+
       // Close the URL-mode iframe overlay (mark this version seen so it's shown once).
       function _closeFrame() {
         // Hide first so a storage error can never leave a full-screen modal stuck.
         if (frameEl) frameEl.classList.add('hidden');
         if (iframeEl) iframeEl.src = 'about:blank';
-        try { if (_wnVersion) localStorage.setItem('seen_whats_new_' + _wnVersion, 'true'); } catch (e) {}
+        return _wnMarkSeen(_wnVersion);
       }
       if (frameClose) frameClose.addEventListener('click', _closeFrame);
-      // The intro page can close itself (its "开始体验/跳过" buttons postMessage this) — but
-      // only honour it while OUR frame is open AND the message came from its iframe.
+      // The intro page talks back through postMessage: 'wn-close' for 跳过/开始体验,
+      // 'wn-go-farm' for its closing "去农场看看" button — the page is in an iframe
+      // and can't route the app itself. Only honour it while OUR frame is open AND
+      // the message came from its iframe.
       window.addEventListener('message', function (e) {
-        if (!e || e.data !== 'wn-close') return;
+        if (!e || (e.data !== 'wn-close' && e.data !== 'wn-go-farm')) return;
         if (!frameEl || frameEl.classList.contains('hidden')) return;
         if (iframeEl && e.source && e.source !== iframeEl.contentWindow) return;
-        _closeFrame();
+        var goFarm = (e.data === 'wn-go-farm');
+        var pending = _closeFrame();
+        if (!goFarm) return;
+        // Let the "seen" write land before we leave the page, but never let a slow
+        // network hold the user on an announcement they just dismissed.
+        var went = false;
+        var go = function () {
+          if (went) return;
+          went = true;
+          location.href = './games/room.html?view=farm';
+        };
+        pending.then(go, go);
+        setTimeout(go, 800);
       });
 
       // Store fetched version for the close handler
@@ -1781,31 +1837,32 @@
       function renderPopup(data) {
         if (!data || !data.version) return;
         _wnVersion = data.version;
-        var seenKey = 'seen_whats_new_' + data.version;
-        if (localStorage.getItem(seenKey)) return;
+        _wnHasSeen(data.version).then(function (seen) {
+          if (seen) return;
 
-        // URL mode: show the full HTML intro page in an iframe overlay (once).
-        if (data.url) {
-          if (iframeEl && frameEl) {
-            iframeEl.src = data.url;
-            setTimeout(function () { frameEl.classList.remove('hidden'); }, 800);
+          // URL mode: show the full HTML intro page in an iframe overlay (once).
+          if (data.url) {
+            if (iframeEl && frameEl) {
+              iframeEl.src = data.url;
+              setTimeout(function () { frameEl.classList.remove('hidden'); }, 800);
+            }
+            return;
           }
-          return;
-        }
 
-        // Populate badge
-        if (badgeEl) badgeEl.textContent = data.badge || '🆕 What\'s New';
-        // Populate items list
-        if (listEl) {
-          listEl.innerHTML = '';
-          var items = Array.isArray(data.items) ? data.items : [];
-          items.forEach(function(html) {
-            var li = document.createElement('li');
-            li.innerHTML = html;
-            listEl.appendChild(li);
-          });
-        }
-        setTimeout(function() { overlay.classList.remove('hidden'); }, 800);
+          // Populate badge
+          if (badgeEl) badgeEl.textContent = data.badge || '🆕 What\'s New';
+          // Populate items list
+          if (listEl) {
+            listEl.innerHTML = '';
+            var items = Array.isArray(data.items) ? data.items : [];
+            items.forEach(function(html) {
+              var li = document.createElement('li');
+              li.innerHTML = html;
+              listEl.appendChild(li);
+            });
+          }
+          setTimeout(function() { overlay.classList.remove('hidden'); }, 800);
+        });
       }
 
       // Populate developer editor with current Firestore data
@@ -1887,8 +1944,8 @@
       }
 
       closeBtn.addEventListener('click', function() {
-        if (_wnVersion) localStorage.setItem('seen_whats_new_' + _wnVersion, 'true');
         overlay.classList.add('hidden');
+        _wnMarkSeen(_wnVersion);
       });
     })();
    

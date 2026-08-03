@@ -271,6 +271,13 @@
     const FARM_LEVELS = [0, 10, 30, 70, 150];   // collected thresholds → Lv1..Lv5
     const FARM_LEVEL_SPEEDUP = 0.10;            // +10% production speed per level above 1
     const FARM_EXPAND_COSTS = [5000, 15000, 40000, 90000];  // +10 animal cap & a bigger pasture per expansion
+    /* Land opened up either side of the farm, once that pasture line is finished.
+       One plot per side, bought separately, and the farm itself never moves — the
+       new ground is added OUTSIDE it. The cost is for the next plot whichever side
+       it is, and is deliberately steeper than any rung of the pasture above: this
+       is what there is left to spend coins on once the pasture is maxed. */
+    const FARM_LAND_COSTS = [50000, 120000];    // 1st plot, then the 2nd — either side
+    const FARM_LAND_STEP = 0.5;                 // how wide one plot is, in window widths
     const FARM_AUTOCOLLECT_COST = 4000;         // one-time: auto-collects produce into stock
 
     // Coat variants: each new animal is the common variant unless it rolls the
@@ -302,6 +309,19 @@
       baguette: { emoji: '🥖', name: 'Baguette', coins: 170 },   // Bakery: from wheat
       pizza:    { emoji: '🍕', name: 'Pizza',          coins: 150 },   // Bakery: from truffle
       risotto:  { emoji: '🍚', name: 'Truffle Risotto', coins: 290 },  // Bakery: from truffle
+    };
+    /* Tier-2 aged goods. Deliberately NOT in FARM_PRODUCTS: three existing paths
+       (sellFarmProduct, sellAllFarm, the plane's wanted list) sell everything
+       they can find at list price, and all three read farmStock/FARM_PRODUCTS.
+       Keeping the aged goods in their own registry and their own inventory
+       (roomData.farmAged) makes selling them anywhere but the tier-2 buyer
+       structurally impossible instead of something three call sites remember. */
+    const FARM_AGED = {
+      agedcheese:  { emoji: '🧀', name: 'Aged Cheese',     coins: 600 },
+      culturedbutter: { emoji: '🧈', name: 'Cultured Butter', coins: 450 },
+      curedsausage: { emoji: '🌭', name: 'Cured Sausage',  coins: 400 },
+      smokedbacon: { emoji: '🥓', name: 'Smoked Bacon',    coins: 540 },
+      agedham:     { emoji: '🍖', name: 'Aged Ham',        coins: 720 },
     };
     // Base meat from butchering, by tier (the animal's level adds more — see _meatYield).
     const FARM_MEAT_YIELD = { goose: 1, pig: 2, cow: 3, horse: 4 };
@@ -367,6 +387,57 @@
     const FARM_SLOT_COST = 10000;  // coins to open one more production slot
     const FARM_MAX_SLOTS = 4;      // most slots a single machine can have
 
+    /* Ageing factories — the right plot's tier-2 layer. Same shape as
+       FARM_MACHINES (id/cost/recipes) so _machineState, startMachineSlot and
+       collectMachineSlot drive both lists; a `store` field says which inventory
+       the output lands in. Only dairy and meat age: bread and cake want to be
+       fresh, and metal doesn't age at all — which is what makes the Dairy and
+       the Butcher, the two cheapest machines, matter late.
+       The first factory comes with the plot; the other two are unlocked by
+       tapping them on the land. Timers are in HOURS against the machines'
+       20–60 minutes, so the two tiers are clearly separate layers. */
+    const HR = 60 * 60 * 1000;   // not `H` — the farm view uses W/H for canvas size
+    const FARM_AGERS = [
+      { id: 'cheesecave', emoji: '🛖', name: 'Cheese Cave', cost: 0, free: true, recipes: [
+        { in: { cheese: 1 }, out: { id: 'agedcheese', qty: 1 }, timeMs: 4 * HR },
+        { in: { butter: 1 }, out: { id: 'culturedbutter', qty: 1 }, timeMs: 3 * HR },
+      ] },
+      { id: 'smokehouse', emoji: '🔥', name: 'Smokehouse', cost: 60000, recipes: [
+        { in: { sausage: 1 }, out: { id: 'curedsausage', qty: 1 }, timeMs: 3 * HR },
+        { in: { bacon: 1 },   out: { id: 'smokedbacon',  qty: 1 }, timeMs: 4 * HR },
+      ] },
+      { id: 'hamcellar', emoji: '🍖', name: 'Ham Cellar', cost: 120000, recipes: [
+        { in: { ham: 1 }, out: { id: 'agedham', qty: 1 }, timeMs: 5 * HR },
+      ] },
+    ];
+    const FARM_AGER_SLOT_COST = 15000;   // above the machines' 10000 — a late-game sink
+    /* The tier-2 buyer runs the plane's mechanic, one tier up: a set it wants
+       this visit, then it shuts and reopens with a different set. It replaced a
+       flat "20 items a day" quota, which braked the economy but said nothing —
+       a list you can read, plan around and see coming does the same job and is
+       something to come back FOR.
+
+       A DAY between visits, against the plane's four hours, because tier 2 is
+       measured in hours: a factory slot turns over every 3-5h, so a faster cycle
+       would keep asking for goods the plot cannot have finished yet. The
+       quantities are scaled to match — three kinds of up to eight each is about
+       the same daily throughput as the quota it replaces, but shaped. */
+    const FARM_BUYER_COOLDOWN_MS = 24 * 60 * 60 * 1000; // shut this long after it is cleared out
+    const FARM_BUYER_WANT_COUNT = 3;                    // how many aged kinds it takes per visit
+    const FARM_BUYER_MAX_QTY = 8;                       // most of each kind (quota 1..this)
+
+    /* Compost yard — the left plot. Three bins stand on the plot from the day it
+       is bought; the first is unlocked, the other two are tapped to unlock.
+       The FILL RATE never changes, only the cap does (10 per unlocked bin), so
+       the unlocks buy patience — how long you can leave it — not speed. At 59
+       animals one bin caps in ~2h and three in ~6.4h. Bins stop filling when
+       full, so the cap is also the offline cap: no separate banking rule. */
+    const FARM_COMPOST_PER_ANIMAL_HR = 0.08;   // fertilizer per animal per hour
+    const FARM_COMPOST_PER_BIN = 10;           // cap added by each unlocked bin
+    const FARM_COMPOST_BINS_MAX = 3;
+    const FARM_COMPOST_BIN_COSTS = [0, 25000, 50000];   // bin 1 comes with the plot
+    const FARM_FERT_MULT = 2;                  // a fertilised bed yields this many times
+
     // Travelling merchant cart: parks on the farm and WAITS until you sell to it,
     // then leaves for a cooldown before returning with a fresh wanted-list. Selling
     // happens only at the cart, and only for the items it wants that visit.
@@ -429,6 +500,33 @@
     const AQUARIUM_FRENZY_MS = 15000;                    // Feeding Frenzy round length (ms)
     const AQUARIUM_BUBBLE_MS = 20000;                    // Bubble Pop round length (ms)
     const AQUARIUM_RACE_STAKES = [10, 50, 100];          // Fish Race bet options
+
+    /* ── Aquarium equipment ──
+       Three devices standing in the tank, bought by tapping them. Index 0 of
+       every table is the UNBOUGHT behaviour, so a player who buys nothing gets
+       exactly the tank that existed before any of this.
+
+       The filter is the one that matters: a full tank idles at 207🪙/hr and used
+       to stop banking after three hours, so a work day earned what a nap earned.
+       The light is a flat multiplier on idle earnings only — never on mini-game
+       payouts, which already out-earn the tank tenfold. The pump buys extra
+       plays of the two games that are capped at once a day, where the ceiling is
+       a hard count that cannot be ground. */
+    const AQUARIUM_EQUIP_MAX = 3;
+    const AQUARIUM_FILTER_CAPS_MS = [3, 6, 12, 24].map(function (h) { return h * 60 * 60 * 1000; });
+    const AQUARIUM_FILTER_COSTS = [0, 1500, 5000, 15000];
+    const AQUARIUM_LIGHT_MULT   = [1, 1.15, 1.3, 1.5];
+    const AQUARIUM_LIGHT_COSTS  = [0, 2000, 6000, 18000];
+    const AQUARIUM_PUMP_COSTS   = [0, 800, 3000, 9000];
+    // One list so the tank, the hit-test and the buy box all walk the same three.
+    const AQUARIUM_EQUIP = [
+      { id: 'filter', field: 'aquariumFilter', emoji: '🫙', name: 'Filter',
+        blurb: 'Banks what your fish earn while you are away.', costs: AQUARIUM_FILTER_COSTS },
+      { id: 'light',  field: 'aquariumLight',  emoji: '💡', name: 'Light',
+        blurb: 'Warmer water, busier fish — they earn faster.', costs: AQUARIUM_LIGHT_COSTS },
+      { id: 'pump',   field: 'aquariumPump',   emoji: '🔋', name: 'Pump',
+        blurb: 'More oxygen, more play in them.', costs: AQUARIUM_PUMP_COSTS },
+    ];
     const AQUARIUM_THEMES = [
       { id: 'tropical', name: '🏝️ Tropical',   grad: ['#1a3a5c', '#15406a', '#0a1e38'], caustic: '100,200,255' },
       { id: 'abyss',    name: '🌑 Deep Abyss',  grad: ['#0a2230', '#06303a', '#02141c'], caustic: '70,170,180' },

@@ -19,12 +19,24 @@
         farmStock: roomData.farmStock || {},
         farmTotalCollected: roomData.farmTotalCollected || 0,
         farmCapLevel: roomData.farmCapLevel || 0,
+        farmLandL: roomData.farmLandL || false,
+        farmLandR: roomData.farmLandR || false,
         farmAutoCollect: roomData.farmAutoCollect || false,
         farmVariants: roomData.farmVariants || {},
         farmPlots: roomData.farmPlots || [],
         farmOrdersDay: roomData.farmOrdersDay || '',
         farmOrdersDone: roomData.farmOrdersDone || [],
         farmMachines: roomData.farmMachines || {},
+        // Side land: the compost yard (left) and the ageing factories (right).
+        farmCompost: roomData.farmCompost || 0,
+        farmCompostAt: roomData.farmCompostAt || 0,
+        farmCompostBins: roomData.farmCompostBins || 0,
+        farmFertilizer: roomData.farmFertilizer || 0,
+        farmAgers: roomData.farmAgers || {},
+        farmAged: roomData.farmAged || {},
+        farmBuyerLeftAt: roomData.farmBuyerLeftAt || 0,
+        farmBuyerWanted: roomData.farmBuyerWanted || null,
+        farmBuyerSold: roomData.farmBuyerSold || null,
         farmCartLeftAt: roomData.farmCartLeftAt || 0,
         farmCartWanted: roomData.farmCartWanted || null,
         farmCartSold: roomData.farmCartSold || null,
@@ -54,7 +66,12 @@
         ownedFarmThemes: roomData.ownedFarmThemes || [],
         aquariumLastCollect: roomData.aquariumLastCollect || 0,
         aquariumRaceDay: roomData.aquariumRaceDay || '',
+        aquariumRaceN: roomData.aquariumRaceN || 0,
         aquariumBubbleDay: roomData.aquariumBubbleDay || '',
+        aquariumBubbleN: roomData.aquariumBubbleN || 0,
+        aquariumFilter: roomData.aquariumFilter || 0,
+        aquariumLight: roomData.aquariumLight || 0,
+        aquariumPump: roomData.aquariumPump || 0,
         aquariumFrenzyAt: roomData.aquariumFrenzyAt || 0,
         // NOTE: aquariumLikes is intentionally NOT written here — only visitors
         // change it (via increment), so an owner save must never clobber it.
@@ -245,13 +262,27 @@
         roomData.farmAnimals = Array.isArray(d.farmAnimals) ? d.farmAnimals : [];
         roomData.aquariumFish = Array.isArray(d.aquariumFish) ? d.aquariumFish : [];
         roomData.aquariumTheme = d.aquariumTheme || 'tropical';
-        // Visiting loads the HOST's document into roomData, so these two make
-        // their farm paint in THEIR skin rather than in mine.
+        // My own skin, kept live with my document. This handler returns early
+        // while visiting, so it is NOT what paints a host's farm — visitRoom()
+        // mirrors farmTheme/ownedFarmThemes for that.
         roomData.farmTheme = d.farmTheme || 'meadow';
         roomData.ownedFarmThemes = Array.isArray(d.ownedFarmThemes) ? d.ownedFarmThemes : [];
         roomData.aquariumLastCollect = d.aquariumLastCollect || 0;
         roomData.aquariumRaceDay = d.aquariumRaceDay || '';
         roomData.aquariumBubbleDay = d.aquariumBubbleDay || '';
+        // Play counters, normalised HERE rather than where they are read. A
+        // document written before the counters existed carries a day and no
+        // count, and that day was only ever set by playing — aquariumPlaysUsed
+        // turns that into "one play used". It has to happen on the way in,
+        // because the first saveRoom would otherwise write the missing count out
+        // as a 0 and hand back a play that was already spent.
+        const _aqDay = _aqGameToday();
+        roomData.aquariumRaceN = aquariumPlaysUsed(d.aquariumRaceDay || '', _aqDay, d.aquariumRaceN);
+        roomData.aquariumBubbleN = aquariumPlaysUsed(d.aquariumBubbleDay || '', _aqDay, d.aquariumBubbleN);
+        // The three equipment levels.
+        roomData.aquariumFilter = d.aquariumFilter || 0;
+        roomData.aquariumLight = d.aquariumLight || 0;
+        roomData.aquariumPump = d.aquariumPump || 0;
         roomData.aquariumFrenzyAt = d.aquariumFrenzyAt || 0;
         roomData.aquariumLikes = d.aquariumLikes || 0;
         roomData.farmDrops = Array.isArray(d.farmDrops) ? d.farmDrops : [];
@@ -261,12 +292,23 @@
         roomData.farmStock = d.farmStock || {};
         roomData.farmTotalCollected = d.farmTotalCollected || 0;
         roomData.farmCapLevel = d.farmCapLevel || 0;
+        roomData.farmLandL = d.farmLandL || false;
+        roomData.farmLandR = d.farmLandR || false;
         roomData.farmAutoCollect = d.farmAutoCollect || false;
         roomData.farmVariants = d.farmVariants || {};
         roomData.farmPlots = Array.isArray(d.farmPlots) ? d.farmPlots : [];
         roomData.farmOrdersDay = d.farmOrdersDay || '';
         roomData.farmOrdersDone = Array.isArray(d.farmOrdersDone) ? d.farmOrdersDone : [];
         roomData.farmMachines = d.farmMachines || {};
+        roomData.farmCompost = d.farmCompost || 0;
+        roomData.farmCompostAt = d.farmCompostAt || 0;
+        roomData.farmCompostBins = d.farmCompostBins || 0;
+        roomData.farmFertilizer = d.farmFertilizer || 0;
+        roomData.farmAgers = d.farmAgers || {};
+        roomData.farmAged = d.farmAged || {};
+        roomData.farmBuyerLeftAt = d.farmBuyerLeftAt || 0;
+        roomData.farmBuyerWanted = d.farmBuyerWanted || null;
+        roomData.farmBuyerSold = d.farmBuyerSold || null;
         roomData.farmCartLeftAt = d.farmCartLeftAt || 0;
         roomData.farmCartWanted = d.farmCartWanted || null;
         roomData.farmCartSold = d.farmCartSold || null;
@@ -390,7 +432,14 @@
       // One-time post-load hooks — gated on the room data actually being applied
       // (_roomLoaded), NOT a blind timer, so the daily reward can never re-prompt
       // against empty/default roomData after a refresh.
-      if (!_postLoadHooksDone && _roomLoaded) {
+      //
+      // …and gated on that data having come from the SERVER. Persistence means
+      // the first snapshot is answered out of THIS device's IndexedDB copy,
+      // which on a second device is whatever it last saw — so asking it "was
+      // today's reward claimed?" re-popped a reward the other device had already
+      // taken. Offline the whole session the modal simply doesn't auto-open;
+      // Settings → 🎁 Daily Reward still does.
+      if (!_postLoadHooksDone && _roomLoaded && !(snap.metadata && snap.metadata.fromCache)) {
         _postLoadHooksDone = true;
         checkDailyOnLogin();
         checkAchievements();
@@ -466,7 +515,7 @@
       _unsubscribeRoomSnap();
       if (unsubVisitList) { unsubVisitList(); unsubVisitList = null; }
       // Reset roomData to defaults for clean account switch
-      roomData = { coins: 0, petDrops: [], petCollections: {}, autoFeeder: false, autoFeedOn: false, farmAnimals: [], farmDrops: [], farmDecors: [], farmFood: 0, farmFoodAt: 0, farmStock: {}, farmTotalCollected: 0, farmCapLevel: 0, farmAutoCollect: false, farmVariants: {}, farmPlots: [], farmOrdersDay: '', farmOrdersDone: [], farmMachines: {}, farmCartLeftAt: 0, farmTroughLevel: 0, farmColdLevel: 0, farmAutoFeed: false, farmAutoFeedOn: false, farmTheme: 'meadow', ownedFarmThemes: [], farmCheersTotal: 0, farmWeekId: '', farmWeekCheers: 0, farmWeekProduce: 0, farmWeekPrevId: '', farmWeekPrevCheers: 0, farmWeekPrevProduce: 0, farmHelpDay: '', farmHelpCount: 0, aquariumFish: [], aquariumTheme: 'tropical', aquariumLastCollect: 0, aquariumRaceDay: '', aquariumBubbleDay: '', aquariumFrenzyAt: 0, aquariumLikes: 0, pets: [], plant: null, plantLevels: {}, plantPosition: null, ownedPlants: [], ownedDecors: [], placedDecors: [], ownedWalls: ['wall_default'], wallPattern: 'wall_default', ownedWindows: ['win_none','win_classic'], windowStyle: 'win_classic', ownedFloors: ['floor_wood'], floorStyle: 'floor_wood', ownedAccessories: [], displayName: getPlayerName(), lastCoinCollect: 0, loginStreak: 0, lastLoginDay: '', achievements: [], gachaPulls: 0, giftsGiven: 0, giftsReceived: 0, jukeboxTrack: null, jukeboxVol: 0.5, unlockedLayers: 1, layerData: {} };
+      roomData = { coins: 0, petDrops: [], petCollections: {}, autoFeeder: false, autoFeedOn: false, farmAnimals: [], farmDrops: [], farmDecors: [], farmFood: 0, farmFoodAt: 0, farmStock: {}, farmTotalCollected: 0, farmCapLevel: 0, farmLandL: false, farmLandR: false, farmAutoCollect: false, farmVariants: {}, farmPlots: [], farmOrdersDay: '', farmOrdersDone: [], farmMachines: {}, farmCompost: 0, farmCompostAt: 0, farmCompostBins: 0, farmFertilizer: 0, farmAgers: {}, farmAged: {}, farmBuyerLeftAt: 0, farmBuyerWanted: null, farmBuyerSold: null, farmCartLeftAt: 0, farmTroughLevel: 0, farmColdLevel: 0, farmAutoFeed: false, farmAutoFeedOn: false, farmTheme: 'meadow', ownedFarmThemes: [], farmCheersTotal: 0, farmWeekId: '', farmWeekCheers: 0, farmWeekProduce: 0, farmWeekPrevId: '', farmWeekPrevCheers: 0, farmWeekPrevProduce: 0, farmHelpDay: '', farmHelpCount: 0, aquariumFish: [], aquariumTheme: 'tropical', aquariumLastCollect: 0, aquariumRaceDay: '', aquariumRaceN: 0, aquariumBubbleDay: '', aquariumBubbleN: 0, aquariumFrenzyAt: 0, aquariumLikes: 0, aquariumFilter: 0, aquariumLight: 0, aquariumPump: 0, pets: [], plant: null, plantLevels: {}, plantPosition: null, ownedPlants: [], ownedDecors: [], placedDecors: [], ownedWalls: ['wall_default'], wallPattern: 'wall_default', ownedWindows: ['win_none','win_classic'], windowStyle: 'win_classic', ownedFloors: ['floor_wood'], floorStyle: 'floor_wood', ownedAccessories: [], displayName: getPlayerName(), lastCoinCollect: 0, loginStreak: 0, lastLoginDay: '', achievements: [], gachaPulls: 0, giftsGiven: 0, giftsReceived: 0, jukeboxTrack: null, jukeboxVol: 0.5, unlockedLayers: 1, layerData: {} };
       // Reset to floor 1 when re-initialising (e.g. account switch)
       currentLayer = 1;
       isOutsideView = false;
