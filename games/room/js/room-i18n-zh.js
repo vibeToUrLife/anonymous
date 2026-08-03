@@ -392,6 +392,7 @@
     'Panda': '熊猫',
     'Tom': '汤姆',
     'Jerry': '杰瑞',
+    'Capybara': '水豚',
 
     /* ── Plants ── */
     'Seedling': '幼苗',
@@ -550,6 +551,7 @@
     'Goose Pond': '天鹅池',
     "Tom's Armchair": '汤姆的扶手椅',
     "Jerry's Cheese Wedge": '杰瑞的奶酪块',
+    'Hot Spring': '温泉',
 
     /* ── Wallpaper ── */
     'Default (Plain)': '默认（素墙）',
@@ -1241,6 +1243,16 @@
     'Getaway Trophy': '逃脱奖杯',
     'Gemstone': '宝石',
     'Mouse Crown': '老鼠皇冠',
+    // 🦫 Capybara
+    'Grass Tuft': '青草',
+    'Capy Print': '水豚脚印',
+    'Watermelon Slice': '西瓜片',
+    'Yuzu Fruit': '柚子',
+    'Hot Spring Token': '温泉牌',
+    'Perched Bird': '肩上小鸟',
+    'River Gem': '河石宝石',
+    'Capy Crown': '水豚皇冠',
+    'Chill Trophy': '躺平奖杯',
 
     /* ── Share to the bubble board (room.html's inline script) ──
        {kind} is the lowercase space id, itself run through T(). */

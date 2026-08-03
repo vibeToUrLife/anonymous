@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Capybara Preview</title>
+<style>
+  body { margin:0; background:#f3e3cd; font-family:sans-serif; color:#5b3f2a; }
+  h1 { text-align:center; padding:14px 12px 4px; margin:0; font-size:20px; }
+  h2 { text-align:center; margin:22px 0 2px; font-size:14px; letter-spacing:1px; opacity:.65; text-transform:uppercase; }
+  .grid { display:flex; flex-wrap:wrap; justify-content:center; gap:14px; padding:12px 16px; }
+  .cell { background:#fbf1e2; border:2px solid #d9bd99; border-radius:16px; padding:8px; text-align:center; box-shadow:0 4px 10px rgba(120,80,40,.12); }
+  .cell canvas { display:block; background:#fff; border-radius:10px; }
+  .cell div { font-weight:700; margin-top:6px; font-size:13px; }
+  .note { text-align:center; font-size:12px; opacity:.65; padding:8px 20px 26px; line-height:1.7; }
+</style>
+</head>
+<body>
+  <h1>🦫 Capybara Preview</h1>
+
+  <h2>Hero — walking</h2>
+  <div class="grid" id="hero"></div>
+
+  <h2>Every pose the game uses</h2>
+  <div class="grid" id="states"></div>
+
+  <h2>Real in-game sizes</h2>
+  <div class="grid" id="sizes"></div>
+
+  <p class="note">
+    Standalone preview — no login needed. Just open this file in the browser.<br>
+    Poses come from <code>pets/img/capybara.png</code>; the walk alternates two of them.
+  </p>
+
+  <script src="pets/capybara.js"></script>
+  <script>
+    // One animated cell. `opts` mirrors what the room passes to the drawer.
+    function addCell(parent, label, opts) {
+      const o = Object.assign({ s: 130, moving: false, action: '', view: '' }, opts);
+      const box = Math.round(o.s * 1.6);
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      const cvs = document.createElement('canvas');
+      cvs.width = box; cvs.height = box;
+      cell.appendChild(cvs);
+      const cap = document.createElement('div');
+      cap.textContent = label;
+      cell.appendChild(cap);
+      document.getElementById(parent).appendChild(cell);
+
+      const ctx = cvs.getContext('2d');
+      (function frame(t) {
+        ctx.clearRect(0, 0, box, box);
+        ctx.save();
+        ctx.translate(box / 2, box / 2 + o.s * 0.1);
+        // The gentle idle/walk bob the room applies around the drawer
+        ctx.translate(0, o.moving ? Math.sin(t / 100) * 2 : Math.sin(t / 800) * 1.5);
+        drawCapybaraPet(ctx, o.s, t / 100, o.moving, 100, o.action, 0, t, null, o.view);
+        ctx.restore();
+        requestAnimationFrame(frame);
+      })(0);
+    }
+
+    addCell('hero', 'Walking', { s: 200, moving: true });
+
+    [['Idle', {}], ['Walking', { moving: true }], ['Selected — faces you', { view: 'front' }],
+     ['Sit', { action: 'sit' }], ['Rest (main site only)', { action: 'sleep' }],
+     ['Dizzy after a throw', { action: 'dizzy' }]]
+      .forEach(([label, o]) => addCell('states', label, o));
+
+    addCell('sizes', 'Room pet (88)', { s: 88, moving: true });
+    addCell('sizes', 'Walking pet (36)', { s: 36, moving: true });
+  </script>
+</body>
+</html>

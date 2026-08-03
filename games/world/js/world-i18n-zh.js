@@ -126,6 +126,7 @@
     'goose': '鹅',
     'tom': '汤姆',
     'jerry': '杰瑞',
+    'capybara': '水豚',
     'Pet': '宠物',
     'None': '不戴',
 

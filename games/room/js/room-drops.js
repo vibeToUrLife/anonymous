@@ -146,6 +146,11 @@
       { emoji:'🍪', name:'Cookie Crumb' }, { emoji:'🔔', name:'Tiny Bell' }, { emoji:'🎈', name:'Balloon' },
       { emoji:'🏆', name:'Getaway Trophy' }, { emoji:'💎', name:'Gemstone' }, { emoji:'👑', name:'Mouse Crown' },
     ],
+    capybara: [
+      { emoji:'🌿', name:'Grass Tuft' }, { emoji:'🐾', name:'Capy Print' }, { emoji:'🍉', name:'Watermelon Slice' },
+      { emoji:'🍊', name:'Yuzu Fruit' }, { emoji:'♨️', name:'Hot Spring Token' }, { emoji:'🐦', name:'Perched Bird' },
+      { emoji:'💎', name:'River Gem' }, { emoji:'👑', name:'Capy Crown' }, { emoji:'🏆', name:'Chill Trophy' },
+    ],
   };
 
   const PET_COLLECTION_DECOR = {
@@ -158,6 +163,7 @@
     goose:   'decor_goose_pond',
     tom:     'decor_tom_armchair',
     jerry:   'decor_jerry_mousehole',
+    capybara:'decor_capybara_onsen',
   };
 
   return {

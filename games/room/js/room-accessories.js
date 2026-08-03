@@ -23,6 +23,9 @@
       tom:     [{ id: 'trick_sit', name: 'Sit', minAffection: 80 }, { id: 'trick_wave', name: 'Wave', minAffection: 250 }, { id: 'trick_dance', name: 'Dance', minAffection: 550 }, { id: 'trick_backflip', name: 'Backflip', minAffection: 1100 }],
       // Jerry: stand up → spin → a quick hop → dance.
       jerry:   [{ id: 'trick_stand', name: 'Stand Up', minAffection: 60 }, { id: 'trick_spin', name: 'Spin', minAffection: 200 }, { id: 'trick_binky', name: 'Hop', minAffection: 450 }, { id: 'trick_dance', name: 'Dance', minAffection: 800 }],
+      // Capybara: sit → wave → dance. No roll and no spin — both are full 360°
+      // rotations, and on sprite artwork that reads as a picture turning round.
+      capybara:[{ id: 'trick_sit', name: 'Sit', minAffection: 80 }, { id: 'trick_wave', name: 'Wave', minAffection: 300 }, { id: 'trick_dance', name: 'Dance', minAffection: 700 }],
     };
 
     function triggerPetTrick(petId, trickId) {
@@ -195,7 +198,10 @@
       // Tom & Jerry are upright with a big head centred over the body (front view).
       // Values taken from their head geometry (tom: arc 0,-0.32 r0.37; jerry: 0,-0.26 r0.30).
       tom:     { hx:  0,    hy: -0.34, r: 0.34 },
-      jerry:   { hx:  0,    hy: -0.28, r: 0.28 }
+      jerry:   { hx:  0,    hy: -0.28, r: 0.28 },
+      // Read off the sprite's side pose: the head sits forward and high, and
+      // the sheet is drawn 1.15x the pet size with its feet at +0.40.
+      capybara:{ hx:  0.25, hy: -0.23, r: 0.15 }
     };
 
     // Accessories that render behind the pet body

@@ -57,6 +57,7 @@ const WORLD_EMOTES = ['wave', 'heart', 'laugh', 'dance', 'cry', 'sparkle'];
 const PET_SIGNATURE = {
   cat: 'sig_pounce', dog: 'sig_spin', bunny: 'sig_bighop', hamster: 'sig_wiggle',
   fox: 'sig_backflip', panda: 'sig_tumble', goose: 'sig_flap',
+  capybara: 'sig_soak',
 };
 function signatureFor(petType) { return PET_SIGNATURE[petType] || 'sig_spin'; }
 

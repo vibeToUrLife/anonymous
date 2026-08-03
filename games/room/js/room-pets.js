@@ -241,7 +241,12 @@
       panda:   ['eat', 'roll', 'wave', 'sit', 'sleep', 'stretch', 'yawn', 'headtilt', 'tumble'],
       goose:   ['sleep', 'stretch', 'yawn', 'headtilt', 'groom', 'sit'],
       tom:     ['sit', 'stretch', 'yawn', 'nap', 'sleep', 'headtilt', 'wave', 'dance', 'pounce'],
-      jerry:   ['sit', 'stretch', 'yawn', 'nap', 'sleep', 'headtilt', 'hop', 'spin', 'wave']
+      jerry:   ['sit', 'stretch', 'yawn', 'nap', 'sleep', 'headtilt', 'hop', 'spin', 'wave'],
+      // Capybara: drawn from artwork, so it only gets actions whose transform is
+      // a small nudge. The lie-down actions (sleep/nap/flop) tilt and squash the
+      // whole body to fake lying down, which fights a sprite that already has
+      // its own poses — and any spin just reads as a picture rotating.
+      capybara:['yawn', 'sit', 'headtilt', 'groom', 'stretch']
     };
 
     let _lastPetAction = {};
@@ -659,7 +664,9 @@
           ctx.translate(px, py);
           // Upright pets (Tom/Jerry) turn to face travel direction; only their side
           // view mirrors L/R. Quadruped pets mirror by facing as before.
-          const petView = petViewForState(p.type, st, moving);
+          const petView = FACING_PETS[p.type]
+            ? (st.stopped ? 'front' : 'side')
+            : petViewForState(p.type, st, moving);
           const mirror = (!DIRECTIONAL_PETS[p.type] || petView === 'side') ? (st.facingRight ? 1 : -1) : 1;
           ctx.scale(mirror * depthScale, depthScale);
 
@@ -1462,6 +1469,8 @@
         // Tom & Jerry are upright characters with three views (front/side/back).
         case 'tom':    drawTomPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
         case 'jerry':  drawJerryPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
+        // Sprite-based; `view` switches it to the front-facing sitting pose.
+        case 'capybara': drawCapybaraPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
         default:       drawCatPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal);
       }
     }
@@ -1470,6 +1479,11 @@
     // by facingRight), toward the viewer → front, away → back. Idle keeps the last view.
     // Quadruped pets always report 'front' (their draw fns ignore the view arg).
     const DIRECTIONAL_PETS = { tom: true, jerry: true };
+    // Pets that stop and turn to face the player while they are selected. Kept
+    // separate from DIRECTIONAL_PETS because this is not about travel direction:
+    // the capybara's front artwork is a SITTING pose, so it may only be shown
+    // when the pet has stopped, never while it is walking.
+    const FACING_PETS = { capybara: true };
     function petViewForState(type, st, moving) {
       if (!DIRECTIONAL_PETS[type]) return 'front';
       const vx = st.vx || 0, vy = st.vy || 0;

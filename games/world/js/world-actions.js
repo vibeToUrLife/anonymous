@@ -39,6 +39,7 @@ const WORLD_ACTIONS = {
   sig_backflip: { kind: 'signature', emoji: '⭐', dur: 1000, label: 'Signature' },
   sig_tumble:   { kind: 'signature', emoji: '⭐', dur: 1000, label: 'Signature' },
   sig_flap:     { kind: 'signature', emoji: '⭐', dur: 950, label: 'Signature' },
+  sig_soak:     { kind: 'signature', emoji: '⭐', dur: 1100, label: 'Signature' },
 };
 
 function worldActionDuration(action) {
@@ -102,6 +103,9 @@ function applyWorldActionTransform(ctx, action, ap, s, t) {
       break; }
     case 'sig_flap': { // goose: a flappy hover — rise on beating wings, then settle
       const rise = Math.sin(ap * Math.PI), beat = Math.sin(ap * Math.PI * 8); ctx.translate(beat * 0.02 * s, -rise * 0.22 * s); ctx.rotate(beat * 0.11); ctx.scale(1, 1 + 0.05 * beat);
+      break; }
+    case 'sig_soak': { // capybara: sinks down with a long sigh, then settles back
+      const sink = Math.sin(ap * Math.PI); ctx.translate(0, sink * 0.09 * s); ctx.scale(1 + 0.09 * sink, 1 - 0.11 * sink);
       break; }
     default: break;
   }

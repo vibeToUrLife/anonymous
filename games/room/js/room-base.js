@@ -100,6 +100,7 @@
       { id: 'goose',  emoji: '🦢', name: 'Goose',     cost: 1500 },
       { id: 'tom',    emoji: '🐈', name: 'Tom',       cost: 10000 },
       { id: 'jerry',  emoji: '🐭', name: 'Jerry',     cost: 10000 },
+      { id: 'capybara', emoji: '🦫', name: 'Capybara', cost: 20000 },
     ];
 
     const PLANTS = [
@@ -118,7 +119,7 @@
 
     const PET_SIZES = {
       cat: 72, dog: 80, bunny: 64, hamster: 58, fox: 76, panda: 86, goose: 74,
-      tom: 78, jerry: 64
+      tom: 78, jerry: 64, capybara: 88
     };
 
     const PET_COLORS = {
@@ -183,6 +184,10 @@
         { key: 'grey',    name: 'Grey',    body: '#9aa0a6', belly: '#e5e7eb', inner: '#e2b0b0', tail: '#8f959b' },
         { key: 'white',   name: 'White',   body: '#e6e0d4', belly: '#fbf7ee', inner: '#f0c4b2', tail: '#d8d2c6' },
       ],
+      // No capybara entry on purpose: it is the one pet drawn from artwork
+      // (games/pets/img/capybara.png) rather than canvas paths, so it ships in
+      // a single coat. The status bar hides the colour dots when a type has no
+      // palette, which is exactly what we want here.
     };
 
     function getPetPalette(type, colorKey) {
@@ -707,6 +712,7 @@
       { id: 'decor_goose_pond',        emoji: '⛲', name: 'Goose Pond',          cost: 0, category: 'floor', dx: 0.62, dy: 0.88, unlockOnly: true },
       { id: 'decor_tom_armchair',      emoji: '🛋️', name: "Tom's Armchair",      cost: 0, category: 'floor', dx: 0.28, dy: 0.82, unlockOnly: true },
       { id: 'decor_jerry_mousehole',   emoji: '🧀', name: "Jerry's Cheese Wedge", cost: 0, category: 'floor', dx: 0.66, dy: 0.84, unlockOnly: true },
+      { id: 'decor_capybara_onsen',    emoji: '♨️', name: 'Hot Spring',          cost: 0, category: 'floor', dx: 0.48, dy: 0.86, unlockOnly: true },
     ];
 
     const WALL_PATTERNS = [

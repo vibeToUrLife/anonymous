@@ -121,7 +121,7 @@ test('milestoneProgress returns 0 for degenerate milestone tables', () => {
   assert.strictEqual(D.milestoneProgress(500, []), 0);
 });
 
-const TYPES = ['cat','dog','bunny','hamster','fox','panda','goose'];
+const TYPES = ['cat','dog','bunny','hamster','fox','panda','goose','capybara'];
 
 test('PET_COLLECTIBLES has exactly 9 pieces with emoji+name for every type', () => {
   for (const t of TYPES) {

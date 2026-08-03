@@ -15,12 +15,12 @@
    ════════════════════════════════════════════════════════════════ */
 
 // The playable pet types, in picker order.
-const WORLD_PET_TYPES = ['cat', 'dog', 'bunny', 'hamster', 'fox', 'panda', 'goose', 'tom', 'jerry'];
+const WORLD_PET_TYPES = ['cat', 'dog', 'bunny', 'hamster', 'fox', 'panda', 'goose', 'tom', 'jerry', 'capybara'];
 
 // Base draw size per pet type (mirrors room-base.js PET_SIZES).
 const PET_SIZES = {
   cat: 72, dog: 80, bunny: 64, hamster: 58, fox: 76, panda: 86, goose: 74,
-  tom: 78, jerry: 64
+  tom: 78, jerry: 64, capybara: 88
 };
 
 // Colour palettes per pet (mirrors room-base.js PET_COLORS).
@@ -85,6 +85,7 @@ const PET_COLORS = {
     { key: 'grey',    name: 'Grey',    body: '#9aa0a6', belly: '#e5e7eb', inner: '#e2b0b0', tail: '#8f959b' },
     { key: 'white',   name: 'White',   body: '#e6e0d4', belly: '#fbf7ee', inner: '#f0c4b2', tail: '#d8d2c6' },
   ],
+  // No capybara entry on purpose — it is drawn from artwork, so it has one coat.
 };
 
 // Resolve a palette object for (type, colorKey); falls back to the first colour.
@@ -155,6 +156,9 @@ function worldDrawPet(ctx, type, size, legPhase, moving, action, ap, t, colorKey
     // Tom & Jerry are upright, three-view characters (view defaults to front).
     case 'tom':     return drawTomPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view);
     case 'jerry':   return drawJerryPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view);
+    // Sprite-based. The caller sends 'front' when standing still, which is the
+    // capybara's sitting pose — exactly right for an idle pet.
+    case 'capybara': return drawCapybaraPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view);
     default:        return drawCatPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal);
   }
 }
