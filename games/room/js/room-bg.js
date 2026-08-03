@@ -350,7 +350,7 @@
       if (!cvs) return;
       const room = cvs.parentElement;
       const rw = room.clientWidth, rh = room.clientHeight;
-      cvs.width = rw; cvs.height = rh;
+      fitCanvas(cvs, rw, rh);
       const ctx = cvs.getContext('2d');
       initBgParticles(rw, rh);
       // Init weather
@@ -387,7 +387,9 @@
         const wp = roomData.wallPattern || 'wall_default';
         const _wallCK = wp + ':' + rw + ':' + Math.round(floorY);
         if (_wallCK === _bgWallCacheKey && _bgWallCanvas) {
-          ctx.drawImage(_bgWallCanvas, 0, 0);
+          // Baked in device pixels, so give the destination in CSS pixels — the
+          // context's own scale then puts it back one-for-one on the screen.
+          ctx.drawImage(_bgWallCanvas, 0, 0, rw, Math.ceil(floorY));
         } else {
         if (wp === 'wall_brick') {
           ctx.fillStyle = '#b5745a';
@@ -519,9 +521,16 @@
         }
         // Cache the wall drawing for future frames
         if (!_bgWallCanvas) _bgWallCanvas = document.createElement('canvas');
-        _bgWallCanvas.width = rw;
-        _bgWallCanvas.height = Math.ceil(floorY);
-        _bgWallCanvas.getContext('2d').drawImage(cvs, 0, 0, rw, Math.ceil(floorY), 0, 0, rw, Math.ceil(floorY));
+        /* Cut straight off the live canvas, so the cache is in DEVICE pixels —
+           drawImage's source rectangle is in the source bitmap's own pixels and
+           ignores the transform. Blitted back at CSS size (see the cache hit
+           above), which lands it back on the pixels it came from. */
+        const _wallDpr = canvasDpr();
+        _bgWallCanvas.width = Math.round(rw * _wallDpr);
+        _bgWallCanvas.height = Math.round(Math.ceil(floorY) * _wallDpr);
+        _bgWallCanvas.getContext('2d').drawImage(cvs,
+          0, 0, _bgWallCanvas.width, _bgWallCanvas.height,
+          0, 0, _bgWallCanvas.width, _bgWallCanvas.height);
         _bgWallCacheKey = _wallCK;
         } // end wall cache miss
 
@@ -746,8 +755,9 @@
         const _floorCK = fp + ':' + rw + ':' + Math.round(rh) + ':' + Math.round(floorY);
         if (_floorCK !== _bgFloorCacheKey) {
           _bgFloorCanvas = document.createElement('canvas');
-          _bgFloorCanvas.width = rw;
-          _bgFloorCanvas.height = rh;
+          // Baked in device pixels and blitted back at CSS size, so the floor is
+          // as sharp as the live drawing around it — see fitCanvas.
+          fitCanvas(_bgFloorCanvas, rw, rh);
           const fc = _bgFloorCanvas.getContext('2d');
           // Baseboard strip
           fc.fillStyle = '#6d5a42';
@@ -757,7 +767,7 @@
           drawFloorPattern(fc, fp, rw, rh, floorY, plankH);
           _bgFloorCacheKey = _floorCK;
         }
-        ctx.drawImage(_bgFloorCanvas, 0, 0);
+        ctx.drawImage(_bgFloorCanvas, 0, 0, rw, rh);
 
         /* ── Oval rug (dynamic based on placed rug decor) ── */
         drawRug(ctx, rw, rh, floorY);

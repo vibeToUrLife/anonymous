@@ -28,11 +28,22 @@ function _aqSpendPlay(kind) {
   saveRoom();
 }
 function _aqCanvasEl() { return document.getElementById('aquariumCanvas'); }
+/* The tank's size in CSS pixels — what every mini-game here lays itself out in.
+   Read off the ELEMENT, because the buffer behind it is sized in device pixels
+   (see fitCanvas in room-base.js) and would be a different number. */
+function _aqSize(cvs) {
+  const r = cvs.getBoundingClientRect();
+  return { w: Math.round(r.width), h: Math.round(r.height) };
+}
+/* CSS pixels, not buffer pixels: the canvas buffer is sized in DEVICE pixels
+   (fitCanvas) while the tank and everything in it is laid out in CSS pixels, so
+   the offset inside the element IS the coordinate. */
 function _aqCanvasPos(e, cvs) {
   const r = cvs.getBoundingClientRect();
-  const px = (e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX) - r.left;
-  const py = (e.touches && e.touches[0] ? e.touches[0].clientY : e.clientY) - r.top;
-  return { x: px * (cvs.width / r.width), y: py * (cvs.height / r.height) };
+  return {
+    x: (e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX) - r.left,
+    y: (e.touches && e.touches[0] ? e.touches[0].clientY : e.clientY) - r.top,
+  };
 }
 function _aqDrawWater(ctx, W, H, time) {
   const theme = (typeof AQUARIUM_THEMES !== 'undefined' && AQUARIUM_THEMES.find(t => t.id === (roomData.aquariumTheme || 'tropical'))) || { grad: ['#1a3a5c', '#15406a', '#0a1e38'], caustic: '100,200,255' };
@@ -144,7 +155,7 @@ function startFeedingFrenzy() {
   roomData.aquariumFrenzyAt = now; saveRoom();
   const cvs = _aqGameBegin('frenzy'); if (!cvs) return;
   const ctx = cvs.getContext('2d');
-  const W = cvs.width, H = cvs.height;
+  const _sz = _aqSize(cvs), W = _sz.w, H = _sz.h;
   const flakes = []; let bites = 0, combo = 0, maxCombo = 0, lastBite = 0, lastSpawn = 0;
   const fish = (roomData.aquariumFish || []).map((name, i) => {
     const type = FISH_TYPES.find(f => f.name === name) || { size: 20 };
@@ -204,7 +215,7 @@ function startBubblePop() {
   const jackChance = bubbleJackpotChance(legendaries);
   const cvs = _aqGameBegin('bubble'); if (!cvs) return;
   const ctx = cvs.getContext('2d');
-  const W = cvs.width, H = cvs.height;
+  const _sz = _aqSize(cvs), W = _sz.w, H = _sz.h;
   const bubbles = []; let coins = 0, popped = 0, lastSpawn = 0;
   const start = performance.now();
   _aqGameTap = function (e) {
@@ -292,7 +303,7 @@ function _aqRunRace(racers, odds, pickIdx, stake) {
   if (typeof renderAll === 'function') renderAll();
   const cvs = _aqGameBegin('race'); if (!cvs) return;
   const ctx = cvs.getContext('2d');
-  const W = cvs.width, H = cvs.height, finish = W - 40;
+  const _sz = _aqSize(cvs), W = _sz.w, H = _sz.h, finish = W - 40;
   const lanes = racers.map((name, i) => {
     const f = FISH_TYPES.find(x => x.name === name) || { size: 20, speed: 1 };
     return { type: f, x: 30, y: H * (0.22 + i * 0.18), base: (f.speed || 1), wob: i };

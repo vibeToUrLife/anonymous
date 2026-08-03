@@ -4,7 +4,10 @@
       const cvs = document.getElementById('plantCanvas');
       if (!cvs) return;
       const ctx = cvs.getContext('2d');
-      const W = cvs.width, H = cvs.height;
+      // The CSS size the element is pinned to; fitCanvas gives the buffer behind
+      // it the screen's real pixels, and the drawing below stays in these.
+      const W = 120, H = 140;
+      fitCanvas(cvs, W, H);
       let _lastPlantFrame = 0;
       function frame(t) {
         // Covered by the outside view, the farm or the tank — nothing to draw.

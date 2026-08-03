@@ -139,7 +139,7 @@ function renderAquariumPanel() {
       ? (isPlaced ? 'removeAquariumFish(\'' + f.name + '\')' : 'placeAquariumFish(\'' + f.name + '\')')
       : '';
     return '<div class="' + cls + '"' + (onclick ? ' onclick="' + onclick + '"' : '') + '>' +
-      '<canvas class="aq-fish-canvas" width="64" height="44" data-fish="' + f.name + '" data-sil="' + (isCaught ? '0' : '1') + '"></canvas>' +
+      '<canvas class="aq-fish-canvas" data-fish="' + f.name + '" data-sil="' + (isCaught ? '0' : '1') + '"></canvas>' +
       '<div class="aq-fish-name">' + (isCaught ? T(f.name) : '???') + '</div>' +
       '<div class="aq-fish-tag">' + (isPlaced ? '✓ ' + T('in tank') : isCaught ? T('tap to add') : T(RARITY_LABEL[f.rarity] || f.rarity)) + '</div>' +
     '</div>';
@@ -189,8 +189,12 @@ function renderAquariumPanel() {
     const type = FISH_TYPES.find(f => f.name === cv.dataset.fish);
     if (!type) return;
     const c = cv.getContext('2d');
-    c.clearRect(0, 0, cv.width, cv.height);
-    c.save(); c.translate(cv.width / 2, cv.height / 2);
+    // The CSS box .aq-fish-canvas pins these to; the buffer behind it carries
+    // the screen's real pixels so the little fish are not soft.
+    const cw = 64, ch = 44;
+    fitCanvas(cv, cw, ch);
+    c.clearRect(0, 0, cw, ch);
+    c.save(); c.translate(cw / 2, ch / 2);
     drawFish(c, type, 18, { silhouette: cv.dataset.sil === '1' });
     c.restore();
   });
@@ -204,7 +208,7 @@ function drawAquariumCanvas() {
   if (!view || !cvs) return;
   const ctx = cvs.getContext('2d');
   let W = view.clientWidth, H = view.clientHeight;
-  cvs.width = W; cvs.height = H;
+  fitCanvas(cvs, W, H);
   let lastFrame = 0;
 
   // Tapping a device opens its box. Wired once and left on: drawAquariumCanvas
@@ -215,7 +219,9 @@ function drawAquariumCanvas() {
     cvs._aqEquipWired = true;
     cvs.addEventListener('pointerdown', function (e) {
       const p = _aqCanvasPos(e, cvs);
-      const id = _aqTankTap(p.x, p.y, cvs.width, cvs.height);
+      // W/H, not cvs.width/height: the buffer is in device pixels now, and the
+      // tank layout — like the pointer position — is worked out in CSS pixels.
+      const id = _aqTankTap(p.x, p.y, W, H);
       if (id) openAquariumEquip(id);
     });
   }
@@ -225,7 +231,7 @@ function drawAquariumCanvas() {
     if (t - lastFrame < 42) { _aqAnimFrame = requestAnimationFrame(frame); return; }
     lastFrame = t;
     const nw = view.clientWidth, nh = view.clientHeight;
-    if (nw && nh && (nw !== W || nh !== H)) { W = nw; H = nh; cvs.width = W; cvs.height = H; }
+    if (nw && nh && (nw !== W || nh !== H)) { W = nw; H = nh; fitCanvas(cvs, W, H); }
     const time = t / 1000;
     ctx.clearRect(0, 0, W, H);
 

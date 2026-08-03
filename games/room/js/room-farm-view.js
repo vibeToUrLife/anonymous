@@ -4846,22 +4846,26 @@
           '<div class="rgb-head">🌈 ' + T('Rainbow (RGB) coats') + '</div>' +
           '<div class="rgb-sub">' + T('~{pct}% chance on any animal you buy. Cosmetic only — same value as a normal one.', { pct: Math.round(FARM_RGB_CHANCE * 100) }) + '</div>' +
           '<div class="rgb-grid">' +
-            FARM_ANIMALS.map(d => '<div class="rgb-cell"><canvas class="rgb-canvas" data-type="' + d.id + '" width="120" height="120"></canvas><span>' + d.emoji + ' ' + T(d.name) + '</span></div>').join('') +
+            FARM_ANIMALS.map(d => '<div class="rgb-cell"><canvas class="rgb-canvas" data-type="' + d.id + '"></canvas><span>' + d.emoji + ' ' + T(d.name) + '</span></div>').join('') +
           '</div>' +
           '<button class="cp-close" onclick="closeRgbPreview()">' + T('Close') + '</button>' +
         '</div>';
       el.style.display = 'flex';
       cancelAnimationFrame(_rgbPreviewAnim);
       const canvases = Array.from(el.querySelectorAll('.rgb-canvas'));
+      // The CSS size of .rgb-canvas. Sized here rather than in the markup so the
+      // buffer can carry the screen's real pixels — the drawing stays in these.
+      const RGB_BOX = 108;
+      canvases.forEach(c => fitCanvas(c, RGB_BOX, RGB_BOX));
       function frame(t) {
         for (const c of canvases) {
           const ctx = c.getContext('2d');
           const v = (FARM_VARIANTS[c.dataset.type] || []).find(x => x.rgb);
-          ctx.clearRect(0, 0, c.width, c.height);
+          ctx.clearRect(0, 0, RGB_BOX, RGB_BOX);
           ctx.save();
-          ctx.translate(c.width / 2, c.height * 0.6);
+          ctx.translate(RGB_BOX / 2, RGB_BOX * 0.6);
           ctx.filter = 'hue-rotate(' + Math.round((t / 5) % 360) + 'deg) saturate(1.7)';
-          drawFarmAnimal(ctx, c.dataset.type, c.width * 0.42, t / 120, false, v ? v.pal : null);
+          drawFarmAnimal(ctx, c.dataset.type, RGB_BOX * 0.42, t / 120, false, v ? v.pal : null);
           ctx.restore();
         }
         _rgbPreviewAnim = requestAnimationFrame(frame);
@@ -5909,7 +5913,9 @@
       let cvs;
       try { cvs = document.createElement('canvas'); } catch (e) { return null; }
       if (!cvs || !cvs.getContext) return null;
-      cvs.width = R * 2; cvs.height = R * 2;
+      // Baked in device pixels and blitted back at CSS size, or every animal on
+      // the farm would be a soft copy of a sharp drawing.
+      fitCanvas(cvs, R * 2, R * 2);
       const c = cvs.getContext('2d');
       c.translate(R, R);                               // the painters draw around the origin
       drawFarmAnimal(c, type, sz, pose < 0 ? 0 : (pose + 0.5) / _ANIM_POSES * TAU, moving, pal);
@@ -5934,7 +5940,7 @@
       if (!view || !cvs) return;
       const ctx = cvs.getContext('2d');
       let W = view.clientWidth, H = view.clientHeight;
-      cvs.width = W; cvs.height = H;
+      fitCanvas(cvs, W, H);
       const hour = new Date().getHours();
       const night = hour >= 19 || hour < 6;
       let lastFrame = 0;
@@ -5948,7 +5954,7 @@
         _farmHoverNow = t;
         if (_farmHoverKey !== _farmHoverSeen) { _farmHoverSeen = _farmHoverKey; _farmHoverAt = t; }
         const nw = view.clientWidth, nh = view.clientHeight;
-        if (nw && nh && (nw !== W || nh !== H)) { W = nw; H = nh; cvs.width = W; cvs.height = H; }
+        if (nw && nh && (nw !== W || nh !== H)) { W = nw; H = nh; fitCanvas(cvs, W, H); }
         ctx.clearRect(0, 0, W, H);
         const windSway = Math.sin(t / 1400) * 0.012;
 
@@ -5963,8 +5969,12 @@
         const _camPx = _farmCamX * W;
         const LAND = _farmWorldW() * W;              // the ground's full width in px
         const LEFT = -_farmLandL() * W;              // …and where its left edge is, in world px
-        const world = function () { ctx.setTransform(1, 0, 0, 1, -_camPx, 0); };
-        const fixed = function () { ctx.setTransform(1, 0, 0, 1, 0, 0); };
+        /* Both carry the device-pixel scale: setTransform REPLACES the matrix, so
+           leaving it at 1 here would throw away what fitCanvas set up and paint
+           the whole farm at a quarter size on a retina screen. */
+        const _dpr = canvasDpr();
+        const world = function () { ctx.setTransform(_dpr, 0, 0, _dpr, -_camPx * _dpr, 0); };
+        const fixed = function () { ctx.setTransform(_dpr, 0, 0, _dpr, 0, 0); };
 
         // The skin in force this frame. Resolved per frame rather than per
         // draw call so buying or switching one repaints without a reload, and
@@ -6015,7 +6025,7 @@
         // buying an expansion rebuilds it once and never again.
         const _tex = _farmGroundTexture(LAND, H, skyY, gy, pal,
           Math.round(LAND) + 'x' + H + '|' + (_theme ? _theme.id : '?') + '|' + (night ? 'n' : 'd') + '|' + Math.round(gy));
-        if (_tex) ctx.drawImage(_tex, LEFT, 0);
+        if (_tex) ctx.drawImage(_tex, LEFT, 0, LAND, H);
         else {
           // Same origin shift for the un-baked path, or the fallback scatter would
           // start at the farm's left edge and leave the left plot bare.
@@ -6164,7 +6174,7 @@
           // Blit the baked pose. The mirror and the RGB filter still apply here,
           // so a left-facing or rainbow animal looks exactly as it always did.
           const _spr = _farmAnimalSprite(a.type, a.variant || '', size, st.moving, t / 120, _farmVariantPal(a));
-          if (_spr) ctx.drawImage(_spr.cvs, -_spr.R, -_spr.R);
+          if (_spr) ctx.drawImage(_spr.cvs, -_spr.R, -_spr.R, _spr.R * 2, _spr.R * 2);
           else drawFarmAnimal(ctx, a.type, size, t / 120, st.moving, _farmVariantPal(a));
           ctx.restore();
           // Mini happiness bar
@@ -6233,7 +6243,7 @@
         // weather at all.
         _drawFarmWeather(ctx, W, H, t, pal.weather);
 
-        ctx.setTransform(1, 0, 0, 1, 0, 0);   // leave the pen where the next frame expects it
+        fixed();   // leave the pen where the next frame expects it
         _farmAnimFrame = requestAnimationFrame(frame);
       }
       _farmAnimFrame = requestAnimationFrame(frame);
@@ -6513,7 +6523,9 @@
       let cvs;
       try { cvs = document.createElement('canvas'); } catch (e) { return null; }
       if (!cvs || !cvs.getContext) return null;
-      cvs.width = W; cvs.height = H;
+      // Baked in device pixels — blitted back at CSS size by the caller, so the
+      // ground is as sharp as the animals standing on it.
+      fitCanvas(cvs, W, H);
       const c = cvs.getContext('2d');
       _drawFarmScatter(c, W, H, top, bot, pal.groundFx);     // tufts and flowers on the pasture
       _drawFarmDeck(c, W, H, bot, H, pal);                   // plank decking under the beds

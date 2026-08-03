@@ -20,7 +20,13 @@
 
     function _drawAccPreviewOnCanvas(cvs, accId) {
       const ctx = cvs.getContext('2d');
-      const w = cvs.width, h = cvs.height;
+      /* CSS size off the element: the buffer behind it is sized in device pixels
+         (fitCanvas) and is no longer the same number. The 1.4 floor is the
+         over-sampling these icons already had by hand — a 1x screen must not
+         come out softer than it is today. */
+      const r = cvs.getBoundingClientRect();
+      const w = Math.round(r.width) || 48, h = Math.round(r.height) || 48;
+      fitCanvas(cvs, w, h, 1.4);
       const s = w * 0.7;
       const ho = PET_HEAD_OFFSETS['cat'] || { hx: 0, hy: -0.3, r: 0.28 };
       ctx.clearRect(0, 0, w, h);

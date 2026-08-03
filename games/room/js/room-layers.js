@@ -192,9 +192,10 @@
       const cvs = document.getElementById('outsideCanvas');
       if (!cvs) return;
       const par = cvs.parentElement;
-      cvs.width  = par.clientWidth;
-      cvs.height = par.clientHeight;
-      const W = cvs.width, H = cvs.height;
+      // W/H stay in CSS pixels — fitCanvas puts the BUFFER in device pixels and
+      // pre-scales the context, so every measurement below is unchanged.
+      const W = par.clientWidth, H = par.clientHeight;
+      fitCanvas(cvs, W, H);
       const ctx = cvs.getContext('2d');
       _outsideFloorRects = {};
 
@@ -1247,13 +1248,12 @@
       const cvs = document.getElementById('outsideCanvas');
       if (!cvs) return;
 
-      /** Converts a mouse/pointer event to canvas coordinates. */
+      /** Converts a mouse/pointer event to canvas coordinates. The scene is laid
+          out in CSS pixels (the buffer is bigger by the device ratio), and the
+          element fills its box, so the offset inside the box IS the coordinate. */
       function canvasCoords(e) {
         const rect = cvs.getBoundingClientRect();
-        return {
-          x: (e.clientX - rect.left) * (cvs.width  / rect.width),
-          y: (e.clientY - rect.top)  * (cvs.height / rect.height)
-        };
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
       }
 
       /** Returns the floor index under (cx, cy), or null. */

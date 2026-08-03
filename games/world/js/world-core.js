@@ -426,7 +426,7 @@
     c.innerHTML = WORLD_PET_TYPES.map(type => {
       const colors = PET_COLORS[type] || [];
       return '<div class="world-pet-row">' +
-        '<canvas class="world-pet-thumb" width="70" height="70" data-pet="' + type + '"></canvas>' +
+        '<canvas class="world-pet-thumb" style="width:70px;height:70px" data-pet="' + type + '"></canvas>' +
         '<div class="world-pet-info"><div class="world-pet-name">' + esc(T(type)) + '</div>' +
         '<div class="world-pet-colors">' + colors.map(col =>
           '<button class="world-color-dot" data-pet="' + type + '" data-color="' + col.key + '" style="background:' + col.body + '" title="' + esc(T(col.name)) + '"></button>').join('') +
@@ -434,6 +434,10 @@
     }).join('');
     c.querySelectorAll('.world-pet-thumb').forEach(cv => {
       const type = cv.dataset.pet, g = cv.getContext('2d');
+      // Buffer in device pixels, drawing still in the 70x70 CSS box below.
+      const tdpr = Math.min(window.devicePixelRatio || 1, 3);
+      cv.width = Math.round(70 * tdpr); cv.height = Math.round(70 * tdpr);
+      g.setTransform(tdpr, 0, 0, tdpr, 0, 0);
       g.save(); g.translate(35, 44); g.scale(0.72, 0.72);
       try { worldDrawPet(g, type, PET_SIZES[type] || 64, 0, false, null, 0, Date.now(), null); } catch (e) {}
       g.restore();
@@ -471,9 +475,18 @@
   }
 
   // ── Render loop ──
+  /* The buffer is sized in DEVICE pixels and the context pre-scaled, so the rest
+     of the world keeps working in CSS pixels — including the pointer maths in
+     world-input.js, which reads offsets off getBoundingClientRect. Without this
+     the whole scene is painted at 1x and stretched to the screen, which on a
+     phone or with Windows display scaling shows up as blur. Capped at 3: past
+     that the buffer costs more than the eye can collect. */
   function resize() {
     const w = stage.clientWidth, h = stage.clientHeight;
-    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const bw = Math.round(w * dpr), bh = Math.round(h * dpr);
+    if (canvas.width !== bw || canvas.height !== bh) { canvas.width = bw; canvas.height = bh; }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);   // sizing a canvas resets its transform
     return { w: w, h: h };
   }
   function fallbackBg(w, h) {

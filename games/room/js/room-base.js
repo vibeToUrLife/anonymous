@@ -112,6 +112,29 @@
       { id: 'cherry',   emoji: '🌸', name: 'Cherry Tree', cost: 1500, coinRate: 10 },
     ];
 
+    /* ── Crisp canvases ──
+       A canvas whose buffer is sized in CSS pixels gets stretched to the screen
+       by the browser, so on a phone or on Windows display scaling EVERYTHING
+       drawn on it goes soft. Flat blocks of colour hide it; a pet or an animal —
+       a picture, with a face — does not.
+       fitCanvas puts the buffer in DEVICE pixels and pre-scales the context, so
+       every caller carries on drawing in CSS pixels and only the sharpness
+       changes. Offscreen caches that are blitted back need the same treatment,
+       or the cached half of a scene ends up softer than the live half: bake them
+       at canvasDpr() too and blit with an explicit CSS-size destination rect.
+       Capped at 3 — past that the buffer costs more memory than the eye collects. */
+    function canvasDpr() { return Math.min(window.devicePixelRatio || 1, 3); }
+    // `minScale` keeps a canvas that was already deliberately over-sampled from
+    // getting SOFTER on a 1x screen than it is today.
+    function fitCanvas(cvs, cssW, cssH, minScale) {
+      const dpr = Math.max(canvasDpr(), minScale || 0);
+      const w = Math.round(cssW * dpr), h = Math.round(cssH * dpr);
+      if (cvs.width !== w || cvs.height !== h) { cvs.width = w; cvs.height = h; }
+      // Sizing a canvas resets its transform, so this has to be re-applied. Doing
+      // it unconditionally is also what makes fitCanvas safe to call every frame.
+      cvs.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
     // Maximum offline coin generation time for plants (2 hours in ms)
     const PLANT_OFFLINE_CAP_MS = 2 * 60 * 60 * 1000;
     // Only show the "while you were away" coin collect modal after ≥1h away

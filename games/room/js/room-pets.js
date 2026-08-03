@@ -334,19 +334,9 @@
       const room = cvs.parentElement.parentElement;
       let rw = room.clientWidth, rh = room.clientHeight;
       const ctx = cvs.getContext('2d');
-      /* The buffer is sized in DEVICE pixels while everything is still drawn in
-         CSS pixels — the transform converts. Without it the whole pet layer is
-         painted at 1x and stretched to the screen by the browser, which is
-         invisible on a flat vector pet and obvious on a drawn one. CSS pins the
-         element's display size (.pet-slot canvas), so only the buffer grows.
-         Capped at 3: past that a phone pays for pixels nobody can see. */
-      const dpr = Math.min(window.devicePixelRatio || 1, 3);
-      function sizePetCanvas() {
-        cvs.width = Math.round(rw * dpr);
-        cvs.height = Math.round(rh * dpr);
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);   // setting width/height resets it
-      }
-      sizePetCanvas();
+      // CSS pins the element's display size (.pet-slot canvas), so this only
+      // grows the buffer — see fitCanvas in room-base.js.
+      fitCanvas(cvs, rw, rh);
 
       // Ensure each pet has a state (keyed by instance ID).
       // Look up the real pet instance so a previously dropped position is restored.
@@ -565,7 +555,7 @@
         _lastPetFrame = t;
         const nw = room.clientWidth, nh = room.clientHeight;
         if (nw && nh && (nw !== rw || nh !== rh)) {
-          rw = nw; rh = nh; sizePetCanvas();
+          rw = nw; rh = nh; fitCanvas(cvs, rw, rh);
         }
         ctx.clearRect(0, 0, rw, rh);
         const now = Date.now();

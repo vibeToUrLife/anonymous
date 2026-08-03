@@ -70,7 +70,7 @@
         const isEquipped = equippedOn.length > 0;
         let cls = isEquipped ? 'equipped' : isOwned ? 'owned' : '';
         html += '<div class="acc-card ' + cls + '">' +
-          '<canvas class="acc-preview-cvs" data-acc="' + acc.id + '" width="60" height="60" style="display:block;margin:0 auto 4px"></canvas>' +
+          '<canvas class="acc-preview-cvs" data-acc="' + acc.id + '" style="display:block;margin:0 auto 4px;width:60px;height:60px"></canvas>' +
           '<div class="acc-name">' + T(acc.name) + '</div>';
         if (isOwned) {
           html += '<div class="acc-price" style="color:#34d399">' + T('Owned') + '</div>';
@@ -119,7 +119,10 @@
       el.querySelectorAll('.acc-preview-cvs').forEach(cvs => {
         const accId = cvs.dataset.acc;
         const ctx = cvs.getContext('2d');
-        const w = cvs.width, h = cvs.height;
+        // The CSS box these are pinned to; the buffer behind it is bigger by the
+        // screen's pixel ratio, which is what keeps the little preview crisp.
+        const w = 60, h = 60;
+        fitCanvas(cvs, w, h);
         const s = w * 0.7;
         const ho = PET_HEAD_OFFSETS['cat'] || { hx: 0, hy: -0.3, r: 0.28 };
         ctx.clearRect(0, 0, w, h);

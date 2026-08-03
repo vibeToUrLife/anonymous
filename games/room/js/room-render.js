@@ -171,7 +171,7 @@
           const clampedLvl = Math.min(plantLvl, 30);
           const lvl = PLANT_LEVELS[clampedLvl - 1];
           plantSlot.innerHTML =
-            '<div class="plant-canvas-wrap"><canvas id="plantCanvas" width="120" height="140"></canvas></div>' +
+            '<div class="plant-canvas-wrap"><canvas id="plantCanvas" style="width:120px;height:140px"></canvas></div>' +
             '<div class="plant-level">' + T('Lv.{n} {label}', { n: plantLvl, label: T(lvl.label) }) + '</div>';
           // Apply saved position or default
           const pos = roomData.plantPosition || { left: 80, bottom: 18 };
@@ -204,7 +204,10 @@
     }
 
     function drawPetPreview(cvs, petType) {
-      const w = cvs.width = 64, h = cvs.height = 52;
+      // 64x52 is the CSS size (.shop-preview pins it); fitCanvas gives the buffer
+      // the screen's real pixels so these little cards are not soft.
+      const w = 64, h = 52;
+      fitCanvas(cvs, w, h);
       const ctx = cvs.getContext('2d');
       // Soft background
       const bg = ctx.createLinearGradient(0, 0, 0, h);
@@ -328,7 +331,10 @@
 
     /* ── Shop Preview Drawing ── */
     function drawWallPreview(cvs, wallId) {
-      const w = cvs.width = 64, h = cvs.height = 52;
+      // 64x52 is the CSS size (.shop-preview pins it); fitCanvas gives the buffer
+      // the screen's real pixels so these little cards are not soft.
+      const w = 64, h = 52;
+      fitCanvas(cvs, w, h);
       const ctx = cvs.getContext('2d');
       if (wallId === 'wall_brick') {
         ctx.fillStyle = '#b5745a'; ctx.fillRect(0, 0, w, h);
@@ -428,14 +434,20 @@
 
     // Floor preview reuses the same renderer as the room background.
     function drawFloorPreview(cvs, floorId) {
-      const w = cvs.width = 64, h = cvs.height = 52;
+      // 64x52 is the CSS size (.shop-preview pins it); fitCanvas gives the buffer
+      // the screen's real pixels so these little cards are not soft.
+      const w = 64, h = 52;
+      fitCanvas(cvs, w, h);
       const ctx = cvs.getContext('2d');
       // floorY = -6 so the floor area (floorY + 6) starts at the top of the thumbnail
       drawFloorPattern(ctx, floorId, w, h, -6, h / 7);
     }
 
     function drawWindowPreview(cvs, winId) {
-      const w = cvs.width = 64, h = cvs.height = 52;
+      // 64x52 is the CSS size (.shop-preview pins it); fitCanvas gives the buffer
+      // the screen's real pixels so these little cards are not soft.
+      const w = 64, h = 52;
+      fitCanvas(cvs, w, h);
       const ctx = cvs.getContext('2d');
       // Background wall
       const bg = ctx.createLinearGradient(0, 0, 0, h);
@@ -536,7 +548,10 @@
     }
 
     function drawDecorPreview(cvs, decorId, category) {
-      const w = cvs.width = 64, h = cvs.height = 52;
+      // 64x52 is the CSS size (.shop-preview pins it); fitCanvas gives the buffer
+      // the screen's real pixels so these little cards are not soft.
+      const w = 64, h = 52;
+      fitCanvas(cvs, w, h);
       const ctx = cvs.getContext('2d');
       const cx = w / 2, cy = h / 2;
       // Background
