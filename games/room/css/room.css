@@ -913,6 +913,14 @@
       display:flex; align-items:center; justify-content:space-between; gap:8px;
       margin:0 0 6px; padding-bottom:6px; border-bottom:2px dotted rgba(251,146,60,.32);
     }
+    /* Sub-heading inside the Produce list — one per building the goods came from.
+       Quieter than .farm-section-title on purpose: these sit INSIDE a section. */
+    .farm-produce-group{
+      font-family:var(--farm-display); font-size:10.5px; font-weight:800; letter-spacing:.6px;
+      text-transform:uppercase; color:var(--g-ink-soft);
+      margin:8px 0 2px; padding-bottom:3px; border-bottom:1px dotted var(--g-border);
+    }
+    .farm-produce-group:first-child{margin-top:2px}
     /* Collapsible section header (My Animals) */
     .farm-collapse-head{cursor:pointer;user-select:none;transition:color .15s}
     .farm-collapse-head:hover{color:var(--g-accent)}
@@ -1146,6 +1154,11 @@
        Scoped under .ws-choose to beat .farm-shop-buy's 11px / nowrap. */
     .ws-choose .ws-recipe{padding:11px 13px;font-size:14px;line-height:1.35;white-space:normal;border-radius:12px}
     .ws-choose .ws-recipe small{display:inline-block;margin-top:1px}
+    /* How many of the product a recipe makes you already hold. Floated so it
+       parks on the right edge of the row's FIRST line, whatever the name and
+       ingredients underneath wrap to. */
+    .ws-have{float:right;margin-left:8px;font-size:12px;font-weight:800;color:var(--g-ink-soft);white-space:nowrap}
+    .ws-have.none{opacity:.4;font-weight:700}
 
     /* Rows — dotted separators, quiet by default */
     .farm-shop-row,.farm-herd-row,.farm-food-row{

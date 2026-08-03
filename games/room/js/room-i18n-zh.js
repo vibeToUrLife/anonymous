@@ -327,6 +327,8 @@
     /* ── Farm: panel sections & modals ── */
     'cart wants': '商人要',
     'ea': '/个',
+    'buyer': '收购商',
+    'Other': '其他',
     'Orders': '订单',
     'resets daily': '每日刷新',
     'done': '已完成',
@@ -370,6 +372,7 @@
     'No animals yet — buy one in the Animals tab.': '还没有动物 — 去动物页买一只吧。',
     'Collect all ({n})': '全部收取（{n}）',
     'In stock: {list}': '库存：{list}',
+    'have': '现有',
     'Open · {cost}': '开启 · {cost}',
     'Slot {n} — pick a product': '第 {n} 个槽位 — 选一样产品',
     'Open a new slot for {cost}?': '花 {cost} 开一个新槽位？',

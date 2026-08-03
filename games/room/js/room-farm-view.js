@@ -1530,11 +1530,15 @@
       // at the cart when it visits — see _farmCart() and the cart sell sheet.
       const prices = farmProductPrices(), meta = farmProductMeta();
       const stock = roomData.farmStock || {};
-      // Show produce in a FIXED canonical order (meta key order) so the list
-      // never re-sequences when a newly-collected product is added to stock.
-      const _order = Object.keys(meta);
-      const stockIds = Object.keys(stock).filter(k => stock[k] > 0)
-        .sort((a, b) => { const ia = _order.indexOf(a), ib = _order.indexOf(b); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
+      const agedStock = roomData.farmAged || {};
+      /* Produce is grouped by the building it comes out of, in the FIXED order
+         farmProductGroups() gives — so the list never re-sequences when a newly
+         collected product lands in stock, and a good always sits under the thing
+         that made it. Groups you hold nothing from are dropped. */
+      const stockGroups = farmProductGroups()
+        .map(g => ({ g: g, ids: g.ids.filter(id => ((g.aged ? agedStock : stock)[id] || 0) > 0) }))
+        .filter(r => r.ids.length);
+      const stockKinds = stockGroups.reduce((n, r) => n + r.ids.length, 0);
       const cart = _farmCart();
       const wantMeta = cart.wanted.map(w => _prodIcon(w.id, 16, meta[w.id]) + '×' + w.qty).join('  ');
       const cartHtml =
@@ -1546,25 +1550,34 @@
           : '<div class="farm-cart-status">🛒 ' + T('Sold out & rolled on — back in {time}.', { time: '<b>' + _fmtFarmTime(cart.nextInMs) + '</b>' }) + '</div>' +
             '<div class="farm-panel-empty" style="padding-top:4px">' + T('It buys a different set each visit — stock up!') + '</div>');
       // Produce list is collapsible (it grows as you collect more types).
-      const _produceCollapsed = _farmProduceCollapsed == null ? stockIds.length > FARM_PRODUCE_COLLAPSE_AT : _farmProduceCollapsed;
+      const _produceCollapsed = _farmProduceCollapsed == null ? stockKinds > FARM_PRODUCE_COLLAPSE_AT : _farmProduceCollapsed;
       const stockHtml =
         cartHtml +
         '<div class="farm-section-title farm-collapse-head" style="margin-top:12px" onclick="toggleFarmProduce()">' +
-          '<span>📦 ' + T('Produce') + ' <small>(' + stockIds.length + ')</small></span>' +
+          '<span>📦 ' + T('Produce') + ' <small>(' + stockKinds + ')</small></span>' +
           '<span class="farm-collapse-arrow">' + (_produceCollapsed ? '▸' : '▾') + '</span>' +
         '</div>' +
         (_produceCollapsed
           ? ''
-          : !stockIds.length
+          : !stockKinds
           ? '<div class="farm-panel-empty">' + T('Tap produce on the farm to collect it here.') + '</div>'
-          : stockIds.map(id => {
-              const m = meta[id] || { emoji: '❓', name: id };
-              const wanted = cart.present && cart.wanted.some(w => w.id === id);
-              return '<div class="farm-shop-row">' +
-                '<span class="farm-shop-animal">' + _prodIcon(id, 20, m) + ' ' + T(m.name) + ' <small>×' + stock[id] + '</small>' + (wanted ? ' <span class="farm-want-tag">' + T('cart wants') + '</span>' : '') + '</span>' +
-                '<span class="farm-shop-drop">' + (prices[id] || 0) + '🪙 ' + T('ea') + '</span>' +
-                '</div>';
-            }).join(''));
+          : stockGroups.map(r =>
+              '<div class="farm-produce-group">' + r.g.emoji + ' ' + T(r.g.name) + '</div>' +
+              r.ids.map(id => {
+                const m = meta[id] || { emoji: '❓', name: id };
+                const n = (r.g.aged ? agedStock : stock)[id];
+                // Only tier-1 goods reach the cart; the aged ones show the price
+                // the tier-2 buyer pays, because nothing else can buy them.
+                const wanted = !r.g.aged && cart.present && cart.wanted.some(w => w.id === id);
+                const price = r.g.aged
+                  ? ((FARM_AGED[id] || {}).coins || 0) + '🪙 ' + T('buyer')
+                  : (prices[id] || 0) + '🪙 ' + T('ea');
+                return '<div class="farm-shop-row">' +
+                  '<span class="farm-shop-animal">' + _prodIcon(id, 20, m) + ' ' + T(m.name) + ' <small>×' + n + '</small>' + (wanted ? ' <span class="farm-want-tag">' + T('cart wants') + '</span>' : '') + '</span>' +
+                  '<span class="farm-shop-drop">' + price + '</span>' +
+                  '</div>';
+              }).join('')
+            ).join(''));
 
       // Daily delivery orders
       const ordersList = _farmOrders();
@@ -2123,6 +2136,37 @@
       for (const id in FARM_PRODUCTS) p[id] = FARM_PRODUCTS[id].coins;
       return p;
     }
+    /* Where each product comes from, in the order the Produce panel groups them:
+       the raw goods first, then every workshop machine, then every ageing
+       factory. Built from the same tables the farm runs on, so adding a recipe
+       files its output under the right building without a second edit here.
+       `aged` marks the tier-2 groups, whose stock and price live apart from the
+       rest (roomData.farmAged / FARM_AGED) — see the note on FARM_AGED. */
+    function farmProductGroups() {
+      // First group to claim a product keeps it, so a good listed by two recipes
+      // is shown (and counted) once.
+      const seen = {};
+      const only = ids => ids.filter(id => !seen[id] && (seen[id] = 1));
+      const groups = [
+        { emoji: '🐄', name: 'Animals', ids: only(FARM_ANIMALS.map(a => a.drop.id)) },
+        { emoji: '🌾', name: 'Garden',  ids: only(FARM_CROPS.map(c => c.yield.product)) },
+      ];
+      const addAll = (list, aged) => list.forEach(d => groups.push({
+        emoji: d.emoji, name: d.name, aged: aged, ids: only(d.recipes.map(r => r.out.id)),
+      }));
+      addAll(FARM_MACHINES, false);
+      addAll(FARM_AGERS, true);
+      // Whatever no table claims — meat, off the butcher's block — is raw too, so
+      // it belongs beside the other raw goods rather than after the factories.
+      groups.splice(2, 0, { emoji: '📦', name: 'Other', ids: Object.keys(FARM_PRODUCTS).filter(id => !seen[id]) });
+      return groups;
+    }
+    // Every kind currently held, tier 1 and tier 2 — the count on the Produce header.
+    function farmProduceKinds() {
+      const stock = roomData.farmStock || {}, aged = roomData.farmAged || {};
+      return farmProductGroups()
+        .reduce((n, g) => n + g.ids.filter(id => ((g.aged ? aged : stock)[id] || 0) > 0).length, 0);
+    }
 
     // Tap a drop → it goes into farm stock (sell later / use for orders), and the
     // producing animal gains collection XP toward its level.
@@ -2312,8 +2356,7 @@
 
     // Collapse / expand the produce list (UI-only, not persisted).
     function toggleFarmProduce() {
-      const stock = roomData.farmStock || {};
-      const n = Object.keys(stock).filter(k => stock[k] > 0).length;
+      const n = farmProduceKinds();
       const cur = _farmProduceCollapsed == null ? n > FARM_PRODUCE_COLLAPSE_AT : _farmProduceCollapsed;
       _farmProduceCollapsed = !cur;
       renderFarmPanel();
@@ -5004,6 +5047,10 @@
       const mc = _farmBuildDef(_workshopModalId);
       if (!_workshopModalOpen || !mc) { el.style.display = 'none'; return; }
       const meta = farmProductMeta(), stock = roomData.farmStock || {}, now = Date.now();
+      // Both tiers take their ingredients out of farmStock; only where the OUTPUT
+      // lands differs, so that is the only thing this needs the tier for.
+      const agedStock = roomData.farmAged || {};
+      const outStock = _isAger(mc.id) ? agedStock : stock;
       const m = _machineState(mc.id);
       const slotCost = _buildSlotCost(mc.id);
       // Ageing runs in hours against the machines' 20–60 minutes, so "240m" would
@@ -5067,7 +5114,12 @@
             const oM = meta[rc.out.id] || { emoji: '❓', name: rc.out.id };
             const inStr = Object.keys(rc.in).map(k => _prodIcon(k, 16, meta[k]) + '×' + rc.in[k]).join('+');
             const can = Object.keys(rc.in).every(k => (stock[k] || 0) >= rc.in[k]);
-            return '<button class="farm-shop-buy ws-recipe" onclick="startMachineSlot(\'' + mc.id + '\',' + _makeChoiceSlot + ',' + r + ')"' + (can ? '' : ' disabled') + '>' + _prodIcon(rc.out.id, 24, oM) + ' ' + T(oM.name) + ' <small>' + inStr + ' · ' + dur(rc.timeMs) + '</small></button>';
+            // How many of this recipe's OUTPUT is already in the barn, so the
+            // choice can be made on what you are short of, not on what it costs.
+            const have = outStock[rc.out.id] || 0;
+            return '<button class="farm-shop-buy ws-recipe" onclick="startMachineSlot(\'' + mc.id + '\',' + _makeChoiceSlot + ',' + r + ')"' + (can ? '' : ' disabled') + '>' +
+              '<span class="ws-have' + (have ? '' : ' none') + '">' + T('have') + ' ×' + have + '</span>' +
+              _prodIcon(rc.out.id, 24, oM) + ' ' + T(oM.name) + ' <small>' + inStr + ' · ' + dur(rc.timeMs) + '</small></button>';
           }).join('');
           chooser = '<div class="ws-choose"><div class="ws-slot-no">' + T('Slot {n} — pick a product', { n: _makeChoiceSlot + 1 }) + ' <span class="ws-x" onclick="cancelMake()">✕</span></div>' + choices + '</div>';
         }
