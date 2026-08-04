@@ -73,14 +73,8 @@ const PET_COLORS = {
     { key: 'brown',  name: 'Brown',  body: '#c8a878', wing: '#a8884e', beak: '#3a3a3a', leg: '#caa040' },
     { key: 'swan',   name: 'Swan',   body: '#ffffff', wing: '#f0f0f0', beak: '#e8682c', leg: '#2a2a2a' },
   ],
-  jerry: [
-    { key: 'ochre',   name: 'Ochre',   body: '#c8893f', belly: '#f4e0b8', inner: '#eab595', tail: '#b87c34' },
-    { key: 'brown',   name: 'Brown',   body: '#9c6b42', belly: '#e7cca7', inner: '#e2a887', tail: '#8a5c38' },
-    { key: 'grey',    name: 'Grey',    body: '#9aa0a6', belly: '#e5e7eb', inner: '#e2b0b0', tail: '#8f959b' },
-    { key: 'white',   name: 'White',   body: '#e6e0d4', belly: '#fbf7ee', inner: '#f0c4b2', tail: '#d8d2c6' },
-  ],
-  // No tom or capybara entry on purpose — both are drawn from artwork, so they
-  // have one coat each.
+  // No tom, jerry or capybara entry on purpose — all three are drawn from
+  // artwork, so they have one coat each.
 };
 
 // Resolve a palette object for (type, colorKey); falls back to the first colour.
@@ -148,7 +142,8 @@ function worldDrawPet(ctx, type, size, legPhase, moving, action, ap, t, colorKey
     case 'fox':     return drawFoxPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal);
     case 'panda':   return drawPandaPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal);
     case 'goose':   return drawGoosePet(ctx, size, legPhase, moving, hunger, action, ap, t, pal);
-    // Tom & Jerry are upright, three-view characters (view defaults to front).
+    // Tom & Jerry are sprite-based: each picks its own frame from `moving`, so
+    // the view arg goes unread and the facing flip alone turns them round.
     case 'tom':     return drawTomPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view);
     case 'jerry':   return drawJerryPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view);
     // Sprite-based. The caller sends 'front' when standing still, which is the

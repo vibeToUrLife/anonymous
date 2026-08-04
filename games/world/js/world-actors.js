@@ -58,8 +58,8 @@ const WorldActors = (function () {
     if (action && !(moving && action === WORLD_HIGHFIVE.actionId)) applyWorldActionTransform(ctx, action, ap, size, t);
     // Accessory back layer (cape/wings) → pet body → accessory front layer.
     if (a.outfit) { try { drawPetAccessory(ctx, a.pet, a.outfit, size, 'back'); } catch (e) {} }
-    // Tom/Jerry are directional: side view while walking (facing flip handles L/R),
-    // front view when idle. Other pets ignore the view arg.
+    // Only the capybara reads this: standing still means its sitting pose.
+    // Tom and Jerry pick their own frame from `moving`, and the rest ignore it.
     const view = moving ? 'side' : 'front';
     worldDrawPet(ctx, a.pet, size, legPhase, moving, action, ap, t, a.color, view);
     if (a.outfit) { try { drawPetAccessory(ctx, a.pet, a.outfit, size, 'front'); } catch (e) {} }

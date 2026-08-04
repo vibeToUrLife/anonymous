@@ -1,101 +1,42 @@
 /* ── Jerry (Tom & Jerry mouse) ──
-   Upright, front-facing cartoon mouse drawn to resemble the classic Jerry.
-   Supports three views via the `view` arg: 'front' | 'side' | 'back'
-   (the room/world renderer picks one from the pet's travel direction).
-   Signature matches the other games/pets/*.js draw fns, plus `view`. */
-function drawJerryPet(ctx,s,lp,moving,hunger,action,ap,t,pal,view){
-  view=view||'front';
-  var body=pal.body,belly=pal.belly,inner=pal.inner,tail=pal.tail;
-  var noseCol='#5a231a';
-  var sw=moving?Math.sin(lp):0, sw2=moving?Math.sin(lp+Math.PI):0;
-  var lfL=moving?Math.max(0,Math.sin(lp))*s*0.04:0, lfR=moving?Math.max(0,Math.sin(lp+Math.PI))*s*0.04:0;
+   Drawn from artwork instead of canvas paths, like Tom. One sheet
+   (img/jerry.png) holds equal cells that all stand on the cell's floor, so
+   changing frame never moves his feet: cell 0 is Jerry standing and facing the
+   viewer, cells 1 onwards are one loop of the walk — contact, down, passing,
+   up. The walk cells face RIGHT, which is the direction the room treats as
+   unmirrored, so walking left is the room's own flip.
+   `pal` and `view` are both ignored: Jerry ships in his own coat, and the art
+   only knows two states, standing and walking. */
+/* The walk is four cells, not the twelve on the reference sheet — those twelve
+   are the same four poses drawn three times over. The reference draws its
+   turnaround row about 1.4x larger than its walk row, so the front pose was
+   scaled down to match the walk before packing; without that Jerry would grow
+   every time he stopped. */
+const JERRY_CELL_W = 112;
+const JERRY_CELL_H = 117;
+const JERRY_WALK = 4;        // walk cells, starting at index 1
+const JERRY_DRAW_H = 1.16;   // Jerry's height, as a fraction of the pet size
+const JERRY_FEET_Y = 0.51;   // where the floor sits below the origin, same fraction
+// Walk cells per unit of the room's leg phase, which advances 10 a second — so
+// the four-cell loop is a full stride every 0.63s, the cadence his drawn legs
+// used to swing at.
+const JERRY_STEP_RATE = 0.64;
 
-  function drawFace(){
-  ctx.fillStyle=body;ctx.beginPath();ctx.arc(0,-s*0.26,s*0.30,0,7);ctx.fill();
-  ctx.fillStyle=body;
-  ctx.beginPath();ctx.arc(-s*0.26,-s*0.44,s*0.18,0,7);ctx.fill();
-  ctx.beginPath();ctx.arc(s*0.26,-s*0.44,s*0.18,0,7);ctx.fill();
-  ctx.fillStyle=inner;
-  ctx.beginPath();ctx.arc(-s*0.26,-s*0.44,s*0.11,0,7);ctx.fill();
-  ctx.beginPath();ctx.arc(s*0.26,-s*0.44,s*0.11,0,7);ctx.fill();
-  // forehead tuft
-  ctx.strokeStyle=body;ctx.lineWidth=s*0.02;ctx.lineCap='round';
-  ctx.beginPath();ctx.moveTo(-s*0.03,-s*0.53);ctx.quadraticCurveTo(-s*0.02,-s*0.62,s*0.04,-s*0.60);ctx.moveTo(s*0.02,-s*0.53);ctx.quadraticCurveTo(s*0.05,-s*0.61,s*0.10,-s*0.575);ctx.stroke();
-  // cream lower face
-  ctx.fillStyle=belly;ctx.beginPath();ctx.ellipse(0,-s*0.13,s*0.19,s*0.15,0,0,7);ctx.fill();
-  // eyes (white sclera, black eyeball) + lashes
-  var eyeY=-s*0.30;
-  ctx.fillStyle='#fff';
-  ctx.beginPath();ctx.ellipse(-s*0.115,eyeY,s*0.076,s*0.10,0,0,7);ctx.fill();
-  ctx.beginPath();ctx.ellipse(s*0.115,eyeY,s*0.076,s*0.10,0,0,7);ctx.fill();
-  ctx.fillStyle='#141210';
-  ctx.beginPath();ctx.ellipse(-s*0.10,eyeY+s*0.008,s*0.046,s*0.066,0,0,7);ctx.fill();
-  ctx.beginPath();ctx.ellipse(s*0.10,eyeY+s*0.008,s*0.046,s*0.066,0,0,7);ctx.fill();
-  ctx.fillStyle='#fff';
-  ctx.beginPath();ctx.arc(-s*0.088,eyeY-s*0.022,s*0.017,0,7);ctx.fill();
-  ctx.beginPath();ctx.arc(s*0.112,eyeY-s*0.022,s*0.017,0,7);ctx.fill();
-  ctx.strokeStyle='#17150f';ctx.lineWidth=s*0.013;ctx.lineCap='round';
-  ctx.beginPath();
-  ctx.moveTo(-s*0.175,-s*0.37);ctx.lineTo(-s*0.215,-s*0.42);
-  ctx.moveTo(-s*0.12,-s*0.395);ctx.lineTo(-s*0.135,-s*0.45);
-  ctx.moveTo(s*0.175,-s*0.37);ctx.lineTo(s*0.215,-s*0.42);
-  ctx.moveTo(s*0.12,-s*0.395);ctx.lineTo(s*0.135,-s*0.45);
-  ctx.stroke();
-  // nose + smile
-  ctx.fillStyle=noseCol;ctx.beginPath();ctx.ellipse(0,-s*0.15,s*0.036,s*0.03,0,0,7);ctx.fill();
-  ctx.strokeStyle=noseCol;ctx.lineWidth=s*0.011;ctx.lineCap='round';
-  ctx.beginPath();ctx.moveTo(0,-s*0.12);ctx.lineTo(0,-s*0.085);ctx.moveTo(0,-s*0.085);ctx.quadraticCurveTo(-s*0.055,-s*0.045,-s*0.095,-s*0.075);ctx.moveTo(0,-s*0.085);ctx.quadraticCurveTo(s*0.055,-s*0.045,s*0.095,-s*0.075);ctx.stroke();
-  // whiskers
-  ctx.strokeStyle='rgba(120,90,60,0.5)';ctx.lineWidth=s*0.008;
-  ctx.beginPath();ctx.moveTo(-s*0.09,-s*0.12);ctx.lineTo(-s*0.30,-s*0.15);ctx.moveTo(-s*0.09,-s*0.09);ctx.lineTo(-s*0.30,-s*0.08);ctx.moveTo(s*0.09,-s*0.12);ctx.lineTo(s*0.30,-s*0.15);ctx.moveTo(s*0.09,-s*0.09);ctx.lineTo(s*0.30,-s*0.08);ctx.stroke();
-  }
+// Resolved against this file's own URL, because the pages that load it sit at
+// different depths. Fetched on first draw rather than at load: the main site
+// shows no Jerry, so it must not pay for the sheet.
+const JERRY_SRC = new URL('img/jerry.png', document.currentScript.src).href;
+let _jerrySheet = null;
+function jerrySheet() {
+  if (!_jerrySheet) { _jerrySheet = new Image(); _jerrySheet.src = JERRY_SRC; }
+  return _jerrySheet;
+}
 
-  if(view==='back'){
-    ctx.strokeStyle=tail;ctx.lineWidth=s*0.035;ctx.lineCap='round';
-    ctx.beginPath();ctx.moveTo(s*0.04,s*0.28);ctx.bezierCurveTo(s*0.40,s*0.40,s*0.44,-s*0.10,s*0.20,-s*0.06);ctx.stroke();
-    ctx.strokeStyle=body;ctx.lineWidth=s*0.10;
-    ctx.beginPath();ctx.moveTo(-s*0.10,s*0.28);ctx.lineTo(-s*0.10+sw*s*0.04,s*0.44-lfL);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(s*0.10,s*0.28);ctx.lineTo(s*0.10+sw2*s*0.04,s*0.44-lfR);ctx.stroke();
-    ctx.fillStyle=inner;
-    ctx.beginPath();ctx.ellipse(-s*0.10+sw*s*0.04,s*0.46-lfL,s*0.08,s*0.05,0,0,7);ctx.fill();
-    ctx.beginPath();ctx.ellipse(s*0.10+sw2*s*0.04,s*0.46-lfR,s*0.08,s*0.05,0,0,7);ctx.fill();
-    // arms + hands (match Tom's back)
-    ctx.strokeStyle=body;ctx.lineWidth=s*0.075;ctx.lineCap='round';
-    ctx.beginPath();ctx.moveTo(-s*0.15,-s*0.02);ctx.lineTo(-s*0.24-sw2*s*0.03,s*0.16);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(s*0.15,-s*0.02);ctx.lineTo(s*0.24-sw*s*0.03,s*0.16);ctx.stroke();
-    ctx.fillStyle=inner;
-    ctx.beginPath();ctx.arc(-s*0.24-sw2*s*0.03,s*0.17,s*0.05,0,7);ctx.fill();
-    ctx.beginPath();ctx.arc(s*0.24-sw*s*0.03,s*0.17,s*0.05,0,7);ctx.fill();
-    ctx.fillStyle=body;ctx.beginPath();ctx.ellipse(0,s*0.14,s*0.20,s*0.24,0,0,7);ctx.fill();
-    ctx.fillStyle=body;ctx.beginPath();ctx.arc(0,-s*0.26,s*0.30,0,7);ctx.fill();
-    ctx.fillStyle=body;
-    ctx.beginPath();ctx.arc(-s*0.26,-s*0.44,s*0.18,0,7);ctx.fill();
-    ctx.beginPath();ctx.arc(s*0.26,-s*0.44,s*0.18,0,7);ctx.fill();
-    // ── back structure: separate the head from the body ──
-    ctx.strokeStyle='rgba(0,0,0,0.14)';ctx.lineWidth=s*0.02;ctx.lineCap='round';
-    ctx.beginPath();ctx.arc(0,-s*0.26,s*0.295,Math.PI*0.08,Math.PI*0.92);ctx.stroke();
-    ctx.beginPath();ctx.arc(-s*0.26,-s*0.44,s*0.175,0,7);ctx.stroke();
-    ctx.beginPath();ctx.arc(s*0.26,-s*0.44,s*0.175,0,7);ctx.stroke();
-    ctx.strokeStyle='rgba(0,0,0,0.07)';ctx.lineWidth=s*0.022;ctx.beginPath();ctx.moveTo(0,s*0.05);ctx.lineTo(0,s*0.26);ctx.stroke();
-    return;
-  }
-  /* Side (walking) view removed per request — walking uses the FRONT pose below. */
-  /* FRONT */
-  ctx.strokeStyle=tail;ctx.lineWidth=s*0.035;ctx.lineCap='round';
-  ctx.beginPath();ctx.moveTo(s*0.14,s*0.28);ctx.bezierCurveTo(s*0.56,s*0.32,s*0.58,-s*0.16,s*0.32,-s*0.10);ctx.stroke();
-  ctx.strokeStyle=body;ctx.lineWidth=s*0.10;ctx.lineCap='round';
-  ctx.beginPath();ctx.moveTo(-s*0.10,s*0.28);ctx.lineTo(-s*0.10+sw*s*0.04,s*0.44-lfL);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(s*0.10,s*0.28);ctx.lineTo(s*0.10+sw2*s*0.04,s*0.44-lfR);ctx.stroke();
-  ctx.fillStyle=inner;
-  ctx.beginPath();ctx.ellipse(-s*0.10+sw*s*0.04,s*0.46-lfL,s*0.08,s*0.05,0,0,7);ctx.fill();
-  ctx.beginPath();ctx.ellipse(s*0.10+sw2*s*0.04,s*0.46-lfR,s*0.08,s*0.05,0,0,7);ctx.fill();
-  ctx.strokeStyle=body;ctx.lineWidth=s*0.075;
-  ctx.beginPath();ctx.moveTo(-s*0.15,s*0.02);ctx.lineTo(-s*0.24-sw2*s*0.03,s*0.16);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(s*0.15,s*0.02);ctx.lineTo(s*0.24-sw*s*0.03,s*0.16);ctx.stroke();
-  ctx.fillStyle=inner;
-  ctx.beginPath();ctx.arc(-s*0.24-sw2*s*0.03,s*0.17,s*0.05,0,7);ctx.fill();
-  ctx.beginPath();ctx.arc(s*0.24-sw*s*0.03,s*0.17,s*0.05,0,7);ctx.fill();
-  ctx.fillStyle=body;ctx.beginPath();ctx.ellipse(0,s*0.14,s*0.20,s*0.24,0,0,7);ctx.fill();
-  ctx.fillStyle=belly;ctx.beginPath();ctx.ellipse(0,s*0.17,s*0.13,s*0.18,0,0,7);ctx.fill();
-  drawFace();
+function drawJerryPet(ctx, s, lp, moving, hunger, action, ap, t, pal, view) {
+  const art = jerrySheet();
+  if (!art.naturalWidth) return;   // sheet still downloading
+  const col = moving ? 1 + Math.floor(lp * JERRY_STEP_RATE) % JERRY_WALK : 0;
+  const h = s * JERRY_DRAW_H, w = h * JERRY_CELL_W / JERRY_CELL_H;
+  ctx.drawImage(art, col * JERRY_CELL_W, 0, JERRY_CELL_W, JERRY_CELL_H,
+    -w / 2, s * JERRY_FEET_Y - h, w, h);
 }

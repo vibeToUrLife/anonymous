@@ -195,15 +195,9 @@
         { key: 'blue',    name: 'Sky Blue', body: '#8fb6ef', patch: '#333333' },
         { key: 'mint',    name: 'Mint',     body: '#8ed9b2', patch: '#333333' },
       ],
-      jerry: [
-        { key: 'ochre',   name: 'Ochre',   body: '#c8893f', belly: '#f4e0b8', inner: '#eab595', tail: '#b87c34' },
-        { key: 'brown',   name: 'Brown',   body: '#9c6b42', belly: '#e7cca7', inner: '#e2a887', tail: '#8a5c38' },
-        { key: 'grey',    name: 'Grey',    body: '#9aa0a6', belly: '#e5e7eb', inner: '#e2b0b0', tail: '#8f959b' },
-        { key: 'white',   name: 'White',   body: '#e6e0d4', belly: '#fbf7ee', inner: '#f0c4b2', tail: '#d8d2c6' },
-      ],
-      // No tom or capybara entry on purpose: those two are drawn from artwork
-      // (games/pets/img/*.png) rather than canvas paths, so they ship in a
-      // single coat. The status bar hides the colour dots when a type has no
+      // No tom, jerry or capybara entry on purpose: those three are drawn from
+      // artwork (games/pets/img/*.png) rather than canvas paths, so they ship in
+      // a single coat. The status bar hides the colour dots when a type has no
       // palette, which is exactly what we want here.
     };
 

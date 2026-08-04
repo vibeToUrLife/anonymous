@@ -701,8 +701,8 @@
 
           ctx.save();
           ctx.translate(px, py);
-          // Jerry turns to face his travel direction; only his side view mirrors
-          // L/R. Every other pet mirrors by facing as before.
+          // The capybara stops and turns to the player; every other pet mirrors
+          // by facing.
           const petView = FACING_PETS[p.type]
             ? (st.stopped ? 'front' : 'side')
             : petViewForState(p.type, st, moving);
@@ -1505,9 +1505,8 @@
         case 'fox':    drawFoxPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
         case 'panda':  drawPandaPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
         case 'goose':  drawGoosePet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
-        // Sprite-based; picks its own frame from `moving`, so it ignores `view`.
+        // Sprite-based; both pick their own frame from `moving`, so they ignore `view`.
         case 'tom':    drawTomPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
-        // Upright character with three views (front/side/back).
         case 'jerry':  drawJerryPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
         // Sprite-based; `view` switches it to the front-facing sitting pose.
         case 'capybara': drawCapybaraPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
@@ -1515,11 +1514,11 @@
       }
     }
 
-    // Jerry is upright and faces his travel direction: across → side (mirrored by
-    // facingRight), toward the viewer → front, away → back. Idle keeps the last view.
-    // Every other pet reports 'front' and mirrors by facing — including Tom, whose
-    // artwork is side-on whenever he walks, so it must follow facingRight.
-    const DIRECTIONAL_PETS = { jerry: true };
+    // Nothing is directional now. Jerry used to turn to face his travel direction,
+    // but his art is a sprite sheet that is side-on whenever he walks, like Tom's,
+    // so he has to follow facingRight instead. Every pet reports 'front' and
+    // mirrors by facing; the hook stays for any pet drawn per-direction later.
+    const DIRECTIONAL_PETS = {};
     // Pets that stop and turn to face the player while they are selected. Kept
     // separate from DIRECTIONAL_PETS because this is not about travel direction:
     // the capybara's front artwork is a SITTING pose, so it may only be shown
