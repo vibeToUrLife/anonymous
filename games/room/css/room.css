@@ -1156,9 +1156,14 @@
     .ws-choose .ws-recipe small{display:inline-block;margin-top:1px}
     /* How many of the product a recipe makes you already hold. Floated so it
        parks on the right edge of the row's FIRST line, whatever the name and
-       ingredients underneath wrap to. */
-    .ws-have{float:right;margin-left:8px;font-size:12px;font-weight:800;color:var(--g-ink-soft);white-space:nowrap}
-    .ws-have.none{opacity:.4;font-weight:700}
+       ingredients underneath wrap to. The row is a brand-orange button, so the
+       count is inked in the button's own dark brown — NOT the light
+       --g-ink-soft (a label colour meant for dark panels), which washed out to
+       ~1.2:1 on orange and left the number unreadable. A faint dark chip locks
+       in contrast anywhere along the gradient and reads as the stock badge it is. */
+    .ws-have{float:right;margin-left:8px;font-size:12px;font-weight:800;color:#2a1c08;
+      background:rgba(42,28,8,.14);padding:1px 7px;border-radius:999px;white-space:nowrap}
+    .ws-have.none{opacity:.55;font-weight:700}
 
     /* Rows — dotted separators, quiet by default */
     .farm-shop-row,.farm-herd-row,.farm-food-row{
