@@ -237,6 +237,19 @@
       shoe_rack:  { dir: 'furniture', w: 0.087 },
       rocket:     { dir: 'furniture', w: 0.032 },
       minifridge: { dir: 'furniture', w: 0.081 },
+      // The pet collection rewards. Bigger than the shop furniture because each
+      // one is a whole habitat rather than a single object, and sized straight
+      // onto the set's common scale — they are new, so there is no old drawing
+      // to stay compatible with.
+      decor_cat_throne:         { dir: 'furniture', w: 0.115 },
+      decor_dog_doghouse:       { dir: 'furniture', w: 0.149 },
+      decor_bunny_garden:       { dir: 'furniture', w: 0.232 },
+      decor_hamster_playground: { dir: 'furniture', w: 0.139 },
+      decor_fox_den:            { dir: 'furniture', w: 0.156 },
+      decor_panda_garden:       { dir: 'furniture', w: 0.255 },
+      decor_goose_pond:         { dir: 'furniture', w: 0.209 },
+      decor_tom_armchair:       { dir: 'furniture', w: 0.146 },
+      decor_jerry_mousehole:    { dir: 'furniture', w: 0.152 },
       // Wall hangings
       clock:       { dir: 'wall', w: 0.056, hangs: true },
       shelf:       { dir: 'wall', w: 0.119, hangs: true },
