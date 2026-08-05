@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>有什么更新了 · 房间全部换成手绘图</title>
+<style>
+  :root{
+    --bg:#faf3ea; --card:#fffdf9; --ink:#34271c; --soft:#6b5847; --faint:#9b8a78;
+    --primary:#c07b3f; --border:rgba(154,86,18,.14); --chip:rgba(154,86,18,.07);
+    --tag-old:#9b8a78; --tag-new:#3f8f5a;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#1b140e; --card:#241b14; --ink:#f1e8dd; --soft:#c3b3a2; --faint:#8c7c6c;
+      --primary:#d99a55; --border:rgba(255,228,194,.14); --chip:rgba(255,228,194,.08);
+      --tag-old:#8c7c6c; --tag-new:#5fb37c; }
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--ink); overflow:hidden;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;
+    display:flex; flex-direction:column; height:100vh; -webkit-text-size-adjust:100%;
+  }
+
+  /* ── chrome: dots on top, three buttons at the bottom — same as the farm and
+     capybara decks, so every What's New page feels like the same product ── */
+  .dots{display:flex; gap:7px; justify-content:center; padding:13px 0 3px; flex:none}
+  .dot{width:7px; height:7px; border-radius:999px; background:var(--border); transition:all .3s; cursor:pointer}
+  .dot.on{width:22px; background:var(--primary)}
+
+  .track{position:relative; flex:1; min-height:0; overflow:hidden; touch-action:pan-y}
+  .slide{
+    position:absolute; inset:0; overflow-y:auto; overscroll-behavior:contain;
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+    text-align:center; padding:6px 20px 12px;
+    opacity:0; transform:translateX(26px); pointer-events:none;
+    transition:opacity .28s ease, transform .28s cubic-bezier(.22,.61,.36,1);
+  }
+  .slide.on{opacity:1; transform:none; pointer-events:auto}
+  .slide.left{transform:translateX(-26px)}
+  /* Auto margins, not justify-content:center. These slides carry two room shots
+     each and outgrow a phone; centring an overflowing flex child pushes its top
+     off the top of the scroll box where you cannot reach it — the "之前" label
+     was the first casualty. Auto margins centre when it fits and give up when
+     it does not. */
+  .inner{width:100%; max-width:430px; margin:auto 0}
+
+  h2{font-size:clamp(21px,6vw,27px); font-weight:900; line-height:1.3; letter-spacing:-.2px}
+  .lead{color:var(--soft); font-size:14.5px; line-height:1.75; margin-top:11px}
+  .lead b{color:var(--ink); font-weight:800}
+  .lead .hi{color:var(--primary); font-weight:900}
+  .foot{color:var(--faint); font-size:11.5px; line-height:1.6; margin-top:15px}
+  .kick{
+    display:inline-block; font-size:10.5px; font-weight:900; letter-spacing:1.2px;
+    color:var(--primary); background:var(--chip); border-radius:999px;
+    padding:4px 13px; margin-bottom:14px;
+  }
+
+  .nav{display:flex; align-items:center; justify-content:space-between; gap:12px; flex:none;
+    padding:9px 20px calc(15px + env(safe-area-inset-bottom,0px))}
+  .skip{background:none; border:none; color:var(--faint); font-size:13px; cursor:pointer; padding:8px; font-family:inherit}
+  .prev{
+    margin-left:auto; flex:none; cursor:pointer; font-family:inherit;
+    padding:11px 15px; border-radius:999px; font-size:14px; font-weight:700;
+    color:var(--soft); background:none; border:1px solid var(--border);
+    transition:transform .1s, opacity .15s, filter .15s;
+  }
+  .prev:hover{filter:brightness(1.06)} .prev:active{transform:translateY(1px)}
+  .prev[disabled]{opacity:.3; cursor:default; pointer-events:none}
+  .next{
+    flex:1; max-width:230px; border:none; cursor:pointer; font-family:inherit;
+    padding:12px 20px; border-radius:999px; font-size:15px; font-weight:800; color:#fff;
+    background:linear-gradient(135deg,#d99a55,#b5713a); box-shadow:0 8px 20px rgba(181,113,58,.35);
+    transition:transform .1s, filter .15s;
+  }
+  .next:active{transform:translateY(1px)} .next:hover{filter:brightness(1.04)}
+  @media (max-width: 360px){ .prev span{display:none} .prev{padding:11px 13px} }
+
+  /* ── the before/after pair ──
+     Stacked, not side by side: at 430px a room cut in half is too small to read
+     the very thing the slide is about. Each shot carries its own label so the
+     order is never in doubt. */
+  .compare{display:flex; flex-direction:column; gap:9px; margin-bottom:15px}
+  .shot{
+    position:relative; border-radius:12px; overflow:hidden;
+    border:1px solid var(--border); background:var(--card);
+    box-shadow:0 4px 14px rgba(60,40,20,.09);
+  }
+  .shot img{display:block; width:100%; height:auto}
+  .shot .tag{
+    position:absolute; top:7px; left:7px;
+    font-size:10px; font-weight:900; letter-spacing:.7px; color:#fff;
+    padding:3px 9px; border-radius:999px; background:var(--tag-old);
+    box-shadow:0 2px 6px rgba(0,0,0,.22);
+    /* Needed because of the filter below. A filtered element gets its own
+       stacking context and is painted alongside positioned siblings in tree
+       order — the picture comes second, so without this it paints straight
+       over the label and only the unfiltered "现在" one shows up. */
+    z-index:1;
+  }
+  .shot.new .tag{background:var(--tag-new)}
+  .shot.old img{filter:saturate(.92)}
+
+  /* The count strip on the opening slide. */
+  .counts{display:flex; justify-content:center; gap:11px; margin-top:13px; flex-wrap:wrap}
+  .counts div{
+    background:var(--chip); border-radius:11px; padding:8px 13px; min-width:78px;
+    border:1px solid var(--border);
+  }
+  .counts b{display:block; font-size:19px; font-weight:900; color:var(--primary); line-height:1.2}
+  .counts span{font-size:11px; color:var(--faint)}
+
+  /* The nine grid on the reward slide. */
+  .grid9{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:5px;
+    width:118px; margin:0 auto 12px; padding:8px;
+    background:var(--chip); border:1px solid var(--border); border-radius:12px;
+  }
+  .grid9 span{font-size:19px; line-height:1.25}
+</style>
+</head>
+<body>
+  <div class="dots" id="dots"></div>
+  <div class="track" id="track">
+
+    <!-- 1 · 整个房间 -->
+    <section class="slide on">
+      <div class="inner">
+        <div class="compare">
+          <div class="shot old"><span class="tag">之前</span><img src="./img/room-before.png" alt="之前的房间，家具是程式画的色块"></div>
+          <div class="shot new"><span class="tag">现在</span><img src="./img/room-after.png" alt="现在的房间，家具是手绘图"></div>
+        </div>
+        <div class="kick">房间大改造</div>
+        <h2>整个房间<br>重新画过了 🏠</h2>
+        <p class="lead">以前房间里每一件东西，都是程式用<b>一条线一个圆</b>拼出来的色块。<br>现在<span class="hi">全部换成手绘图</span>。</p>
+        <div class="counts">
+          <div><b>31</b><span>地板家具</span></div>
+          <div><b>28</b><span>墙上挂饰</span></div>
+          <div><b>9</b><span>收集奖励</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 · 挂饰 -->
+    <section class="slide">
+      <div class="inner">
+        <div class="compare">
+          <div class="shot old"><span class="tag">之前</span><img src="./img/wall-before.png" alt="之前的墙上挂饰，是简单几何色块"></div>
+          <div class="shot new"><span class="tag">现在</span><img src="./img/wall-after.png" alt="现在的墙上挂饰，是手绘图"></div>
+        </div>
+        <div class="kick">墙上 28 件</div>
+        <h2>挂饰终于<br>看得出是什么了</h2>
+        <p class="lead">时钟、层架、地图、飞镖靶、花环、编织挂饰、武士刀、毕业证书……<br><span class="hi">一件一件重画</span>，连花环中间的洞都是真的透的。</p>
+        <p class="foot">🏠 我的房间 → 🛒 商店 → 装饰 → 墙上</p>
+      </div>
+    </section>
+
+    <!-- 3 · 九宫格奖励 -->
+    <section class="slide">
+      <div class="inner">
+        <div class="grid9">
+          <span>🌿</span><span>🐾</span><span>🍉</span>
+          <span>🍊</span><span>♨️</span><span>🐦</span>
+          <span>💎</span><span>👑</span><span>🏆</span>
+        </div>
+        <div class="compare">
+          <div class="shot old"><span class="tag">之前</span><img src="./img/reward-before.png" alt="之前的收集奖励，只是系统 emoji"></div>
+          <div class="shot new"><span class="tag">现在</span><img src="./img/reward-after.png" alt="现在的收集奖励，是画好的宠物窝"></div>
+        </div>
+        <div class="kick">集满九宫格</div>
+        <h2>奖励不再是<br>一个 emoji 了</h2>
+        <p class="lead">养宠物集满九宫格解锁的窝，以前就是个 <b>👑</b>、一个 <b>🏠</b>。<br>现在每一只都有<span class="hi">自己的一整个窝</span> — 猫的王座、兔子的花园、狐狸的树洞。</p>
+        <p class="foot">点宠物 → 🎁 收集，看自己集到哪了</p>
+      </div>
+    </section>
+
+    <!-- 4 · 大小 -->
+    <section class="slide">
+      <div class="inner">
+        <div class="compare">
+          <div class="shot old"><span class="tag">之前</span><img src="./img/scale-before.png" alt="之前的比例，落地灯跟边桌差不多高"></div>
+          <div class="shot new"><span class="tag">现在</span><img src="./img/scale-after.png" alt="现在的比例，落地灯明显比边桌高"></div>
+        </div>
+        <div class="kick">顺手修的</div>
+        <h2>大小也重新<br>量过一遍 📏</h2>
+        <p class="lead">以前<b>小东西画太大、大东西画太小</b> — 一个挂钟画得跟层架一样宽，一盏 1.6 米的落地灯比边桌高不了多少。<br>现在<span class="hi">照真实尺寸重新校准</span>。</p>
+        <p class="foot">没有校到完全写实 — 那样蓝牙音响会小到点不到</p>
+      </div>
+    </section>
+
+    <!-- 5 · 收尾 -->
+    <section class="slide">
+      <div class="inner">
+        <div class="compare">
+          <!-- No label here: there is nothing beside it to be the other half of -->
+          <div class="shot new"><img src="./img/room-after.png" alt="换新之后的房间"></div>
+        </div>
+        <div class="kick">要做什么吗</div>
+        <h2>什么都不用做</h2>
+        <p class="lead">你原本买的、摆的<b>一件都没有变</b>，位置也都还在。<br>下次打开房间，它们就是新的样子了。</p>
+        <p class="foot">🏠 我的房间 · 直接拖就能换位置</p>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="nav">
+    <button class="skip" id="skip">跳过</button>
+    <button class="prev" id="prev" type="button" aria-label="上一个" disabled>←<span> 上一个</span></button>
+    <button class="next" id="next">下一个 →</button>
+  </div>
+
+<script>
+var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+var dotsBox = document.getElementById('dots');
+var track = document.getElementById('track');
+var next = document.getElementById('next');
+var prev = document.getElementById('prev');
+var i = 0;
+
+slides.forEach(function(_, k){
+  var d = document.createElement('span');
+  d.className = 'dot' + (k === 0 ? ' on' : '');
+  d.addEventListener('click', function(){ go(k); });
+  dotsBox.appendChild(d);
+});
+var dots = Array.prototype.slice.call(dotsBox.children);
+
+function go(n){
+  n = Math.max(0, Math.min(slides.length - 1, n));
+  slides.forEach(function(s, k){ s.classList.toggle('on', k === n); s.classList.toggle('left', k < n); });
+  dots.forEach(function(d, k){ d.classList.toggle('on', k === n); });
+  slides[n].scrollTop = 0;
+  i = n;
+  prev.disabled = (i === 0);
+  next.textContent = (i === slides.length - 1) ? '知道了 👍' : '下一个 →';
+}
+next.addEventListener('click', function(){ i >= slides.length - 1 ? done() : go(i + 1); });
+prev.addEventListener('click', function(){ go(i - 1); });
+document.getElementById('skip').addEventListener('click', done);
+document.addEventListener('keydown', function(e){
+  if (e.key === 'ArrowLeft') { go(i - 1); }
+  else if (e.key === 'ArrowRight' && i < slides.length - 1) { go(i + 1); }
+});
+
+/* Swipe. The track is touch-action:pan-y, so a vertical drag still scrolls a
+   long slide; only a clearly horizontal one turns the page. */
+var x0 = null, y0 = 0, moved = false;
+track.addEventListener('pointerdown', function(e){ x0 = e.clientX; y0 = e.clientY; moved = false; });
+track.addEventListener('pointermove', function(e){
+  if (x0 === null) return;
+  var dx = Math.abs(e.clientX - x0);
+  if (dx > 12 && dx > Math.abs(e.clientY - y0)) moved = true;
+});
+track.addEventListener('pointerup', function(e){
+  if (x0 === null) return;
+  var dx = e.clientX - x0, dy = e.clientY - y0;
+  x0 = null;
+  if (moved && Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+    if (dx < 0 && i < slides.length - 1) go(i + 1);
+    else if (dx > 0) go(i - 1);
+  }
+});
+track.addEventListener('pointercancel', function(){ x0 = null; });
+
+// Inside the What's New overlay, index.html owns this page, so 跳过 and 知道了
+// ask it to close — closing already puts you back on index. Opened standalone
+// there is no parent to ask, so walk back to index ourselves.
+function done(){
+  if (window.parent === window) { location.href = '../index.html'; return; }
+  try { parent.postMessage('wn-close', '*'); } catch (e) {}
+}
+
+go(0);
+</script>
+</body>
+</html>
