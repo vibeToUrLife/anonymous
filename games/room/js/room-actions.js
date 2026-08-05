@@ -271,6 +271,22 @@
       showToast(T('Removed from room!'), 'success');
     }
 
+    /* Mirror a placed piece left-to-right. Every placed thing can be flipped —
+       furniture, wall hangings and the collection rewards alike — because a
+       lamp that only ever leans one way boxes the room into one arrangement.
+       The flag lives on the placed entry beside x and y, so it is per floor,
+       it saves with the position, and it is dropped when the piece is put away
+       exactly as the position is. */
+    async function flipDecor(id) {
+      if (viewingUid !== currentUid) return;
+      const p = (roomData.placedDecors || []).find(d => d.id === id);
+      if (!p) return;
+      p.flip = !p.flip;
+      await saveRoom();
+      renderDecorShop();
+      showToast('↔️ ' + (p.flip ? T('Flipped!') : T('Flipped back!')), 'success');
+    }
+
     async function buyWall(id) {
       if (viewingUid !== currentUid) return;
       const item = WALL_PATTERNS.find(w => w.id === id);

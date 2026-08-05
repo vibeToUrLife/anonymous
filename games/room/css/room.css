@@ -301,6 +301,12 @@
     .shop-btn.equip { background: rgba(255,122,92,0.12); color: var(--g-accent); border: 1px solid rgba(255,122,92,0.25); }
     .shop-btn.equip:hover { background: rgba(255,122,92,0.2); }
     .shop-btn.equipped-btn { background: rgba(43,168,106,0.12); color: #2BA86A; }
+    /* ↔️ Mirror a placed piece. Quiet while the piece stands the way it was
+       drawn, lit like an equipped choice once it has been turned round — the
+       card is the only place that says which way round it currently is. */
+    .shop-btn.flip { background: var(--g-slot); color: var(--g-ink-soft); border: 1px solid var(--g-border); }
+    .shop-btn.flip:hover { background: var(--g-card-hover); color: var(--g-ink); }
+    .shop-btn.flip.on { background: rgba(255,122,92,0.12); color: var(--g-accent); border-color: rgba(255,122,92,0.25); }
     .shop-btn.upgrade { background: linear-gradient(135deg, #059669, #34d399); color: #fff; }
     .shop-btn:disabled { opacity: 0.35; cursor: not-allowed; }
     .shop-section-title {

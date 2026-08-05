@@ -584,6 +584,14 @@
         ctx.fillStyle = fg; ctx.fillRect(0, h * 0.3, w, h * 0.7);
       }
 
+      /* Mirrored in the room → mirrored on its card, so the ↔️ button shows what
+         it did. Applied after the background (which is horizontally uniform)
+         and never undone, because nothing else draws on this canvas afterwards;
+         fitCanvas resets the transform on the next repaint. */
+      if (typeof isDecorFlipped === 'function' && isDecorFlipped(decorId)) {
+        ctx.translate(cx, 0); ctx.scale(-1, 1); ctx.translate(-cx, 0);
+      }
+
       // Each decor — mini version
       const art = typeof decorArt === 'function' ? decorArt(decorId) : null;
       if (art) {
@@ -807,7 +815,14 @@
           const canAfford = roomData.coins >= item.cost;
           let btnHtml = '';
           if (isPlaced) {
+            // Flip sits with Remove rather than in the room itself: a placed
+            // piece is dragged by touch, so an in-room gesture would have to
+            // share with the drag. Highlighted while mirrored, so the card says
+            // which way round the piece currently stands.
+            const flipped = typeof isDecorFlipped === 'function' && isDecorFlipped(item.id);
             btnHtml = '<button class="shop-btn equipped-btn" disabled>✓ ' + T('In Room') + '</button>' +
+              '<button class="shop-btn flip' + (flipped ? ' on' : '') + '" style="margin-top:4px" ' +
+              'onclick="flipDecor(\'' + item.id + '\')">↔️ ' + T('Flip') + '</button>' +
               '<button class="shop-btn" style="margin-top:4px;background:rgba(239,68,68,0.2);color:#f87171" onclick="removeDecor(\'' + item.id + '\')">' + T('Remove') + '</button>';
           } else if (isOwned) {
             btnHtml = '<button class="shop-btn equip" onclick="placeDecor(\'' + item.id + '\')">' + T('Place') + '</button>';

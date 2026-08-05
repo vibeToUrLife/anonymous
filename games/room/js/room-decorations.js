@@ -11,6 +11,28 @@
       return p || (def ? { id, x: def.dx, y: def.dy } : { id, x: 0.5, y: 0.5 });
     }
 
+    /* Is this placed piece mirrored? The flag rides on the placed entry next to
+       x and y, so it is per floor and per room and travels with a save the same
+       way a position does. Anything never flipped simply has no flag. */
+    function isDecorFlipped(id) {
+      const p = roomData.placedDecors && roomData.placedDecors.find(d => d.id === id);
+      return !!(p && p.flip);
+    }
+
+    /* Draw `paint` mirrored left-to-right about the vertical line through `cx`
+       (canvas pixels). Every box below is symmetric about that same line, so a
+       mirrored piece keeps its footprint and its tap target exactly — the only
+       thing that turns round is what is painted inside it. */
+    function drawMirrored(ctx, cx, flipped, paint) {
+      if (!flipped) { paint(); return; }
+      ctx.save();
+      ctx.translate(cx, 0);
+      ctx.scale(-1, 1);
+      ctx.translate(-cx, 0);
+      paint();
+      ctx.restore();
+    }
+
     /* The hot spring is a picture, not canvas paths. Loaded on FIRST DRAW, not
        on page load: only a player who finished the capybara's collection ever
        places it, so nobody else pays for the download. */
@@ -51,6 +73,13 @@
       const rugCX = pos ? pos.x * rw : rw * 0.38;
       const rugCY = pos ? pos.y * rh : floorY + (rh - floorY) * 0.5;
       const rugRX = rw * 0.13, rugRY = (rh - floorY) * 0.2;
+
+      /* A mirrored rug turns about its own centre. Only the patterned ones
+         change — the zebra's slanted stripes, the checker's offset — but the
+         flip is offered on every placed piece, so it is honoured on every one. */
+      if (placedRug && placedRug.flip) {
+        ctx.translate(rugCX, 0); ctx.scale(-1, 1); ctx.translate(-rugCX, 0);
+      }
 
       let fillColor = '#9c3c3c';
       let borderColor = '#8c3232';
@@ -341,7 +370,10 @@
       if (order) placed.sort(order);
       placed.forEach(d => {
         const box = decorArtBox(d.id, d.x, d.y, rw, rh);
-        if (box) ctx.drawImage(box.art, box.x, box.y, box.w, box.h);
+        if (!box) return;
+        drawMirrored(ctx, box.x + box.w / 2, d.flip, () => {
+          ctx.drawImage(box.art, box.x, box.y, box.w, box.h);
+        });
       });
     }
 
@@ -358,7 +390,9 @@
         ctx.save();
         ctx.font = Math.round(rw * size) + 'px sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(def.emoji, d.x * rw, d.y * rh);
+        drawMirrored(ctx, d.x * rw, d.flip, () => {
+          ctx.fillText(def.emoji, d.x * rw, d.y * rh);
+        });
         ctx.restore();
       });
     }
@@ -382,8 +416,12 @@
           const pos = getDecorPos('decor_capybara_onsen');
           const w = rw * ONSEN_W;
           const h = w * art.naturalHeight / art.naturalWidth;
-          // pos.y is the base line, same convention the furniture uses
-          ctx.drawImage(art, pos.x * rw - w / 2, pos.y * rh - h, w, h);
+          // pos.y is the base line, same convention the furniture uses. The
+          // mirror turns about the spring's centre, which is exactly where a
+          // soaking pet is parked — so flipping the bath never moves the bather.
+          drawMirrored(ctx, pos.x * rw, pos.flip, () => {
+            ctx.drawImage(art, pos.x * rw - w / 2, pos.y * rh - h, w, h);
+          });
         }
       }
 
