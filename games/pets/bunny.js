@@ -1,62 +1,74 @@
-/* ── Bunny ── */
+/* ── Bunny ──
+   Drawn from artwork rather than canvas paths, exactly like cat.js. One
+   sheet (img/bunny.png) holds equal cells that all stand on the cell's floor, so
+   changing pose never shifts the paws: cell 0 is the idle, sitting and facing
+   you, cells 1-2 are the walk seen from the side, cell 3 is asleep.
+   The walk cells face RIGHT — the direction the room treats as unmirrored — so
+   walking left is the room's own flip and nothing here has to know about it.
 
-function drawBunnyPet(ctx, s, lp, moving, hunger, action, ap, t, pal) {
-  const sleeping  = action === 'sleep' || action === 'nap';
-  const bodyColor = pal ? pal.body      : '#f0f0f0';
-  const pinkColor = pal ? pal.pink      : '#ffb6c1';
-  const tailColor = pal ? pal.tail      : '#fff';
-  const tailShade = pal ? pal.tailShade : '#eee';
-  // Cotton-ball tail
-  ctx.fillStyle = tailColor;
-  ctx.beginPath(); ctx.arc(-s*0.42, 0, s*0.12, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = tailShade;
-  ctx.beginPath(); ctx.arc(-s*0.44, -s*0.03, s*0.05, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(-s*0.38,  s*0.04, s*0.04, 0, Math.PI*2); ctx.fill();
-  // Body
-  ctx.fillStyle = bodyColor;
-  ctx.beginPath(); ctx.ellipse(0, 0, s*0.42, s*0.35, 0, 0, Math.PI*2); ctx.fill();
-  // Head
-  ctx.beginPath(); ctx.arc(s*0.3, -s*0.16, s*0.26, 0, Math.PI*2); ctx.fill();
-  // Long ears
-  ctx.beginPath(); ctx.ellipse(s*0.2, -s*0.58, s*0.065, s*0.26, -0.15, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(s*0.4, -s*0.55, s*0.065, s*0.24,  0.15, 0, Math.PI*2); ctx.fill();
-  // Inner ears
-  ctx.fillStyle = pinkColor;
-  ctx.beginPath(); ctx.ellipse(s*0.2, -s*0.58, s*0.035, s*0.2,  -0.15, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(s*0.4, -s*0.55, s*0.035, s*0.18,  0.15, 0, Math.PI*2); ctx.fill();
-  // Eyes
-  if (sleeping) {
-    drawSleepEyes(ctx, s, s*0.22, -s*0.2, s*0.38, -s*0.2, s*0.04);
-  } else {
-    ctx.fillStyle = hunger > 20 ? '#c44' : '#833';
-    ctx.beginPath(); ctx.arc(s*0.22, -s*0.2, s*0.04, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(s*0.38, -s*0.2, s*0.04, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(s*0.23, -s*0.21, s*0.015, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(s*0.39, -s*0.21, s*0.015, 0, Math.PI*2); ctx.fill();
-  }
-  // Y-shaped nose
-  ctx.fillStyle = pinkColor;
-  ctx.beginPath(); ctx.moveTo(s*0.28,-s*0.11); ctx.lineTo(s*0.3,-s*0.08); ctx.lineTo(s*0.32,-s*0.11); ctx.fill();
-  // Mouth line
-  ctx.strokeStyle = '#caa'; ctx.lineWidth = s * 0.008;
-  ctx.beginPath(); ctx.moveTo(s*0.3,-s*0.08); ctx.lineTo(s*0.3,-s*0.04); ctx.stroke();
-  // Buck teeth
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(s*0.275, -s*0.04, s*0.025, s*0.035);
-  ctx.fillRect(s*0.305, -s*0.04, s*0.025, s*0.035);
-  ctx.strokeStyle = '#ddd'; ctx.lineWidth = s * 0.005;
-  ctx.strokeRect(s*0.275, -s*0.04, s*0.025, s*0.035);
-  ctx.strokeRect(s*0.305, -s*0.04, s*0.025, s*0.035);
-  // Cheek blush
-  ctx.fillStyle = 'rgba(255,182,193,0.35)';
-  ctx.beginPath(); ctx.arc(s*0.15, -s*0.1, s*0.045, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(s*0.45, -s*0.1, s*0.045, 0, Math.PI*2); ctx.fill();
-  // Whiskers
-  ctx.strokeStyle = '#ccc'; ctx.lineWidth = s * 0.006;
-  ctx.beginPath(); ctx.moveTo(s*0.17,-s*0.1);  ctx.lineTo(s*0.02,-s*0.13); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(s*0.17,-s*0.07);  ctx.lineTo(s*0.02,-s*0.05); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(s*0.43,-s*0.1);  ctx.lineTo(s*0.58,-s*0.13); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(s*0.43,-s*0.07); ctx.lineTo(s*0.58,-s*0.05); ctx.stroke();
-  if (!sleeping) drawPetLegs(ctx, s * 0.9, lp, moving, bodyColor);
+   `pal` is ignored: the artwork ships in one coat, which is why room-base.js no
+   longer lists a bunny palette and the status bar stops offering colour dots.
+
+   Unlike Tom, this sheet has a real sleeping pose, so sleep and nap use it
+   instead of being faked by tilting the body — see OWN_SLEEP_POSE in
+   room-pets.js, which stops the lie-down transform from tipping over a bunny that
+   is already lying down.
+
+   The sheet is packed from rabbit.jpeg: the artwork is filed under the animal,
+   the sheet under the pet id the rest of the game keys off. */
+/* How many cells the sheet holds, in order: idle, walk, walk, asleep. The cells'
+   pixel size is NOT written down — it is read off the loaded image, because a
+   number copied from the sheet into here is a number that goes stale the next
+   time the sheet is repacked, and a stale one silently crops every pose. */
+const BUNNY_CELLS = 4;
+const BUNNY_WALK_FROM = 1;    // first walk cell
+const BUNNY_WALK_N = 2;       // how many walk cells
+const BUNNY_DRAW_W = 1.50;    // drawn width, as a fraction of the pet size
+const BUNNY_FEET_Y = 0.38;    // where the cell's ground line sits below the origin
+/* Walk cells per unit of the room's leg phase, which advances 10 a second, so
+   the two-cell loop is a stride every 0.4s — each pose held about a fifth of
+   a second. Two frames is deliberate: these drawings amble rather than
+   stride, and two poses far enough apart read as a step where all eight read
+   as a shimmer. Which two is a judgement, made by eye off the numbered source
+   sheet; the packer measures the choice but does not overrule it. */
+const BUNNY_STEP_RATE = 0.5;
+
+/* The cell each pose lives in. 'walk' is deliberately absent: it has no single
+   cell, being picked from the leg phase. */
+const BUNNY_POSE_CELL = { front: 0, sleep: 3 };
+
+/* Which pose the bunny is in. It lives out here rather than inside the draw call
+   because the accessory code has to ask the same question — the head sits half
+   a body apart between the front and side poses, so a hat can only be placed
+   once the pose is known, and both answers have to come from one place. */
+function bunnyPose(moving, action) {
+  if (moving) return 'walk';
+  if (action === 'sleep' || action === 'nap') return 'sleep';
+  return 'front';
+}
+
+// Resolved against this file's own URL, because the three pages that load it
+// (room, world, index) sit at different depths. Fetched on first draw rather
+// than at load: a page with no bunny on it must not pay for the sheet.
+const BUNNY_SRC = new URL('img/bunny.png', document.currentScript.src).href;
+let _bunnySheet = null;
+function bunnySheet() {
+  if (!_bunnySheet) { _bunnySheet = new Image(); _bunnySheet.src = BUNNY_SRC; }
+  return _bunnySheet;
+}
+
+function drawBunnyPet(ctx, s, lp, moving, hunger, action, ap, t, pal, view) {
+  const art = bunnySheet();
+  if (!art.naturalWidth) return;   // sheet still downloading
+
+  const pose = bunnyPose(moving, action);
+  const col = pose === 'walk'
+    ? BUNNY_WALK_FROM + Math.floor(lp * BUNNY_STEP_RATE) % BUNNY_WALK_N
+    : BUNNY_POSE_CELL[pose];
+
+  const cellW = art.naturalWidth / BUNNY_CELLS, cellH = art.naturalHeight;
+  const w = s * BUNNY_DRAW_W;
+  const h = w * cellH / cellW;
+  ctx.drawImage(art, col * cellW, 0, cellW, cellH,
+    -w / 2, s * BUNNY_FEET_Y - h, w, h);
 }

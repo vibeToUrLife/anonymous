@@ -232,6 +232,8 @@
         jerry:    () => typeof jerrySheet === 'function' && jerrySheet(),
         cat:      () => typeof catSheet === 'function' && catSheet(),
         dog:      () => typeof dogSheet === 'function' && dogSheet(),
+        bunny:    () => typeof bunnySheet === 'function' && bunnySheet(),
+        panda:    () => typeof pandaSheet === 'function' && pandaSheet(),
         capybara: () => typeof CAPY_SHEET !== 'undefined' && CAPY_SHEET,
       };
       const art = sheetOf[petType] ? sheetOf[petType]() : null;

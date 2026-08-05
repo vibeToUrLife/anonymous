@@ -13,8 +13,11 @@
    instead of being faked by tilting the body — see OWN_SLEEP_POSE in
    room-pets.js, which stops the lie-down transform from tipping over a dog that
    is already lying down. */
-const DOG_CELL_W = 256;
-const DOG_CELL_H = 210;
+/* How many cells the sheet holds, in order: idle, walk, walk, asleep. The cells'
+   pixel size is NOT written down — it is read off the loaded image, because a
+   number copied from the sheet into here is a number that goes stale the next
+   time the sheet is repacked, and a stale one silently crops every pose. */
+const DOG_CELLS = 4;
 const DOG_WALK_FROM = 1;    // first walk cell
 const DOG_WALK_N = 2;       // how many walk cells
 const DOG_DRAW_W = 1.50;    // drawn width, as a fraction of the pet size
@@ -60,8 +63,9 @@ function drawDogPet(ctx, s, lp, moving, hunger, action, ap, t, pal, view) {
     ? DOG_WALK_FROM + Math.floor(lp * DOG_STEP_RATE) % DOG_WALK_N
     : DOG_POSE_CELL[pose];
 
+  const cellW = art.naturalWidth / DOG_CELLS, cellH = art.naturalHeight;
   const w = s * DOG_DRAW_W;
-  const h = w * DOG_CELL_H / DOG_CELL_W;
-  ctx.drawImage(art, col * DOG_CELL_W, 0, DOG_CELL_W, DOG_CELL_H,
+  const h = w * cellH / cellW;
+  ctx.drawImage(art, col * cellW, 0, cellW, cellH,
     -w / 2, s * DOG_FEET_Y - h, w, h);
 }

@@ -1,64 +1,71 @@
-/* ── Panda ── */
+/* ── Panda ──
+   Drawn from artwork rather than canvas paths, exactly like cat.js. One
+   sheet (img/panda.png) holds equal cells that all stand on the cell's floor, so
+   changing pose never shifts the paws: cell 0 is the idle, sitting and facing
+   you, cells 1-2 are the walk seen from the side, cell 3 is asleep.
+   The walk cells face RIGHT — the direction the room treats as unmirrored — so
+   walking left is the room's own flip and nothing here has to know about it.
 
-function drawPandaPet(ctx, s, lp, moving, hunger, action, ap, t, pal) {
-  const sleeping = action === 'sleep' || action === 'nap';
-  pal = pal || { body: '#fff', patch: '#333' };
-  const body = pal.body, patch = pal.patch;   // fur + markings (color choices)
-  // Bamboo behind body (when not too hungry)
-  if (hunger > 30) {
-    ctx.strokeStyle = '#5a8a3c'; ctx.lineWidth = s * 0.03; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(-s*0.55, s*0.3); ctx.lineTo(-s*0.35, -s*0.6); ctx.stroke();
-    ctx.strokeStyle = '#4a7a2c'; ctx.lineWidth = s * 0.008;
-    ctx.beginPath(); ctx.moveTo(-s*0.5, s*0.05); ctx.lineTo(-s*0.4, s*0.05); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-s*0.45, -s*0.2); ctx.lineTo(-s*0.35, -s*0.2); ctx.stroke();
-    ctx.fillStyle = '#6aaa4c';
-    ctx.beginPath(); ctx.ellipse(-s*0.3, -s*0.55, s*0.06, s*0.02, -0.8, 0, Math.PI*2); ctx.fill();
-  }
-  // Body (fur)
-  ctx.fillStyle = body;
-  ctx.beginPath(); ctx.ellipse(0, 0, s*0.45, s*0.38, 0, 0, Math.PI*2); ctx.fill();
-  // Shoulders/arms (markings)
-  ctx.fillStyle = patch;
-  ctx.beginPath(); ctx.ellipse(-s*0.3,  -s*0.05, s*0.16, s*0.22, -0.3, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse( s*0.3,  -s*0.05, s*0.16, s*0.22,  0.3, 0, Math.PI*2); ctx.fill();
-  // Head
-  ctx.fillStyle = body;
-  ctx.beginPath(); ctx.arc(s*0.05, -s*0.3, s*0.3, 0, Math.PI*2); ctx.fill();
-  // Round ears (markings)
-  ctx.fillStyle = patch;
-  ctx.beginPath(); ctx.arc(-s*0.16, -s*0.54, s*0.1, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc( s*0.26, -s*0.54, s*0.1, 0, Math.PI*2); ctx.fill();
-  // BIG tilted eye patches
-  ctx.fillStyle = patch;
-  ctx.save(); ctx.translate(-s*0.07, -s*0.32); ctx.rotate(-0.25);
-  ctx.beginPath(); ctx.ellipse(0, 0, s*0.1, s*0.075, 0, 0, Math.PI*2); ctx.fill(); ctx.restore();
-  ctx.save(); ctx.translate(s*0.17, -s*0.32); ctx.rotate(0.25);
-  ctx.beginPath(); ctx.ellipse(0, 0, s*0.1, s*0.075, 0, 0, Math.PI*2); ctx.fill(); ctx.restore();
-  // Eyes
-  if (sleeping) {
-    drawSleepEyes(ctx, s, -s*0.07, -s*0.32, s*0.17, -s*0.32, s*0.03);
-  } else {
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(-s*0.07, -s*0.32, s*0.03, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc( s*0.17, -s*0.32, s*0.03, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#111';
-    ctx.beginPath(); ctx.arc(-s*0.07, -s*0.32, s*0.018, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc( s*0.17, -s*0.32, s*0.018, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(-s*0.065, -s*0.33, s*0.007, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc( s*0.175, -s*0.33, s*0.007, 0, Math.PI*2); ctx.fill();
-  }
-  // Oval nose (markings)
-  ctx.fillStyle = patch;
-  ctx.beginPath(); ctx.ellipse(s*0.05, -s*0.22, s*0.03, s*0.02, 0, 0, Math.PI*2); ctx.fill();
-  // Mouth
-  ctx.strokeStyle = '#555'; ctx.lineWidth = s * 0.008;
-  ctx.beginPath(); ctx.moveTo(s*0.05,-s*0.2); ctx.lineTo(s*0.05,-s*0.17); ctx.stroke();
-  ctx.beginPath(); ctx.arc(s*0.02, -s*0.17, s*0.03, 0, Math.PI*0.5); ctx.stroke();
-  ctx.beginPath(); ctx.arc(s*0.08, -s*0.17, s*0.03, Math.PI*0.5, Math.PI); ctx.stroke();
-  // Blush
-  ctx.fillStyle = 'rgba(255,150,150,0.2)';
-  ctx.beginPath(); ctx.arc(-s*0.14, -s*0.22, s*0.04, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc( s*0.24, -s*0.22, s*0.04, 0, Math.PI*2); ctx.fill();
-  if (!sleeping) drawPetLegs(ctx, s, lp, moving, patch);
+   `pal` is ignored: the artwork ships in one coat, which is why room-base.js no
+   longer lists a panda palette and the status bar stops offering colour dots.
+
+   Unlike Tom, this sheet has a real sleeping pose, so sleep and nap use it
+   instead of being faked by tilting the body — see OWN_SLEEP_POSE in
+   room-pets.js, which stops the lie-down transform from tipping over a panda that
+   is already lying down. */
+/* How many cells the sheet holds, in order: idle, walk, walk, asleep. The cells'
+   pixel size is NOT written down — it is read off the loaded image, because a
+   number copied from the sheet into here is a number that goes stale the next
+   time the sheet is repacked, and a stale one silently crops every pose. */
+const PANDA_CELLS = 4;
+const PANDA_WALK_FROM = 1;    // first walk cell
+const PANDA_WALK_N = 2;       // how many walk cells
+const PANDA_DRAW_W = 1.50;    // drawn width, as a fraction of the pet size
+const PANDA_FEET_Y = 0.38;    // where the cell's ground line sits below the origin
+/* Walk cells per unit of the room's leg phase, which advances 10 a second, so
+   the two-cell loop is a stride every 0.4s — each pose held about a fifth of
+   a second. Two frames is deliberate: these drawings amble rather than
+   stride, and two poses far enough apart read as a step where all eight read
+   as a shimmer. Which two is a judgement, made by eye off the numbered source
+   sheet; the packer measures the choice but does not overrule it. */
+const PANDA_STEP_RATE = 0.5;
+
+/* The cell each pose lives in. 'walk' is deliberately absent: it has no single
+   cell, being picked from the leg phase. */
+const PANDA_POSE_CELL = { front: 0, sleep: 3 };
+
+/* Which pose the panda is in. It lives out here rather than inside the draw call
+   because the accessory code has to ask the same question — the head sits half
+   a body apart between the front and side poses, so a hat can only be placed
+   once the pose is known, and both answers have to come from one place. */
+function pandaPose(moving, action) {
+  if (moving) return 'walk';
+  if (action === 'sleep' || action === 'nap') return 'sleep';
+  return 'front';
+}
+
+// Resolved against this file's own URL, because the three pages that load it
+// (room, world, index) sit at different depths. Fetched on first draw rather
+// than at load: a page with no panda on it must not pay for the sheet.
+const PANDA_SRC = new URL('img/panda.png', document.currentScript.src).href;
+let _pandaSheet = null;
+function pandaSheet() {
+  if (!_pandaSheet) { _pandaSheet = new Image(); _pandaSheet.src = PANDA_SRC; }
+  return _pandaSheet;
+}
+
+function drawPandaPet(ctx, s, lp, moving, hunger, action, ap, t, pal, view) {
+  const art = pandaSheet();
+  if (!art.naturalWidth) return;   // sheet still downloading
+
+  const pose = pandaPose(moving, action);
+  const col = pose === 'walk'
+    ? PANDA_WALK_FROM + Math.floor(lp * PANDA_STEP_RATE) % PANDA_WALK_N
+    : PANDA_POSE_CELL[pose];
+
+  const cellW = art.naturalWidth / PANDA_CELLS, cellH = art.naturalHeight;
+  const w = s * PANDA_DRAW_W;
+  const h = w * cellH / cellW;
+  ctx.drawImage(art, col * cellW, 0, cellW, cellH,
+    -w / 2, s * PANDA_FEET_Y - h, w, h);
 }

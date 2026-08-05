@@ -146,13 +146,6 @@
     };
 
     const PET_COLORS = {
-      bunny: [
-        { key: 'white', name: 'White', body: '#f0f0f0', pink: '#ffb6c1', tail: '#ffffff', tailShade: '#eeeeee' },
-        { key: 'brown', name: 'Brown', body: '#b87333', pink: '#d4a574', tail: '#d4a574', tailShade: '#a56228' },
-        { key: 'gray',  name: 'Gray',  body: '#999999', pink: '#cccccc', tail: '#bbbbbb', tailShade: '#888888' },
-        { key: 'black', name: 'Black', body: '#333333', pink: '#666666', tail: '#444444', tailShade: '#333333' },
-        { key: 'cream', name: 'Cream', body: '#f5e6d0', pink: '#ffb6c1', tail: '#fff5e6', tailShade: '#e8d5c0' },
-      ],
       hamster: [
         { key: 'orange', name: 'Orange', body: '#f5c38a', cheek: '#ffe0b2', tummy: '#fff5e6', ear: '#dda070' },
         { key: 'brown',  name: 'Brown',  body: '#a0724a', cheek: '#d4a574', tummy: '#e8c8a0', ear: '#8a5c3a' },
@@ -173,20 +166,12 @@
         { key: 'cross',  name: 'Cross',  body: '#5a4636', belly: '#dcc6a0', ear: '#241c15', leg: '#201a14' },
         { key: 'fennec', name: 'Fennec', body: '#e8c98a', belly: '#fff6e6', ear: '#b9925c', leg: '#a87f4e' },
       ],
-      panda: [
-        // Color = the panda's skin/fur (body + head). Markings stay black so it still reads as a panda.
-        { key: 'classic', name: 'Classic',  body: '#ffffff', patch: '#333333' },
-        { key: 'brown',   name: 'Brown',    body: '#c8975c', patch: '#333333' },
-        { key: 'pink',    name: 'Pink',     body: '#f7a8c4', patch: '#333333' },
-        { key: 'blue',    name: 'Sky Blue', body: '#8fb6ef', patch: '#333333' },
-        { key: 'mint',    name: 'Mint',     body: '#8ed9b2', patch: '#333333' },
-      ],
-      // No cat, dog, tom, jerry or capybara entry on purpose: those five are
-      // drawn from artwork (games/pets/img/*.png) rather than canvas paths, so
-      // they ship in a single coat. The status bar hides the colour dots when a
-      // type has no palette, which is exactly what we want here. Cats and dogs
-      // did have five coats each while they were canvas paths — a saved pet
-      // still carries its old `color`, it simply has nothing left to select.
+      // No cat, dog, bunny, panda, tom, jerry or capybara entry on purpose: those
+      // seven are drawn from artwork (games/pets/img/*.png) rather than canvas
+      // paths, so they ship in a single coat. The status bar hides the colour dots
+      // when a type has no palette, which is exactly what we want here. Each of
+      // them did have several coats while it was canvas paths — a saved pet still
+      // carries its old `color`, it simply has nothing left to select.
     };
 
     function getPetPalette(type, colorKey) {

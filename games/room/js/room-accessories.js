@@ -187,11 +187,13 @@
 
     // Draw accessory on pet canvas — offset to each pet's actual head position
     const PET_HEAD_OFFSETS = {
-      /* Cat and dog come from artwork (pets/img/*.png) and change pose: they
-         walk side-on, idle sitting and facing you, and sleep curled up. The
-         head moves half a body between those, so one anchor cannot serve all
-         three — these carry a set instead, and the caller says which pose is
-         showing. Each was read off the packed sheet, not from path geometry. */
+      /* Cat, dog, bunny and panda come from artwork (pets/img/*.png) and change
+         pose: they walk side-on, idle sitting and facing you, and sleep curled
+         up. The head moves half a body between those, so one anchor cannot
+         serve all three — these carry a set instead, and the caller says which
+         pose is showing. Each was read off the packed sheet, not from path
+         geometry: hy is the centre of the skull's box with the ears left out,
+         and r is about half its width, so a hat lands on the crown. */
       // `side` is the average across both walk cells — the head bobs a
       // little between them, and a hat pinned to one rides high or low in the other.
       cat: {
@@ -204,10 +206,22 @@
         side:  { hx:  0.45, hy: -0.31, r: 0.22 },
         sleep: { hx:  0.41, hy:  0.01, r: 0.22 },
       },
-      bunny:   { hx:  0.30, hy: -0.16, r: 0.26 },
+      /* Bunny's ears are excluded on purpose: they are half its height, and an
+         anchor that covered them would hang a hat in mid-air above the skull.
+         A hat lands at the ear bases instead, which is where one sits on a
+         rabbit anyway. */
+      bunny: {
+        front: { hx:  0.00, hy: -0.33, r: 0.22 },
+        side:  { hx:  0.28, hy: -0.20, r: 0.20 },
+        sleep: { hx:  0.26, hy:  0.05, r: 0.23 },
+      },
+      panda: {
+        front: { hx:  0.00, hy: -0.34, r: 0.29 },
+        side:  { hx:  0.45, hy: -0.23, r: 0.24 },
+        sleep: { hx:  0.28, hy:  0.04, r: 0.27 },
+      },
       hamster: { hx:  0.25, hy: -0.10, r: 0.30 },
       fox:     { hx:  0.38, hy: -0.14, r: 0.27 },
-      panda:   { hx:  0.05, hy: -0.30, r: 0.30 },
       // Goose's head sits high on its long neck (see drawGoosePet: head centre
       // at 0.42,-0.66 with radius 0.16), far from the body centre — without this
       // entry head-worn accessories fell back to the default and floated over the

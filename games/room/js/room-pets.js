@@ -235,10 +235,17 @@
     const PET_ACTIONS = {
       cat:     ['groom', 'stretch', 'nap', 'yawn', 'sleep', 'pawlick', 'tailflick', 'headtilt', 'knead'],
       dog:     ['sit', 'pant', 'scratch', 'playbow', 'sleep', 'tailwag', 'headtilt', 'shake', 'sniff'],
-      bunny:   ['sniff', 'hop', 'standup', 'eartwitch', 'sleep', 'nosewiggle', 'binky', 'flop', 'groom'],
+      // Bunny is drawn from artwork, so 'flop' is gone: it fakes lying down by
+      // tilting and squashing the body, and this bunny has a real lying-down
+      // cell that 'sleep' already uses — see OWN_SLEEP_POSE below.
+      bunny:   ['sniff', 'hop', 'standup', 'eartwitch', 'sleep', 'nosewiggle', 'binky', 'groom'],
       hamster: ['stuff', 'groom', 'spin', 'sleep', 'wash', 'peek', 'dig', 'stretch'],
       fox:     ['pounce', 'yawn', 'crouch', 'sneak', 'sleep', 'tailflick', 'headtilt', 'stretch', 'dig'],
-      panda:   ['eat', 'roll', 'wave', 'sit', 'sleep', 'stretch', 'yawn', 'headtilt', 'tumble'],
+      // Panda likewise, minus 'roll' and 'tumble': both turn the body a whole
+      // revolution, which on a drawing reads as the picture spinning rather
+      // than the bear rolling. Its tricks keep them — a stunt the player asked
+      // for can be showy; one that fires on its own just looks broken.
+      panda:   ['eat', 'wave', 'sit', 'sleep', 'stretch', 'yawn', 'headtilt'],
       goose:   ['sleep', 'stretch', 'yawn', 'headtilt', 'groom', 'sit'],
       tom:     ['sit', 'stretch', 'yawn', 'nap', 'sleep', 'headtilt', 'wave', 'dance', 'pounce'],
       jerry:   ['sit', 'stretch', 'yawn', 'nap', 'sleep', 'headtilt', 'hop', 'spin', 'wave'],
@@ -1009,15 +1016,16 @@
        to agree, and two copies of this rule would drift apart. Pets drawn from
        paths never change silhouette, so 'side' covers them. */
     function petPoseOf(type, moving, action) {
-      if (type === 'cat' && typeof catPose === 'function') return catPose(moving, action);
-      if (type === 'dog' && typeof dogPose === 'function') return dogPose(moving, action);
-      return 'side';
+      const ask = { cat: typeof catPose, dog: typeof dogPose,
+                    bunny: typeof bunnyPose, panda: typeof pandaPose };
+      if (ask[type] !== 'function') return 'side';
+      return { cat: catPose, dog: dogPose, bunny: bunnyPose, panda: pandaPose }[type](moving, action);
     }
 
     /* Pets whose sheet holds a real sleeping pose. The lie-down transform below
        tilts and flattens the body to FAKE lying down, which on top of a sprite
        that is already curled up asleep reads as a picture falling over. */
-    const OWN_SLEEP_POSE = { cat: true, dog: true };
+    const OWN_SLEEP_POSE = { cat: true, dog: true, bunny: true, panda: true };
 
     /* ── Action body transforms ── */
     function applyActionTransform(ctx, type, action, ap, s, t) {
@@ -1544,10 +1552,10 @@
         // Sprite-based; `view` switches them to the front-facing idle.
         case 'cat':    drawCatPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
         case 'dog':    drawDogPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
-        case 'bunny':  drawBunnyPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
+        case 'bunny':  drawBunnyPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
         case 'hamster':drawHamsterPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
         case 'fox':    drawFoxPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
-        case 'panda':  drawPandaPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
+        case 'panda':  drawPandaPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
         case 'goose':  drawGoosePet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
         // Sprite-based; both pick their own frame from `moving`, so they ignore `view`.
         case 'tom':    drawTomPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
