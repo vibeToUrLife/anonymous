@@ -1,79 +1,63 @@
-/* ── Cat ── */
+/* ── Cat ──
+   Drawn from artwork rather than canvas paths, like Tom and the capybara. One
+   sheet (img/cat.png) holds equal cells that all stand on the cell's floor, so
+   changing frame never shifts the paws: cell 0 is the front-facing idle, cells
+   1-8 are one loop of the walk seen from the side, cell 9 is asleep. Every cell
+   faces RIGHT — the direction the room treats as unmirrored — so walking left
+   is the room's own flip and nothing here has to know about it.
 
-function drawCatPet(ctx, s, lp, moving, hunger, action, ap, t, pal) {
-  const sleeping = action === 'sleep' || action === 'nap';
-  const bodyColor = pal ? pal.body : '#f5a623';
-  const darkColor = pal ? pal.dark : '#d4871a';
-  const stripe = pal ? pal.stripe : '#c97a15';
-  const innerEar = pal ? pal.inner : '#ffb6c1';
-  const muzzleColor = pal ? pal.muzzle : '#ffe0b2';
-  // Tail behind body
-  ctx.strokeStyle = bodyColor;
-  ctx.lineWidth = s * 0.07;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(-s * 0.45, -s * 0.05);
-  ctx.bezierCurveTo(-s * 0.65, -s * 0.15, -s * 0.72, -s * 0.45, -s * 0.48, -s * 0.52);
-  ctx.stroke();
-  // Tail stripes
-  ctx.strokeStyle = stripe; ctx.lineWidth = s * 0.022;
-  for (let i = 0; i < 3; i++) {
-    const t = 0.3 + i * 0.25, tx = -s * (0.48 + t * 0.15), ty = -s * (0.05 + t * 0.35);
-    ctx.beginPath(); ctx.moveTo(tx - s*0.035, ty - s*0.025); ctx.lineTo(tx + s*0.035, ty + s*0.025); ctx.stroke();
-  }
-  // Body
-  ctx.fillStyle = bodyColor;
-  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.5, s * 0.35, 0, 0, Math.PI * 2); ctx.fill();
-  // Body stripes
-  ctx.strokeStyle = stripe; ctx.lineWidth = s * 0.018;
-  for (let i = 0; i < 3; i++) {
-    const sx = -s * 0.15 + i * s * 0.15;
-    ctx.beginPath(); ctx.moveTo(sx, -s * 0.28); ctx.quadraticCurveTo(sx + s*0.02, -s*0.14, sx, 0); ctx.stroke();
-  }
-  // Head
-  ctx.fillStyle = bodyColor;
-  ctx.beginPath(); ctx.arc(s * 0.35, -s * 0.18, s * 0.28, 0, Math.PI * 2); ctx.fill();
-  // Ears
-  ctx.fillStyle = darkColor;
-  ctx.beginPath(); ctx.moveTo(s*0.18,-s*0.4); ctx.lineTo(s*0.27,-s*0.66); ctx.lineTo(s*0.42,-s*0.4); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(s*0.34,-s*0.42); ctx.lineTo(s*0.47,-s*0.64); ctx.lineTo(s*0.56,-s*0.36); ctx.fill();
-  // Inner ears
-  ctx.fillStyle = innerEar;
-  ctx.beginPath(); ctx.moveTo(s*0.22,-s*0.4); ctx.lineTo(s*0.29,-s*0.58); ctx.lineTo(s*0.38,-s*0.4); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(s*0.38,-s*0.42); ctx.lineTo(s*0.46,-s*0.56); ctx.lineTo(s*0.52,-s*0.37); ctx.fill();
-  // Muzzle
-  ctx.fillStyle = muzzleColor;
-  ctx.beginPath(); ctx.ellipse(s*0.38, -s*0.08, s*0.1, s*0.06, 0, 0, Math.PI*2); ctx.fill();
-  // Eyes
-  const eyeY = -s * 0.22;
-  if (sleeping) {
-    drawSleepEyes(ctx, s, s*0.26, eyeY, s*0.44, eyeY, s*0.035);
-  } else {
-    ctx.fillStyle = hunger > 20 ? '#5a5' : '#c44';
-    ctx.beginPath(); ctx.ellipse(s*0.26, eyeY, s*0.035, s*0.045, 0, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(s*0.44, eyeY, s*0.035, s*0.045, 0, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#111';
-    ctx.beginPath(); ctx.ellipse(s*0.26, eyeY, s*0.011, s*0.035, 0, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(s*0.44, eyeY, s*0.011, s*0.035, 0, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(s*0.27, eyeY - s*0.015, s*0.012, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(s*0.45, eyeY - s*0.015, s*0.012, 0, Math.PI*2); ctx.fill();
-  }
-  // Triangle nose
-  ctx.fillStyle = '#e88';
-  ctx.beginPath(); ctx.moveTo(s*0.35,-s*0.1); ctx.lineTo(s*0.38,-s*0.06); ctx.lineTo(s*0.41,-s*0.1); ctx.fill();
-  // W mouth
-  ctx.strokeStyle = '#a0522d'; ctx.lineWidth = s * 0.012;
-  ctx.beginPath();
-  ctx.moveTo(s*0.32,-s*0.04); ctx.lineTo(s*0.35,-s*0.02); ctx.lineTo(s*0.38,-s*0.05);
-  ctx.lineTo(s*0.41,-s*0.02); ctx.lineTo(s*0.44,-s*0.04); ctx.stroke();
-  // Whiskers
-  ctx.strokeStyle = '#bbb'; ctx.lineWidth = s * 0.008;
-  ctx.beginPath(); ctx.moveTo(s*0.2,-s*0.1); ctx.lineTo(s*0.02,-s*0.14); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(s*0.2,-s*0.07); ctx.lineTo(s*0.01,-s*0.07); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(s*0.2,-s*0.04); ctx.lineTo(s*0.02, 0); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(s*0.56,-s*0.1); ctx.lineTo(s*0.72,-s*0.14); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(s*0.56,-s*0.07); ctx.lineTo(s*0.74,-s*0.07); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(s*0.56,-s*0.04); ctx.lineTo(s*0.72, 0); ctx.stroke();
-  if (!sleeping) drawPetLegs(ctx, s, lp, moving, bodyColor);
+   `pal` is ignored: the artwork ships in one coat, which is why room-base.js no
+   longer lists a cat palette and the status bar stops offering colour dots.
+
+   Unlike Tom, this sheet has a real sleeping pose, so sleep and nap use it
+   instead of being faked by tilting the body — see OWN_SLEEP_POSE in
+   room-pets.js, which stops the lie-down transform from tipping over a cat that
+   is already lying down. */
+const CAT_CELL_W = 262;
+const CAT_CELL_H = 202;
+const CAT_FRONT = 0;        // cell index of the idle, facing the viewer
+const CAT_WALK_FROM = 1;    // first walk cell
+const CAT_WALK_N = 8;       // how many walk cells
+const CAT_SLEEP = 9;        // cell index of the sleeping pose
+// Standing still uses a walk cell rather than the front idle. The idle is a
+// SITTING pose facing the viewer, and a pet that swung side-on to front-on
+// every time it paused would also swing its hat off its head — the accessory
+// anchors can only be measured for one pose, and it has to be the one worn
+// most of the time. This is the cell whose legs sit closest together.
+const CAT_STAND = 7;
+const CAT_DRAW_W = 1.50;    // drawn width, as a fraction of the pet size
+const CAT_FEET_Y = 0.38;    // where the cell's ground line sits below the origin
+// Walk cells per unit of the room's leg phase, which advances 10 a second — so
+// the eight-cell loop is a full stride every 1.1s.
+const CAT_STEP_RATE = 0.72;
+
+// Resolved against this file's own URL, because the three pages that load it
+// (room, world, index) sit at different depths. Fetched on first draw rather
+// than at load: a page with no cat on it must not pay for the sheet.
+const CAT_SRC = new URL('img/cat.png', document.currentScript.src).href;
+let _catSheet = null;
+function catSheet() {
+  if (!_catSheet) { _catSheet = new Image(); _catSheet.src = CAT_SRC; }
+  return _catSheet;
+}
+
+function drawCatPet(ctx, s, lp, moving, hunger, action, ap, t, pal, view) {
+  const art = catSheet();
+  if (!art.naturalWidth) return;   // sheet still downloading
+
+  /* 'portrait' is the shop card asking for a head-on pose, and it is the only
+     caller that ever asks. The room's own `view` is NOT it: for a pet that is
+     not directional the room reports 'front' every single frame, so reading
+     that here would pin the cat to its idle cell and it would never take a
+     step. Live pets stay side-on, which is also the pose the accessory anchor
+     is measured against. */
+  const col = view === 'portrait' ? CAT_FRONT
+    : moving ? CAT_WALK_FROM + Math.floor(lp * CAT_STEP_RATE) % CAT_WALK_N
+    : (action === 'sleep' || action === 'nap') ? CAT_SLEEP
+    : CAT_STAND;
+
+  const w = s * CAT_DRAW_W;
+  const h = w * CAT_CELL_H / CAT_CELL_W;
+  ctx.drawImage(art, col * CAT_CELL_W, 0, CAT_CELL_W, CAT_CELL_H,
+    -w / 2, s * CAT_FEET_Y - h, w, h);
 }

@@ -187,8 +187,14 @@
 
     // Draw accessory on pet canvas — offset to each pet's actual head position
     const PET_HEAD_OFFSETS = {
-      cat:     { hx:  0.35, hy: -0.18, r: 0.28 },
-      dog:     { hx:  0.35, hy: -0.14, r: 0.28 },
+      // Cat and dog come from artwork (pets/img/*.png), so these were read off
+      // the sheet rather than from path geometry. They are measured on the SIDE
+      // pose — the one worn standing and walking, which is nearly all the time.
+      // The front-facing idle puts the head half a body to the left, and no
+      // single anchor can serve both; the capybara is anchored the same way and
+      // for the same reason.
+      cat:     { hx:  0.39, hy: -0.38, r: 0.21 },
+      dog:     { hx:  0.40, hy: -0.37, r: 0.22 },
       bunny:   { hx:  0.30, hy: -0.16, r: 0.26 },
       hamster: { hx:  0.25, hy: -0.10, r: 0.30 },
       fox:     { hx:  0.38, hy: -0.14, r: 0.27 },

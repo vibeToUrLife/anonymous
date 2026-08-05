@@ -218,11 +218,23 @@
       ctx.save();
       ctx.translate(w / 2, h * 0.65);
       const size = 18;
-      drawPetCanvas(ctx, petType, size, 0, false, 100, 0, null, 0);
+      // 'portrait' asks a sprite pet for its head-on pose, which is what a card
+      // wants. Pets drawn from paths ignore it and carry on as before.
+      drawPetCanvas(ctx, petType, size, 0, false, 100, 0, null, 0, null, 'portrait');
       ctx.restore();
-      // Sprite-drawn pets paint nothing until their sheet lands, and this card is
-      // painted once — so repaint it when the art arrives.
-      const art = petType === 'tom' && typeof tomSheet === 'function' ? tomSheet() : null;
+      /* Sprite-drawn pets paint nothing until their sheet lands, and this card
+         is painted once — so repaint it when the art arrives. Every sprite pet
+         has to be listed: for a long time only Tom was, which is why Jerry and
+         the capybara showed an empty card whenever their sheet had not already
+         been fetched by the room. */
+      const sheetOf = {
+        tom:      () => typeof tomSheet === 'function' && tomSheet(),
+        jerry:    () => typeof jerrySheet === 'function' && jerrySheet(),
+        cat:      () => typeof catSheet === 'function' && catSheet(),
+        dog:      () => typeof dogSheet === 'function' && dogSheet(),
+        capybara: () => typeof CAPY_SHEET !== 'undefined' && CAPY_SHEET,
+      };
+      const art = sheetOf[petType] ? sheetOf[petType]() : null;
       if (art && !art.naturalWidth) {
         art.addEventListener('load', () => drawPetPreview(cvs, petType), { once: true });
       }

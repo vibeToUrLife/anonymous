@@ -1001,12 +1001,18 @@
       ctx.closePath();
     }
 
+    /* Pets whose sheet holds a real sleeping pose. The lie-down transform below
+       tilts and flattens the body to FAKE lying down, which on top of a sprite
+       that is already curled up asleep reads as a picture falling over. */
+    const OWN_SLEEP_POSE = { cat: true, dog: true };
+
     /* ── Action body transforms ── */
     function applyActionTransform(ctx, type, action, ap, s, t) {
       const ease = Math.sin(ap * Math.PI); // 0→1→0 bell curve
       switch (action) {
         // ── Shared-ish poses ──
         case 'nap': case 'sleep': {
+          if (OWN_SLEEP_POSE[type]) break;   // the artwork lies down by itself
           // Lie down: tilt sideways, squish flat, gentle breathing
           const settle = Math.min(1, ap * 5); // quick settle into pose (first 20%)
           const breath = Math.sin(t / 600) * 0.02 * settle; // gentle breathing
@@ -1522,8 +1528,9 @@
     function drawPetCanvas(ctx, type, size, legPhase, moving, hunger, t, action, ap, colorKey, view) {
       const pal = getPetPalette(type, colorKey);
       switch (type) {
-        case 'cat':    drawCatPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
-        case 'dog':    drawDogPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
+        // Sprite-based; `view` switches them to the front-facing idle.
+        case 'cat':    drawCatPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
+        case 'dog':    drawDogPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
         case 'bunny':  drawBunnyPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
         case 'hamster':drawHamsterPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
         case 'fox':    drawFoxPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;

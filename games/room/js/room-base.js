@@ -146,20 +146,6 @@
     };
 
     const PET_COLORS = {
-      cat: [
-        { key: 'gray',    name: 'Gray',    body: '#9E9E9E', stripe: '#616161', inner: '#F8BBD0', bellyLight: '#E0E0E0', nose: '#FF80AB', tongue: '#FAA0A0' },
-        { key: 'orange',  name: 'Orange',  body: '#E69A47', stripe: '#9C4A1F', inner: '#FDE1B3', bellyLight: '#F8C98A', nose: '#F27C7C', tongue: '#FAA0A0' },
-        { key: 'black',   name: 'Black',   body: '#444444', stripe: '#222222', inner: '#aa6666', bellyLight: '#555555', nose: '#e07070', tongue: '#e08080' },
-        { key: 'white',   name: 'White',   body: '#f0f0f0', stripe: '#cccccc', inner: '#ffb6c1', bellyLight: '#ffffff', nose: '#F27C7C', tongue: '#FAA0A0' },
-        { key: 'siamese', name: 'Siamese', body: '#f0e6d0', stripe: '#a08060', inner: '#ffb6c1', bellyLight: '#f5efe0', nose: '#F27C7C', tongue: '#FAA0A0' },
-      ],
-      dog: [
-        { key: 'brown',  name: 'Brown',  body: '#b87333', light: '#d4a574', ear: '#8B5E3C', collar: '#d22222' },
-        { key: 'golden', name: 'Golden', body: '#d4a030', light: '#f0d090', ear: '#b08828', collar: '#2266dd' },
-        { key: 'black',  name: 'Black',  body: '#333333', light: '#555555', ear: '#222222', collar: '#dd2222' },
-        { key: 'white',  name: 'White',  body: '#f0f0f0', light: '#ffffff', ear: '#dddddd', collar: '#dd2222' },
-        { key: 'husky',  name: 'Husky',  body: '#777777', light: '#f0f0f0', ear: '#555555', collar: '#2266dd' },
-      ],
       bunny: [
         { key: 'white', name: 'White', body: '#f0f0f0', pink: '#ffb6c1', tail: '#ffffff', tailShade: '#eeeeee' },
         { key: 'brown', name: 'Brown', body: '#b87333', pink: '#d4a574', tail: '#d4a574', tailShade: '#a56228' },
@@ -195,10 +181,12 @@
         { key: 'blue',    name: 'Sky Blue', body: '#8fb6ef', patch: '#333333' },
         { key: 'mint',    name: 'Mint',     body: '#8ed9b2', patch: '#333333' },
       ],
-      // No tom, jerry or capybara entry on purpose: those three are drawn from
-      // artwork (games/pets/img/*.png) rather than canvas paths, so they ship in
-      // a single coat. The status bar hides the colour dots when a type has no
-      // palette, which is exactly what we want here.
+      // No cat, dog, tom, jerry or capybara entry on purpose: those five are
+      // drawn from artwork (games/pets/img/*.png) rather than canvas paths, so
+      // they ship in a single coat. The status bar hides the colour dots when a
+      // type has no palette, which is exactly what we want here. Cats and dogs
+      // did have five coats each while they were canvas paths — a saved pet
+      // still carries its old `color`, it simply has nothing left to select.
     };
 
     function getPetPalette(type, colorKey) {
