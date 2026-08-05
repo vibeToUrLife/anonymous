@@ -748,7 +748,7 @@
         } // end if winStyle !== 'win_none'
 
         /* ── Wall Decorations (drawn over wall, before baseboard) ── */
-        drawWallDecorations(ctx, rw, rh, floorY, t);
+        drawWallDecorations(ctx, rw, rh);
 
         /* ── Baseboard + Floor (cached, keyed by floor style) ── */
         const fp = roomData.floorStyle || 'floor_wood';
