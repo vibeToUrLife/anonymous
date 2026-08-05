@@ -60,9 +60,10 @@ const WorldActors = (function () {
     // Sprite pets change silhouette between walking, idling and sleeping, so the
     // hat has to know which pose is showing. Their own module answers, so this
     // can never disagree with the picture underneath it.
-    const accPose = a.pet === 'cat' && typeof catPose === 'function' ? catPose(moving, action)
-      : a.pet === 'dog' && typeof dogPose === 'function' ? dogPose(moving, action)
-      : 'side';
+    // petPoseOf lives in room-accessories.js, which this page already loads —
+    // it used to be answered here for the cat and the dog only, so every other
+    // sprite pet wore its hat at the walking anchor even standing still.
+    const accPose = typeof petPoseOf === 'function' ? petPoseOf(a.pet, moving, action) : 'side';
     if (a.outfit) { try { drawPetAccessory(ctx, a.pet, a.outfit, size, 'back', accPose); } catch (e) {} }
     // Only the capybara reads this: standing still means its sitting pose.
     // Tom and Jerry pick their own frame from `moving`, and the rest ignore it.

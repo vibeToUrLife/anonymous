@@ -23,59 +23,14 @@ const PET_SIZES = {
   tom: 92, jerry: 64, capybara: 88
 };
 
-// Colour palettes per pet (mirrors room-base.js PET_COLORS).
-const PET_COLORS = {
-  cat: [
-    { key: 'gray',    name: 'Gray',    body: '#9E9E9E', stripe: '#616161', inner: '#F8BBD0', bellyLight: '#E0E0E0', nose: '#FF80AB', tongue: '#FAA0A0' },
-    { key: 'orange',  name: 'Orange',  body: '#E69A47', stripe: '#9C4A1F', inner: '#FDE1B3', bellyLight: '#F8C98A', nose: '#F27C7C', tongue: '#FAA0A0' },
-    { key: 'black',   name: 'Black',   body: '#444444', stripe: '#222222', inner: '#aa6666', bellyLight: '#555555', nose: '#e07070', tongue: '#e08080' },
-    { key: 'white',   name: 'White',   body: '#f0f0f0', stripe: '#cccccc', inner: '#ffb6c1', bellyLight: '#ffffff', nose: '#F27C7C', tongue: '#FAA0A0' },
-    { key: 'siamese', name: 'Siamese', body: '#f0e6d0', stripe: '#a08060', inner: '#ffb6c1', bellyLight: '#f5efe0', nose: '#F27C7C', tongue: '#FAA0A0' },
-  ],
-  dog: [
-    { key: 'brown',  name: 'Brown',  body: '#b87333', light: '#d4a574', ear: '#8B5E3C', collar: '#d22222' },
-    { key: 'golden', name: 'Golden', body: '#d4a030', light: '#f0d090', ear: '#b08828', collar: '#2266dd' },
-    { key: 'black',  name: 'Black',  body: '#333333', light: '#555555', ear: '#222222', collar: '#dd2222' },
-    { key: 'white',  name: 'White',  body: '#f0f0f0', light: '#ffffff', ear: '#dddddd', collar: '#dd2222' },
-    { key: 'husky',  name: 'Husky',  body: '#777777', light: '#f0f0f0', ear: '#555555', collar: '#2266dd' },
-  ],
-  bunny: [
-    { key: 'white', name: 'White', body: '#f0f0f0', pink: '#ffb6c1', tail: '#ffffff', tailShade: '#eeeeee' },
-    { key: 'brown', name: 'Brown', body: '#b87333', pink: '#d4a574', tail: '#d4a574', tailShade: '#a56228' },
-    { key: 'gray',  name: 'Gray',  body: '#999999', pink: '#cccccc', tail: '#bbbbbb', tailShade: '#888888' },
-    { key: 'black', name: 'Black', body: '#333333', pink: '#666666', tail: '#444444', tailShade: '#333333' },
-    { key: 'cream', name: 'Cream', body: '#f5e6d0', pink: '#ffb6c1', tail: '#fff5e6', tailShade: '#e8d5c0' },
-  ],
-  hamster: [
-    { key: 'orange', name: 'Orange', body: '#f5c38a', cheek: '#ffe0b2', tummy: '#fff5e6', ear: '#dda070' },
-    { key: 'brown',  name: 'Brown',  body: '#a0724a', cheek: '#d4a574', tummy: '#e8c8a0', ear: '#8a5c3a' },
-    { key: 'white',  name: 'White',  body: '#f0f0f0', cheek: '#ffffff', tummy: '#ffffff', ear: '#dddddd' },
-    { key: 'gray',   name: 'Gray',   body: '#999999', cheek: '#bbbbbb', tummy: '#cccccc', ear: '#777777' },
-    { key: 'golden', name: 'Golden', body: '#d4a030', cheek: '#f0d090', tummy: '#f5e8c0', ear: '#b08828' },
-  ],
-  fox: [
-    { key: 'red',    name: 'Red',    body: '#e0702e', belly: '#fff3e0', ear: '#43382f', leg: '#3c322b' },
-    { key: 'arctic', name: 'Arctic', body: '#e9edf1', belly: '#ffffff', ear: '#aab2bb', leg: '#9aa3ad' },
-    { key: 'silver', name: 'Silver', body: '#5c6066', belly: '#d6dbe0', ear: '#242628', leg: '#26282b' },
-    { key: 'cross',  name: 'Cross',  body: '#5a4636', belly: '#dcc6a0', ear: '#241c15', leg: '#201a14' },
-    { key: 'fennec', name: 'Fennec', body: '#e8c98a', belly: '#fff6e6', ear: '#b9925c', leg: '#a87f4e' },
-  ],
-  panda: [
-    { key: 'classic', name: 'Classic',  body: '#ffffff', patch: '#333333' },
-    { key: 'brown',   name: 'Brown',    body: '#c8975c', patch: '#333333' },
-    { key: 'pink',    name: 'Pink',     body: '#f7a8c4', patch: '#333333' },
-    { key: 'blue',    name: 'Sky Blue', body: '#8fb6ef', patch: '#333333' },
-    { key: 'mint',    name: 'Mint',     body: '#8ed9b2', patch: '#333333' },
-  ],
-  goose: [
-    { key: 'white',  name: 'White',  body: '#f7f7f7', wing: '#e2e2e2', beak: '#f2a13c', leg: '#e08a2c' },
-    { key: 'gray',   name: 'Gray',   body: '#b8bcc2', wing: '#9aa0a8', beak: '#3a3a3a', leg: '#d08a2c' },
-    { key: 'brown',  name: 'Brown',  body: '#c8a878', wing: '#a8884e', beak: '#3a3a3a', leg: '#caa040' },
-    { key: 'swan',   name: 'Swan',   body: '#ffffff', wing: '#f0f0f0', beak: '#e8682c', leg: '#2a2a2a' },
-  ],
-  // No tom, jerry or capybara entry on purpose — all three are drawn from
-  // artwork, so they have one coat each.
-};
+// Colour palettes per pet (mirrors room-base.js PET_COLORS), now empty: every
+// pet is drawn from artwork (games/pets/img/*.png) and artwork ships in one
+// coat. Kept rather than deleted so the World keeps mirroring the room — and so
+// a pet that one day arrives with a second coat has somewhere to go.
+//
+// This mirror had drifted: it still listed cat, dog, bunny and panda coats after
+// the room dropped them, which offered the World colour dots that did nothing.
+const PET_COLORS = {};
 
 // Resolve a palette object for (type, colorKey); falls back to the first colour.
 function getPetPalette(type, colorKey) {
@@ -135,15 +90,18 @@ function worldDrawPet(ctx, type, size, legPhase, moving, action, ap, t, colorKey
   const pal = getPetPalette(type, colorKey);
   const hunger = 100; // World pets are never hungry — always their happy look.
   switch (type) {
-    case 'cat':     return drawCatPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal);
-    case 'dog':     return drawDogPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal);
-    case 'bunny':   return drawBunnyPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal);
-    case 'hamster': return drawHamsterPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal);
-    case 'fox':     return drawFoxPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal);
-    case 'panda':   return drawPandaPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal);
-    case 'goose':   return drawGoosePet(ctx, size, legPhase, moving, hunger, action, ap, t, pal);
-    // Tom & Jerry are sprite-based: each picks its own frame from `moving`, so
-    // the view arg goes unread and the facing flip alone turns them round.
+    /* All seven pick their own cell from `moving` and `action`, so the view arg
+       goes unread and the facing flip alone turns them round. `pal` is unread
+       too — artwork ships in one coat — but it is still passed, because these
+       take it in the same slot every other pet does. */
+    case 'cat':     return drawCatPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view);
+    case 'dog':     return drawDogPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view);
+    case 'bunny':   return drawBunnyPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view);
+    case 'hamster': return drawHamsterPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view);
+    case 'fox':     return drawFoxPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view);
+    case 'panda':   return drawPandaPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view);
+    case 'goose':   return drawGoosePet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view);
+    // Tom & Jerry, likewise.
     case 'tom':     return drawTomPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view);
     case 'jerry':   return drawJerryPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view);
     // Sprite-based. The caller sends 'front' when standing still, which is the

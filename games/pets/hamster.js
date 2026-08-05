@@ -1,64 +1,75 @@
-/* ── Hamster ── */
+/* ── Hamster ──
+   Drawn from artwork rather than canvas paths, exactly like cat.js. One
+   sheet (img/hamster.png) holds equal cells that all stand on the cell's floor, so
+   changing pose never shifts the paws: cell 0 is the idle, sitting and facing
+   you, cells 1-2 are the walk seen from the side, cell 3 is asleep.
+   The walk cells face RIGHT — the direction the room treats as unmirrored — so
+   walking left is the room's own flip and nothing here has to know about it.
 
-function drawHamsterPet(ctx, s, lp, moving, hunger, action, ap, t, pal) {
-  const sleeping   = action === 'sleep' || action === 'nap';
-  const bodyColor  = pal ? pal.body  : '#f5c38a';
-  const cheekColor = pal ? pal.cheek : '#ffe0b2';
-  const tummyColor = pal ? pal.tummy : '#fff5e6';
-  const earColor   = pal ? pal.ear   : '#dda070';
-  // Super round body
-  ctx.fillStyle = bodyColor;
-  ctx.beginPath(); ctx.arc(0, 0, s*0.38, 0, Math.PI*2); ctx.fill();
-  // White tummy
-  ctx.fillStyle = tummyColor;
-  ctx.beginPath(); ctx.ellipse(s*0.05, s*0.08, s*0.2, s*0.18, 0, 0, Math.PI*2); ctx.fill();
-  // Head (big round)
-  ctx.fillStyle = bodyColor;
-  ctx.beginPath(); ctx.arc(s*0.25, -s*0.1, s*0.3, 0, Math.PI*2); ctx.fill();
-  // HUGE puffy cheeks
-  ctx.fillStyle = cheekColor;
-  ctx.beginPath(); ctx.ellipse(s*0.08, -s*0.01, s*0.16, s*0.14, 0, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(s*0.42, -s*0.01, s*0.16, s*0.14, 0, 0, Math.PI*2); ctx.fill();
-  // Cheek blush
-  ctx.fillStyle = 'rgba(255,150,150,0.25)';
-  ctx.beginPath(); ctx.arc(s*0.08, s*0.02, s*0.08, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(s*0.42, s*0.02, s*0.08, 0, Math.PI*2); ctx.fill();
-  // Tiny round ears
-  ctx.fillStyle = earColor;
-  ctx.beginPath(); ctx.arc(s*0.1,  -s*0.36, s*0.075, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(s*0.4,  -s*0.36, s*0.075, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#ffb6c1';
-  ctx.beginPath(); ctx.arc(s*0.1,  -s*0.36, s*0.045, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(s*0.4,  -s*0.36, s*0.045, 0, Math.PI*2); ctx.fill();
-  // Eyes
-  if (sleeping) {
-    drawSleepEyes(ctx, s, s*0.18, -s*0.16, s*0.32, -s*0.16, s*0.032);
-  } else {
-    ctx.fillStyle = '#222';
-    ctx.beginPath(); ctx.arc(s*0.18, -s*0.16, s*0.032, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(s*0.32, -s*0.16, s*0.032, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(s*0.185, -s*0.17, s*0.012, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(s*0.325, -s*0.17, s*0.012, 0, Math.PI*2); ctx.fill();
-  }
-  // Tiny pink nose
-  ctx.fillStyle = '#e88';
-  ctx.beginPath(); ctx.arc(s*0.25, -s*0.08, s*0.02, 0, Math.PI*2); ctx.fill();
-  // W mouth
-  ctx.strokeStyle = '#c08060'; ctx.lineWidth = s * 0.008;
-  ctx.beginPath();
-  ctx.moveTo(s*0.2,-s*0.05); ctx.lineTo(s*0.225,-s*0.035); ctx.lineTo(s*0.25,-s*0.055);
-  ctx.lineTo(s*0.275,-s*0.035); ctx.lineTo(s*0.3,-s*0.05); ctx.stroke();
-  // Seed near mouth when hungry
-  if (hunger < 40) {
-    ctx.fillStyle = '#8B7355';
-    ctx.beginPath(); ctx.ellipse(s*0.35, -s*0.04, s*0.025, s*0.015, 0.3, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle = '#6b5335'; ctx.lineWidth = s*0.004;
-    ctx.beginPath(); ctx.moveTo(s*0.34,-s*0.04); ctx.lineTo(s*0.36,-s*0.04); ctx.stroke();
-  }
-  // Tiny paws
-  ctx.fillStyle = '#f0b67a';
-  ctx.beginPath(); ctx.arc(s*0.08, s*0.12, s*0.04, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(s*0.42, s*0.12, s*0.04, 0, Math.PI*2); ctx.fill();
-  if (!sleeping) drawPetLegs(ctx, s * 0.75, lp, moving, bodyColor);
+   `pal` is ignored: the artwork ships in one coat, which is why room-base.js no
+   longer lists a hamster palette and the status bar stops offering colour dots.
+
+   Unlike Tom, this sheet has a real sleeping pose, so sleep and nap use it
+   instead of being faked by tilting the body — see OWN_SLEEP_POSE in
+   room-pets.js, which stops the lie-down transform from tipping over a hamster that
+   is already lying down.
+
+   The source sheet draws sleeping Zs into the picture; those are painted out
+   when it is packed, because the room draws its own Zs over a sleeping pet and
+   two sets read as a mistake. */
+/* How many cells the sheet holds, in order: idle, walk, walk, asleep. The cells'
+   pixel size is NOT written down — it is read off the loaded image, because a
+   number copied from the sheet into here is a number that goes stale the next
+   time the sheet is repacked, and a stale one silently crops every pose. */
+const HAMSTER_CELLS = 4;
+const HAMSTER_WALK_FROM = 1;    // first walk cell
+const HAMSTER_WALK_N = 2;       // how many walk cells
+const HAMSTER_DRAW_W = 1.50;    // drawn width, as a fraction of the pet size
+const HAMSTER_FEET_Y = 0.38;    // where the cell's ground line sits below the origin
+/* Walk cells per unit of the room's leg phase, which advances 10 a second, so
+   the two-cell loop is a stride every 0.4s — each pose held about a fifth of
+   a second. Two frames is deliberate: these drawings amble rather than
+   stride, and two poses far enough apart read as a step where all eight read
+   as a shimmer. Which two is a judgement, made by eye off the numbered source
+   sheet; the packer measures the choice but does not overrule it. */
+const HAMSTER_STEP_RATE = 0.5;
+
+/* The cell each pose lives in. 'walk' is deliberately absent: it has no single
+   cell, being picked from the leg phase. */
+const HAMSTER_POSE_CELL = { front: 0, sleep: 3 };
+
+/* Which pose the hamster is in. It lives out here rather than inside the draw call
+   because the accessory code has to ask the same question — the head sits half
+   a body apart between the front and side poses, so a hat can only be placed
+   once the pose is known, and both answers have to come from one place. */
+function hamsterPose(moving, action) {
+  if (moving) return 'walk';
+  if (action === 'sleep' || action === 'nap') return 'sleep';
+  return 'front';
+}
+
+// Resolved against this file's own URL, because the three pages that load it
+// (room, world, index) sit at different depths. Fetched on first draw rather
+// than at load: a page with no hamster on it must not pay for the sheet.
+const HAMSTER_SRC = new URL('img/hamster.png', document.currentScript.src).href;
+let _hamsterSheet = null;
+function hamsterSheet() {
+  if (!_hamsterSheet) { _hamsterSheet = new Image(); _hamsterSheet.src = HAMSTER_SRC; }
+  return _hamsterSheet;
+}
+
+function drawHamsterPet(ctx, s, lp, moving, hunger, action, ap, t, pal, view) {
+  const art = hamsterSheet();
+  if (!art.naturalWidth) return;   // sheet still downloading
+
+  const pose = hamsterPose(moving, action);
+  const col = pose === 'walk'
+    ? HAMSTER_WALK_FROM + Math.floor(lp * HAMSTER_STEP_RATE) % HAMSTER_WALK_N
+    : HAMSTER_POSE_CELL[pose];
+
+  const cellW = art.naturalWidth / HAMSTER_CELLS, cellH = art.naturalHeight;
+  const w = s * HAMSTER_DRAW_W;
+  const h = w * cellH / cellW;
+  ctx.drawImage(art, col * cellW, 0, cellW, cellH,
+    -w / 2, s * HAMSTER_FEET_Y - h, w, h);
 }

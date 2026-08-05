@@ -234,6 +234,9 @@
         dog:      () => typeof dogSheet === 'function' && dogSheet(),
         bunny:    () => typeof bunnySheet === 'function' && bunnySheet(),
         panda:    () => typeof pandaSheet === 'function' && pandaSheet(),
+        fox:      () => typeof foxSheet === 'function' && foxSheet(),
+        hamster:  () => typeof hamsterSheet === 'function' && hamsterSheet(),
+        goose:    () => typeof gooseSheet === 'function' && gooseSheet(),
         capybara: () => typeof CAPY_SHEET !== 'undefined' && CAPY_SHEET,
       };
       const art = sheetOf[petType] ? sheetOf[petType]() : null;

@@ -239,7 +239,10 @@
       // tilting and squashing the body, and this bunny has a real lying-down
       // cell that 'sleep' already uses — see OWN_SLEEP_POSE below.
       bunny:   ['sniff', 'hop', 'standup', 'eartwitch', 'sleep', 'nosewiggle', 'binky', 'groom'],
-      hamster: ['stuff', 'groom', 'spin', 'sleep', 'wash', 'peek', 'dig', 'stretch'],
+      // Hamster loses 'spin' for the same reason — a whole revolution. Its other
+      // seven, and every one the fox and the goose have, are small nudges that
+      // sit fine on top of a drawing.
+      hamster: ['stuff', 'groom', 'sleep', 'wash', 'peek', 'dig', 'stretch'],
       fox:     ['pounce', 'yawn', 'crouch', 'sneak', 'sleep', 'tailflick', 'headtilt', 'stretch', 'dig'],
       // Panda likewise, minus 'roll' and 'tumble': both turn the body a whole
       // revolution, which on a drawing reads as the picture spinning rather
@@ -1011,21 +1014,13 @@
       ctx.closePath();
     }
 
-    /* Which pose a sprite pet is showing. Asked of the pet's own module, never
-       recomputed here — the accessory anchor and the picture underneath it have
-       to agree, and two copies of this rule would drift apart. Pets drawn from
-       paths never change silhouette, so 'side' covers them. */
-    function petPoseOf(type, moving, action) {
-      const ask = { cat: typeof catPose, dog: typeof dogPose,
-                    bunny: typeof bunnyPose, panda: typeof pandaPose };
-      if (ask[type] !== 'function') return 'side';
-      return { cat: catPose, dog: dogPose, bunny: bunnyPose, panda: pandaPose }[type](moving, action);
-    }
-
     /* Pets whose sheet holds a real sleeping pose. The lie-down transform below
        tilts and flattens the body to FAKE lying down, which on top of a sprite
        that is already curled up asleep reads as a picture falling over. */
-    const OWN_SLEEP_POSE = { cat: true, dog: true, bunny: true, panda: true };
+    const OWN_SLEEP_POSE = {
+      cat: true, dog: true, bunny: true, panda: true,
+      fox: true, hamster: true, goose: true,
+    };
 
     /* ── Action body transforms ── */
     function applyActionTransform(ctx, type, action, ap, s, t) {
@@ -1549,18 +1544,21 @@
     function drawPetCanvas(ctx, type, size, legPhase, moving, hunger, t, action, ap, colorKey, view) {
       const pal = getPetPalette(type, colorKey);
       switch (type) {
-        // Sprite-based; `view` switches them to the front-facing idle.
+        /* Every pet here is sprite-based now, and all but the capybara pick
+           their own cell from `moving` and `action` alone — `view` reaches them
+           unread. It is still passed: the room sends 'front' every frame for a
+           non-directional pet, and a drawer that started reading it would have
+           to see the real value rather than undefined. */
         case 'cat':    drawCatPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
         case 'dog':    drawDogPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
         case 'bunny':  drawBunnyPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
-        case 'hamster':drawHamsterPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
-        case 'fox':    drawFoxPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
+        case 'hamster':drawHamsterPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
+        case 'fox':    drawFoxPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
         case 'panda':  drawPandaPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
-        case 'goose':  drawGoosePet(ctx, size, legPhase, moving, hunger, action, ap, t, pal); break;
-        // Sprite-based; both pick their own frame from `moving`, so they ignore `view`.
+        case 'goose':  drawGoosePet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
         case 'tom':    drawTomPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
         case 'jerry':  drawJerryPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
-        // Sprite-based; `view` switches it to the front-facing sitting pose.
+        // The one exception: `view` switches the capybara to its sitting pose.
         case 'capybara': drawCapybaraPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal, view); break;
         default:       drawCatPet(ctx, size, legPhase, moving, hunger, action, ap, t, pal);
       }

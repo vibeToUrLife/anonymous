@@ -220,13 +220,32 @@
         side:  { hx:  0.45, hy: -0.23, r: 0.24 },
         sleep: { hx:  0.28, hy:  0.04, r: 0.27 },
       },
-      hamster: { hx:  0.25, hy: -0.10, r: 0.30 },
-      fox:     { hx:  0.38, hy: -0.14, r: 0.27 },
-      // Goose's head sits high on its long neck (see drawGoosePet: head centre
-      // at 0.42,-0.66 with radius 0.16), far from the body centre — without this
-      // entry head-worn accessories fell back to the default and floated over the
-      // body instead of the head. Values taken straight from the goose geometry.
-      goose:   { hx:  0.42, hy: -0.66, r: 0.16 },
+      fox: {
+        // Slightly left of centre because the packer centres each cell on its
+        // centre of mass, and that tail is heavy — the fox's head is not over
+        // the middle of its own picture.
+        front: { hx: -0.03, hy: -0.32, r: 0.25 },
+        side:  { hx:  0.43, hy: -0.29, r: 0.18 },
+        sleep: { hx:  0.20, hy:  0.09, r: 0.24 },
+      },
+      /* The hamster has no neck to speak of, so "head" here is the front third
+         of the ball: hy splits the difference between the eye line, where the
+         glasses go, and a crown high enough for the hat to clear the ears. */
+      hamster: {
+        front: { hx:  0.00, hy: -0.45, r: 0.35 },
+        side:  { hx:  0.41, hy: -0.30, r: 0.22 },
+        // Asleep the hamster's back rises higher than its head, so r is read off
+        // the head alone — measured against the mound the hat floats over it.
+        sleep: { hx:  0.34, hy:  0.09, r: 0.19 },
+      },
+      /* Goose's head is small and rides high on a long neck, so its anchor is
+         nearly a body-length above the others' — and it swings furthest between
+         poses, from -0.84 standing to +0.13 with the head tucked in asleep. */
+      goose: {
+        front: { hx:  0.00, hy: -0.84, r: 0.14 },
+        side:  { hx:  0.24, hy: -0.83, r: 0.14 },
+        sleep: { hx:  0.41, hy:  0.13, r: 0.19 },
+      },
       // Tom comes from artwork (pets/img/tom.png), so these were measured off the
       // sheet, not read from path geometry. His head sits lower while he walks
       // than while he stands (eye line -0.46 vs -0.60), so the values split the
@@ -239,6 +258,28 @@
       // the sheet is drawn 1.15x the pet size with its feet at +0.40.
       capybara:{ hx:  0.25, hy: -0.23, r: 0.15 }
     };
+
+    /* Which pose a sprite pet is showing. Asked of the pet's own module, never
+       recomputed here — the accessory anchor and the picture underneath it have
+       to agree, and two copies of this rule would drift apart. Pets drawn from
+       paths never change silhouette, so 'side' covers them. */
+    /* `typeof` guards every name because each pet is a separate script: a page
+       that does not load one leaves the binding undeclared, and naming it any
+       other way throws. Hence a switch rather than a lookup table — a table
+       would evaluate all seven names to build itself, so one absent module
+       would take the other six down with it. */
+    function petPoseOf(type, moving, action) {
+      switch (type) {
+        case 'cat':     return typeof catPose     === 'function' ? catPose(moving, action)     : 'side';
+        case 'dog':     return typeof dogPose     === 'function' ? dogPose(moving, action)     : 'side';
+        case 'bunny':   return typeof bunnyPose   === 'function' ? bunnyPose(moving, action)   : 'side';
+        case 'panda':   return typeof pandaPose   === 'function' ? pandaPose(moving, action)   : 'side';
+        case 'fox':     return typeof foxPose     === 'function' ? foxPose(moving, action)     : 'side';
+        case 'hamster': return typeof hamsterPose === 'function' ? hamsterPose(moving, action) : 'side';
+        case 'goose':   return typeof goosePose   === 'function' ? goosePose(moving, action)   : 'side';
+        default: return 'side';
+      }
+    }
 
     // Accessories that render behind the pet body
     const BACK_LAYER_ACCESSORIES = ['wings'];

@@ -1,72 +1,76 @@
-/* ── Goose ── */
+/* ── Goose ──
+   Drawn from artwork rather than canvas paths, exactly like cat.js. One
+   sheet (img/goose.png) holds equal cells that all stand on the cell's floor, so
+   changing pose never shifts the feet: cell 0 is the idle, standing and facing
+   you, cells 1-2 are the walk seen from the side, cell 3 is asleep.
+   The walk cells face RIGHT — the direction the room treats as unmirrored — so
+   walking left is the room's own flip and nothing here has to know about it.
 
-// Draws a goose facing right. `pal` is the colour palette entry
-// (see PET_COLORS.goose in room-base.js); falls back to a white goose.
-function drawGoosePet(ctx, s, lp, moving, hunger, action, ap, t, pal) {
-  const sleeping  = action === 'sleep' || action === 'nap';
-  const bodyColor = (pal && pal.body)  || '#f5f5f5';
-  const wingColor = (pal && pal.wing)  || '#e0e0e0';
-  const beakColor = (pal && pal.beak)  || '#f2a13c';
-  const legColor  = (pal && pal.leg)   || '#e08a2c';
+   `pal` is ignored: the artwork ships in one coat, which is why room-base.js no
+   longer lists a goose palette and the status bar stops offering colour dots.
 
-  // Tail feathers (behind body)
-  ctx.fillStyle = wingColor;
-  ctx.beginPath(); ctx.ellipse(-s * 0.42, -s * 0.06, s * 0.16, s * 0.12, -0.3, 0, Math.PI * 2); ctx.fill();
+   Unlike Tom, this sheet has a real sleeping pose, so sleep and nap use it
+   instead of being faked by tilting the body — see OWN_SLEEP_POSE in
+   room-pets.js, which stops the lie-down transform from tipping over a goose that
+   is already lying down.
 
-  // Plump oval body
-  ctx.fillStyle = bodyColor;
-  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.46, s * 0.34, 0, 0, Math.PI * 2); ctx.fill();
+   The source sheet captions every walk pose and draws sleeping Zs; both are
+   painted out when it is packed. The bird is white on near-white paper, so the
+   background is keyed by reach from the border rather than by colour — keying
+   white would have eaten the goose. */
+/* How many cells the sheet holds, in order: idle, walk, walk, asleep. The cells'
+   pixel size is NOT written down — it is read off the loaded image, because a
+   number copied from the sheet into here is a number that goes stale the next
+   time the sheet is repacked, and a stale one silently crops every pose. */
+const GOOSE_CELLS = 4;
+const GOOSE_WALK_FROM = 1;    // first walk cell
+const GOOSE_WALK_N = 2;       // how many walk cells
+const GOOSE_DRAW_W = 1.50;    // drawn width, as a fraction of the pet size
+const GOOSE_FEET_Y = 0.38;    // where the cell's ground line sits below the origin
+/* Walk cells per unit of the room's leg phase, which advances 10 a second, so
+   the two-cell loop is a stride every 0.4s — each pose held about a fifth of
+   a second. Two frames is deliberate: these drawings amble rather than
+   stride, and two poses far enough apart read as a step where all eight read
+   as a shimmer. Which two is a judgement, made by eye off the numbered source
+   sheet; the packer measures the choice but does not overrule it. */
+const GOOSE_STEP_RATE = 0.5;
 
-  // Folded wing detail
-  ctx.fillStyle = wingColor;
-  ctx.beginPath(); ctx.ellipse(-s * 0.02, -s * 0.02, s * 0.28, s * 0.2, 0.1, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = 'rgba(0,0,0,0.06)'; ctx.lineWidth = s * 0.01;
-  ctx.beginPath(); ctx.arc(-s * 0.05, 0, s * 0.2, -0.5, 0.9); ctx.stroke();
+/* The cell each pose lives in. 'walk' is deliberately absent: it has no single
+   cell, being picked from the leg phase. */
+const GOOSE_POSE_CELL = { front: 0, sleep: 3 };
 
-  // Long curved neck up to the head
-  ctx.strokeStyle = bodyColor; ctx.lineWidth = s * 0.16; ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(s * 0.28, -s * 0.05);
-  ctx.quadraticCurveTo(s * 0.5, -s * 0.35, s * 0.42, -s * 0.62);
-  ctx.stroke();
+/* Which pose the goose is in. It lives out here rather than inside the draw call
+   because the accessory code has to ask the same question — the head sits half
+   a body apart between the front and side poses, so a hat can only be placed
+   once the pose is known, and both answers have to come from one place. */
+function goosePose(moving, action) {
+  if (moving) return 'walk';
+  if (action === 'sleep' || action === 'nap') return 'sleep';
+  return 'front';
+}
 
-  // Head
-  const hx = s * 0.42, hy = -s * 0.66;
-  ctx.fillStyle = bodyColor;
-  ctx.beginPath(); ctx.arc(hx, hy, s * 0.16, 0, Math.PI * 2); ctx.fill();
+// Resolved against this file's own URL, because the three pages that load it
+// (room, world, index) sit at different depths. Fetched on first draw rather
+// than at load: a page with no goose on it must not pay for the sheet.
+const GOOSE_SRC = new URL('img/goose.png', document.currentScript.src).href;
+let _gooseSheet = null;
+function gooseSheet() {
+  if (!_gooseSheet) { _gooseSheet = new Image(); _gooseSheet.src = GOOSE_SRC; }
+  return _gooseSheet;
+}
 
-  // Beak
-  ctx.fillStyle = beakColor;
-  ctx.beginPath();
-  ctx.moveTo(hx + s * 0.12, hy - s * 0.04);
-  ctx.lineTo(hx + s * 0.32, hy + s * 0.01);
-  ctx.lineTo(hx + s * 0.12, hy + s * 0.07);
-  ctx.closePath(); ctx.fill();
-  // Beak nostril
-  ctx.fillStyle = 'rgba(0,0,0,0.25)';
-  ctx.beginPath(); ctx.ellipse(hx + s * 0.2, hy + s * 0.005, s * 0.012, s * 0.008, 0, 0, Math.PI * 2); ctx.fill();
+function drawGoosePet(ctx, s, lp, moving, hunger, action, ap, t, pal, view) {
+  const art = gooseSheet();
+  if (!art.naturalWidth) return;   // sheet still downloading
 
-  // Eye
-  if (sleeping) {
-    drawSleepEyes(ctx, s, hx + s * 0.02, hy - s * 0.02, hx + s * 0.02, hy - s * 0.02, s * 0.03);
-  } else {
-    ctx.fillStyle = '#222';
-    ctx.beginPath(); ctx.arc(hx + s * 0.05, hy - s * 0.03, s * 0.025, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(hx + s * 0.058, hy - s * 0.04, s * 0.008, 0, Math.PI * 2); ctx.fill();
-  }
+  const pose = goosePose(moving, action);
+  const col = pose === 'walk'
+    ? GOOSE_WALK_FROM + Math.floor(lp * GOOSE_STEP_RATE) % GOOSE_WALK_N
+    : GOOSE_POSE_CELL[pose];
 
-  // Webbed legs (orange) — only when awake
-  if (!sleeping) {
-    ctx.strokeStyle = legColor; ctx.lineWidth = s * 0.05; ctx.lineCap = 'round';
-    const swing = moving ? Math.sin(lp) * s * 0.06 : 0;
-    ctx.beginPath();
-    ctx.moveTo(s * 0.08 + swing, s * 0.28); ctx.lineTo(s * 0.08 + swing, s * 0.42);
-    ctx.moveTo(-s * 0.08 - swing, s * 0.28); ctx.lineTo(-s * 0.08 - swing, s * 0.42);
-    ctx.stroke();
-    // Webbed feet
-    ctx.fillStyle = legColor;
-    ctx.beginPath(); ctx.ellipse(s * 0.08 + swing, s * 0.43, s * 0.06, s * 0.03, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(-s * 0.08 - swing, s * 0.43, s * 0.06, s * 0.03, 0, 0, Math.PI * 2); ctx.fill();
-  }
+  const cellW = art.naturalWidth / GOOSE_CELLS, cellH = art.naturalHeight;
+  const w = s * GOOSE_DRAW_W;
+  const h = w * cellH / cellW;
+  ctx.drawImage(art, col * cellW, 0, cellW, cellH,
+    -w / 2, s * GOOSE_FEET_Y - h, w, h);
 }
