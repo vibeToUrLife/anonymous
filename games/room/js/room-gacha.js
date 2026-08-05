@@ -27,21 +27,9 @@
       const r = cvs.getBoundingClientRect();
       const w = Math.round(r.width) || 48, h = Math.round(r.height) || 48;
       fitCanvas(cvs, w, h, 1.4);
-      const s = w * 0.7;
-      const ho = PET_HEAD_OFFSETS['cat'] || { hx: 0, hy: -0.3, r: 0.28 };
-      ctx.clearRect(0, 0, w, h);
-      ctx.save();
-      ctx.translate(w / 2 - s * ho.hx, h / 2 + s * 0.1 - s * ho.hy);
-      const hx = s * ho.hx, hy = s * ho.hy;
-      ctx.fillStyle = 'rgba(255,255,255,0.12)';
-      ctx.beginPath(); ctx.arc(hx, hy, s * ho.r, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(hx - s*0.22, hy - s*0.18); ctx.lineTo(hx - s*0.16, hy - s*0.38); ctx.lineTo(hx - s*0.06, hy - s*0.22); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(hx + s*0.22, hy - s*0.18); ctx.lineTo(hx + s*0.16, hy - s*0.38); ctx.lineTo(hx + s*0.06, hy - s*0.22); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.4)';
-      ctx.beginPath(); ctx.arc(hx - s*0.08, hy - s*0.02, s*0.025, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(hx + s*0.08, hy - s*0.02, s*0.025, 0, Math.PI*2); ctx.fill();
-      drawPetAccessory(ctx, 'cat', accId, s);
-      ctx.restore();
+      // The same picture the accessory shop shows, drawn by the same code — two
+      // copies of this head is how both of them came to draw nothing at all.
+      drawAccessoryPreview(ctx, accId, Math.min(w, h));
     }
 
     function showGachaPrizeModal() {

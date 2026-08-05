@@ -117,32 +117,10 @@
 
       // Draw accessory previews on canvases
       el.querySelectorAll('.acc-preview-cvs').forEach(cvs => {
-        const accId = cvs.dataset.acc;
-        const ctx = cvs.getContext('2d');
         // The CSS box these are pinned to; the buffer behind it is bigger by the
         // screen's pixel ratio, which is what keeps the little preview crisp.
-        const w = 60, h = 60;
-        fitCanvas(cvs, w, h);
-        const s = w * 0.7;
-        const ho = PET_HEAD_OFFSETS['cat'] || { hx: 0, hy: -0.3, r: 0.28 };
-        ctx.clearRect(0, 0, w, h);
-        ctx.save();
-        // Centre so the cat head offset lands in the middle of canvas
-        ctx.translate(w / 2 - s * ho.hx, h / 2 + s * 0.1 - s * ho.hy);
-        // Simple pet head silhouette at the head offset position
-        const hx = s * ho.hx, hy = s * ho.hy;
-        ctx.fillStyle = 'rgba(255,255,255,0.15)';
-        ctx.beginPath(); ctx.arc(hx, hy, s * ho.r, 0, Math.PI * 2); ctx.fill();
-        // Ears
-        ctx.beginPath(); ctx.moveTo(hx - s*0.22, hy - s*0.18); ctx.lineTo(hx - s*0.16, hy - s*0.38); ctx.lineTo(hx - s*0.06, hy - s*0.22); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(hx + s*0.22, hy - s*0.18); ctx.lineTo(hx + s*0.16, hy - s*0.38); ctx.lineTo(hx + s*0.06, hy - s*0.22); ctx.fill();
-        // Eyes
-        ctx.fillStyle = 'rgba(255,255,255,0.5)';
-        ctx.beginPath(); ctx.arc(hx - s*0.08, hy - s*0.02, s*0.03, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(hx + s*0.08, hy - s*0.02, s*0.03, 0, Math.PI*2); ctx.fill();
-        // Draw the accessory on top
-        drawPetAccessory(ctx, 'cat', accId, s);
-        ctx.restore();
+        fitCanvas(cvs, 60, 60);
+        drawAccessoryPreview(cvs.getContext('2d'), cvs.dataset.acc, 60);
       });
     }
 
@@ -259,6 +237,60 @@
       capybara:{ hx:  0.25, hy: -0.23, r: 0.15 }
     };
 
+    /* The head anchor for one pet in one pose, always as a plain {hx,hy,r}.
+
+       Half the table is a SET — the sprite pets whose head moves half a body
+       between walking, sitting and sleeping — and half is a single anchor for
+       the pets that keep one silhouette all their life. Everything that puts a
+       hat on a head asks here rather than reaching into the table, because
+       reaching in is exactly how the accessory shop and the gacha came to draw
+       nothing at all: a set has no hx of its own, `s * undefined` is NaN, and a
+       canvas quietly ignores every NaN it is handed. */
+    function petHeadAnchor(petType, pose) {
+      const entry = PET_HEAD_OFFSETS[petType] || { hx: 0, hy: -0.3, r: 0.28 };
+      return entry.side ? (entry[pose] || entry.side) : entry;
+    }
+
+    /* One accessory worn by a stand-in head, filling a `size` × `size` square.
+       The shop card and the gacha both show this — one picture, so it is drawn
+       in one place. `ctx` is expected to be already scaled to CSS pixels.
+
+       The backdrop is a MID tone on purpose. These accessories run from near
+       black (the top hat, the ninja hood, the cape) to near white (the wings,
+       the bandana), so a dark card hides half of them and a light card hides
+       the other half. In the room they are worn against a pet, which is what
+       this grey stands in for. */
+    function drawAccessoryPreview(ctx, accId, size) {
+      const s = size * 0.7;
+      // The head below faces the viewer — two ears, two eyes — so the accessory
+      // is anchored to the FRONT pose. On the side anchor it would land where a
+      // walking cat's head is, off past the edge of this square.
+      const ho = petHeadAnchor('cat', 'front');
+      ctx.clearRect(0, 0, size, size);
+      const bg = ctx.createLinearGradient(0, 0, 0, size);
+      bg.addColorStop(0, '#8b7d6b'); bg.addColorStop(1, '#6b5f52');
+      ctx.fillStyle = bg;
+      roundRectPath(ctx, 0, 0, size, size, Math.round(size * 0.18));
+      ctx.fill();
+
+      ctx.save();
+      // Centre so the cat's head anchor lands in the middle of the square
+      ctx.translate(size / 2 - s * ho.hx, size / 2 + s * 0.1 - s * ho.hy);
+      const hx = s * ho.hx, hy = s * ho.hy;
+      // Anything worn BEHIND the pet — wings — goes down before the head does.
+      drawPetAccessory(ctx, 'cat', accId, s, 'back', 'front');
+      // Stand-in head: skull, ears, eyes
+      ctx.fillStyle = 'rgba(255,255,255,0.30)';
+      ctx.beginPath(); ctx.arc(hx, hy, s * ho.r, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(hx - s*0.22, hy - s*0.18); ctx.lineTo(hx - s*0.16, hy - s*0.38); ctx.lineTo(hx - s*0.06, hy - s*0.22); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(hx + s*0.22, hy - s*0.18); ctx.lineTo(hx + s*0.16, hy - s*0.38); ctx.lineTo(hx + s*0.06, hy - s*0.22); ctx.fill();
+      ctx.fillStyle = 'rgba(35,28,22,0.55)';
+      ctx.beginPath(); ctx.arc(hx - s*0.08, hy - s*0.02, s*0.03, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(hx + s*0.08, hy - s*0.02, s*0.03, 0, Math.PI*2); ctx.fill();
+      drawPetAccessory(ctx, 'cat', accId, s, 'front', 'front');
+      ctx.restore();
+    }
+
     /* Which pose a sprite pet is showing. Asked of the pet's own module, never
        recomputed here — the accessory anchor and the picture underneath it have
        to agree, and two copies of this rule would drift apart. Pets drawn from
@@ -295,8 +327,7 @@
       // If layer is specified, only draw matching layer
       if (layer === 'back' && !isBack) return;
       if (layer === 'front' && isBack) return;
-      const entry = PET_HEAD_OFFSETS[petType] || { hx: 0, hy: -0.3, r: 0.28 };
-      const ho = entry.side ? (entry[pose] || entry.side) : entry;
+      const ho = petHeadAnchor(petType, pose);
       const hx = s * ho.hx;   // head centre X
       const hy = s * ho.hy;   // head centre Y
       const hr = s * ho.r;    // head radius
