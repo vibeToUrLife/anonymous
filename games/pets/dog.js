@@ -2,7 +2,7 @@
    Drawn from artwork rather than canvas paths, exactly like cat.js. One
    sheet (img/dog.png) holds equal cells that all stand on the cell's floor, so
    changing pose never shifts the paws: cell 0 is the idle, sitting and facing
-   you, cells 1-4 are one loop of the walk seen from the side, cell 5 is asleep.
+   you, cells 1-2 are the walk seen from the side, cell 3 is asleep.
    The walk cells face RIGHT — the direction the room treats as unmirrored — so
    walking left is the room's own flip and nothing here has to know about it.
 
@@ -16,16 +16,19 @@
 const DOG_CELL_W = 256;
 const DOG_CELL_H = 210;
 const DOG_WALK_FROM = 1;    // first walk cell
-const DOG_WALK_N = 4;       // how many walk cells
+const DOG_WALK_N = 2;       // how many walk cells
 const DOG_DRAW_W = 1.50;    // drawn width, as a fraction of the pet size
 const DOG_FEET_Y = 0.38;    // where the cell's ground line sits below the origin
-// Walk cells per unit of the room's leg phase, which advances 10 a second — so
-// the four-cell loop is a full stride every 0.56s, the same as Tom's.
-const DOG_STEP_RATE = 0.72;
+/* Walk cells per unit of the room's leg phase, which advances 10 a second, so
+   the two-cell loop is a stride every 0.4s — each pose held about a fifth of
+   a second. Two frames is deliberate: these drawings amble rather than
+   stride, and the two furthest apart read as a step where all eight read as
+   a shimmer. The packer picks which two, by measurement. */
+const DOG_STEP_RATE = 0.5;
 
 /* The cell each pose lives in. 'walk' is deliberately absent: it has no single
    cell, being picked from the leg phase. */
-const DOG_POSE_CELL = { front: 0, sleep: 5 };
+const DOG_POSE_CELL = { front: 0, sleep: 3 };
 
 /* Which pose the dog is in. It lives out here rather than inside the draw call
    because the accessory code has to ask the same question — the head sits half

@@ -192,17 +192,16 @@
          head moves half a body between those, so one anchor cannot serve all
          three — these carry a set instead, and the caller says which pose is
          showing. Each was read off the packed sheet, not from path geometry. */
-      // `side` is the average across the four walk cells — the head bobs a
-      // little between them, and a hat pinned to any one of them rides high or
-      // low in the other three.
+      // `side` is the average across both walk cells — the head bobs a
+      // little between them, and a hat pinned to one rides high or low in the other.
       cat: {
         front: { hx:  0.01, hy: -0.47, r: 0.25 },
-        side:  { hx:  0.43, hy: -0.30, r: 0.22 },
+        side:  { hx:  0.46, hy: -0.29, r: 0.22 },
         sleep: { hx:  0.40, hy:  0.00, r: 0.22 },
       },
       dog: {
         front: { hx:  0.00, hy: -0.51, r: 0.27 },
-        side:  { hx:  0.44, hy: -0.32, r: 0.22 },
+        side:  { hx:  0.45, hy: -0.31, r: 0.22 },
         sleep: { hx:  0.41, hy:  0.01, r: 0.22 },
       },
       bunny:   { hx:  0.30, hy: -0.16, r: 0.26 },
