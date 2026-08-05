@@ -21,6 +21,11 @@
      * canvas (toggling the class reflows the stage to its new width).
      */
     function _syncRoomPanel() {
+      /* Every switch between the room, the outside, the farm and the tank comes
+         through here, which makes it the one place a decoration's tap menu can
+         be put away without four separate calls. It is pinned to a spot on the
+         room stage, and the stage is about to be something else. */
+      if (typeof closeDecorMenu === 'function') closeDecorMenu();
       const wrap = document.querySelector('.main-wrap');
       if (!wrap) return;
       const out  = typeof isOutsideView !== 'undefined' && isOutsideView;

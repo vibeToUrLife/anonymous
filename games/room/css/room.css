@@ -820,6 +820,33 @@
 
     /* ── Multi-layer / Outside View ── */
     /* Floor badge inside the room — click to peek outside */
+    /* ── Tap-a-decoration menu ──
+       Opens where the piece stands, so mirroring it and putting it away happen
+       in the room rather than back in the shop. Sits under the outside/farm/tank
+       views (z-index 45) on purpose: those cover the room completely. */
+    .decor-menu {
+      position: absolute; z-index: 42; padding: 8px; border-radius: 14px;
+      background: rgba(27,33,43,0.95); border: 1px solid var(--g-border);
+      backdrop-filter: blur(8px); box-shadow: var(--g-shadow);
+      animation: decorMenuIn .12s ease-out;
+    }
+    .decor-menu.hidden { display: none; }
+    .decor-menu-name {
+      font-size: 11px; font-weight: 700; color: var(--g-ink-soft);
+      text-align: center; margin-bottom: 6px; white-space: nowrap;
+    }
+    .decor-menu-row { display: flex; gap: 6px; }
+    .decor-menu-btn {
+      padding: 7px 11px; border-radius: 10px; cursor: pointer; white-space: nowrap;
+      font-size: 12px; font-weight: 700; transition: all .2s;
+      background: var(--g-slot); color: var(--g-ink); border: 1px solid var(--g-border);
+    }
+    .decor-menu-btn:hover { background: var(--g-card-hover); }
+    .decor-menu-btn.on { background: rgba(255,122,92,0.14); color: var(--g-accent); border-color: rgba(255,122,92,0.30); }
+    .decor-menu-btn.danger { background: rgba(239,68,68,0.16); color: #f87171; border-color: rgba(239,68,68,0.25); }
+    .decor-menu-btn.go { background: rgba(64,160,208,0.18); color: #7cc6e8; border-color: rgba(64,160,208,0.30); }
+    @keyframes decorMenuIn { from { opacity: 0; transform: translateY(4px) scale(.96); } to { opacity: 1; transform: none; } }
+
     .layer-badge{position:absolute;top:8px;right:8px;z-index:25;font-size:11px;font-weight:700;padding:4px 10px;border-radius:10px;background:rgba(20,20,35,.75);color:rgba(255,255,255,.8);cursor:pointer;transition:all .2s;backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.12);user-select:none}
     .layer-badge:hover{background:rgba(40,40,60,.9);border-color:rgba(247,201,126,.3);color:#f7c97e}
     /* Outside view — canvas-based full-room overlay */

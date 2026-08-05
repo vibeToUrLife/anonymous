@@ -171,6 +171,23 @@
       if (changed) saveRoom();
     }
 
+    /* The floor drop under a point (room fractions), or null: the nearest one
+       within a fingertip. Both the collect tap and the room's decoration grab
+       ask this, so a drop lying on a rug is still a drop and not the rug — and
+       on a phone, where grabbing furniture swallows the tap outright, that is
+       the difference between collecting it and not being able to. */
+    function dropUnder(x, y) {
+      if (viewingUid !== currentUid) return null;
+      if (selectedFood || selectedToy || selectedDrink) return null;   // feeding, not collecting
+      let hit = null, best = Infinity;
+      for (const dr of (roomData.petDrops || [])) {
+        if (dr.layer !== currentLayer) continue;
+        const dist = Math.sqrt((dr.x - x) * (dr.x - x) + (dr.y - y) * (dr.y - y));
+        if (dist < 0.06 && dist < best) { best = dist; hit = dr; }
+      }
+      return hit;
+    }
+
     // Collect a floor drop: award coins, fill the grid, unlock decoration on completion.
     async function collectDrop(dropId) {
       if (viewingUid !== currentUid) return;
@@ -513,16 +530,8 @@
         const clickX = (e.clientX - rect.left) / rect.width;
         const clickY = (e.clientY - rect.top) / rect.height;
         // Collecting a floor drop takes priority — but only when not feeding/playing.
-        if (viewingUid === currentUid && !selectedFood && !selectedToy && !selectedDrink && roomData.petDrops && roomData.petDrops.length) {
-          let hitDrop = null, hitDist = Infinity;
-          for (const dr of roomData.petDrops) {
-            if (dr.layer !== currentLayer) continue;
-            const dx = dr.x - clickX, dy = dr.y - clickY;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < 0.06 && dist < hitDist) { hitDist = dist; hitDrop = dr; }
-          }
-          if (hitDrop) { collectDrop(hitDrop.id); e.stopPropagation(); return; }
-        }
+        const hitDrop = dropUnder(clickX, clickY);
+        if (hitDrop) { collectDrop(hitDrop.id); e.stopPropagation(); return; }
         let closestPet = null;
         let closestDist = Infinity;
         for (const p of pets) {

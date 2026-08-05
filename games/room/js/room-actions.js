@@ -266,6 +266,7 @@
     async function removeDecor(id) {
       if (viewingUid !== currentUid) return;
       roomData.placedDecors = roomData.placedDecors.filter(d => d.id !== id);
+      if (_decorMenuId === id) closeDecorMenu();   // it is not there to point at any more
       await saveRoom();
       renderDecorShop();
       showToast(T('Removed from room!'), 'success');
@@ -282,6 +283,9 @@
       const p = (roomData.placedDecors || []).find(d => d.id === id);
       if (!p) return;
       p.flip = !p.flip;
+      // Reopened rather than left alone: the button lights up to match, and the
+      // menu stays put so flipping back is one more tap in the same place.
+      if (_decorMenuId === id) openDecorMenu(id);
       await saveRoom();
       renderDecorShop();
       showToast('↔️ ' + (p.flip ? T('Flipped!') : T('Flipped back!')), 'success');
@@ -669,22 +673,96 @@
       rug_heart: { w: 0.30, h: 0.18 },
     };
 
-    function decorHitTest(mx, my, p) {
-      /* Furniture and wall hangings are pictures, so the box is whatever the
-         artwork works out to on screen — ask the code that draws it rather than
-         keeping a second copy of the sizes here, which would drift. The table
-         above still answers while a picture is on its way down. */
+    /* The box a placed piece occupies, in room fractions (0-1).
+
+       Furniture and wall hangings are pictures, so the box is whatever the
+       artwork works out to on screen — ask the code that draws it rather than
+       keeping a second copy of the sizes here, which would drift. The table
+       above still answers while a picture is on its way down. Null for a piece
+       with neither, which is also a piece nothing can grab.
+
+       Both the grab test and the tap menu read this, so what you touch, what
+       you see and where the menu opens can never drift apart. */
+    function decorNormBox(p) {
       const ab = typeof decorArtHitBox === 'function' && decorArtHitBox(p.id, p.x, p.y);
-      if (ab) return mx >= ab.x0 && mx <= ab.x1 && my >= ab.y0 && my <= ab.y1;
+      if (ab) return ab;
       const hs = DECOR_HIT_SIZES[p.id];
-      if (!hs) return false;
+      if (!hs) return null;
       const halfW = hs.w / 2;
-      if (mx < p.x - halfW || mx > p.x + halfW) return false;
-      if (hs.base) {
-        // pos.y is bottom � hit area extends upward
-        return my >= p.y - hs.h && my <= p.y;
+      // pos.y is the bottom for a piece that stands on the floor, so its box
+      // runs upward from there; everything else is centred on its anchor.
+      return hs.base
+        ? { x0: p.x - halfW, x1: p.x + halfW, y0: p.y - hs.h,     y1: p.y }
+        : { x0: p.x - halfW, x1: p.x + halfW, y0: p.y - hs.h / 2, y1: p.y + hs.h / 2 };
+    }
+
+    function decorHitTest(mx, my, p) {
+      const b = decorNormBox(p);
+      if (!b) return false;
+      return mx >= b.x0 && mx <= b.x1 && my >= b.y0 && my <= b.y1;
+    }
+
+    /* ── Tap a placed piece ──
+       Everything you can do to a piece where it stands. Dragging already moves
+       it; this is the rest — mirror it, or put it away — so decorating no
+       longer means going back to the shop list to find the row for the thing
+       you are looking straight at. */
+    let _decorMenuId = null;   // id whose menu is open, or null
+
+    /* Where the menu sits, in canvas pixels: centred over the piece and above
+       it, dropping below when the piece is too near the ceiling (wall hangings
+       are), and always kept inside the room. Split out from the DOM so the
+       placement can be checked without a browser. */
+    function decorMenuPlacement(box, rw, rh, mw, mh) {
+      const gap = 8, edge = 4;
+      const fit = (v, max) => Math.max(edge, Math.min(v, Math.max(edge, max)));
+      let top = box.y0 * rh - mh - gap;
+      if (top < edge) top = box.y1 * rh + gap;      // no room above → hang it below
+      return {
+        left: fit((box.x0 + box.x1) / 2 * rw - mw / 2, rw - mw - edge),
+        top:  fit(top, rh - mh - edge),
+      };
+    }
+
+    function openDecorMenu(id) {
+      if (viewingUid !== currentUid) return;
+      const room = document.getElementById('roomView');
+      const menu = document.getElementById('decorMenu');
+      const p = (roomData.placedDecors || []).find(d => d.id === id);
+      const box = p && decorNormBox(p);
+      if (!room || !menu || !box) return;
+      _decorMenuId = id;
+
+      const def = DECORATIONS.find(d => d.id === id);
+      document.getElementById('decorMenuName').textContent =
+        def ? def.emoji + ' ' + T(def.name) : id;
+
+      const flipped = typeof isDecorFlipped === 'function' && isDecorFlipped(id);
+      let btns = '';
+      // The tank is a door as much as a piece of furniture — a tap used to open
+      // the aquarium outright, so that stays, first and highlighted.
+      if (id === 'aquarium') {
+        btns += '<button class="decor-menu-btn go" onclick="closeDecorMenu(); openAquarium()">🐠 ' + T('Open Tank') + '</button>';
       }
-      return my >= p.y - hs.h / 2 && my <= p.y + hs.h / 2;
+      btns += '<button class="decor-menu-btn' + (flipped ? ' on' : '') + '" ' +
+              'onclick="flipDecor(\'' + id + '\')">↔️ ' + T('Flip') + '</button>' +
+              '<button class="decor-menu-btn danger" onclick="removeDecor(\'' + id + '\')">📦 ' + T('Remove') + '</button>';
+      document.getElementById('decorMenuBtns').innerHTML = btns;
+
+      // Two popups over one room is one too many.
+      if (typeof closePetStatus === 'function') closePetStatus();
+      // Measured only once it is on screen — hidden, its width is 0 and the
+      // menu would land half a card to the left of the piece.
+      menu.classList.remove('hidden');
+      const pos = decorMenuPlacement(box, room.clientWidth, room.clientHeight, menu.offsetWidth, menu.offsetHeight);
+      menu.style.left = pos.left + 'px';
+      menu.style.top = pos.top + 'px';
+    }
+
+    function closeDecorMenu() {
+      _decorMenuId = null;
+      const menu = document.getElementById('decorMenu');
+      if (menu) menu.classList.add('hidden');
     }
 
     let decorDrag = null; // { id, offsetX, offsetY }
@@ -713,23 +791,60 @@
          room does not get the event. */
       const covered = () => isOutsideView || isFarmView || isAquariumView;
 
+      /* A tap that landed on a decoration belongs to that decoration. The pet
+         canvas sits on top of the background with a click handler of its own,
+         so without this the same tap would also open the status bar of a pet
+         standing in front of the piece — behind the menu that just opened.
+         Capture on the room runs BEFORE the canvas's own handler, which is the
+         only place a click on a child can still be called off. */
+      let claimedTap = false;
+      room.addEventListener('click', (e) => {
+        if (!claimedTap) return;
+        claimedTap = false;
+        e.stopPropagation();
+      }, true);
+
+      /* Controls sitting ON the stage keep their own taps. The menu is the
+         obvious one — its buttons must not read as a tap on the room beneath
+         them — but so is the floor badge: a wall hanging behind it would
+         otherwise swallow the tap that goes outside. */
+      const onControl = (e) => {
+        const t = e.target;
+        return !!(t && t.closest && t.closest('#decorMenu, .layer-badge, #petStatusBar, #roomLoadingOverlay'));
+      };
+
       room.addEventListener('mousedown', (e) => {
-        if (!isOwner() || covered()) return;
+        if (!isOwner() || covered() || onControl(e)) return;
         const rect = cvs.getBoundingClientRect();
         const mx = (e.clientX - rect.left) / rect.width;
         const my = (e.clientY - rect.top) / rect.height;
+
+        /* A drop lying on the floor is a drop, not the furniture under it. Let
+           the tap through untouched so the pet canvas collects it. */
+        if (typeof dropUnder === 'function' && dropUnder(mx, my)) {
+          claimedTap = false;
+          closeDecorMenu();
+          return;
+        }
 
         // Hit-test placed decorations (reverse order for z-order priority)
         const placed = [...(roomData.placedDecors || [])].reverse();
         for (const p of placed) {
           if (decorHitTest(mx, my, p)) {
-            decorDrag = { id: p.id, offsetX: mx - p.x, offsetY: my - p.y, startX: mx, startY: my, moved: false };
+            // Remembered before the menu goes away, so a second tap on the
+            // same piece closes it instead of reopening it.
+            const wasOpen = _decorMenuId === p.id;
+            closeDecorMenu();
+            claimedTap = true;
+            decorDrag = { id: p.id, offsetX: mx - p.x, offsetY: my - p.y, startX: mx, startY: my, moved: false, wasOpen };
             cvs.style.cursor = 'grabbing';
             e.preventDefault();
             e.stopPropagation(); // Prevent pet click from firing
             return;
           }
         }
+        claimedTap = false;
+        closeDecorMenu();          // tapped the room, not a piece
       });
 
       // Hover cursor � listen on room container for same reason
@@ -773,10 +888,14 @@
       const endDrag = () => {
         if (!decorDrag) return;
         cvs.style.cursor = '';
-        // A tap (no drag) on the fish tank enters the aquarium view.
-        const tappedTank = !decorDrag.moved && decorDrag.id === 'aquarium';
+        // A tap (no drag) opens the piece's menu where it stands; tapping the
+        // same piece again puts it away. A drag is a move, and saves.
+        const tap = decorDrag.moved ? null : decorDrag;
         decorDrag = null;
-        if (tappedTank && typeof openAquarium === 'function') { openAquarium(); return; }
+        if (tap) {
+          if (!tap.wasOpen) openDecorMenu(tap.id);
+          return;
+        }
         // Debounce save
         clearTimeout(decorSaveTimer);
         decorSaveTimer = setTimeout(() => saveRoom(), 300);
@@ -785,20 +904,27 @@
 
       // Touch support — listen on room container to avoid being blocked by pet canvas
       room.addEventListener('touchstart', (e) => {
-        if (!isOwner() || covered() || e.touches.length !== 1) return;
+        claimedTap = false;   // touch never synthesises the click that clears it
+        if (!isOwner() || covered() || onControl(e) || e.touches.length !== 1) return;
         const touch = e.touches[0];
         const rect = cvs.getBoundingClientRect();
         const mx = (touch.clientX - rect.left) / rect.width;
         const my = (touch.clientY - rect.top) / rect.height;
+        // Same as the mouse path: a drop on top of a piece is still a drop, and
+        // grabbing the piece here would swallow the tap that collects it.
+        if (typeof dropUnder === 'function' && dropUnder(mx, my)) { closeDecorMenu(); return; }
         const placed = [...(roomData.placedDecors || [])].reverse();
         for (const p of placed) {
           if (decorHitTest(mx, my, p)) {
-            decorDrag = { id: p.id, offsetX: mx - p.x, offsetY: my - p.y, startX: mx, startY: my, moved: false };
+            const wasOpen = _decorMenuId === p.id;
+            closeDecorMenu();
+            decorDrag = { id: p.id, offsetX: mx - p.x, offsetY: my - p.y, startX: mx, startY: my, moved: false, wasOpen };
             e.preventDefault();
             e.stopPropagation();
             return;
           }
         }
+        closeDecorMenu();          // tapped the room, not a piece
       }, { passive: false });
 
       document.addEventListener('touchmove', (e) => {
@@ -834,6 +960,25 @@
         if (isOwner() || covered()) return;             // owners use the tap-vs-drag path above
         if (tankUnder(e) && typeof openAquarium === 'function') openAquarium();
       });
+      /* Anything tapped OUTSIDE the stage — a tab, the shop, the back button —
+         puts the menu away too. Taps inside the room are settled above, which
+         is what stops the very tap that opens the menu from closing it again.
+
+         On the way DOWN, not on the click: a menu button rebuilds the menu, so
+         by the time its click reaches the document the button it fired on is
+         detached — and a detached target belongs to no ancestor, which read as
+         "outside" and shut the menu the moment you flipped anything. */
+      const dismissFromOutside = (e) => {
+        if (!_decorMenuId) return;
+        const t = e.target;
+        if (t && t.closest && (t.closest('#decorMenu') || t.closest('#roomView'))) return;
+        closeDecorMenu();
+      };
+      document.addEventListener('mousedown', dismissFromOutside);
+      document.addEventListener('touchstart', dismissFromOutside, { passive: true });
+      // The menu is pinned to a spot in a room that just changed size.
+      window.addEventListener('resize', () => { if (_decorMenuId) closeDecorMenu(); });
+
       room.addEventListener('mousemove', (e) => {
         if (isOwner() || decorDrag || covered()) return;
         cvs.style.cursor = tankUnder(e) ? 'pointer' : '';

@@ -935,6 +935,7 @@
     'In Room': '已摆放',
     'Remove': '收起',
     'Flip': '左右翻转',
+    'Open Tank': '进入鱼缸',
     'Flipped!': '已左右翻转！',
     'Flipped back!': '已翻转回来！',
     'On Floor {n}': '在第 {n} 层',
