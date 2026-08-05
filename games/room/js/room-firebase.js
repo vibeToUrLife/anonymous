@@ -18,9 +18,17 @@
         farmFoodAt: roomData.farmFoodAt || 0,
         farmStock: roomData.farmStock || {},
         farmTotalCollected: roomData.farmTotalCollected || 0,
-        farmCapLevel: roomData.farmCapLevel || 0,
-        farmLandL: roomData.farmLandL || false,
-        farmLandR: roomData.farmLandR || false,
+        // NOTE: farmCapLevel / farmLandL / farmLandR are intentionally NOT written
+        // here, for the same reason as farmHelpDay below. They are one-way, paid
+        // progression, and this save posts whichever copy of the document this
+        // client happens to be holding — and persistence means that copy can be
+        // stale through no fault of the player: the first snapshot after a load is
+        // answered out of THIS device's offline cache, another tab may be further
+        // ahead, and the farm tick saves on its own timer without waiting for the
+        // server to reply. Carried in a routine save, a stale copy walks them
+        // BACKWARDS: a maxed pasture came back as Lv 1 with the plots it had paid
+        // for still standing beside it. expandFarm / buyFarmLand move them instead,
+        // in a transaction, against the server's own copy.
         farmAutoCollect: roomData.farmAutoCollect || false,
         farmVariants: roomData.farmVariants || {},
         farmPlots: roomData.farmPlots || [],

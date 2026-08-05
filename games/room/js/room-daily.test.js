@@ -286,3 +286,46 @@ test('a claim reads the streak from the server, not from a stale local copy', as
   assert.equal(server.doc.coins, 75, 'day 5 pays 75');
   assert.equal(sb.roomData.loginStreak, 5, 'and the local copy must follow the server');
 });
+
+/* ═══════════════════════════════════════════════════════════════
+   4. The farm scale a routine save must not post
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Same stale-cache shape as §1, one field over, and it cost real progress:
+   "my farm had to be full to open the land beside it — and now it shows my farm
+   at level 1". Applying a cache-only snapshot sets _roomLoaded, which unblocks
+   every saveRoom() site and the farm production tick; while farmCapLevel rode
+   along in that payload, the first tick after a stale read posted the old level
+   straight over the server's. */
+
+test('a routine save does not carry the farm scale at all', async () => {
+  const sb = dailySandbox();
+  sb._handleRoomSnap(snapOf({ coins: 100, farmCapLevel: 4, farmLandL: true, farmLandR: true }));
+  await sb.saveRoom();
+  const posted = sb.writes[sb.writes.length - 1];
+  for (const k of ['farmCapLevel', 'farmLandL', 'farmLandR']) {
+    assert.ok(!(k in posted), k + ' rode along in a routine save — only the purchase may move it');
+  }
+});
+
+test('a tick after a stale cache read cannot walk the pasture backwards', async () => {
+  const sb = dailySandbox({ server: { doc: { coins: 100, farmCapLevel: 4, farmLandL: true, farmLandR: true } } });
+
+  // This device wakes with a copy from before any of that was bought…
+  sb._handleRoomSnap(snapOf({ coins: 100, farmCapLevel: 1 }, { fromCache: true }));
+  assert.equal(sb.roomData.farmCapLevel, 1, 'the cached copy is what the client is holding');
+
+  // …and something saves before the server answers, the way the farm tick does.
+  await sb.saveRoom();
+
+  assert.equal(sb.server.doc.farmCapLevel, 4, 'a stale save walked the pasture back to Lv 1');
+  assert.equal(sb.server.doc.farmLandL, true, 'and took the plots it had paid for with it');
+  assert.equal(sb.server.doc.farmLandR, true);
+});
+
+test('the level a save leaves alone is the one the next snapshot brings back', () => {
+  const sb = dailySandbox();
+  sb._handleRoomSnap(snapOf({ coins: 100, farmCapLevel: 1 }, { fromCache: true }));
+  sb._handleRoomSnap(snapOf({ coins: 100, farmCapLevel: 4, farmLandL: true, farmLandR: true }));
+  assert.equal(sb.roomData.farmCapLevel, 4, 'the server snapshot did not correct the stale level');
+});

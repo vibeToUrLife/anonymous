@@ -851,6 +851,7 @@
     'right →': '右 →',
     'New ground either side. Nothing already on the farm moves.': '在农场左右两侧开新地 —— 农场上原有的东西不会动。',
     'Fully expand the pasture first!': '先把牧场扩建到满级！',
+    'Your farm has moved on — this is what it holds now.': '农场已经变过了 —— 这是它现在的样子。',
     'Opened up the land on the left!': '左边的地开垦好了！',
     'Opened up the land on the right!': '右边的地开垦好了！',
     'Farm land': '农场土地',

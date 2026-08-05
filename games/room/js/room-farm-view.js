@@ -1928,6 +1928,16 @@
       const cost = FARM_LAND_COSTS[(roomData.farmLandL ? 1 : 0) + (roomData.farmLandR ? 1 : 0)];
       if (cost == null) return;
       if (roomData.coins < cost) return showToast(T('Not enough coins!'), 'error');
+      // Both the gate and the price are re-checked on the server's copy: the OTHER
+      // side may have been bought on another device since this panel was drawn,
+      // which makes this plot the second one and the dearer of the two.
+      const r = await _farmScaleTxn(function (d) {
+        if (farmCapLevelOf(d) < FARM_EXPAND_COSTS.length || d[key]) return null;
+        const at = FARM_LAND_COSTS[(d.farmLandL ? 1 : 0) + (d.farmLandR ? 1 : 0)];
+        if (at !== cost) return null;
+        const f = {}; f[key] = true; return f;
+      });
+      if (!r.ok) return _farmScaleBehind(r);
       roomData.coins -= cost;
       logCoin(-cost, T('Farm land'));
       roomData[key] = true;
@@ -1938,12 +1948,51 @@
       farmPan(side === 'L' ? -1 : 1);   // glide over so the new ground is what you see
     }
 
+    /* The pasture level and the two plots are one-way, paid progression, and
+       saveRoom() deliberately no longer carries them (see the NOTE there). They
+       move only through here, and only against what the SERVER holds: the
+       transaction re-reads the document and re-checks the gate on THAT copy, so a
+       client running on an out-of-date one — a first snapshot answered out of the
+       device's offline cache, a second tab, a tick that fired before the server
+       replied — loses the race instead of posting its stale level over a newer.
+       `plan(d)` is handed the server document and returns the fields to write, or
+       null to refuse. The server's own numbers come back either way, so a refused
+       caller can adopt them and redraw rather than argue with a stale copy. */
+    async function _farmScaleTxn(plan) {
+      const ref = userDocRef(currentUid);
+      return await db.runTransaction(async function (tx) {
+        const snap = await tx.get(ref);
+        const d = snap.exists ? snap.data() : {};
+        const fields = plan(d);
+        if (fields) tx.set(ref, fields, { merge: true });
+        return { ok: !!fields, level: farmCapLevelOf(d), landL: !!d.farmLandL, landR: !!d.farmLandR };
+      });
+    }
+
+    // Nothing was bought and nothing charged — this client priced a step the
+    // server does not agree is next. Take the server's numbers and redraw, so the
+    // panel stops offering something that has already happened.
+    function _farmScaleBehind(r) {
+      roomData.farmCapLevel = r.level;
+      roomData.farmLandL = r.landL;
+      roomData.farmLandR = r.landR;
+      renderFarmPanel();
+      renderAll();
+      showToast(T('Your farm has moved on — this is what it holds now.'), '');
+    }
+
     async function expandFarm() {
       if (viewingUid !== currentUid) return;
       const lvl = roomData.farmCapLevel || 0;
       if (lvl >= FARM_EXPAND_COSTS.length) return showToast(T('Farm is fully expanded!'), '');
       const cost = FARM_EXPAND_COSTS[lvl];
       if (roomData.coins < cost) return showToast(T('Not enough coins!'), 'error');
+      // Only buy the rung the server also thinks is next — priced off its level,
+      // not ours, so a stale client can neither pay twice nor step down.
+      const r = await _farmScaleTxn(function (d) {
+        return farmCapLevelOf(d) === lvl ? { farmCapLevel: lvl + 1 } : null;
+      });
+      if (!r.ok) return _farmScaleBehind(r);
       roomData.coins -= cost;
       logCoin(-cost, T('Farm expansion'));
       roomData.farmCapLevel = lvl + 1;

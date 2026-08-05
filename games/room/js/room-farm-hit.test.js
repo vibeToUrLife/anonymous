@@ -1263,3 +1263,78 @@ test('a repaired save gets back the herd cap it had paid for', () => {
     'the pen still held ' + sb.farmAnimalCap() + ' animals, not the ' + (base + 10 * max) +
     ' four expansions were bought for');
 });
+
+/* ── Buying scale against the SERVER's copy ──
+   The reported rollback: a maxed pasture came back as Lv 1 with its bought plots
+   still standing beside it. saveRoom() carried farmCapLevel, so any routine save
+   posted whichever copy of the document the client held — and with offline
+   persistence that copy can be stale through no fault of the player. The two
+   purchases are the only writers now, and they commit in a transaction. */
+
+// A fake document behind a fake db.runTransaction, so a "server" can hold state
+// this client does not have.
+function scaleSandbox(serverDoc) {
+  const sb = plotSandbox();
+  const server = Object.assign({ coins: 0 }, serverDoc);
+  sb.roomData.farmLandL = !!serverDoc.farmLandL;
+  sb.roomData.farmLandR = !!serverDoc.farmLandR;
+  sb.roomData.farmCapLevel = serverDoc.farmCapLevel || 0;
+  sb.roomData.coins = 999999;
+  const ref = {};
+  sb.userDocRef = () => ref;
+  sb.db = {
+    runTransaction: async (fn) => fn({
+      get: async () => ({ exists: true, data: () => Object.assign({}, server) }),
+      set: (r, fields) => Object.assign(server, fields),
+    }),
+  };
+  sb._server = server;
+  return sb;
+}
+
+test('expanding commits the rung the server agrees is next', async () => {
+  const sb = scaleSandbox({ farmCapLevel: 1 });
+  await sb.expandFarm();
+  assert.equal(sb._server.farmCapLevel, 2, 'the level the server ended on');
+  assert.equal(sb.roomData.farmCapLevel, 2);
+});
+
+test('a client behind the server neither steps the level down nor pays', async () => {
+  // The exact shape of the bug: this client is holding a copy that says Lv 1
+  // while the server has the finished pasture and both plots.
+  const sb = scaleSandbox({ farmCapLevel: 4, farmLandL: true, farmLandR: true });
+  sb.roomData.farmCapLevel = 1;                 // …the stale copy in hand
+  const coins = sb.roomData.coins;
+  await sb.expandFarm();
+  assert.equal(sb._server.farmCapLevel, 4, 'a stale client wrote its own level over the server\'s');
+  assert.equal(sb.roomData.coins, coins, 'it charged for an expansion it did not get');
+  assert.equal(sb.roomData.farmCapLevel, 4, 'the client kept showing the stale level after being refused');
+});
+
+test('a plot is priced off the server\'s count, not this panel\'s', async () => {
+  // The other side was bought elsewhere, so this one is the SECOND plot.
+  const sb = scaleSandbox({ farmCapLevel: 4, farmLandL: true });
+  sb.roomData.farmLandL = false;                // …this panel still shows both free
+  const coins = sb.roomData.coins;
+  await sb.buyFarmLand('R');
+  assert.equal(sb._server.farmLandR, undefined, 'it sold the dearer plot at the first plot\'s price');
+  assert.equal(sb.roomData.coins, coins, 'it charged anyway');
+  assert.equal(sb.roomData.farmLandL, true, 'the refusal did not adopt what the server holds');
+});
+
+test('a plot commits when the server agrees on gate and price', async () => {
+  const sb = scaleSandbox({ farmCapLevel: 4 });
+  const costs = vm.runInContext('FARM_LAND_COSTS', sb);
+  const coins = sb.roomData.coins;
+  await sb.buyFarmLand('L');
+  assert.equal(sb._server.farmLandL, true);
+  assert.equal(sb.roomData.coins, coins - costs[0], 'charged ' + (coins - sb.roomData.coins) + ', expected ' + costs[0]);
+});
+
+test('the server refuses a plot to an unfinished pasture even if this client thinks otherwise', async () => {
+  const sb = scaleSandbox({ farmCapLevel: 2 });
+  sb.roomData.farmCapLevel = 4;                 // a stale copy that says it is done
+  await sb.buyFarmLand('L');
+  assert.equal(sb._server.farmLandL, undefined, 'the plot gate was decided on the client\'s copy');
+  assert.equal(sb.roomData.farmCapLevel, 2, 'the client did not adopt the server\'s level');
+});
