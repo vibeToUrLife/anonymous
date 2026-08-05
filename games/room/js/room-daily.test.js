@@ -146,6 +146,10 @@ function dailySandbox(opts) {
   const base = fs.readFileSync(path.join(DIR, 'room-base.js'), 'utf8');
   const s = base.indexOf('const DAILY_REWARDS = [');
   vm.runInContext(base.slice(s, base.indexOf('];', s) + 2), sandbox);
+  // Same trick for farmCapLevelOf: the snapshot handler reads the pasture level
+  // back through it, so the block it lives in has to be here to load at all.
+  const f = base.indexOf('const FARM_EXPAND_COSTS = [');
+  vm.runInContext(base.slice(f, base.indexOf('const FARM_AUTOCOLLECT_COST', f)), sandbox);
 
   vm.runInContext(fs.readFileSync(path.join(DIR, 'room-firebase.js'), 'utf8'), sandbox);
   vm.runInContext(fs.readFileSync(path.join(DIR, 'room-ui.js'), 'utf8'), sandbox);

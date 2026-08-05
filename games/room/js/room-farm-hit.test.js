@@ -1188,3 +1188,78 @@ test('progress through a visit survives a reload', async () => {
   assert.equal(vm.runInContext('_buyerSold', sb)[w.id], 1,
     'after a reload the stall re-offered a unit it had already bought');
 });
+
+/* ── The Upgrades tab's land row ──
+   Reported as "my farm had to be full to open the land beside it — and now it
+   shows my farm at level 1". Two faults met on one card: a gate note that
+   outlived the thing it gates, and a pasture level that had gone missing under
+   it. The row read "2/2 · needs a full pasture" beside a MAX tag, one line
+   below "Lv 1/4". */
+
+test('both plots owned: no gate note, whatever the pasture level says', () => {
+  const sb = plotSandbox();                 // plotSandbox owns both plots…
+  const html = sb._farmLandHtml(false);     // …while the pasture reads unfinished
+  assert.ok(!/needs a full pasture/.test(html),
+    'a row showing 2/2 and MAX still said the plots "need a full pasture": ' + html);
+  assert.ok(/2\/2/.test(html) && /MAX/.test(html),
+    'expected the owned/max pair and a MAX tag: ' + html);
+});
+
+test('the gate note shows while there is still a plot to buy', () => {
+  const sb = plotSandbox();
+  sb.roomData.farmLandL = false;
+  sb.roomData.farmLandR = false;
+  const html = sb._farmLandHtml(false);
+  assert.ok(/needs a full pasture/.test(html),
+    'nothing on the row said why both sides were dead: ' + html);
+  assert.ok(/disabled/.test(html), 'the buy buttons were live below a full pasture');
+});
+
+test('a maxed pasture prices the next plot instead of gating it', () => {
+  const sb = plotSandbox();
+  sb.roomData.farmLandR = false;            // one side left to buy
+  const costs = vm.runInContext('FARM_LAND_COSTS', sb);
+  const html = sb._farmLandHtml(true);
+  assert.ok(!/needs a full pasture/.test(html), 'gated a plot the pasture had earned: ' + html);
+  assert.ok(html.includes('next ' + costs[1]),
+    'the second plot was not priced at ' + costs[1] + ': ' + html);
+});
+
+/* ── The pasture level under those plots ──
+   buyFarmLand is the only thing that grants a plot and it refuses below a full
+   pasture, so land is proof the pasture was finished. Where the two disagree,
+   the land wins. */
+
+test('land on a save puts a lost pasture level back', () => {
+  const sb = plotSandbox();
+  const max = vm.runInContext('FARM_EXPAND_COSTS', sb).length;
+  assert.equal(sb.farmCapLevelOf({ farmCapLevel: 1, farmLandL: true, farmLandR: true }), max,
+    'a farm owning both plots must have finished the pasture to have bought them');
+  assert.equal(sb.farmCapLevelOf({ farmCapLevel: 0, farmLandR: true }), max,
+    'one plot is proof enough — it costs a full pasture too');
+});
+
+test('a farm with no plots keeps exactly the level it saved', () => {
+  const sb = plotSandbox();
+  assert.equal(sb.farmCapLevelOf({ farmCapLevel: 1 }), 1,
+    'the repair handed out expansions nobody bought');
+  assert.equal(sb.farmCapLevelOf({ farmCapLevel: 0, farmLandL: false, farmLandR: false }), 0);
+  assert.equal(sb.farmCapLevelOf({}), 0);
+  assert.equal(sb.farmCapLevelOf(undefined), 0, 'a missing document must read as a new farm');
+});
+
+test('the repair never pushes a level past the top rung', () => {
+  const sb = plotSandbox();
+  const max = vm.runInContext('FARM_EXPAND_COSTS', sb).length;
+  assert.equal(sb.farmCapLevelOf({ farmCapLevel: max, farmLandL: true }), max);
+});
+
+test('a repaired save gets back the herd cap it had paid for', () => {
+  const sb = plotSandbox();
+  const max = vm.runInContext('FARM_EXPAND_COSTS', sb).length;
+  const base = vm.runInContext('FARM_MAX_ANIMALS', sb);
+  sb.roomData.farmCapLevel = sb.farmCapLevelOf({ farmCapLevel: 1, farmLandL: true, farmLandR: true });
+  assert.equal(sb.farmAnimalCap(), base + 10 * max,
+    'the pen still held ' + sb.farmAnimalCap() + ' animals, not the ' + (base + 10 * max) +
+    ' four expansions were bought for');
+});

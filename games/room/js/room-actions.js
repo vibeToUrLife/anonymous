@@ -952,7 +952,10 @@
       roomData.farmFoodAt = d.farmFoodAt || 0;
       roomData.farmStock = d.farmStock || {};
       roomData.farmTotalCollected = d.farmTotalCollected || 0;
-      roomData.farmCapLevel = d.farmCapLevel || 0;
+      // Same repair the owner's own load applies — the pasture level sets where
+      // the crop fence sits, so a host whose level was lost would be drawn with
+      // their herd standing on a strip of grass too narrow for it.
+      roomData.farmCapLevel = farmCapLevelOf(d);
       roomData.farmLandL = d.farmLandL || false;
       roomData.farmLandR = d.farmLandR || false;
       roomData.farmAutoCollect = d.farmAutoCollect || false;

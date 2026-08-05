@@ -291,7 +291,10 @@
         roomData.farmFoodAt = d.farmFoodAt || 0;
         roomData.farmStock = d.farmStock || {};
         roomData.farmTotalCollected = d.farmTotalCollected || 0;
-        roomData.farmCapLevel = d.farmCapLevel || 0;
+        // farmCapLevelOf, not d.farmCapLevel: a save holding land beside the farm
+        // has a maxed pasture behind it whatever the stored level says. The next
+        // saveRoom() writes the repaired level back, so this heals the document.
+        roomData.farmCapLevel = farmCapLevelOf(d);
         roomData.farmLandL = d.farmLandL || false;
         roomData.farmLandR = d.farmLandR || false;
         roomData.farmAutoCollect = d.farmAutoCollect || false;

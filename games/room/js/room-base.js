@@ -289,6 +289,20 @@
        is what there is left to spend coins on once the pasture is maxed. */
     const FARM_LAND_COSTS = [50000, 120000];    // 1st plot, then the 2nd — either side
     const FARM_LAND_STEP = 0.5;                 // how wide one plot is, in window widths
+    /* A plot is only ever SOLD to a finished pasture — buyFarmLand refuses below
+       farmCapLevel === FARM_EXPAND_COSTS.length, and nothing else in the game
+       grants one. So a save carrying land but a short pasture cannot have been
+       played into: the land is the surviving proof, and the pasture level is what
+       went missing. Read it back through here and the pasture is restored to the
+       level that plot had to have been bought at.
+       Reported as "the land beside my farm is open, but it now says my farm is
+       level 1": the Upgrades tab contradicted itself — "Lv 1/4" one row above
+       "2/2 · needs a full pasture" — and the herd cap sat 30 animals below what
+       had been paid for, since farmAnimalCap() counts off this level. */
+    function farmCapLevelOf(d) {
+      const lvl = (d && d.farmCapLevel) || 0;
+      return (d && (d.farmLandL || d.farmLandR)) ? Math.max(lvl, FARM_EXPAND_COSTS.length) : lvl;
+    }
     const FARM_AUTOCOLLECT_COST = 4000;         // one-time: auto-collects produce into stock
 
     // Coat variants: each new animal is the common variant unless it rolls the

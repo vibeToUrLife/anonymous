@@ -1901,8 +1901,12 @@
       const max = FARM_LAND_COSTS.length;
       const owned = (roomData.farmLandL ? 1 : 0) + (roomData.farmLandR ? 1 : 0);
       const cost = owned < max ? FARM_LAND_COSTS[owned] : null;
-      const note = !pastureMaxed ? T('needs a full pasture')
-                 : cost == null ? ''
+      /* Owning everything is checked FIRST. The gate is about the NEXT plot, so
+         once there isn't one it has nothing left to say — and said anyway it
+         read as a claim about the plots already standing there: "2/2 · needs a
+         full pasture", beside a MAX tag, on ground bought long ago. */
+      const note = cost == null ? ''
+                 : !pastureMaxed ? T('needs a full pasture')
                  : T('next {cost}', { cost: cost + '🪙' });
       const side = (key, dir, label) =>
         roomData[key] ? _upTag(T(label) + ' ✓')

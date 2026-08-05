@@ -40,6 +40,12 @@ function visitSandbox(hostDoc) {
   sandbox.globalThis = sandbox;
   sandbox.scrollTo = () => {};
   vm.createContext(sandbox);
+  // visitRoom reads the host's pasture level back through farmCapLevelOf, which
+  // lives in room-base.js among a lot of Firebase bootstrapping; take just that
+  // block, the way room-farm-hit.test.js takes the farm consts.
+  const base = fs.readFileSync(path.join(DIR, 'room-base.js'), 'utf8');
+  const f = base.indexOf('const FARM_EXPAND_COSTS = [');
+  vm.runInContext(base.slice(f, base.indexOf('const FARM_AUTOCOLLECT_COST', f)), sandbox);
   vm.runInContext(fs.readFileSync(path.join(DIR, 'room-actions.js'), 'utf8'), sandbox);
   return sandbox;
 }
@@ -110,4 +116,28 @@ test('visitRoom falls back to the free skin for an empty host document', async (
 
   assert.equal(sb.roomData.farmTheme, 'meadow');
   assert.deepEqual(sb.roomData.ownedFarmThemes, []);
+});
+
+/* The pasture level sets where the crop fence is drawn and how many animals the
+   pen holds, so a host whose level went missing under their bought plots would
+   be toured with their herd crammed onto a strip of grass too narrow for it.
+   Same repair the host's own load applies — see farmCapLevelOf. */
+test('a visit reads the host pasture back through the same repair', async () => {
+  const sb = visitSandbox({ farmCapLevel: 1, farmLandL: true, farmLandR: true, pets: [] });
+  sb.roomData = { pets: [], layerData: {} };
+  const max = vm.runInContext('FARM_EXPAND_COSTS', sb).length;
+
+  await sb.visitRoom('host');
+
+  assert.equal(sb.roomData.farmCapLevel, max,
+    'the host owns both plots, which are only sold to a finished pasture');
+  assert.equal(sb.roomData.farmLandL, true);
+  assert.equal(sb.roomData.farmLandR, true);
+});
+
+test('a host with no plots is toured at exactly the level they saved', async () => {
+  const sb = visitSandbox({ farmCapLevel: 1, pets: [] });
+  sb.roomData = { pets: [], layerData: {} };
+  await sb.visitRoom('host');
+  assert.equal(sb.roomData.farmCapLevel, 1, 'the repair invented expansions on a host that had none');
 });
