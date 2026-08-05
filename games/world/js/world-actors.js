@@ -57,12 +57,18 @@ const WorldActors = (function () {
     // in the effect pass already signals it.
     if (action && !(moving && action === WORLD_HIGHFIVE.actionId)) applyWorldActionTransform(ctx, action, ap, size, t);
     // Accessory back layer (cape/wings) → pet body → accessory front layer.
-    if (a.outfit) { try { drawPetAccessory(ctx, a.pet, a.outfit, size, 'back'); } catch (e) {} }
+    // Sprite pets change silhouette between walking, idling and sleeping, so the
+    // hat has to know which pose is showing. Their own module answers, so this
+    // can never disagree with the picture underneath it.
+    const accPose = a.pet === 'cat' && typeof catPose === 'function' ? catPose(moving, action)
+      : a.pet === 'dog' && typeof dogPose === 'function' ? dogPose(moving, action)
+      : 'side';
+    if (a.outfit) { try { drawPetAccessory(ctx, a.pet, a.outfit, size, 'back', accPose); } catch (e) {} }
     // Only the capybara reads this: standing still means its sitting pose.
     // Tom and Jerry pick their own frame from `moving`, and the rest ignore it.
     const view = moving ? 'side' : 'front';
     worldDrawPet(ctx, a.pet, size, legPhase, moving, action, ap, t, a.color, view);
-    if (a.outfit) { try { drawPetAccessory(ctx, a.pet, a.outfit, size, 'front'); } catch (e) {} }
+    if (a.outfit) { try { drawPetAccessory(ctx, a.pet, a.outfit, size, 'front', accPose); } catch (e) {} }
     ctx.restore();
 
     if (action) drawWorldActionEffect(ctx, px, py, size, ds, action, ap, t, scene.fx);

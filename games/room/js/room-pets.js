@@ -736,10 +736,13 @@
 
           // Draw back-layer accessories (cape, wings) behind the pet
           const accId = petInst ? petInst.accessory : null;
-          if (accId) drawPetAccessory(ctx, p.type, accId, size, 'back');
+          // Sprite pets change silhouette, so the hat has to know which pose is
+          // showing; petPoseOf asks the pet's own module rather than guessing.
+          const accPose = petPoseOf(p.type, moving, currentAction);
+          if (accId) drawPetAccessory(ctx, p.type, accId, size, 'back', accPose);
           drawPetCanvas(ctx, p.type, size, legPhase, moving, hunger, t, currentAction, actionProgress, color, petView);
           // Draw front-layer accessories on top of the pet
-          if (accId) drawPetAccessory(ctx, p.type, accId, size, 'front');
+          if (accId) drawPetAccessory(ctx, p.type, accId, size, 'front', accPose);
           ctx.restore();
 
           // Action floating effects
@@ -999,6 +1002,16 @@
       ctx.lineTo(x, y + r);
       ctx.arcTo(x, y, x + r, y, r);
       ctx.closePath();
+    }
+
+    /* Which pose a sprite pet is showing. Asked of the pet's own module, never
+       recomputed here — the accessory anchor and the picture underneath it have
+       to agree, and two copies of this rule would drift apart. Pets drawn from
+       paths never change silhouette, so 'side' covers them. */
+    function petPoseOf(type, moving, action) {
+      if (type === 'cat' && typeof catPose === 'function') return catPose(moving, action);
+      if (type === 'dog' && typeof dogPose === 'function') return dogPose(moving, action);
+      return 'side';
     }
 
     /* Pets whose sheet holds a real sleeping pose. The lie-down transform below

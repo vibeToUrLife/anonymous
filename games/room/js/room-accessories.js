@@ -187,14 +187,21 @@
 
     // Draw accessory on pet canvas — offset to each pet's actual head position
     const PET_HEAD_OFFSETS = {
-      // Cat and dog come from artwork (pets/img/*.png), so these were read off
-      // the sheet rather than from path geometry. They are measured on the SIDE
-      // pose — the one worn standing and walking, which is nearly all the time.
-      // The front-facing idle puts the head half a body to the left, and no
-      // single anchor can serve both; the capybara is anchored the same way and
-      // for the same reason.
-      cat:     { hx:  0.39, hy: -0.38, r: 0.21 },
-      dog:     { hx:  0.40, hy: -0.37, r: 0.22 },
+      /* Cat and dog come from artwork (pets/img/*.png) and change pose: they
+         walk side-on, idle sitting and facing you, and sleep curled up. The
+         head moves half a body between those, so one anchor cannot serve all
+         three — these carry a set instead, and the caller says which pose is
+         showing. Each was read off the packed sheet, not from path geometry. */
+      cat: {
+        front: { hx:  0.01, hy: -0.47, r: 0.25 },
+        side:  { hx:  0.40, hy: -0.30, r: 0.22 },
+        sleep: { hx:  0.40, hy:  0.00, r: 0.22 },
+      },
+      dog: {
+        front: { hx:  0.00, hy: -0.51, r: 0.27 },
+        side:  { hx:  0.42, hy: -0.30, r: 0.22 },
+        sleep: { hx:  0.41, hy:  0.01, r: 0.22 },
+      },
       bunny:   { hx:  0.30, hy: -0.16, r: 0.26 },
       hamster: { hx:  0.25, hy: -0.10, r: 0.30 },
       fox:     { hx:  0.38, hy: -0.14, r: 0.27 },
@@ -220,7 +227,10 @@
     // Accessories that render behind the pet body
     const BACK_LAYER_ACCESSORIES = ['wings'];
 
-    function drawPetAccessory(ctx, petType, accId, s, layer) {
+    /* `pose` is only read for pets whose entry above is a set — the sprite pets
+       that change silhouette. Everything else keeps one head all its life and
+       ignores it, so callers that do not know the pose can leave it out. */
+    function drawPetAccessory(ctx, petType, accId, s, layer, pose) {
       if (!accId) return;
       const acc = PET_ACCESSORIES.find(a => a.id === accId);
       if (!acc) return;
@@ -228,7 +238,8 @@
       // If layer is specified, only draw matching layer
       if (layer === 'back' && !isBack) return;
       if (layer === 'front' && isBack) return;
-      const ho = PET_HEAD_OFFSETS[petType] || { hx: 0, hy: -0.3, r: 0.28 };
+      const entry = PET_HEAD_OFFSETS[petType] || { hx: 0, hy: -0.3, r: 0.28 };
+      const ho = entry.side ? (entry[pose] || entry.side) : entry;
       const hx = s * ho.hx;   // head centre X
       const hy = s * ho.hy;   // head centre Y
       const hr = s * ho.r;    // head radius

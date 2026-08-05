@@ -1,10 +1,10 @@
 /* ── Cat ──
    Drawn from artwork rather than canvas paths, like Tom and the capybara. One
    sheet (img/cat.png) holds equal cells that all stand on the cell's floor, so
-   changing frame never shifts the paws: cell 0 is the front-facing idle, cells
-   1-8 are one loop of the walk seen from the side, cell 9 is asleep. Every cell
-   faces RIGHT — the direction the room treats as unmirrored — so walking left
-   is the room's own flip and nothing here has to know about it.
+   changing pose never shifts the paws: cell 0 is the idle, sitting and facing
+   you, cells 1-8 are one loop of the walk seen from the side, cell 9 is asleep.
+   The walk cells face RIGHT — the direction the room treats as unmirrored — so
+   walking left is the room's own flip and nothing here has to know about it.
 
    `pal` is ignored: the artwork ships in one coat, which is why room-base.js no
    longer lists a cat palette and the status bar stops offering colour dots.
@@ -15,21 +15,27 @@
    is already lying down. */
 const CAT_CELL_W = 262;
 const CAT_CELL_H = 202;
-const CAT_FRONT = 0;        // cell index of the idle, facing the viewer
 const CAT_WALK_FROM = 1;    // first walk cell
 const CAT_WALK_N = 8;       // how many walk cells
-const CAT_SLEEP = 9;        // cell index of the sleeping pose
-// Standing still uses a walk cell rather than the front idle. The idle is a
-// SITTING pose facing the viewer, and a pet that swung side-on to front-on
-// every time it paused would also swing its hat off its head — the accessory
-// anchors can only be measured for one pose, and it has to be the one worn
-// most of the time. This is the cell whose legs sit closest together.
-const CAT_STAND = 7;
 const CAT_DRAW_W = 1.50;    // drawn width, as a fraction of the pet size
 const CAT_FEET_Y = 0.38;    // where the cell's ground line sits below the origin
 // Walk cells per unit of the room's leg phase, which advances 10 a second — so
 // the eight-cell loop is a full stride every 1.1s.
 const CAT_STEP_RATE = 0.72;
+
+/* The cell each pose lives in. 'walk' is deliberately absent: it has no single
+   cell, being picked from the leg phase. */
+const CAT_POSE_CELL = { front: 0, sleep: 9 };
+
+/* Which pose the cat is in. It lives out here rather than inside the draw call
+   because the accessory code has to ask the same question — the head sits half
+   a body apart between the front and side poses, so a hat can only be placed
+   once the pose is known, and both answers have to come from one place. */
+function catPose(moving, action) {
+  if (moving) return 'walk';
+  if (action === 'sleep' || action === 'nap') return 'sleep';
+  return 'front';
+}
 
 // Resolved against this file's own URL, because the three pages that load it
 // (room, world, index) sit at different depths. Fetched on first draw rather
@@ -45,16 +51,10 @@ function drawCatPet(ctx, s, lp, moving, hunger, action, ap, t, pal, view) {
   const art = catSheet();
   if (!art.naturalWidth) return;   // sheet still downloading
 
-  /* 'portrait' is the shop card asking for a head-on pose, and it is the only
-     caller that ever asks. The room's own `view` is NOT it: for a pet that is
-     not directional the room reports 'front' every single frame, so reading
-     that here would pin the cat to its idle cell and it would never take a
-     step. Live pets stay side-on, which is also the pose the accessory anchor
-     is measured against. */
-  const col = view === 'portrait' ? CAT_FRONT
-    : moving ? CAT_WALK_FROM + Math.floor(lp * CAT_STEP_RATE) % CAT_WALK_N
-    : (action === 'sleep' || action === 'nap') ? CAT_SLEEP
-    : CAT_STAND;
+  const pose = catPose(moving, action);
+  const col = pose === 'walk'
+    ? CAT_WALK_FROM + Math.floor(lp * CAT_STEP_RATE) % CAT_WALK_N
+    : CAT_POSE_CELL[pose];
 
   const w = s * CAT_DRAW_W;
   const h = w * CAT_CELL_H / CAT_CELL_W;

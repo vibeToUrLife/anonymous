@@ -218,9 +218,9 @@
       ctx.save();
       ctx.translate(w / 2, h * 0.65);
       const size = 18;
-      // 'portrait' asks a sprite pet for its head-on pose, which is what a card
-      // wants. Pets drawn from paths ignore it and carry on as before.
-      drawPetCanvas(ctx, petType, size, 0, false, 100, 0, null, 0, null, 'portrait');
+      // moving=false, so sprite pets give their idle pose — which for the cat
+      // and the dog is the head-on sit, exactly what a card wants.
+      drawPetCanvas(ctx, petType, size, 0, false, 100, 0, null, 0);
       ctx.restore();
       /* Sprite-drawn pets paint nothing until their sheet lands, and this card
          is painted once — so repaint it when the art arrives. Every sprite pet
