@@ -267,17 +267,35 @@
     const SOAK_CHANCE = 0.35;   // odds a wander picks the spring over anywhere
     const SOAK_DUR = 7000;      // ms; the actual soak runs SOAK_DUR .. 2×
 
-    // The spot to stand on, or null when there is nothing to soak in. The
-    // spring works out where its own water line is; this only clamps the result
-    // into the area a pet is allowed to walk on.
+    // The spot to soak on, or null when there is nothing to soak in. The spring
+    // works out where its own water line is; this only bounds the result.
     function soakSpotFor(type, rw, rh) {
       if (!SOAK_PETS[type]) return null;
       const p = onsenSoakPoint(rw, rh);
       if (!p) return null;
       return {
         x: Math.max(0.06, Math.min(0.68, p.x)),
-        y: Math.max(0.70, Math.min(0.92, p.y))
+        /* Deliberately NOT clamped into the walking band. The spring is drawn
+           as a fraction of the room's WIDTH while this is a fraction of its
+           HEIGHT, so the wider the room the higher up its water sits — past
+           1.57:1 the surface clears the band entirely. Clamping it there was
+           parking the capybara 12-28px under its own bath. The bound left here
+           is a sanity floor for an absurdly placed spring, not a floor line. */
+        y: Math.max(0.35, Math.min(0.92, p.y)),
+        /* How far away the pet should LOOK, which is where the spring stands
+           rather than where the water is. Sizing off the water line would make
+           the capybara shrink as the window got wider — a depth cue reacting to
+           something the player never moved. */
+        depthY: Math.max(0.70, Math.min(0.92, p.baseY))
       };
+    }
+
+    /* True while a pet is in the spring or on its way there. Such a pet is
+       exempt from the floor clamp: its destination is legitimately above the
+       walkable band, and clamped it would never arrive — it would drift up,
+       get pulled back every frame, and finally settle for the clamped spot. */
+    function isSoaking(st) {
+      return st.action === 'soak' || !!st.soakOnArrive;
     }
 
     let _lastPetAction = {};
@@ -616,6 +634,15 @@
               actionProgress = Math.max(0, Math.min(1, actionProgress));
             } else {
               if (st.action) {
+                /* Getting out of the bath. A soaking pet sits at the water
+                   line, which is above the band it may walk in — left there it
+                   would be yanked down by the floor clamp the moment it stopped
+                   counting as soaking. Stepping it onto the spring's own
+                   footing is the same move, done deliberately. */
+                if (st.action === 'soak' && st.soakDepthY != null) {
+                  st.y = st.soakDepthY;
+                  st.soakDepthY = null;
+                }
                 st.action = null;
                 st.actionCooldown = now + 4000 + Math.random() * 5000;
               }
@@ -639,6 +666,7 @@
                 st.soakOnArrive = !!soak && Math.random() < SOAK_CHANCE;
                 if (st.soakOnArrive) {
                   st.tx = soak.x; st.ty = soak.y;
+                  st.soakDepthY = soak.depthY;   // sizes the pet; see soakSpotFor
                 } else {
                   st.tx = 0.06 + Math.random() * 0.60;
                   st.ty = 0.72 + Math.random() * 0.18;
@@ -696,6 +724,10 @@
           if (st.parked || st.dragging || st.flying) {
             st.x = Math.max(0.02, Math.min(0.98, st.x));
             st.y = Math.max(0.10, Math.min(0.96, st.y));
+          } else if (isSoaking(st)) {
+            // Still bounded — by the room, not by the floor. See soakSpotFor.
+            st.x = Math.max(0.04, Math.min(0.70, st.x));
+            st.y = Math.max(0.35, Math.min(0.92, st.y));
           } else {
             st.x = Math.max(0.04, Math.min(0.70, st.x));
             st.y = Math.max(0.70, Math.min(0.92, st.y));
@@ -703,9 +735,14 @@
 
           const px = st.x * rw;
           const py = st.y * rh;
+          /* A soaking pet is drawn at the water line, which is up the picture
+             from the floor the spring stands on. Depth is about how far away a
+             thing is, not how high it is drawn, so its size comes from the
+             spring's own footing. */
+          const depthY = (isSoaking(st) && st.soakDepthY != null) ? st.soakDepthY : st.y;
           const depthScale = (st.dragging || st.flying)
             ? HELD_SCALE
-            : Math.max(0.4, 0.6 + (st.y - 0.6) * 2.0);
+            : Math.max(0.4, 0.6 + (depthY - 0.6) * 2.0);
           const baseSize = PET_SIZES[p.type] || 44;
           const size = baseSize * depthScale;
 

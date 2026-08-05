@@ -35,7 +35,11 @@
       if (!art.naturalWidth) return null;
       const pos = getDecorPos('decor_capybara_onsen');
       const h = rw * ONSEN_W * art.naturalHeight / art.naturalWidth;
-      return { x: pos.x, y: pos.y - h * ONSEN_WATER / rh };
+      // baseY is where the spring STANDS, which is not where a pet in it is
+      // drawn: the water is a good way up the picture. The caller needs both —
+      // one to place the pet, the other to size it, since how far away a thing
+      // looks is set by where it stands.
+      return { x: pos.x, y: pos.y - h * ONSEN_WATER / rh, baseY: pos.y };
     }
 
     function drawRug(ctx, rw, rh, floorY) {
