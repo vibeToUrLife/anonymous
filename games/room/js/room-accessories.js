@@ -196,7 +196,7 @@
       // little between them, and a hat pinned to one rides high or low in the other.
       cat: {
         front: { hx:  0.01, hy: -0.47, r: 0.25 },
-        side:  { hx:  0.46, hy: -0.29, r: 0.22 },
+        side:  { hx:  0.43, hy: -0.30, r: 0.22 },
         sleep: { hx:  0.40, hy:  0.00, r: 0.22 },
       },
       dog: {

@@ -22,8 +22,9 @@ const DOG_FEET_Y = 0.38;    // where the cell's ground line sits below the origi
 /* Walk cells per unit of the room's leg phase, which advances 10 a second, so
    the two-cell loop is a stride every 0.4s — each pose held about a fifth of
    a second. Two frames is deliberate: these drawings amble rather than
-   stride, and the two furthest apart read as a step where all eight read as
-   a shimmer. The packer picks which two, by measurement. */
+   stride, and two poses far enough apart read as a step where all eight read
+   as a shimmer. Which two is a judgement, made by eye off the numbered source
+   sheet; the packer measures the choice but does not overrule it. */
 const DOG_STEP_RATE = 0.5;
 
 /* The cell each pose lives in. 'walk' is deliberately absent: it has no single
