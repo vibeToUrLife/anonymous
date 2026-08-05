@@ -654,6 +654,12 @@
     };
 
     function decorHitTest(mx, my, p) {
+      /* Floor furniture is a picture, so its box is whatever the artwork works
+         out to on screen — ask the code that draws it rather than keeping a
+         second copy of the sizes here, which would drift. The table above still
+         answers while a picture is on its way down. */
+      const fb = typeof furnitureHitBox === 'function' && furnitureHitBox(p.id, p.x, p.y);
+      if (fb) return mx >= fb.x0 && mx <= fb.x1 && my >= fb.y0 && my <= fb.y1;
       const hs = DECOR_HIT_SIZES[p.id];
       if (!hs) return false;
       const halfW = hs.w / 2;

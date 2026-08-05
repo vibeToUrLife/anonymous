@@ -773,7 +773,7 @@
         drawRug(ctx, rw, rh, floorY);
 
         /* ── Floor Decorations ── */
-        drawFloorDecorations(ctx, rw, rh, floorY, t);
+        drawFloorDecorations(ctx, rw, rh);
 
         /* ── Floating dust motes ── */
         bgDust.forEach(p => {
