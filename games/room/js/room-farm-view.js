@@ -76,12 +76,19 @@
       waterMs: FARM_WATER_MS, feedUnits: FARM_FEED_UNITS, giftMaxQty: FARM_GIFT_MAX_QTY,
     };
     const FARM_CART_X = 0.84, FARM_CART_Y = 0.135; // where the sky merchant plane hovers (normalized; up in the sky band)
-    /* On a narrow stage the plane moves in from the corner and grows. At 0.84 it
-       hovers right against the tree at 0.94, and a 47px sprite camouflaged
-       against a canopy in the hardest corner of a phone to reach is hard to
-       FIND — its tap zone was already ~130x166px, so the trouble was never the
-       hit-test. Wide stages keep the corner: there the plane is 78px with room
-       around it. */
+    /* EVERY stage parks it in this corner. A narrow one used to move it in to
+       0.70 as well as growing it, because at 0.84 a 47px sprite went camouflaged
+       against the tree at 0.94 — but 0.70 is where the forge stands (0.674), so
+       what the move actually bought was a plane parked on a workshop roof with
+       23px of air under it, and an away-cloud marking that same spot. There is no
+       third option: the plane's body is 77px on a 360 stage and the clear sky
+       between the forge's right edge and the tree's crown is 53px, so it sits
+       over one or the other. The corner is the one to sit over — it is scenery,
+       the forge is a target, and the plane is drawn after the trees so the canopy
+       never hides it, only sits behind it.
+       What DOES survive from that change is the size: a narrow stage still grows
+       the plane (see _farmCartSize), and 58-64px against the leaves is the part
+       that was actually doing the finding, not the 0.14 of stage it moved. */
     /* It shares this corner with the floating "🧺 Collect" button — 10px from the
        top and at least 44px tall on touch, and on a narrow stage it sits right
        above the plane. That button is a DOM element over the canvas, so anything
@@ -91,7 +98,7 @@
     function _farmCartPos(W, H) {
       const ceil = (FARM_CART_CLEAR_PX + _farmCartSize(W, H) * 0.45) / Math.max(1, H || 1);
       return {
-        x: (W < FARM_NARROW_W) ? 0.70 : FARM_CART_X,
+        x: FARM_CART_X,
         y: H ? Math.max(ceil, FARM_CART_Y) : FARM_CART_Y,
       };
     }

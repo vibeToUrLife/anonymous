@@ -1338,3 +1338,54 @@ test('the server refuses a plot to an unfinished pasture even if this client thi
   assert.equal(sb._server.farmLandL, undefined, 'the plot gate was decided on the client\'s copy');
   assert.equal(sb.roomData.farmCapLevel, 2, 'the client did not adopt the server\'s level');
 });
+
+/* ── Where the plane parks ──
+   Reported as "on a small window the plane and its preview aren't where they
+   should be". A narrow stage used to move the plane in to 0.70 as well as
+   growing it — and 0.70 is where the forge stands (FARM_HUT_X0 + 4·FARM_HUT_DX
+   = 0.674), so it parked on a workshop roof. Every stage keeps the corner now;
+   the narrow stage still grows it, which is the half of that change that was
+   doing the finding. */
+
+test('the plane parks in the same corner on every stage', () => {
+  const sb = plotSandbox();
+  const X = vm.runInContext('FARM_CART_X', sb);
+  for (const [W, H] of [[360, 520], [390, 600], [400, 620], [520, 700], [600, 700], [900, 600], [1280, 700]]) {
+    assert.equal(sb._farmCartPos(W, H).x, X,
+      W + 'x' + H + ' parks the plane at ' + sb._farmCartPos(W, H).x + ' instead of the corner');
+  }
+});
+
+test('a narrow stage still draws the bigger plane', () => {
+  const sb = plotSandbox();
+  // The size is what makes it findable against the leaves — losing it along with
+  // the position would put back the 47px sprite the move was meant to fix.
+  assert.ok(sb._farmCartSize(360, 520) > 47,
+    'a phone drew a ' + sb._farmCartSize(360, 520).toFixed(0) + 'px plane');
+  assert.ok(sb._farmCartSize(360, 520) / 360 > sb._farmCartSize(900, 600) / 900,
+    'the plane is no bigger a share of a phone stage than of a desktop one');
+});
+
+test('the plane body clears the last workshop hut on a phone', () => {
+  const sb = plotSandbox();
+  const { W, H } = PHONE;
+  const s = sb._farmCartSize(W, H);
+  const bodyL = sb._farmCartPos(W, H).x * W - s * 0.60;    // tail fin, the leftmost of the plane itself
+  const forge = sb._workshopPos(4);
+  const forgeR = forge.x * W + sb._workshopSize(W, H) * 0.63;
+  assert.ok(bodyL > forgeR,
+    'the plane body starts at ' + bodyL.toFixed(0) + 'px, over a forge that ends at ' + forgeR.toFixed(0) + 'px');
+});
+
+test('the away preview marks the spot the plane comes back to', () => {
+  const sb = plotSandbox();
+  for (const { W, H } of [PHONE, NARROW, WIDE]) {
+    const here = sb.farmCartTapRect(sb._farmCartPos(W, H), sb._farmCartSize(W, H), W, H, true);
+    const away = sb.farmCartTapRect(sb._farmCartPos(W, H), sb._farmCartSize(W, H), W, H, false);
+    // The cloud has to sit inside what the plane occupies, or it marks a spot
+    // the plane does not return to.
+    assert.ok(away.x0 >= here.x0 && away.x1 <= here.x1,
+      W + 'x' + H + ': the away cloud (' + (away.x0 * W).toFixed(0) + '..' + (away.x1 * W).toFixed(0) +
+      ') falls outside the plane (' + (here.x0 * W).toFixed(0) + '..' + (here.x1 * W).toFixed(0) + ')');
+  }
+});
