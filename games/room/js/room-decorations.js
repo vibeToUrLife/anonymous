@@ -306,6 +306,14 @@
       return { art, x: x * rw - w / 2, y: y * rh - (spec.hangs ? h / 2 : h), w, h };
     }
 
+    /* The picture for any decoration that has one, hot spring included. The
+       spring is drawn by its own code because a pet soaks in it and the water
+       line has to be known, but to anything that only wants to SHOW the thing —
+       the collection grid, a shop card — it is just another picture. */
+    function decorArtAny(id) {
+      return id === 'decor_capybara_onsen' ? onsenArt() : decorArt(id);
+    }
+
     /* The same box in room fractions, which is what the drag code hit-tests in.
        Asking rather than keeping a second copy is what stops what you grab from
        drifting away from what you see. */

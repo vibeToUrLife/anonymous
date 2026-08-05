@@ -939,8 +939,32 @@
       }
       const decorId = PET_COLLECTION_DECOR[type];
       const ddef = DECORATIONS.find(d => d.id === decorId);
-      const decorLabel = ddef ? ddef.emoji + ' ' + T(ddef.name) : T('a special decoration');
       const complete = pieces.length === 9 && pieces.every((_, i) => collected[i]);
+
+      /* Show the prize, not only its name — the artwork here is the very picture
+         the room will stand on the floor. Greyed and dimmed until it is earned,
+         so what you are looking at is never mistaken for what you own. */
+      const artEl = document.getElementById('petCollectionRewardArt');
+      const art = typeof decorArtAny === 'function' && decorArtAny(decorId);
+
+      /* With the picture above it, the emoji in the label is a second and worse
+         drawing of the same thing — and sometimes a contradictory one, the Bunny
+         Garden's being a 🌻. It stays only when there is no picture to show. */
+      const decorLabel = ddef ? ((art ? '' : ddef.emoji + ' ') + T(ddef.name))
+                              : T('a special decoration');
+      if (artEl) {
+        if (art) {
+          artEl.src = art.src;
+          artEl.alt = ddef ? T(ddef.name) : '';
+          artEl.style.display = '';
+          artEl.style.filter = complete ? 'none' : 'grayscale(0.6)';
+          artEl.style.opacity = complete ? '1' : '0.45';
+        } else {
+          // No picture for this one yet; the line below still says what it is.
+          artEl.style.display = 'none';
+        }
+      }
+
       const rewardEl = document.getElementById('petCollectionReward');
       if (rewardEl) {
         rewardEl.innerHTML = complete

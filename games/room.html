@@ -437,9 +437,9 @@
   <script defer src="room/js/room-render.js?v=cb127"></script>
   <script defer src="room/js/room-actions.js?v=cb127"></script>
   <script defer src="room/js/room-plants.js?v=cb122"></script>
-  <script defer src="room/js/room-decorations.js?v=cb129"></script>
+  <script defer src="room/js/room-decorations.js?v=cb130"></script>
   <script defer src="room/js/room-bg.js?v=cb127"></script>
-  <script defer src="room/js/room-pets.js?v=cb122"></script>
+  <script defer src="room/js/room-pets.js?v=cb130"></script>
   <script defer src="room/js/room-ui.js?v=cb122"></script>
   <script defer src="room/js/room-accessories.js?v=cb122"></script>
   <script defer src="room/js/room-jukebox.js?v=cb122"></script>
@@ -496,7 +496,12 @@
         <button onclick="closePetCollection()" style="background:none;border:none;color:var(--g-ink-soft);font-size:18px;cursor:pointer">✕</button>
       </div>
       <div id="petCollectionGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
-      <div id="petCollectionReward" style="margin-top:14px;text-align:center;font-size:11px;color:var(--g-ink-soft);line-height:1.4"></div>
+      <!-- The prize itself, so the nine squares are working toward something you
+           can look at rather than a name you have to imagine. -->
+      <div style="margin-top:14px;display:flex;flex-direction:column;align-items:center;gap:7px">
+        <img id="petCollectionRewardArt" alt="" style="display:none;max-width:160px;max-height:112px;transition:opacity .3s,filter .3s">
+        <div id="petCollectionReward" style="text-align:center;font-size:11px;color:var(--g-ink-soft);line-height:1.4"></div>
+      </div>
     </div>
   </div>
 </body>
