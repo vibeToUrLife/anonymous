@@ -815,14 +815,10 @@
           const canAfford = roomData.coins >= item.cost;
           let btnHtml = '';
           if (isPlaced) {
-            // Flip sits with Remove rather than in the room itself: a placed
-            // piece is dragged by touch, so an in-room gesture would have to
-            // share with the drag. Highlighted while mirrored, so the card says
-            // which way round the piece currently stands.
-            const flipped = typeof isDecorFlipped === 'function' && isDecorFlipped(item.id);
+            /* No flip button here: mirroring is done by tapping the piece in the
+               room, where you can see which way it ends up facing. The card
+               still SHOWS the current facing in its preview below. */
             btnHtml = '<button class="shop-btn equipped-btn" disabled>✓ ' + T('In Room') + '</button>' +
-              '<button class="shop-btn flip' + (flipped ? ' on' : '') + '" style="margin-top:4px" ' +
-              'onclick="flipDecor(\'' + item.id + '\')">↔️ ' + T('Flip') + '</button>' +
               '<button class="shop-btn" style="margin-top:4px;background:rgba(239,68,68,0.2);color:#f87171" onclick="removeDecor(\'' + item.id + '\')">' + T('Remove') + '</button>';
           } else if (isOwned) {
             btnHtml = '<button class="shop-btn equip" onclick="placeDecor(\'' + item.id + '\')">' + T('Place') + '</button>';
