@@ -1,9 +1,65 @@
-﻿    async function saveRoom() {
-      if (viewingUid !== currentUid) return false;
-      if (!_roomLoaded) return false; // Don't save defaults before Firestore data loads
-      // Sync active layer's mutable state (wall/window/decors/plantPos) into layerData
-      flushLayerData();
-      const data = {
+﻿    /* ═══════════════════════════════
+       Saving — a field at a time, never the whole document
+       ═══════════════════════════════
+
+       The room document belongs to the ACCOUNT, not to a device, and every
+       device signed in holds its own copy of it in roomData. This save used to
+       post all ~90 fields out of whichever copy the client happened to be
+       holding, so the last device to save won the whole document — and it never
+       announced itself as a race. Reported as: the laptop and the phone open
+       together, work done on one comes back undone, "手机做其他东西然后没得到这个东西".
+
+       Two rules make that structurally impossible now.
+
+       1. _syncedState remembers the document as it stood when this device last
+          APPLIED a snapshot, and a save writes only the fields that differ from
+          it. A field this device did not touch is not in the patch at all, so
+          it cannot land on top of what another device wrote. Being stale stops
+          being dangerous: behind on farmStock now only means we don't write
+          farmStock.
+       2. coins travels as an atomic increment of the delta THIS device caused,
+          never as an absolute balance. Earning 50 on the laptop while the phone
+          spends 30 settles at +20 instead of one number winning outright.
+
+       This generalises the opt-outs that were being added one reported loss at a
+       time (farmCapLevel, farmHelpDay, aquariumLikes…). The default is now
+       "don't write it", so those fields stay out for free — they are simply
+       never changed locally by anything but their own transaction. */
+
+    // Written on every save whatever the diff says: they describe THIS device's
+    // session, so there is no other device's value to lose.
+    const _SAVE_ALWAYS = ['lastSeen', 'updatedAt'];
+
+    // Order-independent value key. Firestore hands maps back in whatever key
+    // order it likes, and a plain JSON.stringify would read that reshuffle as a
+    // change and write the field — which is the exact clobber this is here to
+    // prevent. undefined and null compare equal: a field the document has never
+    // held reads as absent either way.
+    function _valueKey(v) {
+      if (v === undefined || v === null) return 'null';
+      if (typeof v !== 'object') return JSON.stringify(v);
+      if (Array.isArray(v)) return '[' + v.map(_valueKey).join(',') + ']';
+      return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + _valueKey(v[k])).join(',') + '}';
+    }
+
+    function _cloneValue(v) {
+      return v === undefined ? undefined : JSON.parse(JSON.stringify(v));
+    }
+
+    // firebase is a global from the SDK room.html loads. Returns null if it isn't
+    // there rather than something increment-shaped: writing a plain object where
+    // a sentinel belongs would replace the balance with a map and destroy it, so
+    // the caller drops the field and leaves the coins alone instead.
+    function _coinIncrement(n) {
+      if (typeof firebase === 'undefined' || !firebase.firestore) return null;
+      return firebase.firestore.FieldValue.increment(n);
+    }
+
+    // The document as this device would write it, built from roomData. Split out
+    // of saveRoom so the snapshot handler can use the same projection to take its
+    // baseline — the two have to agree field for field or the diff is meaningless.
+    function _roomDocFields() {
+      return {
         coins: roomData.coins,
         coinHistory: roomData.coinHistory || [],
         pets: roomData.pets.map(p => ({ id: p.id, type: p.type, name: p.name, hunger: p.hunger, thirst: p.thirst, affection: p.affection, color: p.color, layer: p.layer ?? null, accessory: p.accessory || null, posX: p.posX ?? null, posY: p.posY ?? null, parked: p.parked ?? false, lastDropDay: p.lastDropDay || '', pendingDrops: p.pendingDrops || 0 })),
@@ -18,17 +74,15 @@
         farmFoodAt: roomData.farmFoodAt || 0,
         farmStock: roomData.farmStock || {},
         farmTotalCollected: roomData.farmTotalCollected || 0,
-        // NOTE: farmCapLevel / farmLandL / farmLandR are intentionally NOT written
-        // here, for the same reason as farmHelpDay below. They are one-way, paid
-        // progression, and this save posts whichever copy of the document this
-        // client happens to be holding — and persistence means that copy can be
-        // stale through no fault of the player: the first snapshot after a load is
-        // answered out of THIS device's offline cache, another tab may be further
-        // ahead, and the farm tick saves on its own timer without waiting for the
-        // server to reply. Carried in a routine save, a stale copy walks them
-        // BACKWARDS: a maxed pasture came back as Lv 1 with the plots it had paid
-        // for still standing beside it. expandFarm / buyFarmLand move them instead,
-        // in a transaction, against the server's own copy.
+        // NOTE: farmCapLevel / farmLandL / farmLandR stay out of this projection
+        // entirely, and so does farmHelpDay/farmHelpCount below. The diff already
+        // keeps an untouched field out of the patch, but these are one-way PAID
+        // progression that a local repair may legitimately change — and a local
+        // change is exactly what the diff would then let through. expandFarm /
+        // buyFarmLand own them, in a transaction against the server's own copy.
+        // Left in a routine save, a stale level walked them BACKWARDS: a maxed
+        // pasture came back as Lv 1 with the plots it had paid for still standing
+        // beside it.
         farmAutoCollect: roomData.farmAutoCollect || false,
         farmVariants: roomData.farmVariants || {},
         farmPlots: roomData.farmPlots || [],
@@ -63,10 +117,10 @@
         farmWeekPrevId: roomData.farmWeekPrevId || '',
         farmWeekPrevCheers: roomData.farmWeekPrevCheers || 0,
         farmWeekPrevProduce: roomData.farmWeekPrevProduce || 0,
-        // NOTE: farmHelpDay / farmHelpCount are intentionally NOT written here.
+        // NOTE: farmHelpDay / farmHelpCount are intentionally NOT projected here.
         // Only the help transaction moves them, and it reads the server value
-        // first — an owner save carrying a stale local copy would reset the
-        // daily allowance and hand back helps that were already spent (the same
+        // first — a save carrying a locally-rolled day would reset the daily
+        // allowance and hand back helps that were already spent (the same
         // reason aquariumLikes is left out below).
         aquariumFish: roomData.aquariumFish || [],
         aquariumTheme: roomData.aquariumTheme || 'tropical',
@@ -81,8 +135,8 @@
         aquariumLight: roomData.aquariumLight || 0,
         aquariumPump: roomData.aquariumPump || 0,
         aquariumFrenzyAt: roomData.aquariumFrenzyAt || 0,
-        // NOTE: aquariumLikes is intentionally NOT written here — only visitors
-        // change it (via increment), so an owner save must never clobber it.
+        // NOTE: aquariumLikes is intentionally NOT projected here — only visitors
+        // change it (via increment), so an owner save must never carry it.
         plant: roomData.plant,
         plantLevels: roomData.plantLevels,
         ownedPlants: roomData.ownedPlants,
@@ -113,16 +167,87 @@
         unlockedLayers: roomData.unlockedLayers || 1,
         layerData: roomData.layerData || {}
       };
+    }
+
+    async function saveRoom() {
+      if (viewingUid !== currentUid) return false;
+      if (!_roomLoaded) return false; // Don't save defaults before Firestore data loads
+      // Sync active layer's mutable state (wall/window/decors/plantPos) into layerData
+      flushLayerData();
+      const data = _roomDocFields();
+
+      // Only what this device actually moved since the last applied snapshot.
+      const patch = {};
+      for (const k of Object.keys(data)) {
+        if (k === 'coins') continue;                       // travels as a delta, below
+        if (_SAVE_ALWAYS.indexOf(k) >= 0) { patch[k] = data[k]; continue; }
+        if (_valueKey(data[k]) !== _valueKey(_syncedState[k])) patch[k] = data[k];
+      }
+      // Coins: post the change we caused, not the balance we believe in. The
+      // balance is shared with the board, the mini-games, the shop and every
+      // other device, so an absolute write here loses whatever moved it
+      // elsewhere while this copy was in hand.
+      let coinDelta = Math.floor(data.coins || 0) - Math.floor(_syncedState.coins || 0);
+      if (coinDelta !== 0) {
+        const inc = _coinIncrement(coinDelta);
+        if (inc) patch.coins = inc;
+        else { console.error('saveRoom: no Firestore increment available, coins not written'); coinDelta = 0; }
+      }
+
       _lastLocalSaveTime = Date.now();
+
+      // Adopt the patch as the new baseline HERE — at the moment the write is
+      // issued, not when it comes back.
+      //
+      // A set() with offline persistence doesn't settle until the SERVER
+      // acknowledges it, which offline is however long the tunnel lasts. Waiting
+      // for that would leave every save in the meantime measuring its delta from
+      // the same untouched baseline, so a coin increment would be queued once per
+      // save and they would ALL land on reconnect: earn 10, then 10 again, and
+      // the account gains 30. Firestore's queue is durable across reloads, so the
+      // moment a write is issued is the honest moment to call the change ours.
+      const seq = ++_saveSeq;
+      const previous = {};
+      for (const k of Object.keys(patch)) {
+        previous[k] = _syncedState[k];
+        if (k !== 'coins') _syncedState[k] = _cloneValue(data[k]);
+      }
+      if (coinDelta !== 0) _syncedState.coins = Math.floor(_syncedState.coins || 0) + coinDelta;
+
       // Report success/failure so callers can roll back optimistic local changes
       // (e.g. workshop collect) instead of silently desyncing on a failed write.
       try {
-        await userDocRef().set(data, { merge: true });
+        await userDocRef().set(patch, { merge: true });
         return true;
       } catch (e) {
         console.error('saveRoom failed:', e);
+        // Rejected for good — put the baseline back so the change is posted again
+        // next time. Unless a later save has already moved it: that one's
+        // baseline is the current truth, and a snapshot will settle the rest.
+        if (_saveSeq === seq) {
+          for (const k of Object.keys(previous)) _syncedState[k] = previous[k];
+        }
         return false;
       }
+    }
+
+    /* ── Coins that moved on the SERVER without going through saveRoom ──
+       The daily reward, a gift, a farm help, an inbox claim: each tells the
+       server the new balance itself, in a transaction or a batch that reads or
+       increments the server's own copy. The local balance then has to be brought
+       into line — and so does the save baseline, or the next saveRoom reads the
+       difference as an earning THIS device made and posts it a second time. A
+       10-coin daily reward became 20, a gift of 500 charged 1000.
+
+       So: after telling the server, move roomData.coins through one of these two
+       and never around them. adoptServerCoins takes the balance the server
+       settled on; adoptServerCoinDelta takes the amount an increment() moved. */
+    function adoptServerCoins(balance) {
+      roomData.coins = Math.floor(balance || 0);
+      _syncedState.coins = roomData.coins;
+    }
+    function adoptServerCoinDelta(delta) {
+      adoptServerCoins(Math.floor(roomData.coins || 0) + Math.floor(delta || 0));
     }
 
     // ── Room "while you were away" plant coins.
@@ -137,6 +262,20 @@
     let _farmCatchupDone = false;
     let _plantCoinInterval = null;
     let _lastLocalSaveTime = 0;
+    // The document as it stood when this device last APPLIED a snapshot — the
+    // baseline saveRoom diffs against. Taken from ANY snapshot, cache or server:
+    // it only has to answer "did THIS device change the field?", and this
+    // device's own cache answers that as well as the server does. That keeps a
+    // player who is genuinely offline saving normally, through Firestore's own
+    // write queue, instead of silently dropping their session.
+    let _syncedState = {};
+    // Bumped per save, so a failed write only rolls the baseline back if it is
+    // still the one that save put there.
+    let _saveSeq = 0;
+    // Set when the tab comes back to the foreground, cleared by the first server
+    // snapshot after it — see the visibilitychange handler for why the catch-up
+    // waits rather than paying out against a frozen copy.
+    let _pendingWakeCatchUp = false;
     let _unsubRoomSnap = null;
     let _roomLoaded = false;
     let _postLoadHooksDone = false;   // daily-reward / achievements run once, after data loads
@@ -337,6 +476,18 @@
         roomData.farmHelpDay = d.farmHelpDay || '';
         roomData.farmHelpCount = d.farmHelpCount || 0;
         _roomLoaded = true;
+        // ── The diff baseline, taken HERE ──
+        // Right after the document has been loaded into roomData and before the
+        // catch-up blocks below start changing it, so it holds the document as
+        // it arrived and nothing this device has since done to it. Everything
+        // saveRoom writes from here on is measured against this.
+        _syncedState = _roomDocFields();
+        // …with one exception. The two layer migrations above (legacy single-layer
+        // data lifted into layerData[1], and the same-plant-on-two-floors dedup)
+        // have already rewritten roomData.layerData, so baselining on the result
+        // would hide the repair from the diff and it would never be persisted.
+        // Baseline on what the DOCUMENT holds and the repair reads as a change.
+        _syncedState.layerData = _cloneValue(d.layerData) || {};
         // Persist the unique-plant migration now that the full room is loaded.
         if (_plantDedupChanged) {
           saveRoom();
@@ -428,13 +579,32 @@
         // Farm offline produce is no longer applied on load — it's banked and shown
         // in the mandatory "while you were away" collect modal when you open the farm
         // (see openFarm / _offlinePlan in room-farm-view.js).
+        // The tab came back to the foreground and this is the first server
+        // snapshot since — now the copy in hand is current, bank what the plants
+        // earned while we weren't listening.
+        if (_pendingWakeCatchUp && !(snap.metadata && snap.metadata.fromCache)) {
+          _pendingWakeCatchUp = false;
+          _bankPlantIncomeOnWake();
+        }
         maybeGenerateDailyDrops();
         _roomLoaded = true;
       } else {
-        // New user — create room document
-        _roomLoaded = true;
-        roomData.displayName = getPlayerName();
-        saveRoom();
+        // New user — create room document. Only on the SERVER's word: offline
+        // persistence answers the first read out of this device's own IndexedDB,
+        // and a cache that has never seen this account says "no document" just as
+        // loudly as an empty account does. Creating one on that evidence posts
+        // coins: 0 and empty arrays — and the moment the connection comes back,
+        // that write lands on a real, fully-played room. Offline, we simply wait:
+        // roomData keeps its defaults, saveRoom stays shut (_roomLoaded is still
+        // false), and the real document arrives when the network does.
+        if (snap.metadata && snap.metadata.fromCache) {
+          console.warn('Room doc missing from cache — waiting for the server before creating one');
+        } else {
+          _roomLoaded = true;
+          _syncedState = {};
+          roomData.displayName = getPlayerName();
+          saveRoom();
+        }
       }
       // Hide loading overlay and always render on first snapshot
       const _loadOv = document.getElementById('roomLoadingOverlay');
@@ -496,6 +666,34 @@
       } catch (e) { /* ignore malformed URL */ }
     }
 
+    // Plant coins earned while the tab was hidden. Mirrors the on-load behaviour:
+    // bank them straight away and pop a top notice — whether they were away an
+    // hour or just tabbed out for a bit — so returning by re-focusing an
+    // already-open tab (common on mobile) stays consistent with a fresh page
+    // load. No blocking modal either way.
+    //
+    // Called from _handleRoomSnap rather than from the visibilitychange handler
+    // itself, so lastCoinCollect is the server's and not this tab's frozen copy.
+    function _bankPlantIncomeOnWake() {
+      const incomeHidden = getTotalPlantIncome();
+      if (viewingUid !== currentUid || !incomeHidden || !roomData.lastCoinCollect) return;
+      const coinsPerCycle = incomeHidden.perCycle;
+      const rawElapsed = Date.now() - roomData.lastCoinCollect;
+      const elapsed = Math.min(rawElapsed, PLANT_OFFLINE_CAP_MS);
+      const cycles = Math.floor(elapsed / (5 * 60 * 1000));
+      if (cycles <= 0) return;
+      const earned = cycles * coinsPerCycle;
+      roomData.coins += earned;
+      logCoin(earned, T('Plant income') + ' 🌱');
+      roomData.lastCoinCollect = Date.now();
+      saveRoom();
+      const _label = incomeHidden.count > 1 ? T('Your {n} trees', { n: incomeHidden.count }) : (incomeHidden.top.plantDef ? T(incomeHidden.top.plantDef.name) : T('Your plant'));
+      const _msg = rawElapsed >= PLANT_OFFLINE_MODAL_MS
+        ? T('{name} earned {n} coins while you were away!', { name: _label, n: earned })
+        : T('{name} earned {n} coins while tab was hidden!', { name: _label, n: earned });
+      showToast('🌱 ' + _msg, 'success');
+    }
+
     // Live Auto-Feeder top-up: refill any owned pet at/below threshold back to
     // target, bounded by coins. Shared by the decay tick and the buy/toggle-on
     // actions so enabling the device feeds an already-hungry pet immediately
@@ -522,6 +720,10 @@
       _farmCatchupDone = false;
       _roomLoaded = false;
       _postLoadHooksDone = false;
+      // A different account's document is a different baseline; keeping the old
+      // one would read every field of the new room as "changed by this device".
+      _syncedState = {};
+      _pendingWakeCatchUp = false;
       // Unsubscribe previous room listener (account switch)
       _unsubscribeRoomSnap();
       if (unsubVisitList) { unsubVisitList(); unsubVisitList = null; }
@@ -575,31 +777,17 @@
           _unsubscribeRoomSnap();
         } else if (document.visibilityState === 'visible' && currentUid) {
           userDocRef().update({ lastSeen: Date.now() }).catch(() => {});
-          // Plant coins earned while the tab was hidden. Mirror the on-load
-          // behaviour: bank them straight away and pop a top notice — whether they
-          // were away an hour or just tabbed out for a bit — so returning by
-          // re-focusing an already-open tab (common on mobile) stays consistent
-          // with a fresh page load. No blocking modal either way.
-          const incomeHidden = getTotalPlantIncome();
-          if (viewingUid === currentUid && incomeHidden && roomData.lastCoinCollect) {
-            const coinsPerCycle = incomeHidden.perCycle;
-            const rawElapsed = Date.now() - roomData.lastCoinCollect;
-            const elapsed = Math.min(rawElapsed, PLANT_OFFLINE_CAP_MS);
-            const cycles = Math.floor(elapsed / (5 * 60 * 1000));
-            if (cycles > 0) {
-              const earned = cycles * coinsPerCycle;
-              roomData.coins += earned;
-              logCoin(earned, T('Plant income') + ' 🌱');
-              roomData.lastCoinCollect = Date.now();
-              saveRoom();
-              const _label = incomeHidden.count > 1 ? T('Your {n} trees', { n: incomeHidden.count }) : (incomeHidden.top.plantDef ? T(incomeHidden.top.plantDef.name) : T('Your plant'));
-              const _msg = rawElapsed >= PLANT_OFFLINE_MODAL_MS
-                ? T('{name} earned {n} coins while you were away!', { name: _label, n: earned })
-                : T('{name} earned {n} coins while tab was hidden!', { name: _label, n: earned });
-              showToast('🌱 ' + _msg, 'success');
-            }
-          }
-          // Reattach room listener to resume real-time updates
+          // Re-attach FIRST, and let the snapshot that follows do the catching up.
+          //
+          // The listener was detached the whole time the tab was hidden, so
+          // roomData is frozen at whatever it held when we left — including
+          // lastCoinCollect. Paying plant income out against that frozen mark
+          // pays for a window another device may already have been paid for:
+          // put the phone down at 9:00 with the laptop's tab open, play on the
+          // phone until 10:00, come back to the laptop and it bills the hour a
+          // second time. Nothing local can tell the difference, so we wait for
+          // the server's copy and bank it from there instead.
+          _pendingWakeCatchUp = true;
           _subscribeRoomSnap();
         }
       });

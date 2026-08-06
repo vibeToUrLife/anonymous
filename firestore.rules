@@ -101,6 +101,26 @@ service cloud.firestore {
     match /rooms/{uid} {
       allow read: if isAuth();
       allow create: if isOwner(uid);
+      // ── A note on the OWNER clause and multi-device writes ──
+      // The owner may write any field of their own room, and that has to stay
+      // true — there is no subset of this document an owner shouldn't be able to
+      // move. So the rule cannot be what stops one device overwriting another's
+      // work; the CLIENT is. saveRoom() (games/room/js/room-firebase.js) diffs
+      // against the document as it was last received and sends only the fields
+      // this device actually changed, and it moves `coins` as an atomic
+      // increment of its own delta rather than as a balance. That is why an
+      // owner write is now a handful of keys instead of ~90, and why two devices
+      // signed into one account no longer undo each other.
+      //
+      // Some fields are further reserved for a transaction that reads the
+      // server's copy first, and never travel in an ordinary save at all:
+      //   farmCapLevel / farmLandL / farmLandR — one-way paid progression
+      //   farmHelpDay / farmHelpCount          — the daily help allowance
+      //   aquariumLikes                        — only visitors move it
+      // That is a client-side convention: rules can't tell a legitimate owner
+      // write of those fields from a stale one, so it is enforced by keeping
+      // them out of saveRoom's projection.
+      //
       // - Owner may write their own room, UNLESS banned (a banned user can't earn/play).
       // - Developers (admin dashboard) may write ANY room: adjust coins, rename, reset.
       // - A signed-in (non-banned) user may add only coins/gifts/aquariumLikes to SOMEONE

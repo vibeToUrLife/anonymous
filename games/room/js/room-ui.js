@@ -157,7 +157,10 @@
       // so leaving lastLoginDay stale would re-arm the button behind us.
       roomData.lastLoginDay = today;
       roomData.loginStreak = out.streak;
-      roomData.coins = out.balance;
+      // Through adoptServerCoins, not a bare assignment: the transaction already
+      // banked this balance, so the save that follows must not post the reward
+      // again as a delta of its own.
+      adoptServerCoins(out.balance);
       if (out.claimed) {
         logCoin(out.coins, T('Daily reward') + ' 🎁');
         await saveRoom();
@@ -460,7 +463,9 @@
       });
       // Update local roomData only if viewing own room
       if (viewingUid === currentUid) {
-        roomData.coins -= _giftAmount;
+        // The increment above already took it out of the document — adopt the
+        // deduction so the next save doesn't charge for the gift twice.
+        adoptServerCoinDelta(-_giftAmount);
         logCoin(-_giftAmount, T('Gift sent') + ' 🎁');
         roomData.giftsGiven = (roomData.giftsGiven || 0) + 1;
         document.getElementById('coinAmount').textContent = roomData.coins;

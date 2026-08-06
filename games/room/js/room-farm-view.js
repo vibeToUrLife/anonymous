@@ -862,7 +862,9 @@
       }
       _noteHelped(hostUid, kind);
       if (paid > 0) {
-        roomData.coins = (roomData.coins || 0) + paid;   // visitRoom leaves coins mine, so this is my balance
+        // visitRoom leaves coins mine, so this is my balance. Adopted rather than
+        // added, because _sendHelpTxn already incremented the document by `paid`.
+        adoptServerCoinDelta(paid);
         if (typeof logCoin === 'function') logCoin(paid, T('Lend a hand') + ' ' + FARM_HELP_LABEL[kind].emoji);
         if (_myHelpLeft != null) _myHelpLeft = Math.max(0, _myHelpLeft - 1);
         // Write the header directly rather than renderAll() — we're standing in
@@ -1076,8 +1078,9 @@
       const now = Date.now();
 
       // Build the new field values WITHOUT touching roomData — if the batch
-      // fails we must be left exactly where we started.
-      const coins = (roomData.coins || 0) + eff.coins;
+      // fails we must be left exactly where we started. (Coins aren't among
+      // them: they go as an increment below, so there is no new balance to
+      // compute here.)
       const food = Math.min(farmFoodMax(), (roomData.farmFood || 0) + eff.food);
       const stock = Object.assign({}, roomData.farmStock || {});
       for (const k in eff.stock) stock[k] = (stock[k] || 0) + eff.stock[k];
@@ -1091,7 +1094,6 @@
       });
       const week = farmWeekBump(roomData, farmWeekIdFor(new Date()), eff.cheers, 0);
       const fields = Object.assign({
-        coins: coins,
         farmFood: food,
         farmFoodAt: roomData.farmFoodAt || now,
         farmStock: stock,
@@ -1101,7 +1103,15 @@
 
       try {
         const batch = db.batch();
-        batch.set(userDocRef(currentUid), fields, { merge: true });
+        // Coins go as an atomic delta, not as the balance this device happens to
+        // be holding. The same balance is moved by the board, the mini-games and
+        // any other device signed into this account, and an absolute here hands
+        // back whatever they did between our read and this write.
+        batch.set(userDocRef(currentUid),
+                  eff.coins
+                    ? Object.assign({ coins: firebase.firestore.FieldValue.increment(eff.coins) }, fields)
+                    : fields,
+                  { merge: true });
         items.forEach(function (it) { batch.delete(_inboxCol(currentUid).doc(it.id)); });
         await batch.commit();
       } catch (e) {
@@ -1111,6 +1121,9 @@
       }
 
       Object.assign(roomData, fields);             // now mirror what we just wrote
+      // …and the balance separately: the batch has already banked it, so adopt
+      // it rather than letting the saveRoom below post the same coins again.
+      if (eff.coins) adoptServerCoinDelta(eff.coins);
       if (eff.coins && typeof logCoin === 'function') logCoin(eff.coins, T('Farm popularity') + ' 👍');
       // The batch wrote only the fields the claim changes. Follow it with a
       // normal save so the coin-history row lands too — and so anything the
