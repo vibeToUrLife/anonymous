@@ -435,7 +435,30 @@
       if (!auth.currentUser) return;
       const ref = db.collection('rooms').doc(auth.currentUser.uid);
       ref.update({ lastSeen: document.hidden ? 0 : Date.now() }).catch(() => {});
+      if (document.visibilityState === 'visible') refreshCoins();
     });
+
+    /* Re-read the balance when this tab comes back to the foreground.
+       The same coins are spent by the board, the room, the farm and every other
+       mini-game, so the number loaded on entry is stale as soon as the player
+       does anything on another device — and a shop that thinks you can still
+       afford something you can't just fails at the till.
+
+       Only the balance: skins, effects and items are this page's own state, a
+       purchase may still be in flight, and re-reading them here would race
+       saveState(). One read per return to the foreground. */
+    async function refreshCoins() {
+      if (!auth.currentUser || !roomLoaded) return;
+      try {
+        const snap = await db.collection('rooms').doc(auth.currentUser.uid).get();
+        if (!snap.exists) return;
+        const fresh = snap.data().coins || 0;
+        if (fresh === player.coins) return;
+        player.coins = fresh;
+        refreshHud();
+        refreshShopUI();
+      } catch (e) { /* transient — the next return to the tab tries again */ }
+    }
 
     /* ═══════════════════════════════
        Room doc load (single read) + persistence helpers

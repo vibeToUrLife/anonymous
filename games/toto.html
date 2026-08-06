@@ -395,6 +395,7 @@
         await loadPlayerData();
         startCountdownTimer();
         renderUI();
+        watchForOtherDevices();
       } else {
         currentUid = null;
         loginOverlay.classList.remove('hidden');
@@ -559,6 +560,24 @@
     /* ═══════════════════════════════
        Firestore — Load / Save
        ═══════════════════════════════ */
+
+    /* Coming back to this tab, re-read the room document once.
+       The balance is spent by the board, the room, the farm and every other
+       mini-game, and picks can be placed from a phone while this tab sits open
+       on a laptop — so the numbers this page loaded on entry go stale the moment
+       the player touches anything else. One read per return to the foreground,
+       not a poll and not a live listener: nothing here changes while you're
+       looking at it except by your own hand. */
+    let _refocusWired = false;
+    function watchForOtherDevices() {
+      if (_refocusWired) return;
+      _refocusWired = true;
+      document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState !== 'visible' || !currentUid) return;
+        await loadPlayerData();
+        renderUI();
+      });
+    }
 
     /** Load player coins and today's TOTO picks from Firestore. */
     async function loadPlayerData() {

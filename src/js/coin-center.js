@@ -173,6 +173,43 @@
     } catch (e) {}
   }
 
+  /* ── The wallet, live while the panel is open ──
+     One balance is shared by the board, the room, the farm and every mini-game,
+     and it moves on whichever device the player happens to be holding. Reading
+     it once on open meant the number on the OTHER device stayed frozen at
+     whatever it was then: sell produce on the laptop and the phone's shop still
+     offered to spend money that was already gone, and a cosmetic bought over
+     there was still on sale over here.
+
+     So the panel listens while it is open and lets go when it closes — one
+     document, one listener, and only while somebody is looking at it. The reads
+     are bounded by how often the balance actually changes, not by a poll.
+
+     Cache-only snapshots are skipped: offline persistence answers the first one
+     out of THIS device's IndexedDB, which is precisely the stale copy we are
+     trying not to show, and loadRoom()'s get() has already painted a real
+     number by then. */
+  var walletUnsub = null;
+  function watchWallet() {
+    if (walletUnsub || !hasFB || !auth.currentUser) return;
+    walletUnsub = roomRef().onSnapshot(function (doc) {
+      if (!doc.exists || (doc.metadata && doc.metadata.fromCache)) return;
+      var d = doc.data() || {};
+      var coinsBefore = coins;
+      var ownedBefore = owned.join('|');
+      coins = d.coins || 0;
+      owned = Array.isArray(d.boardCosOwned) ? d.boardCosOwned : [];
+      equip = Object.assign({ color: null, frame: null, badge: null, title: null, anim: null }, d.boardCosEquip || {});
+      fortuneToday = (d.fortuneDay === todayKey() && d.fortuneResult) ? d.fortuneResult : null;
+      saveEquipLocal();
+      if (coins !== coinsBefore) updateCoins();
+      // Only when the collection actually moved — re-rendering the list on every
+      // snapshot would yank it out from under a player who is mid-scroll.
+      if (curTab === 'shop' && owned.join('|') !== ownedBefore) renderShop();
+    }, function () { /* transient: the panel keeps working off the last value */ });
+  }
+  function unwatchWallet() { if (walletUnsub) { walletUnsub(); walletUnsub = null; } }
+
   /* ── Firestore transactions ───────────────────────────────── */
   async function buyTx(id) {
     const it = C.getCosmetic(id); if (!it) return { ok: false, reason: 'not_found' };
@@ -728,8 +765,9 @@
     overlay.querySelectorAll('.cc-tab').forEach(function (x) { x.classList.toggle('active', x.getAttribute('data-tab') === 'shop'); });
     renderTab();
     overlay.classList.add('show');
+    watchWallet();
   }
-  function close() { if (overlay) overlay.classList.remove('show'); }
+  function close() { unwatchWallet(); if (overlay) overlay.classList.remove('show'); }
 
   /* ── Gacha prize pool + per-item odds ── */
   function buildPoolPopup() {
