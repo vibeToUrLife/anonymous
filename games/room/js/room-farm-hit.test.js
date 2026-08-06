@@ -791,14 +791,31 @@ test('with an empty sack it explains instead of opening the sheet', () => {
     'it refused without saying why: ' + toasts.join(' | '));
 });
 
-test('with nothing waiting it says so instead of opening an empty sheet', () => {
+test('a field that is all fertilised already says exactly that', () => {
   const { sb, picker, toasts } = fertAllSandbox([
     { crop: 'wheat', plantedAt: Date.now(), fert: true },
-    { crop: null, plantedAt: 0, fert: false },
+    { crop: 'corn', plantedAt: Date.now(), fert: true },
   ], 9);
   sb.askFertAll();
   assert.equal(picker.style.display, 'none', 'it opened a sheet for zero beds');
-  assert.ok(toasts.join(' | ').indexOf('Nothing to fertilise') >= 0, toasts.join(' | '));
+  assert.ok(toasts.join(' | ').indexOf('already fertilised') >= 0, toasts.join(' | '));
+});
+
+/* An empty field is the one that makes the gesture look broken: fertilizer
+   needs a crop already in the ground, so "nothing happened" has to come back as
+   "go and plant something" rather than as silence. */
+test('an unplanted field is told to plant, not that it is done', () => {
+  const { sb, picker, toasts } = fertAllSandbox([
+    { crop: null, plantedAt: 0, fert: false },
+    { crop: null, plantedAt: 0, fert: false },
+  ], 9);
+  sb.askFertAll();
+  assert.equal(picker.style.display, 'none', 'it opened a sheet for a field with no crops');
+  const said = toasts.join(' | ');
+  assert.ok(said.indexOf('plant a bed first') >= 0,
+    'an empty field was not told what to actually do: ' + said);
+  assert.ok(said.indexOf('already fertilised') < 0,
+    'an empty field was told its beds are done, which is the opposite of true: ' + said);
 });
 
 test('opening the sheet puts an armed sack down', () => {

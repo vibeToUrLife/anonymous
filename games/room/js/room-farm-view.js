@@ -3188,7 +3188,17 @@
       const have = farmFertCount();
       if (have < 1) return showToast('🌱 ' + T('No fertilizer — collect a compost bin on the west plot.'), '');
       const targets = _fertableIdxs().length;
-      if (!targets) return showToast('🌱 ' + T('Nothing to fertilise — no growing bed is waiting for it.'), '');
+      if (!targets) {
+        /* Two very different reasons for "nothing to do", and one message for
+           both is what makes the gesture look broken: fertilizer goes on a crop
+           that is already in the ground, so an empty field needs planting, not
+           more compost. Saying which one it is turns a dead end into an
+           instruction. */
+        const growing = (roomData.farmPlots || []).some(p => p && p.crop);
+        return showToast('🌱 ' + (growing
+          ? T('Every growing bed is already fertilised.')
+          : T('Nothing is growing yet — fertilizer goes on a crop, so plant a bed first.')), '');
+      }
       _disarmFert();                       // the sheet takes over from the armed sack
       _fertAllPending = true;
       _renderFertAllConfirm(have, targets);
