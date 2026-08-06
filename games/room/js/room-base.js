@@ -369,7 +369,7 @@
 
     /* Ageing factories — the right plot's tier-2 layer. Same shape as
        FARM_MACHINES (id/cost/recipes) so _machineState, startMachineSlot and
-       collectMachineSlot drive both lists; a `store` field says which inventory
+       collectMachineReady drive both lists; a `store` field says which inventory
        the output lands in. Only dairy and meat age: bread and cake want to be
        fresh, and metal doesn't age at all — which is what makes the Dairy and
        the Butcher, the two cheapest machines, matter late.

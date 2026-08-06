@@ -1576,3 +1576,111 @@ test('the away preview marks the spot the plane comes back to', () => {
       ') falls outside the plane (' + (here.x0 * W).toFixed(0) + '..' + (here.x1 * W).toFixed(0) + ')');
   }
 });
+
+/* ── Emptying a factory ──
+   A tap on any finished square clears the whole building. A ready square is a
+   blocked square, so there was never a reason to take one and leave the rest —
+   but "all of them" has to mean exactly the finished ones, and a failed save
+   must not leave the building half emptied. */
+
+const MIN = 60 * 1000;
+
+// A machine with `jobs` already in place. Ages are in minutes-ago, so a job set
+// far enough back is finished and a fresh one is not.
+function machineSandbox(id, jobs, slots) {
+  const sb = plotSandbox();
+  sb.roomData.farmStock = {};
+  sb.roomData.farmAged = {};
+  const now = Date.now();
+  const state = { owned: true, slots: slots || jobs.length,
+                  jobs: jobs.map(j => (j ? { at: now - j.agoMin * MIN, r: j.r } : 0)) };
+  (vm.runInContext('FARM_AGERS', sb).some(a => a.id === id) ? sb.roomData.farmAgers : sb.roomData.farmMachines)[id] = state;
+  const toasts = [];
+  sb.showToast = (m) => { toasts.push(String(m)); };
+  return { sb, toasts, state };
+}
+
+test('tapping one finished square empties every finished square', async () => {
+  // Dairy recipe 0 is milk → cheese in 30 min.
+  const { sb, state } = machineSandbox('dairy', [
+    { agoMin: 40, r: 0 }, { agoMin: 40, r: 0 }, { agoMin: 40, r: 0 },
+  ]);
+  assert.equal(await sb.collectMachineReady('dairy'), 3, 'a tap should clear all three, not one');
+  assert.equal(sb.roomData.farmStock.cheese, 3);
+  assert.deepEqual(state.jobs, [0, 0, 0], 'every emptied square should be free to start again');
+});
+
+test('squares that are still running are left alone', async () => {
+  const { sb, state } = machineSandbox('dairy', [
+    { agoMin: 40, r: 0 },   // done
+    { agoMin: 2, r: 0 },    // still going
+    { agoMin: 40, r: 0 },   // done
+  ]);
+  assert.equal(await sb.collectMachineReady('dairy'), 2);
+  assert.equal(sb.roomData.farmStock.cheese, 2, 'an unfinished square must not pay out early');
+  assert.ok(state.jobs[1], 'the running square should still be running');
+  assert.deepEqual([state.jobs[0], state.jobs[2]], [0, 0]);
+});
+
+test('a mixed building collects every kind and names them all', async () => {
+  // Dairy: 0 = cheese, 1 = yogurt.
+  const { sb, toasts } = machineSandbox('dairy', [
+    { agoMin: 40, r: 0 }, { agoMin: 40, r: 1 }, { agoMin: 40, r: 1 },
+  ]);
+  assert.equal(await sb.collectMachineReady('dairy'), 3);
+  assert.equal(sb.roomData.farmStock.cheese, 1);
+  assert.equal(sb.roomData.farmStock.yogurt, 2);
+  const said = toasts.join(' | ');
+  assert.ok(/Cheese/i.test(said) && /Yogurt/i.test(said),
+    'a mixed haul reported only a count, so the player cannot tell what they got: ' + said);
+});
+
+test('one finished square still reads as the single-item message it always did', async () => {
+  const { sb, toasts } = machineSandbox('dairy', [{ agoMin: 40, r: 0 }, { agoMin: 1, r: 0 }]);
+  assert.equal(await sb.collectMachineReady('dairy'), 1);
+  assert.ok(toasts.join(' | ').indexOf('Collected 1') >= 0, toasts.join(' | '));
+});
+
+test('nothing finished collects nothing and says why', async () => {
+  const { sb, state, toasts } = machineSandbox('dairy', [{ agoMin: 1, r: 0 }, { agoMin: 2, r: 0 }]);
+  assert.equal(await sb.collectMachineReady('dairy'), 0);
+  assert.ok(toasts.join(' | ').indexOf('Still processing') >= 0, toasts.join(' | '));
+  assert.equal(sb.roomData.farmStock.cheese, undefined, 'it paid out for unfinished work');
+  assert.ok(state.jobs[0] && state.jobs[1], 'it cleared squares that were still running');
+});
+
+test('an empty building is a no-op, not a crash', async () => {
+  const { sb } = machineSandbox('dairy', [0, 0]);
+  assert.equal(await sb.collectMachineReady('dairy'), 0);
+});
+
+test('a failed save puts every square back, not just the last one', async () => {
+  const { sb, state, toasts } = machineSandbox('dairy', [
+    { agoMin: 40, r: 0 }, { agoMin: 40, r: 0 }, { agoMin: 40, r: 0 },
+  ]);
+  const before = state.jobs.map(j => j.at);
+  sb.saveRoom = () => Promise.resolve(false);          // the write is rejected
+  assert.equal(await sb.collectMachineReady('dairy'), 0);
+  assert.ok(!sb.roomData.farmStock.cheese, 'the barn kept goods the save never recorded');
+  assert.deepEqual(state.jobs.map(j => j && j.at), before,
+    'a rejected save half-emptied the building — those three products are now gone');
+  assert.ok(toasts.join(' | ').indexOf('save failed') >= 0, toasts.join(' | '));
+});
+
+test('an ageing factory pays into farmAged, never the sellable barn', async () => {
+  const def = vm.runInContext('FARM_AGERS', plotSandbox())[0];
+  const mins = Math.ceil(def.recipes[0].timeMs / MIN) + 5;
+  const { sb } = machineSandbox(def.id, [{ agoMin: mins, r: 0 }, { agoMin: mins, r: 0 }]);
+  assert.equal(await sb.collectMachineReady(def.id), 2);
+  const outId = def.recipes[0].out.id;
+  assert.equal(sb.roomData.farmAged[outId], 2, 'aged goods must land in farmAged');
+  assert.equal(sb.roomData.farmStock[outId], undefined,
+    'an aged good reached the barn, where the plane could buy it at list price');
+});
+
+test('a visitor cannot empty someone else s factory', async () => {
+  const { sb, state } = machineSandbox('dairy', [{ agoMin: 40, r: 0 }]);
+  sb.viewingUid = 'someone-else';
+  assert.equal(await sb.collectMachineReady('dairy'), 0);
+  assert.ok(state.jobs[0], 'a visitor collected from a farm that is not theirs');
+});

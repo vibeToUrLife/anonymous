@@ -1253,6 +1253,9 @@
     'Built {name}': '造了{name}',
     'making {item}…': '正在做{item}…',
     'Collected {n} {item}!': '收下 {n} 个{item}！',
+    /* Tapping one finished square empties the whole factory, so a mixed haul
+       has to name every kind — a bare count would not say what you now have. */
+    'Collected {n}: {list}': '收下 {n} 件：{list}',
     '{n}m': '{n} 分',
     '{h}h {m}m': '{h} 小时 {m} 分',
     'Sold {n} {item} for {coins}': '卖了 {n} 个{item}，得 {coins}',

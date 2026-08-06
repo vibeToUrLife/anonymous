@@ -2348,28 +2348,71 @@
       renderWorkshopModal(); renderFarmPanel(); renderAll();
     }
 
-    async function collectMachineSlot(id, slot) {
-      if (viewingUid !== currentUid) return;
+    /* ── Emptying a factory ──
+       Tapping a finished square clears the WHOLE building, not just the one
+       tapped. A ready square is a blocked square — nothing new can be started in
+       it until it is emptied — so there was never a reason to take one and leave
+       the rest, and clearing four squares was four taps with no decision in any
+       of them. Tap a building with only one thing ready and it collects one,
+       exactly as it always did.
+
+       Nothing is spent here, so unlike the fertilizer sack this asks nothing and
+       simply does it: a confirmation on a pure gain is a click with no question
+       in it. What it owes the player instead is an honest receipt — a building's
+       squares can be running different recipes at once, so the toast names what
+       it actually took rather than handing back a bare count. */
+    async function collectMachineReady(id) {
+      if (viewingUid !== currentUid) return 0;
       const mc = _farmBuildDef(id), m = _machineState(id);
-      if (!mc || !m || !m.jobs[slot]) return;
-      const job = m.jobs[slot], recipe = mc.recipes[job.r] || mc.recipes[0];
-      if (cropProgress(job.at, Date.now(), recipe.timeMs) < 1) return showToast(T('Still processing…'), '');
-      // Apply locally, then persist. If the save fails, roll back — otherwise the
-      // collected item silently disappears when the next snapshot overwrites it.
-      // Tier 2 lands in farmAged, which no list-price sell path can reach.
+      if (!mc || !m) return 0;
+      const now = Date.now();
+      const ready = [];
+      for (let i = 0; i < m.slots; i++) {
+        const job = m.jobs[i];
+        if (!job) continue;
+        const recipe = mc.recipes[job.r] || mc.recipes[0];
+        if (cropProgress(job.at, now, recipe.timeMs) >= 1) ready.push({ slot: i, job: job, out: recipe.out });
+      }
+      if (!ready.length) { showToast(T('Still processing…'), ''); return 0; }
+      // Apply locally, then persist. If the save fails, put every one of them
+      // back — otherwise the collected items silently disappear when the next
+      // snapshot overwrites them. One failed save must not half-empty the
+      // building. Tier 2 lands in farmAged, which no list-price sell path can
+      // reach.
       const bin = _isAger(id) ? 'farmAged' : 'farmStock';
       roomData[bin] = roomData[bin] || {};
-      roomData[bin][recipe.out.id] = (roomData[bin][recipe.out.id] || 0) + recipe.out.qty;
-      m.jobs[slot] = 0;
+      const got = {};
+      for (const r of ready) {
+        roomData[bin][r.out.id] = (roomData[bin][r.out.id] || 0) + r.out.qty;
+        got[r.out.id] = (got[r.out.id] || 0) + r.out.qty;
+        m.jobs[r.slot] = 0;
+      }
       const ok = await saveRoom();
       if (!ok) {
-        roomData[bin][recipe.out.id] -= recipe.out.qty;
-        m.jobs[slot] = job;
-        return showToast(T('Could not collect — save failed. Check your connection and try again.'), 'error');
+        for (const r of ready) {
+          roomData[bin][r.out.id] -= r.out.qty;
+          m.jobs[r.slot] = r.job;
+        }
+        showToast(T('Could not collect — save failed. Check your connection and try again.'), 'error');
+        return 0;
       }
-      const outM = farmProductMeta()[recipe.out.id];
-      showToast(T('Collected {n} {item}!', { n: recipe.out.qty, item: outM ? outM.emoji + ' ' + T(outM.name) : recipe.out.id }), 'success');
+      showToast(_collectedReceipt(got), 'success');
       renderWorkshopModal(); renderFarmPanel(); renderAll();
+      return ready.length;
+    }
+
+    /* What came out, in words. A single kind keeps the message it always had, so
+       the common case reads exactly as before; a mixed haul lists each kind,
+       because "collected 5" from a building that makes six different things does
+       not tell you what you now have. Toasts render as textContent, so this is
+       emoji and names only — never markup. */
+    function _collectedReceipt(got) {
+      const meta = farmProductMeta();
+      const ids = Object.keys(got);
+      const label = (k) => { const pm = meta[k]; return pm ? pm.emoji + ' ' + T(pm.name) : k; };
+      if (ids.length === 1) return T('Collected {n} {item}!', { n: got[ids[0]], item: label(ids[0]) });
+      const total = ids.reduce((s, k) => s + got[k], 0);
+      return T('Collected {n}: {list}', { n: total, list: ids.map(k => label(k) + '×' + got[k]).join('  ') });
     }
 
     /* ── Orders ── */
@@ -5256,6 +5299,14 @@
       } else {
         // A grid of FARM_MAX_SLOTS squares: locked (buy) · idle (tap to choose) ·
         // making (shows the product + timer) · ready (tap to collect).
+        /* How many are finished, counted before the squares are drawn: a tap on
+           any one of them empties the lot, so each ready square has to say that
+           up front rather than surprising the player with the other three. */
+        let readyN = 0;
+        for (let i = 0; i < m.slots; i++) {
+          const j = m.jobs[i];
+          if (j && cropProgress(j.at, now, (mc.recipes[j.r] || mc.recipes[0]).timeMs) >= 1) readyN++;
+        }
         let cells = '';
         for (let i = 0; i < FARM_MAX_SLOTS; i++) {
           if (i >= m.slots) {                                   // not opened yet
@@ -5272,8 +5323,9 @@
             const recipe = mc.recipes[job.r] || mc.recipes[0];
             const oM = meta[recipe.out.id] || { emoji: '❓' };
             if (cropProgress(job.at, now, recipe.timeMs) >= 1) {
-              cells += '<button class="ws-cell ready" onclick="collectMachineSlot(\'' + mc.id + '\',' + i + ')">' +
-                '<span class="ws-cell-icon">' + _prodIcon(recipe.out.id, 40, oM) + '</span><span class="ws-cell-cap">✅ ' + T('Collect') + '</span></button>';
+              cells += '<button class="ws-cell ready" onclick="collectMachineReady(\'' + mc.id + '\')">' +
+                '<span class="ws-cell-icon">' + _prodIcon(recipe.out.id, 40, oM) + '</span><span class="ws-cell-cap">✅ ' +
+                (readyN > 1 ? T('Collect all ({n})', { n: readyN }) : T('Collect')) + '</span></button>';
             } else {
               cells += '<div class="ws-cell busy">' +
                 '<span class="ws-cell-icon">' + _prodIcon(recipe.out.id, 40, oM) + '</span><span class="ws-cell-cap">⏳ ' + dur(recipe.timeMs - (now - job.at)) + '</span></div>';
