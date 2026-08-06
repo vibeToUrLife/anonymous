@@ -1262,6 +1262,7 @@
     function openFarm() {
       isFarmView = true;
       _fertArmed = false; _fertDrag = null;   // never open with the sack already up
+      _fertLastTap = 0; _fertAllPending = false;   // nor mid-double-tap, nor with a stale sheet live
             _farmCamX = 0; _farmCamTo = null;   // always open on the near end of the land, at rest
       document.getElementById('farmView')?.classList.add('visible');
       _setFarmPanelMode(true);
@@ -2556,6 +2557,7 @@
     }
     function closeCropPicker() {
       _pendingPlant = null;
+      _fertAllPending = false;
       const p = document.getElementById('cropPicker');
       if (p) p.style.display = 'none';
     }
@@ -3005,7 +3007,7 @@
       if (tg && tg.kind === 'fert') {
         const n = farmFertCount();
         return '🌱 ' + (n
-          ? T('Fertilizer ×{n} — tap then tap a bed, or drag across a row', { n: n })
+          ? T('Fertilizer ×{n} — tap then tap a bed · double-tap for the whole field', { n: n })
           : T('No fertilizer — collect a compost bin on the west plot.'));
       }
       if (tg && tg.kind === 'sky' && tg.id === '#mail') {
@@ -3044,6 +3046,9 @@
        finger on a 44px target — so arming is what the button does on a plain tap,
        and the drag is an extra for whoever reaches for it.
 
+       A DOUBLE tap is the third way, and it means the whole field at once — see
+       askFertAll() below for why that one asks before it spends.
+
        The sack is a DOM button over the canvas, like "🧺 Collect" and the pan
        arrows: that guarantees the touch target, gets its own hover and pressed
        states, and keeps it out of the canvas hit-test entirely. */
@@ -3052,6 +3057,9 @@
     let _fertPress = null;           // press that started on the sack, before it became a drag
     let _fertPainted = null;         // bed indices done in this one drag
     let _fertPaintN = 0;             // how many this drag has done, for the toast at the end
+    let _fertLastTap = 0;            // when the sack was last tapped, to spot the second one
+    let _fertAllPending = false;     // a "fertilise the whole field" sheet is waiting on yes/no
+    const FARM_FERT_DBLTAP_MS = 340; // two taps on the sack closer than this are one double-tap
 
     function farmFertCount() { return Math.floor(roomData.farmFertilizer || 0); }
 
@@ -3087,6 +3095,13 @@
     function _fertable(i) {
       const p = (roomData.farmPlots || [])[i];
       return !!(p && p.crop && !p.fert);
+    }
+    // Every bed the sack could go on right now, in field order — which is also
+    // the order a short sack gets spent in, first row first.
+    function _fertableIdxs() {
+      const plots = roomData.farmPlots || [], out = [];
+      for (let i = 0; i < plots.length; i++) if (_fertable(i)) out.push(i);
+      return out;
     }
 
     function toggleFertArm() {
@@ -3138,6 +3153,91 @@
       showToast('🌱 ' + I18N.plural(n, 'Fertilised 1 bed — yields ×{m}', 'Fertilised {n} beds — yields ×{m}',
         { m: FARM_FERT_MULT }), 'success');
       renderFarmPanel();
+    }
+
+    /* ── Double-tap the sack: the whole field in one go ──
+       Bed by bed is fine for a row and a chore for forty, and the drag-paint
+       cannot reach a bed that is panned off the side of the window. So the sack
+       takes a double tap too, and that means "everything it can reach".
+
+       Every tap on the sack arrives here. The single tap is the common path and
+       stays instant — nothing is deferred waiting to see whether a second one
+       follows, because that lag would be paid on every tap by every player,
+       including the ones who never discover the gesture. So the pair is spotted
+       after the fact from the timestamps, and the second tap takes back the
+       arming the first one did. Zeroing the stamp on the double means a third
+       tap starts a fresh pair rather than asking all over again. */
+    function _fertSackTap(now) {
+      const t = now || Date.now();
+      if (t - _fertLastTap < FARM_FERT_DBLTAP_MS) { _fertLastTap = 0; askFertAll(); return 'all'; }
+      _fertLastTap = t;
+      toggleFertArm();
+      return 'arm';
+    }
+
+    /* The reminder, and it is not a nicety — it is the reason the gesture is
+       safe to have. This is the only thing on the farm that spends a resource
+       you waited hours of composting for, all of it, on beds you never pointed
+       at, and a mis-aimed double tap is an easy thing to do on a phone. So it
+       asks first, with the numbers on it: how many beds, what it costs, and what
+       survives it. Nothing moves until "yes". When the sack cannot cover the
+       field it says so and names the number it CAN do, rather than quietly doing
+       a partial job and leaving the rest looking skipped. */
+    function askFertAll() {
+      if (viewingUid !== currentUid) return;
+      const have = farmFertCount();
+      if (have < 1) return showToast('🌱 ' + T('No fertilizer — collect a compost bin on the west plot.'), '');
+      const targets = _fertableIdxs().length;
+      if (!targets) return showToast('🌱 ' + T('Nothing to fertilise — no growing bed is waiting for it.'), '');
+      _disarmFert();                       // the sheet takes over from the armed sack
+      _fertAllPending = true;
+      _renderFertAllConfirm(have, targets);
+    }
+
+    // The reminder itself, reusing #cropPicker the way the partial-plant
+    // confirmation does — same sheet, same buttons, one thing to learn.
+    function _renderFertAllConfirm(have, targets) {
+      const picker = document.getElementById('cropPicker');
+      if (!picker) return;
+      const n = Math.min(have, targets);
+      picker.innerHTML =
+        '<div class="cp-head">🌱 ' + T('Fertilise the whole field?') + '</div>' +
+        '<div class="cp-bulk-info" style="line-height:1.5">' +
+          I18N.plural(targets, '<b>1</b> bed is growing and unfertilised.',
+                               '<b>{n}</b> beds are growing and unfertilised.') + '<br>' +
+          (targets > have
+            ? T('You have {have} — enough for the first {n}, and the rest stay as they are.',
+                { have: '<b>' + have + ' 🌱</b>', n: '<b>' + n + '</b>' })
+            : T('This spends {n} and leaves {left} in the sack.',
+                { n: '<b>' + n + ' 🌱</b>', left: '<b>' + (have - n) + ' 🌱</b>' })) + '<br>' +
+          T('Every bed it reaches yields ×{m}.', { m: FARM_FERT_MULT }) +
+        '</div>' +
+        '<button class="cp-crop" style="justify-content:center;font-weight:800" onclick="confirmFertAll()">🌱 ' +
+          I18N.plural(n, 'Fertilise 1 bed', 'Fertilise {n} beds') + '</button>' +
+        '<button class="cp-close" onclick="closeCropPicker()">' + T('Cancel') + '</button>';
+      picker.style.display = 'block';
+    }
+
+    // Said yes → walk the field, stopping when the sack runs dry. One save and
+    // one message for the lot, like the paint drag, plus what is left over:
+    // after a sweep that big the next thing you want to know is whether there
+    // is any fertilizer to come back with.
+    async function confirmFertAll() {
+      if (!_fertAllPending) return closeCropPicker();
+      closeCropPicker();
+      if (viewingUid !== currentUid) return 0;
+      let n = 0;
+      for (const i of _fertableIdxs()) {
+        if (farmFertCount() < 1) break;
+        if (_fertBed(i)) n++;
+      }
+      _disarmFert();
+      if (!n) return 0;
+      await saveRoom();
+      showToast('🌱 ' + I18N.plural(n, 'Fertilised 1 bed — yields ×{m}', 'Fertilised {n} beds — yields ×{m}',
+        { m: FARM_FERT_MULT }) + ' · ' + T('{n} left in the sack', { n: farmFertCount() }), 'success');
+      renderFarmPanel();
+      return n;
     }
 
     /* While the sack is up, every bed that can take it gets a ring. Without this
@@ -6966,7 +7066,7 @@
            nothing else — it must not fall through and open the planting sheet.
            A tap anywhere that is not a bed puts the sack down, which is the
            escape hatch: there is no separate cancel to find. */
-        if (tg && tg.kind === 'fert') { toggleFertArm(); return; }
+        if (tg && tg.kind === 'fert') { _fertSackTap(); return; }   // one tap arms, two do the field
         if (_fertArmed) {
           if (tg && tg.kind === 'plot') { applyFert(tg.idx); return; }
           _disarmFert();

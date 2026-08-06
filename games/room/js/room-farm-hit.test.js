@@ -695,6 +695,176 @@ test('replanting a bed clears the fertiliser it had', () => {
     'a reused bed came back already fertilised — beds are recycled, the flag was not');
 });
 
+/* ── Double-tapping the sack: the whole field at once ──
+   One gesture that can empty a sack the player composted hours for, onto beds
+   they never pointed at. It asks first, and the sheet it asks with is the only
+   place those numbers appear before anything moves — so these guard both
+   halves: that asking spends nothing, and that what the sheet promises is what
+   confirming actually does. */
+
+// A field of beds all growing and all waiting for fertilizer.
+function fertRows(n) {
+  return Array.from({ length: n }, () => ({ crop: 'wheat', plantedAt: Date.now(), fert: false }));
+}
+
+// fertSandbox plus the one DOM node the confirmation sheet renders into, and a
+// log of what the player was told.
+function fertAllSandbox(plots, have) {
+  const sb = fertSandbox(plots);
+  sb.roomData.farmFertilizer = have;
+  const picker = { innerHTML: '', style: { display: 'none' } };
+  const toasts = [];
+  sb.document.getElementById = (id) => (id === 'cropPicker' ? picker : null);
+  sb.showToast = (m) => { toasts.push(String(m)); };
+  return { sb, picker, toasts };
+}
+
+test('the field lists exactly the beds the sack could go on, in field order', () => {
+  const { sb } = fertAllSandbox([
+    { crop: 'wheat', plantedAt: Date.now(), fert: false },   // 0 — yes
+    { crop: null, plantedAt: 0, fert: false },               // 1 — empty
+    { crop: 'corn', plantedAt: Date.now(), fert: true },     // 2 — already done
+    { crop: 'corn', plantedAt: Date.now(), fert: false },    // 3 — yes
+  ], 9);
+  assert.deepEqual(sb._fertableIdxs(), [0, 3]);
+});
+
+test('the sheet spends nothing until it is confirmed', () => {
+  const { sb, picker } = fertAllSandbox(fertRows(4), 9);
+  sb.askFertAll();
+  assert.equal(picker.style.display, 'block', 'the confirmation never opened');
+  assert.equal(sb.roomData.farmFertilizer, 9, 'merely asking spent fertilizer');
+  assert.ok(sb.roomData.farmPlots.every(p => !p.fert), 'merely asking fertilised the beds');
+});
+
+test('confirming fertilises every waiting bed and spends one each', async () => {
+  const { sb } = fertAllSandbox(fertRows(4), 9);
+  sb.askFertAll();
+  assert.equal(await sb.confirmFertAll(), 4);
+  assert.equal(sb.roomData.farmFertilizer, 5, 'one fertilizer per bed');
+  assert.ok(sb.roomData.farmPlots.every(p => p.fert), 'a bed was left out of "the whole field"');
+});
+
+test('it skips the beds that cannot take it rather than spending on them', async () => {
+  const { sb } = fertAllSandbox([
+    { crop: 'wheat', plantedAt: Date.now(), fert: false },
+    { crop: null, plantedAt: 0, fert: false },
+    { crop: 'corn', plantedAt: Date.now(), fert: true },
+  ], 9);
+  assert.equal(await (sb.askFertAll(), sb.confirmFertAll()), 1);
+  assert.equal(sb.roomData.farmFertilizer, 8, 'only the one eligible bed should have cost anything');
+  assert.equal(sb.roomData.farmPlots[1].fert, false, 'an empty bed must not be marked');
+});
+
+test('a short sack fertilises what it can, from the start of the field', async () => {
+  const { sb } = fertAllSandbox(fertRows(5), 2);
+  sb.askFertAll();
+  assert.equal(await sb.confirmFertAll(), 2, 'it must stop when the sack runs dry, not go into debt');
+  assert.equal(sb.roomData.farmFertilizer, 0);
+  assert.deepEqual(sb.roomData.farmPlots.map(p => !!p.fert), [true, true, false, false, false]);
+});
+
+test('the sheet names the beds, the cost and what is left over', () => {
+  const { sb, picker } = fertAllSandbox(fertRows(3), 9);
+  sb.askFertAll();
+  const html = picker.innerHTML;
+  assert.ok(html.indexOf('<b>3</b> beds') >= 0, 'the sheet never says how many beds: ' + html);
+  assert.ok(html.indexOf('spends <b>3 🌱</b>') >= 0, 'the sheet never says what it costs: ' + html);
+  assert.ok(html.indexOf('leaves <b>6 🌱</b>') >= 0, 'the sheet never says what survives it: ' + html);
+});
+
+test('a sack too small to cover the field says so on the sheet', () => {
+  const { sb, picker } = fertAllSandbox(fertRows(5), 2);
+  sb.askFertAll();
+  const html = picker.innerHTML;
+  assert.ok(html.indexOf('enough for the first <b>2</b>') >= 0,
+    'a partial job must be named as one before it happens: ' + html);
+  assert.ok(html.indexOf('Fertilise 2 beds') >= 0,
+    'the button promised more than the sack can do: ' + html);
+});
+
+test('with an empty sack it explains instead of opening the sheet', () => {
+  const { sb, picker, toasts } = fertAllSandbox(fertRows(3), 0);
+  sb.askFertAll();
+  assert.equal(picker.style.display, 'none', 'it offered to spend a sack that is empty');
+  assert.ok(toasts.join(' | ').indexOf('No fertilizer') >= 0,
+    'it refused without saying why: ' + toasts.join(' | '));
+});
+
+test('with nothing waiting it says so instead of opening an empty sheet', () => {
+  const { sb, picker, toasts } = fertAllSandbox([
+    { crop: 'wheat', plantedAt: Date.now(), fert: true },
+    { crop: null, plantedAt: 0, fert: false },
+  ], 9);
+  sb.askFertAll();
+  assert.equal(picker.style.display, 'none', 'it opened a sheet for zero beds');
+  assert.ok(toasts.join(' | ').indexOf('Nothing to fertilise') >= 0, toasts.join(' | '));
+});
+
+test('opening the sheet puts an armed sack down', () => {
+  const { sb } = fertAllSandbox(fertRows(3), 9);
+  sb.toggleFertArm();
+  assert.equal(vm.runInContext('_fertArmed', sb), true, 'the first tap of the pair should arm it');
+  sb.askFertAll();
+  assert.equal(vm.runInContext('_fertArmed', sb), false,
+    'the sheet and an armed sack would both claim the next tap on a bed');
+});
+
+test('confirming with no sheet open does nothing', async () => {
+  const { sb } = fertAllSandbox(fertRows(3), 9);
+  await sb.confirmFertAll();
+  assert.equal(sb.roomData.farmFertilizer, 9, 'a stale button emptied the sack with nothing asked');
+  assert.ok(sb.roomData.farmPlots.every(p => !p.fert));
+});
+
+test('cancelling the sheet really cancels it', async () => {
+  const { sb } = fertAllSandbox(fertRows(3), 9);
+  sb.askFertAll();
+  sb.closeCropPicker();
+  await sb.confirmFertAll();
+  assert.equal(sb.roomData.farmFertilizer, 9, 'cancel left the action live behind the closed sheet');
+  assert.ok(sb.roomData.farmPlots.every(p => !p.fert));
+});
+
+/* ── Telling one tap from two ──
+   The single tap must stay instant (it is the common path, and deferring it to
+   wait for a possible second would put a visible lag on picking the sack up),
+   so the pair is spotted after the fact from the timestamps. */
+
+test('two quick taps on the sack ask about the whole field', () => {
+  const { sb, picker } = fertAllSandbox(fertRows(3), 9);
+  assert.equal(sb._fertSackTap(10000), 'arm', 'the first tap should just pick the sack up');
+  assert.equal(picker.style.display, 'none', 'one tap must not open the sheet');
+  assert.equal(sb._fertSackTap(10120), 'all', 'the second tap should mean the whole field');
+  assert.equal(picker.style.display, 'block');
+});
+
+test('two slow taps are two taps — arm, then put it down', () => {
+  const { sb, picker } = fertAllSandbox(fertRows(3), 9);
+  sb._fertSackTap(10000);
+  assert.equal(vm.runInContext('_fertArmed', sb), true);
+  assert.equal(sb._fertSackTap(10600), 'arm', '600ms apart is two deliberate taps, not a double');
+  assert.equal(vm.runInContext('_fertArmed', sb), false, 'the second slow tap should put the sack down');
+  assert.equal(picker.style.display, 'none', 'a slow pair must never open the sheet');
+});
+
+test('a third quick tap starts a fresh pair instead of asking again', () => {
+  const { sb } = fertAllSandbox(fertRows(3), 9);
+  sb._fertSackTap(10000);
+  assert.equal(sb._fertSackTap(10100), 'all');
+  assert.equal(sb._fertSackTap(10200), 'arm',
+    'the tap after a double re-opened the sheet — a triple tap would ask twice');
+});
+
+test('the sack tooltip advertises the double-tap', () => {
+  const { sb } = fertAllSandbox(fertRows(2), 4);
+  const { W, H } = WIDE;
+  const p = sb._fertBagPos(W, H);
+  const tip = sb._farmHoverTip(p.x, p.y, W, H, 0, sb._farmTargetAt(p.x, p.y, W, H));
+  assert.ok(tip.indexOf('double-tap') >= 0,
+    'nothing on the sack tells the player the gesture exists: "' + tip + '"');
+});
+
 /* ── The sack lives in the field ──
    It is drawn in the world layer and pans with the land, so its hit-test has to
    be in land coordinates like everything else below the fence — and it has to
