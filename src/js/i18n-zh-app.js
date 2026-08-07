@@ -116,7 +116,13 @@
     '+ Add option': '+ 加一个选项',
     '📊 Post Poll': '📊 发起投票',
     'Scroll to zoom · Drag to pan · Tap outside to close': '滚轮缩放 · 拖动平移 · 点外面关闭',
-    'Feedback Corner': '意见箱',
+    /* 意见角, not 意见箱 — the corner's own page calls itself 意见角 and the
+       button has to agree with the thing it opens. Every page that loads any
+       dictionary loads this one, so these two rows cover the whole site; the
+       pages with no i18n at all (chess / toto / fishing / subway-dash) fall
+       back to the copy built into feedback-corner.js. */
+    'Feedback Corner': '意见角',
+    'Having trouble? Tell us →': '出问题了？跟我们说一声 →',
     'Coin Rush': '金币狂潮',
     'Join': '参加',
     'How to play': '玩法说明',

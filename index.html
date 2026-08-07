@@ -29,28 +29,13 @@
     .poll-add-row input { background: var(--sunken) !important; color: var(--ink) !important; border: none !important; box-shadow: var(--clay-in) !important; }
     .poll-creator-header { color: var(--primary-deep) !important; border-bottom-color: var(--border) !important; }
 
-    /* ── Feedback FAB ── */
-    .feedback-fab {
-      position: fixed;
-      bottom: 148px;
-      right: 18px;
-      z-index: 310;
-      width: 48px;
-      height: 48px;
-      border: none;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
-      color: #fff;
-      font-size: 22px;
-      cursor: pointer;
-      box-shadow: 0 4px 16px rgba(59,130,246,0.4);
-      transition: transform 0.2s, box-shadow 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-decoration: none;
-    }
-    .feedback-fab:hover { transform: scale(1.1); box-shadow: 0 6px 24px rgba(59,130,246,0.5); }
+    /* ── Feedback FAB ──
+       The button, its hover and its attention pulse now live in
+       src/js/feedback-corner.js, which puts the same button on every page.
+       All this page still owns is where it sits: unlike the mini-games, the
+       board has a FAB stack (mood 90 · feedback 148 · riddle 206) and this
+       one has to keep its slot in it. */
+    :root { --fbc-bottom: 148px; --fbc-z: 310; --fbc-accent: var(--primary-deep); --fbc-accent-2: var(--primary); }
 
     /* ── Daily Quote Banner (clay card) ── */
     .daily-quote-banner {
@@ -1483,7 +1468,9 @@
   <div class="toast" id="toast"></div>
 
   <!-- Feedback Corner FAB -->
-  <a class="feedback-fab" id="feedbackFab" href="./games/feedback.html" data-i18n-title title="Feedback Corner">💬</a>
+  <!-- 🛠️, not 💬: on a message board a speech bubble reads as "chat", which is
+       the one thing this button is not. -->
+  <a class="feedback-fab" id="feedbackFab" href="./games/feedback.html" data-i18n-title title="Feedback Corner">🛠️</a>
 
   <!-- Daily 脑筋急转弯 (brain teaser) — button stacked above the feedback button -->
   <button class="riddle-fab" id="riddleFab" data-i18n-title title="每日脑筋急转弯 · 答对得100金币">🧠</button>
@@ -1655,6 +1642,9 @@
   <!-- Reply size guard (keeps a thread under Firestore's 1MiB doc cap; used by app.js). -->
   <script src="./src/js/reply-logic.js?v=1"></script>
   <script src="./src/js/app.js?v=34"></script>
+  <!-- Feedback Corner — nudges the 🛠️ button when errors pile up. After app.js: it
+       wraps that file's showToast(). -->
+  <script src="./src/js/feedback-corner.js?v=1"></script>
   <!-- Access code gate — must load after app.js (uses its shared auth/db). Shows after Google login. -->
   <script src="./src/js/access-code-gate.js?v=2"></script>
   <script src="./src/js/feature-flags.js"></script>
