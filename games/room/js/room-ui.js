@@ -469,6 +469,11 @@
         logCoin(-_giftAmount, T('Gift sent') + ' 🎁');
         roomData.giftsGiven = (roomData.giftsGiven || 0) + 1;
         document.getElementById('coinAmount').textContent = roomData.coins;
+        // Persist the log row and the counter now rather than leaving them to
+        // whatever saves next. The coins themselves are already gone from the
+        // document (the increment above), so closing the tab here left a
+        // deduction with nothing to explain it.
+        saveRoom();
       }
       // Add coins to target
       await db.collection('rooms').doc(_giftTargetUid).update({

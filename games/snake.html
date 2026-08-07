@@ -263,6 +263,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="../src/js/firebase-config.js"></script>
+  <script src="../src/js/coin-history.js?v=2"></script>
   <script src="../src/js/stay-time.js"></script>
 
   <script>
@@ -773,7 +774,11 @@
         await db.runTransaction(async tx => {
           const snap = await tx.get(roomRef);
           const current = snap.exists ? (snap.data().coins || 0) : 0;
-          const update = { coins: current + earned, displayName: playerName || 'Anonymous', updatedAt: Date.now() };
+          // The payout and the row explaining it go in the same write — the
+          // balance is shared with the board, the shop and the room, so coins
+          // that arrive unexplained read as a glitch.
+          const update = { coins: current + earned, displayName: playerName || 'Anonymous', updatedAt: Date.now(),
+            coinHistory: CoinHistory.append(snap.exists ? snap.data().coinHistory : [], earned, CoinHistory.label('🐍 Snake'), current + earned) };
           if (snap.exists) tx.update(roomRef, update);
           else tx.set(roomRef, { ...update, pet: null, plant: null, petHunger: {}, plantLevels: {}, ownedPets: [], ownedPlants: [] });
         });

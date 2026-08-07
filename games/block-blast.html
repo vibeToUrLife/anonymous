@@ -414,6 +414,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="../src/js/firebase-config.js"></script>
+  <script src="../src/js/coin-history.js?v=2"></script>
   <script src="../src/js/stay-time.js"></script>
 
   <script>
@@ -1264,7 +1265,11 @@
           // Not T('Anonymous'): this is written to Firestore and read back by
           // everyone who visits the room, so it is stored data rather than a
           // label on this reader's screen.
-          const update = { coins: current + earned, displayName: playerName || 'Anonymous', updatedAt: Date.now() };
+          // The payout and the row explaining it go in the same write — the
+          // balance is shared with the board, the shop and the room, so coins
+          // that arrive unexplained read as a glitch.
+          const update = { coins: current + earned, displayName: playerName || 'Anonymous', updatedAt: Date.now(),
+            coinHistory: CoinHistory.append(snap.exists ? snap.data().coinHistory : [], earned, CoinHistory.label('🧱 Block Blast'), current + earned) };
           if (snap.exists) tx.update(roomRef, update);
           else tx.set(roomRef, { ...update, pet: null, plant: null, petHunger: {}, plantLevels: {}, ownedPets: [], ownedPlants: [] });
         });

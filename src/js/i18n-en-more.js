@@ -202,6 +202,10 @@
     '置顶冲榜': 'Pin & burn',
     '每日求签': 'Daily fortune',
     '每日求签（返还 {n}）': 'Daily fortune (refund {n})',
+    '打赏：{name}': 'Award: {name}',
+    // Refund rows — a charge that came back because what it paid for failed to stamp
+    '置顶冲榜退款': 'Pin & burn refunded',
+    '打赏退款': 'Award refunded',
 
     // 土豪榜 + burn
     '按累计消费金币排名 · 烧得越多越靠前 💸': 'Ranked by coins burned — the more you spend, the higher you sit 💸',
@@ -327,6 +331,7 @@
     '🏅 本周答对榜': '🏅 This week',
     '🎉 接上了！+{n} 金币 💰': '🎉 Linked! +{n} coins 💰',
     '🐉 成语接龙 +{n} 金币！': '🐉 Idiom chain +{n} coins!',
+    '成语接龙': 'Idiom chain',                            // the coin-log row for the reward
     '请先登录再玩哦': 'Sign in to play',
     '🐢 手慢了，接龙刚被接走，请接「{ch}」': '🐢 Too slow — someone linked first. Now follow 「{ch}」',
     '出错了，请再试一次': 'Something went wrong — try again',

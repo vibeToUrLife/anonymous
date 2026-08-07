@@ -61,13 +61,39 @@
   // Folded into the same transaction as the coin write so it stays atomic; dev
   // (zero-delta) actions are skipped. Capped so the Firestore doc stays small.
   function histAppend(d, delta, reason, newBal) {
-    var h = Array.isArray(d.coinHistory) ? d.coinHistory.slice() : [];
-    delta = Math.round(delta || 0);
-    if (delta !== 0) {
-      h.push({ t: Date.now(), d: delta, r: reason, b: Math.floor(newBal || 0) });
-      if (h.length > 100) h = h.slice(h.length - 100);
-    }
-    return h;
+    return CoinHistory.append(d.coinHistory, delta, reason, newBal);
+  }
+
+  /* ── Putting a charge back ──
+     Two sinks charge in a transaction and then do a second write to the thing
+     being paid for — a boost stamp on the bubble, an award badge. If that second
+     write fails the charge has to come back, and it used to come back as
+       roomRef().set({ coins: res.coins + price })
+     — the balance as it stood at the moment of the CHARGE, posted whole, outside
+     any transaction, after a network call that had just spent seconds timing
+     out. Everything that moved the balance in between was overwritten: plant
+     income banked in the room, a mini-game payout, a purchase on another device.
+     It ran both ways, too — if the balance had gone DOWN in between, writing the
+     old number back minted the difference out of nothing.
+
+     So the refund reads the document itself and moves the balance by a delta,
+     which is also what makes an honest history row possible: `b` is the balance
+     the refund actually leaves behind, not one remembered from before. */
+  async function refundTx(price, reason) {
+    if (isDev() || !(price > 0)) return;   // nothing was charged
+    try {
+      await db.runTransaction(async function (tx) {
+        var ref = roomRef();
+        var doc = await tx.get(ref);
+        var d = doc.exists ? doc.data() : {};
+        var nc = (d.coins || 0) + price;
+        tx.set(ref, {
+          coins: FieldValue.increment(price),
+          coinsSpent: FieldValue.increment(-price),
+          coinHistory: histAppend(d, price, reason, nc)
+        }, { merge: true });
+      });
+    } catch (e) { console.error('refund failed', e); }
   }
   function histTime(ts) {
     if (!ts) return '';
@@ -276,7 +302,7 @@
       if (!res.ok) return res;
       const until = Date.now() + hours * 3600000;
       try { await db.collection('answers').doc(answerId).set({ boostUntil: until }, { merge: true }); }
-      catch (e) { roomRef().set({ coins: res.coins + (isDev() ? 0 : price) }, { merge: true }).catch(function () {}); return { ok: false, reason: 'error' }; }
+      catch (e) { await refundTx(price, T('置顶冲榜退款')); return { ok: false, reason: 'error' }; }
       coins = res.coins;
       return { ok: true, coins: res.coins };
     } catch (e) { return { ok: false, reason: 'error' }; }
@@ -462,7 +488,7 @@
         const ref = roomRef(); const doc = await tx.get(ref); const d = doc.exists ? doc.data() : {};
         const cur = d.coins || 0; if (!affordOK(cur, a.price)) return { ok: false, reason: 'insufficient' };
         const nc = chargedCoins(cur, a.price);
-        tx.set(ref, { coins: nc, coinsSpent: spentTally(d.coinsSpent, a.price) }, { merge: true });
+        tx.set(ref, { coins: nc, coinsSpent: spentTally(d.coinsSpent, a.price), coinHistory: histAppend(d, nc - cur, T('打赏：{name}', { name: a.name || '' }), nc) }, { merge: true });
         return { ok: true, coins: nc };
       });
       if (!res.ok) return res;
@@ -473,7 +499,7 @@
         await db.collection('answers').doc(answerId).set(patch, { merge: true });
       } catch (e) {
         // Refund if stamping the award failed (no-op for devs — nothing was charged).
-        if (!isDev()) roomRef().set({ coins: res.coins + a.price, coinsSpent: FieldValue.increment(-a.price) }, { merge: true }).catch(function () {});
+        await refundTx(a.price, T('打赏退款'));
         return { ok: false, reason: 'error' };
       }
       coins = res.coins;

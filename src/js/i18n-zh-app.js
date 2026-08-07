@@ -293,6 +293,7 @@
     'Results preview (mock)': '结果预览（示例）',
     "Today's Coin Rush ranking": '今天的金币狂潮排名',
     '🏆 You placed #{rank}! +{bonus} 💰 bonus': '🏆 你排第 {rank} 名！奖励 +{bonus} 💰',
+    'Coin Rush — #{n}': '金币狂潮第 {n} 名',                  // the coin-log row for the placing bonus
     "Once each weekday a coin rush starts at a surprise time. Race your coworkers to grab the coins before they're gone — every coin is money in your wallet. The top 3 grabbers win bonus coins (1st 1000 / 2nd 500 / 3rd 300). Watch the countdown!":
       '每个工作日都会在一个不预告的时间开一场金币狂潮。跟同事抢，谁手快谁拿得多 —— 每一枚都直接进你的钱包。前 3 名还有额外奖励（第 1 名 1000 / 第 2 名 500 / 第 3 名 300）。盯着倒数就对了！',
     'Got it': '知道了',

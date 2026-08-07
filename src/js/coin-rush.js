@@ -28,6 +28,10 @@
 
   const SCORE_WRITE_MS = 4000;   // throttle score-doc writes
   const WALLET_FLUSH_MS = 6000;  // batch wallet coin increments
+  // How long a coin-log row stays open to absorb the next flush. Comfortably
+  // wider than WALLET_FLUSH_MS so an ordinary rush reads as ONE row however many
+  // flushes it took, while a rush the next day starts a row of its own.
+  const RUSH_LOG_COALESCE_MS = 10 * 60 * 1000;
   const MAX_BALLS = 14;          // coins on the field at once
 
   // Realtime DB (robbing mode). Guarded: if RTDB isn't configured firebase
@@ -417,13 +421,30 @@
       .catch(() => {});
   }
   function scheduleWalletFlush() { if (!walletTimer) walletTimer = setTimeout(flushWallet, WALLET_FLUSH_MS); }
+  /* A rush pays in a steady trickle, so the wallet is batched every few seconds
+     rather than written per pickup. The log row is COALESCED (see
+     CoinHistory.append): a rush would otherwise file a row every six seconds
+     and, at a hundred rows, push every other entry in the account's history out
+     behind it. Folding into the newest row keeps a whole session as one line
+     that grows — and because each flush still persists it, closing the tab
+     mid-rush leaves what was banked already logged.
+
+     A transaction now, not a bare increment: the row needs the balance it left
+     behind, which means reading the document. coins still travels as an
+     increment inside it, so nothing is lost to a write that lands in between. */
   function flushWallet() {
     if (walletTimer) { clearTimeout(walletTimer); walletTimer = null; }
     if (!pendingWallet || !myUid) return;
     const amt = pendingWallet; pendingWallet = 0;
-    db.collection('rooms').doc(myUid)
-      .set({ coins: FieldValue.increment(amt) }, { merge: true })
-      .catch(() => { pendingWallet += amt; });   // restore so we retry
+    const ref = db.collection('rooms').doc(myUid);
+    db.runTransaction((tx) => tx.get(ref).then((snap) => {
+      const d = snap.exists ? (snap.data() || {}) : {};
+      tx.set(ref, {
+        coins: FieldValue.increment(amt),
+        coinHistory: CoinHistory.append(d.coinHistory, amt, T('Coin Rush'), (d.coins || 0) + amt,
+                                        { coalesceMs: RUSH_LOG_COALESCE_MS })
+      }, { merge: true });
+    })).catch(() => { pendingWallet += amt; });   // restore so we retry
   }
 
   /* ── end of rush → settle → results + bonus ───────────────── */
@@ -515,10 +536,20 @@
     const claimRef = db.collection('coin_rush').doc(dayKey).collection('claims').doc(myUid);
     const roomRef = db.collection('rooms').doc(myUid);
     db.runTransaction((tx) =>
-      tx.get(claimRef).then((snap) => {
+      // Both reads before either write — a transaction cannot read after it has
+      // written, and the log row needs the balance the bonus leaves behind.
+      Promise.all([tx.get(claimRef), tx.get(roomRef)]).then((res) => {
+        const snap = res[0];
         if (snap.exists) return false;
+        const d = res[1].exists ? (res[1].data() || {}) : {};
         tx.set(claimRef, { bonus: bonus, rank: rank, claimedAt: Date.now() });
-        tx.set(roomRef, { coins: FieldValue.increment(bonus) }, { merge: true });
+        tx.set(roomRef, {
+          coins: FieldValue.increment(bonus),
+          // Its own row, never folded into the session's — a placing is an event,
+          // not part of the trickle.
+          coinHistory: CoinHistory.append(d.coinHistory, bonus,
+            T('Coin Rush — #{n}', { n: rank }), (d.coins || 0) + bonus)
+        }, { merge: true });
         return true;
       })
     ).then((paid) => { if (paid) toast(T('🏆 You placed #{rank}! +{bonus} 💰 bonus', { rank: rank, bonus: bonus })); })

@@ -1641,8 +1641,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="./src/js/i18n.js?v=3"></script>
-  <script src="./src/js/i18n-zh-app.js?v=5"></script>
-  <script src="./src/js/i18n-en-more.js?v=5"></script>
+  <script src="./src/js/i18n-zh-app.js?v=6"></script>
+  <script src="./src/js/i18n-en-more.js?v=6"></script>
   <script defer src="./src/js/i18n-ui.js?v=3"></script>
   <script src="./src/js/firebase-config.js"></script>
   <script src="./src/js/daily-quotes.js?v=2"></script>
@@ -1670,20 +1670,21 @@
   <script src="./src/js/doodle.js?v=2"></script>
   <script src="./src/js/wall-logic.js?v=6"></script>
   <script src="./src/js/graffiti-wall.js?v=8"></script>
+  <!-- Shared coin-log row shape. Loaded before EVERY coin sink and source below:
+       anything that moves the balance owes the log a row in the same write. -->
+  <script src="./src/js/coin-history.js?v=2"></script>
   <script src="./src/js/coin-rush-logic.js"></script>
-  <script src="./src/js/coin-rush.js?v=1"></script>
-  <!-- Shared coin-log row shape — anything that moves the balance owes it a row -->
-  <script src="./src/js/coin-history.js?v=1"></script>
+  <script src="./src/js/coin-rush.js?v=2"></script>
   <!-- Daily brain-teaser (脑筋急转弯) -->
   <script src="./src/js/riddles-data.js?v=2"></script>
   <script src="./src/js/daily-riddle.js?v=6"></script>
   <!-- Daily 成语接龙 (idiom chain) -->
   <script src="./src/js/chengyu-data.js?v=2"></script>
-  <script src="./src/js/chengyu-chain.js?v=8"></script>
+  <script src="./src/js/chengyu-chain.js?v=9"></script>
   <!-- Coin sinks: cosmetics shop / gacha / slot / boost (金币乐园) -->
   <script src="./src/js/coin-spend-logic.js?v=4"></script>
   <script src="./src/js/economy-config.js"></script>
-  <script src="./src/js/coin-center.js?v=11"></script>
+  <script src="./src/js/coin-center.js?v=12"></script>
   <!-- 富豪榜: rank players by current coin balance -->
   <script src="./src/js/coin-ranking.js?v=2"></script>
   <!-- 摸鱼时长: site-wide active-time tracker + 摸鱼榜 leaderboard (formerly 停留榜) -->

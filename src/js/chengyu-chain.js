@@ -355,6 +355,17 @@
         for (let i = 0; i < top.length; i++) {
           const prize = WEEK_PRIZES[i] || 0;
           if (prize > 0) {
+            // No coinHistory row here, deliberately. This pays OTHER players,
+            // and firestore.rules lets a non-owner touch only coins /
+            // giftsReceived / aquariumLikes on someone else's room — carrying a
+            // log row would get the whole settlement REJECTED and nobody would
+            // be paid at all. Widening the rule is worse than the gap it closes:
+            // an append-only array cannot be enforced there, so anyone could
+            // rewrite or empty anyone else's coin log.
+            // A cross-account credit is instead explained by
+            // reconcileCoinHistory() (games/room/js/room-state.js), which folds
+            // any balance the room can't account for into a catch-all row on the
+            // winner's own next visit — same path a gift takes.
             tx.set(db.collection('rooms').doc(top[i].uid),
                    { coins: firebase.firestore.FieldValue.increment(prize) }, { merge: true });
           }
@@ -432,7 +443,14 @@
           tx.update(docRef, { links: links.concat([link]) });
         }
         const rd = room.exists ? room.data() : {};              // every correct idiom pays 20 coins
-        tx.set(roomRef, { coins: (rd.coins || 0) + L.REWARD }, { merge: true });
+        const newBal = (rd.coins || 0) + L.REWARD;
+        // The row goes in the same write as the coins — the balance is shared
+        // with the board, the shop and the room, so an unexplained bump reads as
+        // a glitch however right the number is.
+        tx.set(roomRef, {
+          coins: newBal,
+          coinHistory: CoinHistory.append(rd.coinHistory, L.REWARD, T('成语接龙'), newBal)
+        }, { merge: true });
         // …and bumps my WEEKLY correct-answer count (increment sentinel needs no
         // prior read, so it's valid alongside the writes above). Powers the
         // 本周答对榜, which resets every Sunday; last week's top 3 win coins.

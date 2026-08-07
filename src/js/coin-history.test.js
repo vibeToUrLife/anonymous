@@ -66,3 +66,62 @@ test('a fractional delta is rounded, and the balance floored', () => {
   assert.equal(out[0].d, 12);
   assert.equal(out[0].b, 512);
 });
+
+/* ── Coalescing: a source that trickles rather than fires ──
+   Coin Rush banks every few seconds for the length of a rush. A row per flush
+   would be unreadable AND destructive — MAX rows of "Coin Rush +2" push every
+   other entry in the account's history out behind them. */
+
+test('repeat payouts from the same source fold into one row', () => {
+  let rows = [];
+  for (let i = 0; i < 20; i++) {
+    rows = CoinHistory.append(rows, 2, 'Coin Rush', 100 + (i + 1) * 2, { coalesceMs: 60000 });
+  }
+  assert.equal(rows.length, 1, 'a rush filed ' + rows.length + ' rows and buried the rest of the log');
+  assert.equal(rows[0].d, 40, 'the folded row must carry the whole session');
+  assert.equal(rows[0].b, 140, 'the balance shown is the one the last payout left behind');
+});
+
+test('a different reason is never folded in', () => {
+  let rows = CoinHistory.append([], 2, 'Coin Rush', 102, { coalesceMs: 60000 });
+  rows = CoinHistory.append(rows, 1000, 'Coin Rush — #1', 1102, { coalesceMs: 60000 });
+  assert.equal(rows.length, 2, 'the placing bonus is an event, not part of the trickle');
+});
+
+test('a payout past the window opens a new row', () => {
+  const old = [{ t: Date.now() - 120000, d: 2, r: 'Coin Rush', b: 102 }];
+  const rows = CoinHistory.append(old, 2, 'Coin Rush', 104, { coalesceMs: 60000 });
+  assert.equal(rows.length, 2, "yesterday's rush must not absorb today's");
+});
+
+test('folding leaves the caller\'s rows untouched', () => {
+  const rows = [{ t: Date.now(), d: 2, r: 'Coin Rush', b: 102 }];
+  CoinHistory.append(rows, 2, 'Coin Rush', 104, { coalesceMs: 60000 });
+  assert.equal(rows[0].d, 2,
+    'the row was edited in place — a transaction that retries would fold twice');
+});
+
+test('without coalesceMs every payout is its own row', () => {
+  let rows = CoinHistory.append([], 5, 'Fishing', 105);
+  rows = CoinHistory.append(rows, 5, 'Fishing', 110);
+  assert.equal(rows.length, 2, 'coalescing must be opt-in — two games are two rows');
+});
+
+/* ── label(): three game pages carry no i18n at all ── */
+
+test('label falls back to the English source when the page has no i18n', () => {
+  const had = 'T' in globalThis, prev = globalThis.T;
+  delete globalThis.T;
+  try {
+    assert.equal(CoinHistory.label('🎣 Fishing'), '🎣 Fishing',
+      'a bare T() on fishing/subway-dash/chinese-chess throws mid-transaction');
+  } finally { if (had) globalThis.T = prev; }
+});
+
+test('label translates when the page does have i18n', () => {
+  const had = 'T' in globalThis, prev = globalThis.T;
+  globalThis.T = (s) => (s === '🐍 Snake' ? '🐍 贪吃蛇' : s);
+  try {
+    assert.equal(CoinHistory.label('🐍 Snake'), '🐍 贪吃蛇');
+  } finally { if (had) globalThis.T = prev; else delete globalThis.T; }
+});
