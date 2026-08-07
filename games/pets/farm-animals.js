@@ -31,14 +31,22 @@ const FARM_ART_FEET_Y = 0.38;
 // different depths (the room, the world, the preview page). Fetched on first
 // draw rather than at load: a page with no farm on it must not pay for three
 // sheets.
-const FARM_ART_BASE = new URL('img/', document.currentScript.src).href;
+//
+// The sheets ride this script's OWN cache-buster (room.html loads it as
+// farm-animals.js?v=cbNNN). Re-cutting a sheet keeps its filename, so without
+// this a browser holding the old image would pair it with new code — and the
+// two disagreeing about cell size is a farm drawn from slices of nothing.
+// Bumping the script version now bumps its artwork with it.
+const _farmArtSrc = document.currentScript.src;
+const FARM_ART_BASE = new URL('img/', _farmArtSrc).href;
+const FARM_ART_Q = _farmArtSrc.indexOf('?') >= 0 ? _farmArtSrc.slice(_farmArtSrc.indexOf('?')) : '';
 const _farmSheets = {};
 function farmSheet(type) {
   const def = FARM_ART[type];
   if (!def) return null;
   if (!_farmSheets[type]) {
     const im = new Image();
-    im.src = FARM_ART_BASE + def.file;
+    im.src = FARM_ART_BASE + def.file + FARM_ART_Q;
     _farmSheets[type] = im;
   }
   return _farmSheets[type];
