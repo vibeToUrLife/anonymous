@@ -316,6 +316,18 @@
 
     const _decorImgs = {};
 
+    /* The pictures ride this script's OWN cache-buster (room.html loads it as
+       room-decorations.js?v=cbNNN), the same arrangement the farm sheets use.
+       Re-drawing a piece keeps its filename, so without this a browser holding
+       the old file goes on showing it — and the habitat rewards were re-drawn
+       precisely to take the animals back OUT of them, which is a change that
+       has to reach a returning player to mean anything. Bumping the script
+       version bumps its artwork with it. */
+    const DECOR_ART_Q = (function (src) {
+      const q = src.indexOf('?');
+      return q >= 0 ? src.slice(q) : '';
+    })((document.currentScript && document.currentScript.src) || '');
+
     /* Loaded on FIRST DRAW, not on page load: a room only pays for the pieces
        it actually owns. Null for anything with no artwork of its own. */
     function decorArt(id) {
@@ -323,7 +335,7 @@
       let img = _decorImgs[id];
       if (!img) {
         img = _decorImgs[id] = new Image();
-        img.src = 'room/img/' + DECOR_ART[id].dir + '/' + id + '.png';
+        img.src = 'room/img/' + DECOR_ART[id].dir + '/' + id + '.png' + DECOR_ART_Q;
       }
       return img;
     }
