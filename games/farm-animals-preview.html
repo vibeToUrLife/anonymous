@@ -8,56 +8,117 @@
 <style>
   body { margin: 0; background: #7ec850; font-family: sans-serif; color: #2a3a1a; }
   h1 { text-align: center; padding: 12px; margin: 0; font-size: 18px; }
+  h2 { text-align: center; margin: 4px 0 0; font-size: 14px; font-weight: 700; opacity: .8; }
   .grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; padding: 16px; }
   .cell { background: #8ed860; border: 2px solid #5aa838; border-radius: 16px; padding: 8px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,.15); }
   .cell canvas { display: block; background: linear-gradient(#bfe9a0,#8ed860); border-radius: 10px; }
-  .cell div { font-weight: 700; margin-top: 6px; font-size: 14px; }
+  .cell div { font-weight: 700; margin-top: 6px; font-size: 13px; }
   .note { text-align:center; font-size:12px; opacity:.7; padding-bottom:16px; }
 </style>
 </head>
 <body>
   <h1>🚜 Farm Animals Preview</h1>
-  <div class="grid" id="grid"></div>
-  <p class="note">Standalone preview — no login needed. Tell me which animal and what to change (shape / mane / ears / muzzle / colour).</p>
+
+  <h2>Walking — the cells the farm cycles through</h2>
+  <div class="grid" id="walk"></div>
+
+  <h2>Coat variants — the filter each rare one is baked with</h2>
+  <div class="grid" id="coats"></div>
+
+  <h2>🌈 Rainbow coat — one sweep, in 60° steps</h2>
+  <div class="grid" id="rgb"></div>
+
+  <p class="note">Standalone preview — no login needed. The dashed line is the ground the
+  farm stands every animal on (FARM_ART_FEET_Y), so a hoof off it is a cutting bug.</p>
 
   <!-- Same drawers the game uses -->
   <script src="pets/shared.js"></script>
   <script src="pets/goose.js"></script>
   <script src="pets/farm-animals.js"></script>
   <script>
-    const animals = [
-      { type: 'cow',   name: '🐄 Cow' },
-      { type: 'pig',   name: '🐷 Pig' },
-      { type: 'horse', name: '🐎 Horse' },
-      { type: 'goose', name: '🦆 Goose' },
-    ];
-    const grid = document.getElementById('grid');
-    const CELL = 220, S = 150; // big so details are visible
+    const TYPES = ['pig', 'horse', 'cow', 'goose'];
+    const CELL = 260, S = 150;   // big so details are visible
 
-    for (const a of animals) {
+    // Read straight off FARM_COAT_FILTER, so this page shows what the farm
+    // shows and can't drift from it. The plain coat is the one with no entry.
+    const COATS = {};
+    for (const type of TYPES) {
+      COATS[type] = [['default', '']].concat(
+        Object.keys(FARM_COAT_FILTER[type] || {}).map((v) => [v, FARM_COAT_FILTER[type][v]]));
+    }
+
+    function tile(parent, label, paint) {
       const cell = document.createElement('div');
       cell.className = 'cell';
       const cvs = document.createElement('canvas');
-      cvs.width = CELL; cvs.height = CELL;
-      cell.appendChild(cvs);
-      const label = document.createElement('div');
-      label.textContent = a.name;
-      cell.appendChild(label);
-      grid.appendChild(cell);
-
+      const dpr = window.devicePixelRatio || 1;
+      cvs.width = CELL * dpr; cvs.height = CELL * dpr;
+      cvs.style.width = cvs.style.height = CELL + 'px';
       const ctx = cvs.getContext('2d');
-      let t = 0;
-      (function frame() {
-        ctx.clearRect(0, 0, CELL, CELL);
-        ctx.save();
-        // Center; origin is the body center, base of legs ~ +0.42s
-        ctx.translate(CELL / 2, CELL / 2 + S * 0.12);
-        drawFarmAnimal(ctx, a.type, S, t / 120, true); // moving=true to see leg swing
-        ctx.restore();
-        t += 16;
-        requestAnimationFrame(frame);
-      })();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const label_ = document.createElement('div');
+      label_.textContent = label;
+      cell.appendChild(cvs); cell.appendChild(label_); parent.appendChild(cell);
+      return { ctx: ctx, paint: paint };
     }
+
+    const tiles = [];
+    const walk = document.getElementById('walk'), coats = document.getElementById('coats');
+    for (const type of TYPES) {
+      for (let frame = 0; frame < 2; frame++) {
+        // The phase angle the farm's baker hands each pose, picked so the two
+        // walk cells both get shown.
+        const lp = (frame + 0.25) / 2 * Math.PI * 2;
+        tiles.push(tile(walk, type + ' — cell ' + frame, (ctx) => {
+          drawFarmAnimal(ctx, type, S, lp, true, null);
+        }));
+      }
+    }
+    for (const type of TYPES) {
+      for (const [name, filter] of COATS[type]) {
+        tiles.push(tile(coats, type + ' · ' + name, (ctx) => {
+          if (filter) ctx.filter = filter;
+          drawFarmAnimal(ctx, type, S, 0, false, null);
+        }));
+      }
+    }
+    /* The rainbow coat sweeps its hue with the clock, so a still of one frame
+       says nothing. Laid out in 60° steps instead: read along a row and that is
+       one animal over ~1.8 seconds — and it is also what a HERD of them looks
+       like at any one instant, since the farm offsets each animal by 60°. */
+    const rgbGrid = document.getElementById('rgb');
+    for (const type of TYPES) {
+      for (let deg = 0; deg < 360; deg += 60) {
+        tiles.push(tile(rgbGrid, type + ' · rgb ' + deg + '°', (ctx) => {
+          ctx.filter = farmRgbFilter(deg, type);
+          drawFarmAnimal(ctx, type, S, 0, false, null);
+        }));
+      }
+    }
+
+    // Redraw until every sheet has landed — the drawers paint nothing before that.
+    function paintAll() {
+      for (const t of tiles) {
+        const ctx = t.ctx;
+        ctx.save();
+        ctx.setTransform(window.devicePixelRatio || 1, 0, 0, window.devicePixelRatio || 1, 0, 0);
+        ctx.clearRect(0, 0, CELL, CELL);
+        // The ground line, where the farm puts every animal's feet.
+        const groundY = CELL * 0.62;
+        ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(8, groundY); ctx.lineTo(CELL - 8, groundY); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.translate(CELL / 2, groundY - S * FARM_ART_FEET_Y);
+        t.paint(ctx);
+        ctx.restore();
+      }
+    }
+    paintAll();
+    let tries = 0;
+    const iv = setInterval(() => {
+      paintAll();
+      if (TYPES.every(farmAnimalReady) || ++tries > 60) clearInterval(iv);
+    }, 150);
   </script>
 </body>
 </html>

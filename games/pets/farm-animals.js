@@ -1,236 +1,148 @@
-/* ── Farm animals (cow, pig, horse) + farm decor ──
-   Same conventions as the room pets: drawn at the origin facing right,
-   `s` is the body size, `lp` the leg phase, `moving` toggles the swing.
-   Chibi proportions follow cat.js (big head ~0.28s at x 0.35s, eyes with
-   pupil + highlight, blush). The farm goose reuses drawGoosePet. */
+/* ── Farm animals (pig, horse, cow) ──
+   Drawn from artwork, the same way the goose is. Each type has its own sheet
+   under img/: a horizontal strip of EQUAL cells, every one of them standing on
+   the cell's floor, so changing pose never shifts the feet. The cells face
+   RIGHT — the direction the farm treats as unmirrored — so walking left is the
+   farm's own flip and nothing here has to know about it.
 
-// Cute round eye with pupil + sparkle highlight.
-function _farmEye(ctx, s, x, y) {
-  ctx.fillStyle = '#fff';
-  ctx.beginPath(); ctx.ellipse(x, y, s * 0.045, s * 0.05, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#1a1a1a';
-  ctx.beginPath(); ctx.ellipse(x + s * 0.008, y, s * 0.026, s * 0.034, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#fff';
-  ctx.beginPath(); ctx.arc(x + s * 0.018, y - s * 0.015, s * 0.012, 0, Math.PI * 2); ctx.fill();
-}
+   The three sheets were cut from one drawing at ONE scale, so a horse still
+   stands taller than a pig instead of every animal being normalised to the same
+   height. That is what the differing DRAW_W values below are.
 
-function _farmBlush(ctx, s, x, y) {
-  ctx.fillStyle = 'rgba(255,130,150,0.35)';
-  ctx.beginPath(); ctx.ellipse(x, y, s * 0.05, s * 0.03, 0, 0, Math.PI * 2); ctx.fill();
-}
+   `pal` is ignored here exactly as it is for the goose: artwork ships in one
+   coat. A rare variant recolours the finished drawing with a CSS filter instead
+   — see FARM_VARIANTS in room-base.js and where the farm bakes it in
+   room-farm-view.js. */
 
-function drawCowPet(ctx, s, lp, moving, pal) {
-  const coat = (pal && pal.coat) || '#faf6f0'; // body + face (variant recolours this)
-  // Tail with tuft
-  ctx.strokeStyle = '#f5f0ea'; ctx.lineWidth = s * 0.05; ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(-s * 0.46, -s * 0.05);
-  ctx.bezierCurveTo(-s * 0.62, 0, -s * 0.64, s * 0.12, -s * 0.58, s * 0.24);
-  ctx.stroke();
-  ctx.fillStyle = '#4a4038';
-  ctx.beginPath(); ctx.ellipse(-s * 0.58, s * 0.27, s * 0.05, s * 0.07, 0.3, 0, Math.PI * 2); ctx.fill();
+const FARM_ART = {
+  //                          cells   cell width, as a fraction of the pet size
+  pig:   { file: 'pig.png',   cells: 2, drawW: 1.322 },
+  horse: { file: 'horse.png', cells: 2, drawW: 1.653 },
+  cow:   { file: 'cow.png',   cells: 2, drawW: 1.653 },
+};
 
-  drawPetLegs(ctx, s, lp, moving, '#ece5dc');
+/* Where a cell's ground line sits below the origin, as a fraction of the pet
+   size. 0.38 is exactly where drawPetLegs used to end the hooves, and what
+   goose.js already uses — so the herd's feet, the ground shadow painted under
+   them and the happiness bar above them all stay where they were. */
+const FARM_ART_FEET_Y = 0.38;
 
-  // Body — soft cream with patches
-  ctx.fillStyle = coat;
-  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.5, s * 0.35, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#4a4038';
-  ctx.beginPath(); ctx.ellipse(-s * 0.2, -s * 0.12, s * 0.17, s * 0.12, 0.35, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(s * 0.05, s * 0.16, s * 0.13, s * 0.09, -0.25, 0, Math.PI * 2); ctx.fill();
-  // Belly shading
-  ctx.fillStyle = 'rgba(0,0,0,0.05)';
-  ctx.beginPath(); ctx.ellipse(0, s * 0.22, s * 0.32, s * 0.1, 0, 0, Math.PI * 2); ctx.fill();
-  // Udder peeking
-  ctx.fillStyle = '#f8c8d4';
-  ctx.beginPath(); ctx.ellipse(-s * 0.1, s * 0.28, s * 0.1, s * 0.06, 0, 0, Math.PI * 2); ctx.fill();
-
-  // Head — big and round
-  const hx = s * 0.35, hy = -s * 0.2;
-  // Ears out the sides (behind head)
-  ctx.fillStyle = '#ece5dc';
-  ctx.beginPath(); ctx.ellipse(hx - s * 0.27, hy - s * 0.06, s * 0.1, s * 0.055, -0.35, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(hx + s * 0.27, hy - s * 0.06, s * 0.1, s * 0.055, 0.35, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#f8c8d4';
-  ctx.beginPath(); ctx.ellipse(hx - s * 0.27, hy - s * 0.06, s * 0.055, s * 0.03, -0.35, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(hx + s * 0.27, hy - s * 0.06, s * 0.055, s * 0.03, 0.35, 0, Math.PI * 2); ctx.fill();
-  // Horns
-  ctx.fillStyle = '#e8d4a8';
-  ctx.beginPath(); ctx.ellipse(hx - s * 0.16, hy - s * 0.26, s * 0.05, s * 0.08, -0.5, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(hx + s * 0.16, hy - s * 0.26, s * 0.05, s * 0.08, 0.5, 0, Math.PI * 2); ctx.fill();
-  // Face
-  ctx.fillStyle = coat;
-  ctx.beginPath(); ctx.arc(hx, hy, s * 0.28, 0, Math.PI * 2); ctx.fill();
-  // Patch over one eye
-  ctx.fillStyle = '#4a4038';
-  ctx.beginPath(); ctx.ellipse(hx + s * 0.14, hy - s * 0.1, s * 0.12, s * 0.1, 0.2, 0, Math.PI * 2); ctx.fill();
-  // Big pink muzzle
-  ctx.fillStyle = '#f8c8d4';
-  ctx.beginPath(); ctx.ellipse(hx + s * 0.02, hy + s * 0.13, s * 0.17, s * 0.1, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#d88a9e';
-  ctx.beginPath(); ctx.ellipse(hx - s * 0.05, hy + s * 0.12, s * 0.02, s * 0.028, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(hx + s * 0.09, hy + s * 0.12, s * 0.02, s * 0.028, 0, 0, Math.PI * 2); ctx.fill();
-  // Smile
-  ctx.strokeStyle = '#c97a8e'; ctx.lineWidth = s * 0.014; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.arc(hx + s * 0.02, hy + s * 0.14, s * 0.05, 0.3, Math.PI - 0.3); ctx.stroke();
-  // Eyes (one on the patch)
-  _farmEye(ctx, s, hx - s * 0.1, hy - s * 0.06);
-  _farmEye(ctx, s, hx + s * 0.14, hy - s * 0.06);
-  _farmBlush(ctx, s, hx - s * 0.18, hy + s * 0.06);
-  // Forelock tuft
-  ctx.fillStyle = '#ece5dc';
-  ctx.beginPath(); ctx.ellipse(hx, hy - s * 0.26, s * 0.08, s * 0.05, 0, 0, Math.PI * 2); ctx.fill();
-}
-
-function drawPigPet(ctx, s, lp, moving, pal) {
-  const coat = (pal && pal.coat) || '#f9bcc9'; // body (variant recolours this)
-  // Proper spiral curly tail
-  ctx.strokeStyle = '#eda0b4'; ctx.lineWidth = s * 0.035; ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(-s * 0.46, -s * 0.02);
-  ctx.bezierCurveTo(-s * 0.58, -s * 0.12, -s * 0.68, -s * 0.02, -s * 0.58, s * 0.04);
-  ctx.bezierCurveTo(-s * 0.52, s * 0.08, -s * 0.52, -s * 0.02, -s * 0.58, -s * 0.03);
-  ctx.stroke();
-
-  drawPetLegs(ctx, s, lp, moving, '#eda0b4');
-
-  // Round body
-  ctx.fillStyle = coat;
-  ctx.beginPath(); ctx.ellipse(0, 0, s * 0.48, s * 0.36, 0, 0, Math.PI * 2); ctx.fill();
-  // Belly highlight
-  ctx.fillStyle = 'rgba(255,255,255,0.35)';
-  ctx.beginPath(); ctx.ellipse(-s * 0.02, s * 0.14, s * 0.28, s * 0.13, 0, 0, Math.PI * 2); ctx.fill();
-  // Back shading
-  ctx.fillStyle = 'rgba(0,0,0,0.04)';
-  ctx.beginPath(); ctx.ellipse(-s * 0.08, -s * 0.16, s * 0.3, s * 0.12, 0.1, 0, Math.PI * 2); ctx.fill();
-
-  // Head — big and round
-  const hx = s * 0.33, hy = -s * 0.18;
-  // Floppy ears (behind head)
-  ctx.fillStyle = '#eda0b4';
-  ctx.beginPath();
-  ctx.moveTo(hx - s * 0.2, hy - s * 0.14);
-  ctx.quadraticCurveTo(hx - s * 0.3, hy - s * 0.38, hx - s * 0.04, hy - s * 0.26);
-  ctx.closePath(); ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(hx + s * 0.06, hy - s * 0.25);
-  ctx.quadraticCurveTo(hx + s * 0.18, hy - s * 0.42, hx + s * 0.26, hy - s * 0.16);
-  ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#d8839c';
-  ctx.beginPath();
-  ctx.moveTo(hx - s * 0.16, hy - s * 0.16);
-  ctx.quadraticCurveTo(hx - s * 0.23, hy - s * 0.32, hx - s * 0.07, hy - s * 0.24);
-  ctx.closePath(); ctx.fill();
-  // Face
-  ctx.fillStyle = '#f9bcc9';
-  ctx.beginPath(); ctx.arc(hx, hy, s * 0.27, 0, Math.PI * 2); ctx.fill();
-  // Snout — big oval with nostrils
-  ctx.fillStyle = '#eda0b4';
-  ctx.beginPath(); ctx.ellipse(hx + s * 0.1, hy + s * 0.08, s * 0.13, s * 0.09, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = s * 0.012;
-  ctx.beginPath(); ctx.ellipse(hx + s * 0.1, hy + s * 0.08, s * 0.13, s * 0.09, 0, 0, Math.PI * 2); ctx.stroke();
-  ctx.fillStyle = '#c96a84';
-  ctx.beginPath(); ctx.ellipse(hx + s * 0.05, hy + s * 0.08, s * 0.022, s * 0.035, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(hx + s * 0.15, hy + s * 0.08, s * 0.022, s * 0.035, 0, 0, Math.PI * 2); ctx.fill();
-  // Eyes + blush
-  _farmEye(ctx, s, hx - s * 0.08, hy - s * 0.07);
-  _farmEye(ctx, s, hx + s * 0.16, hy - s * 0.07);
-  _farmBlush(ctx, s, hx - s * 0.17, hy + s * 0.05);
-  _farmBlush(ctx, s, hx + s * 0.24, hy + s * 0.04);
-  // Little smile under the snout
-  ctx.strokeStyle = '#c96a84'; ctx.lineWidth = s * 0.014; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.arc(hx + s * 0.1, hy + s * 0.17, s * 0.04, 0.4, Math.PI - 0.4); ctx.stroke();
-}
-
-function drawHorsePet(ctx, s, lp, moving, pal) {
-  // Proper horse proportions: one continuous body+neck+head silhouette (so no
-  // part can look detached), then legs, mane, tail and face layered on top.
-  const coat = (pal && pal.coat) || '#b5814f', coatDark = '#946539', light = '#e8cda6';
-  const mane = (pal && pal.mane) || '#523521', hoof = '#3a2a1a';
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-
-  const sway = moving ? Math.sin(lp) * s * 0.05 : 0;
-
-  // ── Tail (behind everything) ──
-  ctx.strokeStyle = mane; ctx.lineWidth = s * 0.11;
-  ctx.beginPath(); ctx.moveTo(-s * 0.5, -s * 0.18); ctx.quadraticCurveTo(-s * 0.66, s * 0.06 + sway, -s * 0.6, s * 0.42); ctx.stroke();
-  ctx.lineWidth = s * 0.06;
-  ctx.beginPath(); ctx.moveTo(-s * 0.5, -s * 0.16); ctx.quadraticCurveTo(-s * 0.56, s * 0.08 - sway, -s * 0.5, s * 0.40); ctx.stroke();
-
-  // ── Legs (long; drawn before the body so the body covers their tops).
-  //    Kept well inside the barrel's x-range so none pokes past the body. ──
-  const lw = s * 0.085, legTop = s * 0.02, legBot = s * 0.5;
-  const sw = moving ? Math.sin(lp) * s * 0.035 : 0;
-  const legX = [s * 0.14 + sw, s * 0.0 - sw, -s * 0.26 - sw, -s * 0.38 + sw];
-  ctx.fillStyle = coatDark;
-  for (const x of legX) ctx.fillRect(x, legTop, lw, legBot - legTop);
-  ctx.fillStyle = hoof;
-  for (const x of legX) ctx.fillRect(x - s * 0.005, legBot - s * 0.05, lw + s * 0.01, s * 0.06);
-
-  // ── One continuous silhouette: rump → back → neck crest → poll → face →
-  //    muzzle → throat → chest → belly → back to rump ──
-  ctx.fillStyle = coat;
-  ctx.beginPath();
-  ctx.moveTo(-s * 0.46, -s * 0.18);                                   // rump top
-  ctx.quadraticCurveTo(-s * 0.2, -s * 0.34, s * 0.06, -s * 0.30);     // back to withers
-  ctx.quadraticCurveTo(s * 0.20, -s * 0.52, s * 0.30, -s * 0.64);     // up the neck crest
-  ctx.quadraticCurveTo(s * 0.40, -s * 0.70, s * 0.46, -s * 0.58);     // over the poll
-  ctx.quadraticCurveTo(s * 0.56, -s * 0.46, s * 0.56, -s * 0.36);     // down the face to the muzzle
-  ctx.quadraticCurveTo(s * 0.56, -s * 0.28, s * 0.46, -s * 0.30);     // muzzle underside
-  ctx.quadraticCurveTo(s * 0.36, -s * 0.32, s * 0.32, -s * 0.16);     // throat / jaw
-  ctx.quadraticCurveTo(s * 0.36, -s * 0.02, s * 0.36, s * 0.16);      // fuller chest (covers front legs)
-  ctx.quadraticCurveTo(s * 0.30, s * 0.26, s * 0.0, s * 0.26);        // belly
-  ctx.quadraticCurveTo(-s * 0.34, s * 0.26, -s * 0.46, s * 0.10);     // rear belly to haunch
-  ctx.quadraticCurveTo(-s * 0.5, -s * 0.04, -s * 0.46, -s * 0.18);    // haunch up to rump
-  ctx.closePath(); ctx.fill();
-
-  // Muzzle (lighter) at the head's lower-right tip
-  ctx.fillStyle = light;
-  ctx.beginPath(); ctx.ellipse(s * 0.5, -s * 0.36, s * 0.08, s * 0.075, -0.3, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = coatDark; // nostril
-  ctx.beginPath(); ctx.ellipse(s * 0.53, -s * 0.39, s * 0.018, s * 0.024, -0.3, 0, Math.PI * 2); ctx.fill();
-
-  // Ears (pointed, at the poll)
-  ctx.fillStyle = coat;
-  ctx.beginPath(); ctx.moveTo(s * 0.30, -s * 0.6); ctx.lineTo(s * 0.30, -s * 0.78); ctx.lineTo(s * 0.40, -s * 0.62); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(s * 0.40, -s * 0.62); ctx.lineTo(s * 0.50, -s * 0.74); ctx.lineTo(s * 0.46, -s * 0.56); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#7a5436';
-  ctx.beginPath(); ctx.moveTo(s * 0.33, -s * 0.62); ctx.lineTo(s * 0.33, -s * 0.73); ctx.lineTo(s * 0.39, -s * 0.63); ctx.closePath(); ctx.fill();
-
-  // Mane — thick dark band along the back of the neck (poll → withers)
-  ctx.strokeStyle = mane; ctx.lineWidth = s * 0.12;
-  ctx.beginPath(); ctx.moveTo(s * 0.36, -s * 0.64); ctx.quadraticCurveTo(s * 0.16, -s * 0.5, s * 0.04, -s * 0.28); ctx.stroke();
-  // Forelock
-  ctx.lineWidth = s * 0.045;
-  ctx.beginPath(); ctx.moveTo(s * 0.40, -s * 0.62); ctx.lineTo(s * 0.46, -s * 0.5); ctx.stroke();
-
-  // Eye + highlight (on the side of the face)
-  ctx.fillStyle = '#2a1a10';
-  ctx.beginPath(); ctx.arc(s * 0.42, -s * 0.46, s * 0.04, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#fff';
-  ctx.beginPath(); ctx.arc(s * 0.435, -s * 0.475, s * 0.014, 0, Math.PI * 2); ctx.fill();
-}
-
-/* Dispatch a farm animal type to its drawer (goose comes from goose.js).
-   `pal` is an optional coat-variant palette (see FARM_VARIANTS); null = default. */
-function drawFarmAnimal(ctx, type, s, lp, moving, pal) {
-  switch (type) {
-    case 'cow':   drawCowPet(ctx, s, lp, moving, pal); break;
-    case 'pig':   drawPigPet(ctx, s, lp, moving, pal); break;
-    case 'horse': drawHorsePet(ctx, s, lp, moving, pal); break;
-    case 'goose': drawGoosePet(ctx, s, lp, moving, 100, '', 0, 0, pal || null); break;
+// Resolved against this file's own URL, because the pages that load it sit at
+// different depths (the room, the world, the preview page). Fetched on first
+// draw rather than at load: a page with no farm on it must not pay for three
+// sheets.
+//
+// The sheets ride this script's OWN cache-buster (room.html loads it as
+// farm-animals.js?v=cbNNN). Re-cutting a sheet keeps its filename, so without
+// this a browser holding the old image would pair it with new code — and the
+// two disagreeing about cell size is a farm drawn from slices of nothing.
+// Bumping the script version now bumps its artwork with it.
+const _farmArtSrc = document.currentScript.src;
+const FARM_ART_BASE = new URL('img/', _farmArtSrc).href;
+const FARM_ART_Q = _farmArtSrc.indexOf('?') >= 0 ? _farmArtSrc.slice(_farmArtSrc.indexOf('?')) : '';
+const _farmSheets = {};
+function farmSheet(type) {
+  const def = FARM_ART[type];
+  if (!def) return null;
+  if (!_farmSheets[type]) {
+    const im = new Image();
+    im.src = FARM_ART_BASE + def.file + FARM_ART_Q;
+    _farmSheets[type] = im;
   }
+  return _farmSheets[type];
+}
+
+function drawFarmArtAnimal(ctx, type, s, lp, moving) {
+  const def = FARM_ART[type], art = farmSheet(type);
+  if (!def || !art || !art.naturalWidth) return;   // sheet still downloading
+  /* Which cell. Read off the phase ANGLE, not off elapsed time: the farm bakes
+     each pose once and calls this with that pose's fixed angle (see _ANIM_POSES
+     in room-farm-view.js), so a rate-times-time reading would land unevenly on
+     the cells and the walk would limp. Live callers pass a growing lp; the
+     modulo turns it into the same angle, one stride per turn. */
+  const TAU = Math.PI * 2;
+  const cell = moving
+    ? Math.floor((((lp % TAU) + TAU) % TAU) / TAU * def.cells) % def.cells
+    : 0;
+  const cellW = art.naturalWidth / def.cells, cellH = art.naturalHeight;
+  const w = s * def.drawW;
+  const h = w * cellH / cellW;
+  ctx.drawImage(art, cell * cellW, 0, cellW, cellH,
+    -w / 2, s * FARM_ART_FEET_Y - h, w, h);
+}
+
+/* Dispatch a farm animal type to its drawer (the goose comes from goose.js).
+   `pal` survives only for the goose's own signature; the artwork ignores it.
+
+   The goose is asked for its WALK pose even when it is standing still, which
+   is the one place the farm departs from drawGoosePet's own idea of an idle.
+   That drawer's idle cell is the bird seen from the FRONT — right for a pet
+   standing in your room looking at you, and a different silhouette entirely
+   from the side-on walk cells: about half the width. A goose that reached the
+   end of its wander therefore swapped a wide bird for a narrow sliver between
+   one frame and the next, and swapped back when it set off again. At farm
+   scale that does not read as "it turned to face me", it reads as the goose
+   blinking out — reported as "farm 的动物会闪一下闪一下… 直接不见", and
+   reported for the goose alone because the goose is the only one of the four
+   with a separate idle drawing at all: the pig, the cow and the horse stand in
+   one of their own walk cells.
+   lp is pinned to 0 while standing so it picks the first walk cell and holds
+   it, rather than freezing mid-stride wherever the clock happened to be. */
+function drawFarmAnimal(ctx, type, s, lp, moving, pal) {
+  if (type === 'goose') { drawGoosePet(ctx, s, moving ? lp : 0, true, 100, '', 0, 0, pal || null); return; }
+  drawFarmArtAnimal(ctx, type, s, lp, moving);
+}
+
+/* What a rare coat does to the artwork.
+   Artwork ships in one coat, so a variant tints the finished drawing instead of
+   swapping a palette into it. The values live HERE, next to the drawing they
+   tint, rather than in the game's variant table: farm-animals-preview.html
+   renders every coat without loading a line of room code, and two copies of a
+   filter string is two copies that drift. room-base.js's FARM_VARIANTS names
+   the coats; this says what they look like.
+   'rgb' is deliberately absent — its hue sweeps with the clock, so the farm
+   applies it live rather than baking it.
+   Eyeballed against the artwork, and meant to be nudged. */
+const FARM_COAT_FILTER = {
+  pig:   { golden: 'hue-rotate(48deg) saturate(1.7) brightness(1.06)' },
+  horse: { black:  'saturate(0.28) brightness(0.5)' },
+  cow:   { brown:  'sepia(0.9) saturate(1.7) hue-rotate(-14deg)' },
+  goose: { golden: 'sepia(1) saturate(3.2) hue-rotate(-12deg) brightness(1.02)' },
+};
+function farmCoatFilter(type, variant) {
+  return (FARM_COAT_FILTER[type] || {})[variant] || '';
+}
+
+/* The rainbow coat. Not in the table above because it MOVES: the hue sweeps
+   with the clock rather than sitting still, so it can't be baked into a sprite
+   the way a rare coat is — the farm applies it per frame at the draw site.
+   `deg` is where the sweep has got to; the farm takes it from the frame clock
+   and offsets it per animal, so a herd of rainbows shimmers out of step instead
+   of pulsing in unison.
+
+   Some artwork has nothing to rotate. hue-rotate moves a colour AROUND the grey
+   axis and leaves anything sitting on it alone however hard it is pushed, and
+   the goose is white — so the rarest coat in the game (3%, the cosmetic
+   jackpot) was coming out as an ordinary white goose with coloured feet. sepia
+   lands a neutral drawing on a real hue first, and the sweep has something to
+   take hold of. The other three carry their own colour and keep it. */
+const FARM_RGB_PREFIX = { goose: 'sepia(1) saturate(2.2) ' };
+function farmRgbFilter(deg, type) {
+  return (FARM_RGB_PREFIX[type] || '') +
+    'hue-rotate(' + Math.round(((deg % 360) + 360) % 360) + 'deg) saturate(1.7)';
 }
 
 /* Would drawFarmAnimal actually paint this type right now?
-   Cow, pig and horse are canvas paths, so they are always ready. The goose is
-   drawn from a sheet (goose.js) and paints nothing until it has downloaded —
-   which only matters to a caller that caches what the drawer produced. Answers
-   false when it can't tell, because a wrong "ready" gets a blank cached and a
-   wrong "not ready" costs one uncached frame. */
+   Every farm animal is drawn from a sheet, and a sheet paints nothing until it
+   has downloaded. Live painters don't need to ask — the animal is missing for a
+   moment and then appears. A caller that CACHES what the drawer produced does:
+   a bake taken during the download stores a blank. Answers false when it can't
+   tell, because a wrong "ready" caches that blank for good while a wrong "not
+   ready" costs one uncached frame. */
 function farmAnimalReady(type) {
-  if (type !== 'goose') return true;
-  return typeof goosePetReady === 'function' ? goosePetReady() : false;
+  if (type === 'goose') return typeof goosePetReady === 'function' ? goosePetReady() : false;
+  const art = farmSheet(type);
+  return !!(art && art.naturalWidth);
 }
 
 /* ── Farm decor drawers — drawn at the origin, base at y ≈ +0.3s ── */
