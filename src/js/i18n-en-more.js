@@ -289,6 +289,7 @@
     '🎉 答对了！': '🎉 Correct!',
     '🎉 答对了！+100 金币 🪙': '🎉 Correct! +100 coins 🪙',
     '🧠 答对脑筋急转弯，+100 金币！': '🧠 Riddle solved — +100 coins!',
+    '脑筋急转弯': 'Daily riddle',                        // the coin-log row for the reward
     '🪙 已领取今日奖励，明天再来！': "🪙 Today's reward is claimed — see you tomorrow!",
     '🎉 答对了！(今天已领过奖励)': '🎉 Correct! (reward already claimed today)',
     '🪙 今天的奖励已经领过啦': "🪙 Today's reward has been claimed",

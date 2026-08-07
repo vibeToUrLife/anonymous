@@ -12,8 +12,9 @@
  *      no DOM/Firebase, also exported for Node/CommonJS.
  *   2. A browser IIFE that wires the FAB + overlay UI and the coin reward.
  *
- * Depends on globals: DAILY_RIDDLES (riddles-data.js), and — for the reward —
- * db/auth/showToast from app.js. Loaded after both.
+ * Depends on globals: DAILY_RIDDLES (riddles-data.js), CoinHistory
+ * (coin-history.js) and — for the reward — db/auth/showToast from app.js.
+ * Loaded after all three.
  */
 (function (global) {
   'use strict';
@@ -229,7 +230,16 @@
         const doc = await tx.get(ref);
         const data = doc.exists ? doc.data() : {};
         if (data.riddleLastSolvedDay === today) return 'already';
-        tx.set(ref, { coins: (data.coins || 0) + L.REWARD, riddleLastSolvedDay: today }, { merge: true });
+        const newBal = (data.coins || 0) + L.REWARD;
+        // The 100 coins and the row explaining them go in the SAME write. The
+        // balance is shared with the board, the shop, the room and every
+        // mini-game, so a reward that moves the number and says nothing is
+        // indistinguishable from a bug — and that is exactly how it was read.
+        tx.set(ref, {
+          coins: newBal,
+          riddleLastSolvedDay: today,
+          coinHistory: CoinHistory.append(data.coinHistory, L.REWARD, T('脑筋急转弯'), newBal)
+        }, { merge: true });
         // Bump my all-time correct-answer count here too, so it can only ever go
         // up once per day (the day-guard above runs in the same transaction).
         tx.set(rankRef, { name: myName(), count: firebase.firestore.FieldValue.increment(1), at: Date.now() }, { merge: true });

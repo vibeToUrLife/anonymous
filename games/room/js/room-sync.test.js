@@ -512,3 +512,119 @@ test('switching account clears the baseline so the new room is not read as chang
     'a stale baseline from the previous account makes every field of the new ' +
     'room look like a local change');
 });
+
+/* ═══════════════════════════════════════════════════════════════
+   7. Work done IN PLACE is still work
+   ───────────────────────────────────────────────────────────────
+   The baseline is a projection of roomData, and _roomDocFields() hands back
+   roomData's own arrays and maps by reference. Stored as-is, the baseline WAS
+   the live state: a field mutated in place — the only way most of this app
+   changes anything — compared equal to itself, stayed out of the patch and was
+   never written. Reported as all three of:
+
+     • "farm 的 crop 收割之后再 reload page 后那些 crop 会回来没收割的时候,
+       数量也没增加" — harvest empties plots and adds to farmStock in place;
+     • "plant 的收益被吃掉了, history 没有看到有" — logCoin() pushes onto
+       roomData.coinHistory, so nothing the room earned or spent was logged;
+     • upgradePlant() writes plantLevels[id] in place while the coins for it go
+       out as an increment — charged, and the level gone on the next snapshot.
+
+   Every test here mutates the way the app does and asserts the change travels.
+   The equivalents that REPLACE the whole value (section 1) passed throughout,
+   which is why the diff looked correct. */
+
+test('a harvest done in place still reaches the server', async () => {
+  const server = { doc: baseDoc({ farmStock: { wheat: 3 }, farmPlots: [{ crop: 'wheat', at: 1 }] }) };
+  const sb = syncSandbox({ server });
+  sb._handleRoomSnap(snapOf(server.doc));
+  sb.patches.length = 0;
+
+  // harvestAllFarm(): the ripe bed is emptied and the barn topped up, both on
+  // the objects roomData already holds.
+  sb.roomData.farmStock.wheat = (sb.roomData.farmStock.wheat || 0) + 2;
+  sb.roomData.farmPlots[0].crop = null;
+  sb.roomData.farmPlots[0].at = 0;
+  await sb.saveRoom();
+
+  assert.deepEqual(moved(sb.patches[0]).sort(), ['farmPlots', 'farmStock'],
+    'the harvest carried ' + (moved(sb.patches[0]).join(', ') || 'nothing') +
+    ' — reload and the ripe crops are standing again with the barn no fuller');
+  assert.deepEqual(server.doc.farmStock, { wheat: 5 });
+  assert.equal(server.doc.farmPlots[0].crop, null);
+});
+
+test('the crops stay harvested across a reload', async () => {
+  const server = { doc: baseDoc({ farmStock: { wheat: 3 }, farmPlots: [{ crop: 'wheat', at: 1 }] }) };
+  const sb = syncSandbox({ server });
+  sb._handleRoomSnap(snapOf(server.doc));
+
+  sb.roomData.farmStock.wheat += 2;
+  sb.roomData.farmPlots[0].crop = null;
+  await sb.saveRoom();
+
+  // The page is reloaded and reads the document back — the user's own check.
+  const fresh = syncSandbox({ server });
+  fresh._handleRoomSnap(snapOf(server.doc));
+  assert.equal(fresh.roomData.farmPlots[0].crop, null,
+    'the crop came back unharvested');
+  assert.equal(fresh.roomData.farmStock.wheat, 5,
+    'the harvested produce never made it into the barn');
+});
+
+test('a coin-log row appended in place is written with the coins it explains', async () => {
+  const server = { doc: baseDoc({ coins: 500, coinHistory: [{ t: 1, d: 0, r: 'Opening balance', b: 500 }] }) };
+  const sb = syncSandbox({ server });
+  sb._handleRoomSnap(snapOf(server.doc));
+  sb.patches.length = 0;
+
+  // The plant tick: bank the income, then logCoin() — which pushes a row onto
+  // the array roomData already holds.
+  sb.roomData.coins += 12;
+  sb.roomData.coinHistory.push({ t: 2, d: 12, r: 'Plant income 🌱', b: 512 });
+  await sb.saveRoom();
+
+  assert.equal(server.doc.coins, 512, 'the income did not reach the balance');
+  assert.equal(server.doc.coinHistory.length, 2,
+    'the coins moved and the log did not — "收益被吃掉了, history 没有看到有"');
+  assert.equal(server.doc.coinHistory[1].r, 'Plant income 🌱');
+});
+
+test('a plant upgrade lands with the coins it cost', async () => {
+  const server = { doc: baseDoc({ coins: 500, plantLevels: { pine: 1 } }) };
+  const sb = syncSandbox({ server });
+  sb._handleRoomSnap(snapOf(server.doc));
+
+  // upgradePlant(): charge, log, then bump the level in place.
+  sb.roomData.coins -= 100;
+  sb.roomData.plantLevels.pine = 2;
+  await sb.saveRoom();
+
+  assert.equal(server.doc.coins, 400, 'the upgrade was not charged for');
+  assert.equal(server.doc.plantLevels.pine, 2,
+    'the coins went out and the level did not go up — the upgrade was paid for ' +
+    'and lost on the next snapshot');
+});
+
+test('the baseline is a copy, not a live view of roomData', () => {
+  const sb = syncSandbox();
+  sb._handleRoomSnap(snapOf(baseDoc({ farmStock: { wheat: 3 } })));
+
+  sb.roomData.farmStock.wheat = 99;
+  assert.equal(sb._peek('_syncedState').farmStock.wheat, 3,
+    'the baseline moved with roomData, so it can only ever answer "unchanged"');
+});
+
+test('a field mutated in place is not re-posted once it has been saved', async () => {
+  const server = { doc: baseDoc({ farmStock: { wheat: 3 } }) };
+  const sb = syncSandbox({ server });
+  sb._handleRoomSnap(snapOf(server.doc));
+
+  sb.roomData.farmStock.wheat = 5;
+  await sb.saveRoom();
+  sb.patches.length = 0;
+
+  await sb.saveRoom();   // an idle tick right behind it
+  assert.deepEqual(moved(sb.patches[0]), [],
+    'the save adopted a live reference as its new baseline, so the field is ' +
+    'posted again on every tick from here on');
+});

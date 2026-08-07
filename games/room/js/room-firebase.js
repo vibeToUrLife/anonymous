@@ -34,16 +34,42 @@
     // order it likes, and a plain JSON.stringify would read that reshuffle as a
     // change and write the field — which is the exact clobber this is here to
     // prevent. undefined and null compare equal: a field the document has never
-    // held reads as absent either way.
+    // held reads as absent either way, and a key whose value is undefined is
+    // dropped for the same reason — Firestore cannot store one, and _cloneValue
+    // drops it, so keeping it would make a value and its own clone disagree.
     function _valueKey(v) {
       if (v === undefined || v === null) return 'null';
       if (typeof v !== 'object') return JSON.stringify(v);
       if (Array.isArray(v)) return '[' + v.map(_valueKey).join(',') + ']';
-      return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + _valueKey(v[k])).join(',') + '}';
+      return '{' + Object.keys(v).filter(k => v[k] !== undefined).sort()
+        .map(k => JSON.stringify(k) + ':' + _valueKey(v[k])).join(',') + '}';
     }
 
     function _cloneValue(v) {
       return v === undefined ? undefined : JSON.parse(JSON.stringify(v));
+    }
+
+    /* The save baseline, DETACHED from the live game state.
+       ─────────────────────────────────────────────────────
+       _roomDocFields() hands back roomData's own arrays and maps by reference —
+       farmStock, farmPlots, coinHistory, plantLevels and the rest are the very
+       objects the game mutates. Keeping one of those as the baseline compares a
+       field against itself, so anything changed IN PLACE reads as unchanged and
+       never reaches the patch. It cost real work, silently:
+
+         • harvest empties the beds and adds to farmStock in place, so the save
+           carried neither — reload and the ripe crops were standing again with
+           the barn no fuller;
+         • logCoin() pushes a row onto roomData.coinHistory, so plant income,
+           purchases, everything stopped appearing in the coin log;
+         • upgradePlant() writes plantLevels[id] in place while the coins for it
+           go out as an increment — paid for, then gone on the next snapshot.
+
+       Only a whole-value REPLACEMENT (roomData.x = […]) survived, which is why
+       the diff looked right in the tests that replaced fields. So the baseline
+       is taken as a deep copy, and there is no path that stores a live one. */
+    function _takeBaseline() {
+      return _cloneValue(_roomDocFields());
     }
 
     // firebase is a global from the SDK room.html loads. Returns null if it isn't
@@ -480,8 +506,9 @@
         // Right after the document has been loaded into roomData and before the
         // catch-up blocks below start changing it, so it holds the document as
         // it arrived and nothing this device has since done to it. Everything
-        // saveRoom writes from here on is measured against this.
-        _syncedState = _roomDocFields();
+        // saveRoom writes from here on is measured against this. A deep copy —
+        // see _takeBaseline for what sharing it with roomData cost.
+        _syncedState = _takeBaseline();
         // …with one exception. The two layer migrations above (legacy single-layer
         // data lifted into layerData[1], and the same-plant-on-two-floors dedup)
         // have already rewritten roomData.layerData, so baselining on the result
