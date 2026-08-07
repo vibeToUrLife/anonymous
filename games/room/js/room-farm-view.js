@@ -605,10 +605,14 @@
     }
 
     // Coat-variant palette for an animal (null = default colours).
-    function _farmVariantPal(a) {
-      const list = (typeof FARM_VARIANTS !== 'undefined' && FARM_VARIANTS[a.type]) || [];
-      const v = list.find(x => x.id === a.variant);
-      return v ? (v.pal || null) : null;
+    /* The CSS filter a rare coat recolours with, or '' for the plain one.
+       Every farm animal is drawn from artwork now, so a variant can no longer
+       swap a palette into the drawing the way the old canvas-path drawers did —
+       it tints the finished drawing instead. RGB is deliberately not here: its
+       hue sweeps with the clock, so it is applied per frame at the draw site
+       rather than baked. */
+    function _farmVariantFilter(a) {
+      return typeof farmCoatFilter === 'function' ? farmCoatFilter(a.type, a.variant) : '';
     }
 
     // Move every ground drop into stock (+XP). Used by the Auto-Collector and on
@@ -5086,12 +5090,11 @@
       function frame(t) {
         for (const c of canvases) {
           const ctx = c.getContext('2d');
-          const v = (FARM_VARIANTS[c.dataset.type] || []).find(x => x.rgb);
           ctx.clearRect(0, 0, RGB_BOX, RGB_BOX);
           ctx.save();
           ctx.translate(RGB_BOX / 2, RGB_BOX * 0.6);
           ctx.filter = 'hue-rotate(' + Math.round((t / 5) % 360) + 'deg) saturate(1.7)';
-          drawFarmAnimal(ctx, c.dataset.type, RGB_BOX * 0.42, t / 120, false, v ? v.pal : null);
+          drawFarmAnimal(ctx, c.dataset.type, RGB_BOX * 0.42, t / 120, false, null);
           ctx.restore();
         }
         _rgbPreviewAnim = requestAnimationFrame(frame);
@@ -6135,7 +6138,7 @@
     let _animSprites = {};
     let _animSpriteSize = 0;
 
-    function _farmAnimalSprite(type, variant, size, moving, lp, pal) {
+    function _farmAnimalSprite(type, variant, size, moving, lp, filter) {
       /* Never bake a drawer that isn't ready to paint.
          The goose is drawn from a sheet (games/pets/goose.js) and paints NOTHING
          until it has downloaded. Baking during that window stored an empty
@@ -6166,7 +6169,11 @@
       fitCanvas(cvs, R * 2, R * 2);
       const c = cvs.getContext('2d');
       c.translate(R, R);                               // the painters draw around the origin
-      drawFarmAnimal(c, type, sz, pose < 0 ? 0 : (pose + 0.5) / _ANIM_POSES * TAU, moving, pal);
+      // A rare coat's tint is baked in, not applied per frame: the cache key
+      // already carries the variant, so a golden pig costs a filter once per
+      // pose instead of once per animal per frame.
+      if (filter) c.filter = filter;
+      drawFarmAnimal(c, type, sz, pose < 0 ? 0 : (pose + 0.5) / _ANIM_POSES * TAU, moving, null);
       return (_animSprites[key] = { cvs: cvs, R: R });
     }
 
@@ -6421,9 +6428,13 @@
           if (a.variant === 'rgb') ctx.filter = 'hue-rotate(' + Math.round((t / 5 + idx * 60) % 360) + 'deg) saturate(1.7)';
           // Blit the baked pose. The mirror and the RGB filter still apply here,
           // so a left-facing or rainbow animal looks exactly as it always did.
-          const _spr = _farmAnimalSprite(a.type, a.variant || '', size, st.moving, t / 120, _farmVariantPal(a));
+          const _vf = _farmVariantFilter(a);
+          const _spr = _farmAnimalSprite(a.type, a.variant || '', size, st.moving, t / 120, _vf);
           if (_spr) ctx.drawImage(_spr.cvs, -_spr.R, -_spr.R, _spr.R * 2, _spr.R * 2);
-          else drawFarmAnimal(ctx, a.type, size, t / 120, st.moving, _farmVariantPal(a));
+          // No sprite: the sheet is still downloading (this draws nothing yet)
+          // or the offscreen canvas could not be made. The rare tint has to be
+          // applied here in that case, since there is no bake to carry it.
+          else { if (_vf && a.variant !== 'rgb') ctx.filter = _vf; drawFarmAnimal(ctx, a.type, size, t / 120, st.moving, null); }
           ctx.restore();
           // Mini happiness bar
           const h = Math.max(0, Math.min(100, a.happiness));

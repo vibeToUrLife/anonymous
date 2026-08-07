@@ -260,9 +260,6 @@
     }
     const FARM_AUTOCOLLECT_COST = 4000;         // one-time: auto-collects produce into stock
 
-    // Coat variants: each new animal is the common variant unless it rolls the
-    // rare one (FARM_RARE_CHANCE). The first entry per type is the default (no
-    // palette → drawer uses its built-in colours); rare entries override colours.
     // Non-animal sellable products (crops + processed goods). Animal drops keep
     // their price on FARM_ANIMALS[].drop; the farm view merges both into one
     // product registry for selling / orders / processing.
@@ -427,14 +424,23 @@
 
     const FARM_RARE_CHANCE = 0.15;
     const FARM_RGB_CHANCE = 0.03;   // very rare rainbow coat — cosmetic jackpot
-    // Per animal: [0] common, [1] rare, [2] rgb (rainbow). The rgb pal sets a
-    // vivid base colour; the farm renderer also hue-rotates rgb animals over time
-    // for an animated rainbow shimmer (purely cosmetic — same value as any other).
+    // Per animal: [0] common, [1] rare, [2] rgb (rainbow). The rgb coat has no
+    // stored colour at all — the farm hue-rotates it over time for an animated
+    // rainbow shimmer (purely cosmetic; it is worth no more than any other).
+    /* Each new animal is the common variant unless it rolls the rare one
+       (FARM_RARE_CHANCE) or the rainbow (FARM_RGB_CHANCE); [0] is the default.
+       The names and the odds only. What a rare coat LOOKS like is
+       FARM_COAT_FILTER in games/pets/farm-animals.js, next to the artwork it
+       tints — every farm animal is drawn from a sheet now, and a sheet ships in
+       one coat, so a variant can no longer swap a palette into the drawing.
+       The `pal` entries that used to sit here were already half dead: goose.js
+       had stopped reading one when the goose went to artwork, so a golden goose
+       was rendering identical to a white one. */
     const FARM_VARIANTS = {
-      goose: [ { id: 'white',   name: 'White',   rare: false }, { id: 'golden', name: 'Golden', rare: true, pal: { body: '#f3d676', wing: '#e6c45a', beak: '#e08a2c', leg: '#d8842c' } }, { id: 'rgb', name: 'RGB', rgb: true, pal: { body: '#6ad9ff', wing: '#ff7ae0', beak: '#ffd23d', leg: '#ff8a5c' } } ],
-      pig:   [ { id: 'pink',    name: 'Pink',    rare: false }, { id: 'golden', name: 'Golden', rare: true, pal: { coat: '#f0cf8a', ear: '#e0b96a' } }, { id: 'rgb', name: 'RGB', rgb: true, pal: { coat: '#c77aff', ear: '#7ad6ff' } } ],
-      cow:   [ { id: 'classic', name: 'Classic', rare: false }, { id: 'brown',  name: 'Brown',  rare: true, pal: { coat: '#e8c89a', light: '#d8b681', patch: '#6b4a2e' } }, { id: 'rgb', name: 'RGB', rgb: true, pal: { coat: '#8ad6ff', light: '#ffd6f5', patch: '#7a4fff' } } ],
-      horse: [ { id: 'bay',     name: 'Bay',     rare: false }, { id: 'black',  name: 'Black',  rare: true, pal: { coat: '#4a3f3a', mane: '#241f1b' } }, { id: 'rgb', name: 'RGB', rgb: true, pal: { coat: '#9b7afc', mane: '#ff5db1' } } ],
+      goose: [ { id: 'white',   name: 'White',   rare: false }, { id: 'golden', name: 'Golden', rare: true }, { id: 'rgb', name: 'RGB', rgb: true } ],
+      pig:   [ { id: 'pink',    name: 'Pink',    rare: false }, { id: 'golden', name: 'Golden', rare: true }, { id: 'rgb', name: 'RGB', rgb: true } ],
+      cow:   [ { id: 'classic', name: 'Classic', rare: false }, { id: 'brown',  name: 'Brown',  rare: true }, { id: 'rgb', name: 'RGB', rgb: true } ],
+      horse: [ { id: 'bay',     name: 'Bay',     rare: false }, { id: 'black',  name: 'Black',  rare: true }, { id: 'rgb', name: 'RGB', rgb: true } ],
     };
     /* ── Farm social layer ──
        Visitors can't touch another player's farm directly (that would be a
