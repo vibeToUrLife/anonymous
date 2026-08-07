@@ -64,9 +64,24 @@ function drawFarmArtAnimal(ctx, type, s, lp, moving) {
 }
 
 /* Dispatch a farm animal type to its drawer (the goose comes from goose.js).
-   `pal` survives only for the goose's own signature; the artwork ignores it. */
+   `pal` survives only for the goose's own signature; the artwork ignores it.
+
+   The goose is asked for its WALK pose even when it is standing still, which
+   is the one place the farm departs from drawGoosePet's own idea of an idle.
+   That drawer's idle cell is the bird seen from the FRONT — right for a pet
+   standing in your room looking at you, and a different silhouette entirely
+   from the side-on walk cells: about half the width. A goose that reached the
+   end of its wander therefore swapped a wide bird for a narrow sliver between
+   one frame and the next, and swapped back when it set off again. At farm
+   scale that does not read as "it turned to face me", it reads as the goose
+   blinking out — reported as "farm 的动物会闪一下闪一下… 直接不见", and
+   reported for the goose alone because the goose is the only one of the four
+   with a separate idle drawing at all: the pig, the cow and the horse stand in
+   one of their own walk cells.
+   lp is pinned to 0 while standing so it picks the first walk cell and holds
+   it, rather than freezing mid-stride wherever the clock happened to be. */
 function drawFarmAnimal(ctx, type, s, lp, moving, pal) {
-  if (type === 'goose') { drawGoosePet(ctx, s, lp, moving, 100, '', 0, 0, pal || null); return; }
+  if (type === 'goose') { drawGoosePet(ctx, s, moving ? lp : 0, true, 100, '', 0, 0, pal || null); return; }
   drawFarmArtAnimal(ctx, type, s, lp, moving);
 }
 
