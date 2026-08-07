@@ -94,21 +94,18 @@
   30%           { opacity: 1; }
 }
 
-/* ── 2. Reaction buttons — per-bubble / per-reply emoji reactions (built in
-   app.js). The live-bar broadcast emoji bar was removed; this base style stays
-   because it's shared by the reactions shown on individual bubbles/replies. ── */
-.reaction-btn {
-  border: none;
-  background: rgba(255, 255, 255, 0.07);
-  border-radius: 50%;
-  width: 34px; height: 34px;
-  font-size: 17px;
-  line-height: 1;
-  cursor: pointer;
-  transition: transform 0.12s, background 0.12s;
-}
-.reaction-btn:hover { background: rgba(255, 255, 255, 0.16); transform: translateY(-2px) scale(1.12); }
-.reaction-btn:active { transform: scale(0.9); }
+/* ── 2. Reaction buttons ──
+   Deliberately NOT styled here any more. This file used to carry a second
+   .reaction-btn rule — a 34px circle, left behind when the live-bar broadcast
+   emoji bar was removed — and because it loads after style.css it won.
+
+   That bar's buttons held one emoji and nothing else, so a fixed circle fitted
+   them. A per-bubble reaction is an emoji AND its count, and the two rules
+   merged into the worst of both: style.css's flex row and 8px side padding
+   inside interactive.css's fixed 34px circle. Eighteen pixels of content box
+   for thirty pixels of content, so the count sat outside the circle it belonged
+   to. The whole button lives in style.css now — one rule, sized by what is in
+   it. See .reaction-btn there. */
 
 /* ── 营火小景 Campfire diorama (pixel sky + a villager per online person, fixed bottom-left) ── */
 .campfire {

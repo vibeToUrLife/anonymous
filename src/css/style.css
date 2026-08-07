@@ -356,28 +356,45 @@ body.light-theme .gif-attribution { color: rgba(0,0,0,0.35); }
     gap: 5px;
     margin-top: 8px;
 }
+/* A pill, not a circle: it holds an emoji AND a count, and how wide that is
+   depends on the count — "1" and "128" are not the same button. Nothing here
+   fixes a width or a height for that reason.
+   `flex: 0 0 auto` is what stops the row from taking the difference out of the
+   buttons: .bubble-reactions wraps, so a cramped row should push a pill onto
+   the next line rather than squeeze the count out of this one. */
 .reaction-btn {
     display: flex;
     align-items: center;
+    flex: 0 0 auto;
     gap: 3px;
     padding: 3px 8px;
     border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 12px;
+    border-radius: 999px;
     background: rgba(255,255,255,0.06);
     color: rgba(255,255,255,0.7);
     font-size: 13px;
+    line-height: 1;
+    white-space: nowrap;
     cursor: pointer;
     transition: background 0.2s, border-color 0.2s, transform 0.12s;
     user-select: none;
 }
-.reaction-btn:hover { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.25); }
+.reaction-btn:hover {
+    background: rgba(255,255,255,0.14);
+    border-color: rgba(255,255,255,0.25);
+    transform: translateY(-1px);
+}
 .reaction-btn:active { transform: scale(0.9); }
 .reaction-btn.reacted {
     background: rgba(138, 120, 255, 0.2);
     border-color: rgba(138, 120, 255, 0.5);
 }
 .reaction-btn .r-emoji { font-size: 15px; line-height: 1; }
+/* min-width holds the pill still as a count crosses 9 → 10; :empty drops it
+   entirely for the one case that has no number to hold — your own reaction,
+   optimistically shown before the server has counted it. */
 .reaction-btn .r-count { font-size: 11px; font-weight: 700; min-width: 8px; text-align: center; }
+.reaction-btn .r-count:empty { display: none; }
 .reaction-picker {
     display: flex;
     gap: 2px;
