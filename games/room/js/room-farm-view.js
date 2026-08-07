@@ -6147,6 +6147,28 @@
     let _animSprites = {};
     let _animSpriteSize = 0;
 
+    /* Throw the baked sprites away the moment a sheet lands.
+
+       The readiness test below is the first line of defence, and this is the
+       second, because the two failures are different: a test can stop a blank
+       being baked, but nothing can un-bake one already stored, and this cache is
+       otherwise only ever dropped when the drawn size changes — which on a farm
+       nobody resizes is never. One wrong bake therefore lasts the whole session,
+       and since the walk is six poses baked lazily as the animal moves, the ones
+       that landed in the download window blink the animal out every time the
+       cycle comes back round to them.
+
+       Registered once per type while its art is still missing; the listener is
+       `once`, so a sheet that has already arrived never gets one. */
+    const _artWatched = {};
+    function _dropSpritesWhenArtLands(type) {
+      if (_artWatched[type] || typeof farmAnimalArt !== 'function') return;
+      const art = farmAnimalArt(type);
+      if (!art || typeof art.addEventListener !== 'function') return;
+      _artWatched[type] = true;
+      art.addEventListener('load', () => { _animSprites = {}; }, { once: true });
+    }
+
     function _farmAnimalSprite(type, variant, size, moving, lp, filter) {
       /* Never bake a drawer that isn't ready to paint.
          The goose is drawn from a sheet (games/pets/goose.js) and paints NOTHING
@@ -6160,7 +6182,10 @@
          Returning null hands this frame back to the live painter, which draws
          nothing yet either — but caches nothing either, so the next frame is
          free to bake it properly. */
-      if (typeof farmAnimalReady === 'function' && !farmAnimalReady(type)) return null;
+      if (typeof farmAnimalReady === 'function' && !farmAnimalReady(type)) {
+        _dropSpritesWhenArtLands(type);   // and un-bake anything stored too early
+        return null;
+      }
       const sz = Math.round(size);                     // a sub-pixel wobble must not thrash the cache
       if (sz !== _animSpriteSize) { _animSprites = {}; _animSpriteSize = sz; }
       const TAU = Math.PI * 2;

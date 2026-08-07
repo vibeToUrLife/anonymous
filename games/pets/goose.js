@@ -65,8 +65,14 @@ function gooseSheet() {
    caller that BAKES the drawing into a cached sprite does need to ask: a bake
    taken while the sheet is still downloading paints nothing, and the blank
    result is what gets cached and reused. See _farmAnimalSprite in
-   room-farm-view.js, where exactly that made the farm's geese flicker. */
-function goosePetReady() { return !!gooseSheet().naturalWidth; }
+   room-farm-view.js, where exactly that made the farm's geese flicker.
+
+   `complete` is the load test, and naturalWidth on its own is not: a PNG's
+   dimensions sit in the first thirty bytes, so naturalWidth goes non-zero the
+   moment the HEADER arrives and stays so for the rest of the download. Asking
+   only that is what let the flicker come back — the check was there, but it was
+   answering a question about the header rather than about the picture. */
+function goosePetReady() { const a = gooseSheet(); return !!(a.complete && a.naturalWidth); }
 
 function drawGoosePet(ctx, s, lp, moving, hunger, action, ap, t, pal, view) {
   const art = gooseSheet();

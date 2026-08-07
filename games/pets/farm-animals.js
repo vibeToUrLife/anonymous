@@ -138,11 +138,28 @@ function farmRgbFilter(deg, type) {
    moment and then appears. A caller that CACHES what the drawer produced does:
    a bake taken during the download stores a blank. Answers false when it can't
    tell, because a wrong "ready" caches that blank for good while a wrong "not
-   ready" costs one uncached frame. */
+   ready" costs one uncached frame.
+
+   It asks for `complete`, not just naturalWidth, and the difference is the whole
+   point. A PNG carries its width and height in the first thirty bytes, so
+   naturalWidth goes non-zero as soon as the HEADER lands and stays that way for
+   the entire download — hundreds of ms on a cold cache. Through that window this
+   answered "ready" while the sheet could still paint nothing, which is how the
+   flicker survived being fixed once: the check was added, but the thing it
+   checked was not readiness. `complete` is the property that means fetched. */
 function farmAnimalReady(type) {
   if (type === 'goose') return typeof goosePetReady === 'function' ? goosePetReady() : false;
   const art = farmSheet(type);
-  return !!(art && art.naturalWidth);
+  return !!(art && art.complete && art.naturalWidth);
+}
+
+/* The Image a type is drawn from — for a caller that needs to know WHEN the art
+   lands, not merely whether it has. A cache cannot un-bake a blank it stored
+   before any readiness test could have passed, so the farm listens for the load
+   and throws the cache away. See _farmAnimalSprite in room-farm-view.js. */
+function farmAnimalArt(type) {
+  if (type === 'goose') return typeof gooseSheet === 'function' ? gooseSheet() : null;
+  return farmSheet(type);
 }
 
 /* ── Farm decor drawers — drawn at the origin, base at y ≈ +0.3s ── */

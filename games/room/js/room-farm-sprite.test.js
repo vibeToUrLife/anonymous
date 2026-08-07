@@ -72,15 +72,32 @@ function spriteSandbox() {
     currentUid: 'me', viewingUid: 'me', isFarmView: true,
     fitCanvas(cvs, w, h) { cvs.width = w; cvs.height = h; },
   };
-  // The drawer under test, standing in for games/pets/farm-animals.js: it paints
-  // only when the artwork is there, exactly like drawGoosePet.
-  sandbox.artReady = false;
+  /* The drawer under test, standing in for games/pets/farm-animals.js: it paints
+     only when the artwork is there, exactly like drawGoosePet.
+
+     All four types wait now. The goose was the first to be drawn from a sheet
+     and for a while the only one, but the pig, the cow and the horse followed —
+     so a stub that held up the goose alone would stop modelling three quarters
+     of the herd, and stop covering them for the very bug this file is about. */
+  sandbox.artReady = false;                 // every sheet, together
+  sandbox.artLanded = {};                   // per type, once the load fires
+  const _ready = (type) => sandbox.artReady || !!sandbox.artLanded[type];
   sandbox.drawFarmAnimal = function (ctx, type) {
-    if (type === 'goose' && !sandbox.artReady) return;   // sheet still downloading
+    if (!_ready(type)) return;              // sheet still downloading
     ctx.fillRect(0, 0, 1, 1);
   };
-  sandbox.farmAnimalReady = function (type) {
-    return type !== 'goose' || sandbox.artReady;
+  sandbox.farmAnimalReady = _ready;
+  /* The Image each type is drawn from. Only `load` matters here, so this is the
+     smallest thing that can carry one. */
+  sandbox.artListeners = {};
+  sandbox.farmAnimalArt = function (type) {
+    return {
+      addEventListener(ev, fn) { (sandbox.artListeners[type] = sandbox.artListeners[type] || []).push({ ev, fn }); },
+    };
+  };
+  sandbox.fireArtLoad = function (type) {
+    sandbox.artLanded[type] = true;
+    for (const l of sandbox.artListeners[type] || []) if (l.ev === 'load') l.fn();
   };
   sandbox.globalThis = sandbox;
   sandbox.window = sandbox;
@@ -133,13 +150,48 @@ test('a null sprite is what makes the caller fall back to the live painter', () 
   assert.equal(sb._farmAnimalSprite('goose', '', SIZE, false, 0, PAL), null);
 });
 
-test('the animals drawn from canvas paths are never held up', () => {
-  const sb = spriteSandbox();      // artReady is false — irrelevant to these three
-  for (const type of ['cow', 'pig', 'horse']) {
-    const spr = sb._farmAnimalSprite(type, '', SIZE, true, phaseFor(2), PAL);
-    assert.ok(spr && spr.cvs.painted > 0,
-      type + ' waited on artwork it does not use — it is drawn with canvas paths');
+/* The goose was the first sheet-backed animal and for a while the only one.
+   The pig, the cow and the horse are drawn from artwork too now, so the wait
+   applies to all four — a bake taken early ruins any of them. */
+test('every animal waits for its own sheet, not just the goose', () => {
+  const sb = spriteSandbox();      // nothing has landed yet
+  for (const type of ['goose', 'cow', 'pig', 'horse']) {
+    assert.equal(sb._farmAnimalSprite(type, '', SIZE, true, phaseFor(2), PAL), null,
+      type + ' baked before its sheet arrived');
   }
+  sb.artReady = true;
+  for (const type of ['goose', 'cow', 'pig', 'horse']) {
+    const spr = sb._farmAnimalSprite(type, '', SIZE, true, phaseFor(2), PAL);
+    assert.ok(spr && spr.cvs.painted > 0, type + ' never baked once its sheet was in');
+  }
+});
+
+/* Second line of defence. The readiness test stops a blank being baked; it
+   cannot un-bake one already stored, and this cache is otherwise only dropped
+   on a size change — which on a farm nobody resizes is never. So the sheet's
+   own load event throws the cache away.
+
+   It matters because readiness is a guess about someone else's download. This
+   is not: the browser says when the picture is there. */
+test('art landing throws away whatever was baked before it', () => {
+  const sb = spriteSandbox();
+  // A miss while the art is missing is what registers the watch.
+  assert.equal(sb._farmAnimalSprite('cow', '', SIZE, true, phaseFor(1), PAL), null);
+  // Pretend something got cached anyway — a bake the guard let through.
+  sb.artLanded.cow = true;
+  const stale = sb._farmAnimalSprite('cow', '', SIZE, true, phaseFor(1), PAL);
+  assert.ok(stale, 'nothing was cached to begin with');
+
+  sb.fireArtLoad('cow');           // the sheet arrives for real
+  const fresh = sb._farmAnimalSprite('cow', '', SIZE, true, phaseFor(1), PAL);
+  assert.notEqual(fresh, stale, 'the cache survived the load, so a bad bake would too');
+});
+
+test('the watch is registered once, not once a frame', () => {
+  const sb = spriteSandbox();
+  for (let i = 0; i < 30; i++) sb._farmAnimalSprite('pig', '', SIZE, true, phaseFor(i % 6), PAL);
+  assert.equal((sb.artListeners.pig || []).length, 1,
+    'a listener per frame is a leak, and thirty cache wipes when the sheet lands');
 });
 
 test('a baked pose is reused rather than repainted', () => {
