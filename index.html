@@ -1641,7 +1641,11 @@
   <script src="./src/js/share-to-board.js?v=1"></script>
   <!-- Reply size guard (keeps a thread under Firestore's 1MiB doc cap; used by app.js). -->
   <script src="./src/js/reply-logic.js?v=1"></script>
-  <script src="./src/js/app.js?v=34"></script>
+  <!-- Coin sink catalogs + pure logic. Must precede app.js: app.js renders the
+       cached board the moment it runs, and the pin bar asks CoinSpend how full
+       it should be. Pure and dependency-free, so loading it early is safe. -->
+  <script src="./src/js/coin-spend-logic.js?v=5"></script>
+  <script src="./src/js/app.js?v=35"></script>
   <!-- Feedback Corner — nudges the 🛠️ button when errors pile up. After app.js: it
        wraps that file's showToast(). -->
   <script src="./src/js/feedback-corner.js?v=1"></script>
@@ -1671,8 +1675,8 @@
   <!-- Daily 成语接龙 (idiom chain) -->
   <script src="./src/js/chengyu-data.js?v=2"></script>
   <script src="./src/js/chengyu-chain.js?v=9"></script>
-  <!-- Coin sinks: cosmetics shop / gacha / slot / boost (金币乐园) -->
-  <script src="./src/js/coin-spend-logic.js?v=4"></script>
+  <!-- Coin sinks: cosmetics shop / gacha / slot / boost (金币乐园).
+       coin-spend-logic.js itself is loaded further up, ahead of app.js. -->
   <script src="./src/js/economy-config.js"></script>
   <script src="./src/js/coin-center.js?v=12"></script>
   <!-- 富豪榜: rank players by current coin balance -->

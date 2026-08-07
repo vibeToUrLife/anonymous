@@ -439,8 +439,9 @@
     '花金币给这条留言一个奖章': 'Spend coins to give this message a medal',
     '🏺 收藏': '🏺 Keep',
     '收进泡泡罐（只保存在这台设备）': 'Into your bubble jar (this device only)',
-    '置顶 {n}h': 'Pinned {n}h',
-    '置顶 {n}m': 'Pinned {n}m',
+    // The pin bar now shows the time left rather than a rounded whole, so one
+    // row replaces the old {n}h / {n}m pair; {t} arrives already formatted.
+    '置顶 · {t}': 'Pinned · {t}',
     '🎉 {names} 打赏了': '🎉 {names} gave an award',
     '🎉 {names} 等{n}人 打赏了': '🎉 {names} and {n} others gave awards',
 

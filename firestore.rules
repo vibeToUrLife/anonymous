@@ -198,6 +198,11 @@ service cloud.firestore {
     //    replies[] items may include: {id, ts, text, image, name, reactions, replies}
     //    Optional: cos {c,f,b,t} — poster's equipped bubble cosmetics snapshot;
     //              boostUntil (ms) — paid "pin to top", any signed-in user may set it;
+    //              boostFrom  (ms) — when the current pin run started, so the
+    //                bubble's gold bar can show how much of it is left. Written
+    //                with boostUntil in one transaction (pinning again extends
+    //                the end and keeps this start), so it needs no rule of its
+    //                own beyond the answers write below;
     //              awards {awardId: count} — paid 🏆 awards stamped on a message.
     //              (The board is anonymous, so boosting/awarding is not owner-restricted.)
     // ═══════════════════════════════════════

@@ -220,7 +220,9 @@ function showToast(msg, type) {
 }
 
 function fmtRemaining(ms) {
-    if (ms <= 0) return T('expiring…');
+    // Under a minute would otherwise round down to a flat "0m left", which
+    // reads as broken rather than as nearly over.
+    if (ms < 60000) return T('expiring…');
     const h = Math.floor(ms / 3600000);
     const m = Math.floor((ms % 3600000) / 60000);
     return h > 0 ? T('{h}h {m}m left', { h: h, m: m }) : T('{n}m left', { n: m });
@@ -1209,17 +1211,26 @@ function buildPollContent(a) {
 /* ── Render bubbles ── */
 let knownIds = new Set();
 
-/* ── Bubble HP / pin status ── */
+/* ── Bubble HP / pin status ──
+   Gold is the pinned bar and reads as "paid"; the other three are the ordinary
+   6-hour decay going healthy → warning → nearly gone. */
+const HP_COLORS = { pin: '#f5b301', ok: '#58c5b5', warn: '#f2a154', low: '#e06377' };
+
 function hpInfo(a, now) {
-    // A pinned (boosted) bubble survives until its pin expires — show the pin
-    // time remaining instead of the normal 6-hour HP decay.
+    // A pinned (boosted) bubble ignores the 6-hour decay and runs its own
+    // clock: the bar drains across the pin that was actually paid for, so
+    // buying more time visibly refills it instead of just moving a number.
     if (a.boostUntil && a.boostUntil > now) {
-    const mins = Math.ceil((a.boostUntil - now) / 60000);
-    const label = mins >= 60 ? T('置顶 {n}h', { n: Math.round(mins / 60) }) : T('置顶 {n}m', { n: mins });
-    return { pct: 100, label: '📌 ' + label, color: '#f5b301' };
+    // The bar spans the whole pin run (see CoinSpend.boostPct), so topping the
+    // pin up widens the span and visibly refills it.
+    return {
+        pct: CoinSpend.boostPct(a, now),
+        label: '📌 ' + T('置顶 · {t}', { t: fmtRemaining(a.boostUntil - now) }),
+        color: HP_COLORS.pin
+    };
     }
     const pct = Math.max(0, Math.min(100, ((SIX_HOURS - (now - a.ts)) / SIX_HOURS) * 100));
-    return { pct: pct, label: T('HP {n}%', { n: Math.round(pct) }), color: pct > 50 ? '#58c5b5' : pct > 20 ? '#f2a154' : '#e06377' };
+    return { pct: pct, label: T('HP {n}%', { n: Math.round(pct) }), color: pct > 50 ? HP_COLORS.ok : pct > 20 ? HP_COLORS.warn : HP_COLORS.low };
 }
 
 // Terminal-theme HP rendered as an ASCII meter, e.g. "[████████----] 64%".
@@ -1503,7 +1514,11 @@ function render(items) {
     boostBtn.title = T('花金币把这条留言置顶');
     boostBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (typeof window.openBoost === 'function') window.openBoost(a.id);
+        // Read the pin end off the element rather than the captured `a` — see
+        // the dataset.boostUntil note in the boosted-state pass below.
+        const el = boostBtn.closest('[data-id]');
+        const until = el ? parseInt(el.dataset.boostUntil || '0', 10) : 0;
+        if (typeof window.openBoost === 'function') window.openBoost(a.id, until);
     });
     footer.appendChild(boostBtn);
 
@@ -1543,6 +1558,11 @@ function render(items) {
     const boosted = a.boostUntil && a.boostUntil > now;
     el.classList.toggle('boosted', !!boosted);
     el.style.order = boosted ? '-1' : '';
+    // Park the live pin end on the element. Each snapshot builds fresh answer
+    // objects, so the `a` captured by the footer's 置顶 handler when the bubble
+    // was first drawn goes stale — and a stale 0 there would word the popup as
+    // a fresh pin on a bubble that is already pinned.
+    el.dataset.boostUntil = boosted ? a.boostUntil : 0;
     });
 
     // Auto-scroll to bottom on first load or after user sends a message

@@ -232,6 +232,12 @@
     '⭐ 置顶这条留言': '⭐ Pin this message',
     '置顶后会浮到留言板最上方并高亮显示': 'It floats to the top of the board and gets highlighted',
     '⭐ 置顶成功！': '⭐ Pinned!',
+    // Pinning again extends rather than replaces, so the wording changes once
+    // a pin is already running.
+    '⭐ 延长置顶': '⭐ Extend the pin',
+    '{t} · 再买会接在后面，不会覆盖': '{t} · more time is added on the end, not over it',
+    '再加 ': '+',
+    '⭐ 置顶中 · {t}': '⭐ Pinned · {t}',
 
     // Fortune
     '上上签': 'Great fortune',

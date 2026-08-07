@@ -46,6 +46,9 @@
   let fortuneToday = null;   // today's drawn fortune (locked once drawn)
 
   function toast(msg, type) { if (typeof showToast === 'function') showToast(msg, type || ''); }
+  // Same wording the bubble's own pin bar uses, so the popup and the bar agree.
+  // app.js owns it; fall back to bare minutes if this ever loads without it.
+  function fmtLeft(ms) { return (typeof fmtRemaining === 'function') ? fmtRemaining(ms) : Math.ceil(ms / 60000) + 'm'; }
   function roomRef() { return db.collection('rooms').doc(auth.currentUser.uid); }
   function todayKey() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
@@ -300,11 +303,24 @@
         return { ok: true, coins: nc };
       });
       if (!res.ok) return res;
-      const until = Date.now() + hours * 3600000;
-      try { await db.collection('answers').doc(answerId).set({ boostUntil: until }, { merge: true }); }
+      // Pin time ADDS instead of replacing. Buying 1h on a bubble with 20h left
+      // used to overwrite it down to 1h — you paid to lose 19 hours. Read and
+      // write in one transaction so two people pinning the same bubble at once
+      // both get their hours in rather than one silently overwriting the other.
+      let until = 0;
+      try {
+        until = await db.runTransaction(async function (tx) {
+          const aRef = db.collection('answers').doc(answerId);
+          const snap = await tx.get(aRef);
+          const d = snap.exists ? snap.data() : {};
+          const next = C.extendBoost(d, hours, Date.now());   // pure; see coin-spend-logic.js
+          tx.set(aRef, next, { merge: true });
+          return next.boostUntil;
+        });
+      }
       catch (e) { await refundTx(price, T('置顶冲榜退款')); return { ok: false, reason: 'error' }; }
       coins = res.coins;
-      return { ok: true, coins: res.coins };
+      return { ok: true, coins: res.coins, boostUntil: until };
     } catch (e) { return { ok: false, reason: 'error' }; }
   }
 
@@ -829,17 +845,28 @@
     pop.querySelector('.cc-close').addEventListener('click', destroy);
   }
 
-  /* ── Boost popup (called from each bubble's 置顶 button) ───── */
-  function buildBoostPopup(answerId) {
+  /* ── Boost popup (called from each bubble's 置顶 button) ─────
+     `boostUntil` is handed in by the caller, which already has the bubble in
+     its cache — re-reading the doc just to word a title would be a Firestore
+     read per popup open, for something the board already knows. */
+  function buildBoostPopup(answerId, boostUntil) {
+    const live = boostUntil && boostUntil > Date.now();
+    // Already pinned → this is an extension, and the one thing worth saying is
+    // how much is left and that the new hours land on the end, not over it.
+    const title = live ? T('⭐ 延长置顶') : T('⭐ 置顶这条留言');
+    const hint = live
+      // {t} arrives already worded as "还剩 …" / "… left", so no prefix here.
+      ? T('{t} · 再买会接在后面，不会覆盖', { t: fmtLeft(boostUntil - Date.now()) })
+      : T('置顶后会浮到留言板最上方并高亮显示');
     const pop = document.createElement('div');
     pop.className = 'cc-overlay show';
     pop.innerHTML =
       '<div class="cc-card cc-boost">'
       + '<button class="cc-close" title="关闭">✕</button>'
-      + '<div class="cc-title">' + T('⭐ 置顶这条留言') + '</div>'
-      + '<div class="cc-hint">' + T('置顶后会浮到留言板最上方并高亮显示') + '</div>'
+      + '<div class="cc-title">' + title + '</div>'
+      + '<div class="cc-hint">' + hint + '</div>'
       + '<div class="cc-boost-opts">'
-      + C.BOOST_OPTIONS.map(function (o) { return '<button class="cc-btn buy" data-h="' + o.hours + '" data-p="' + o.price + '">' + o.label + ' ' + CIC + '' + o.price + '</button>'; }).join('')
+      + C.BOOST_OPTIONS.map(function (o) { return '<button class="cc-btn buy" data-h="' + o.hours + '" data-p="' + o.price + '">' + (live ? T('再加 ') : '') + o.label + ' ' + CIC + '' + o.price + '</button>'; }).join('')
       + '</div></div>';
     document.body.appendChild(pop);
     function destroy() { pop.remove(); }
@@ -849,15 +876,24 @@
       b.addEventListener('click', async function () {
         b.disabled = true;
         const res = await boostTx(answerId, parseInt(b.getAttribute('data-h'), 10), parseInt(b.getAttribute('data-p'), 10));
-        if (res.ok) { toast(T('⭐ 置顶成功！'), 'success'); destroy(); }
+        // Report the new total, not just "done" — the whole point of paying
+        // again is the extra time, so say how much there now is.
+        if (res.ok) {
+          toast(res.boostUntil
+            ? T('⭐ 置顶中 · {t}', { t: fmtLeft(res.boostUntil - Date.now()) })
+            : T('⭐ 置顶成功！'), 'success');
+          destroy();
+        }
         else { toast(res.reason === 'insufficient' ? T('金币不足') : T('出错了'), 'error'); b.disabled = false; }
       });
     });
   }
-  window.openBoost = function (answerId) {
+  // boostUntil is optional: without it the popup just words itself as a fresh
+  // pin, which is the safe reading if a caller doesn't know.
+  window.openBoost = function (answerId, boostUntil) {
     if (!hasFB || !auth.currentUser) { toast(T('请先登录'), 'error'); return; }
     if (!answerId) return;
-    buildBoostPopup(answerId);
+    buildBoostPopup(answerId, boostUntil);
   };
 
   /* ── Entry button (in the live bar) + Esc to close ────────── */

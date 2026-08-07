@@ -194,6 +194,31 @@
     { hours: 24, price: 1500, label: '24 小时' }
   ];
 
+  // Where a pin lands when someone buys `hours` on a bubble whose current pin
+  // is {boostUntil, boostFrom}. Pinning again ADDS to the end: buying 1h on a
+  // bubble with 20h left used to overwrite it down to 1h, so you paid to lose
+  // 19 hours. An expired (or absent) pin starts a fresh run from `now`; a live
+  // one keeps its original start, which is what lets the bubble's gold bar
+  // measure "how much of what I bought is left" and jump back up on a top-up.
+  CoinSpend.extendBoost = function (cur, hours, now) {
+    const c = cur || {};
+    const live = c.boostUntil > now;
+    return {
+      boostUntil: (live ? c.boostUntil : now) + hours * 3600000,
+      boostFrom: (live && c.boostFrom) ? c.boostFrom : now
+    };
+  };
+
+  // How full the gold pin bar should be, 0–100. A pin written before boostFrom
+  // existed has no span to measure, so it reads full rather than guessing.
+  CoinSpend.boostPct = function (cur, now) {
+    const c = cur || {};
+    if (!(c.boostUntil > now)) return 0;
+    const span = c.boostFrom ? c.boostUntil - c.boostFrom : 0;
+    if (span <= 0) return 100;
+    return Math.max(0, Math.min(100, ((c.boostUntil - now) / span) * 100));
+  };
+
   /* ─────────────────────────────────────────────────────────────
      Bubble Awards 🏆 — pay coins to stamp an award on any message
      ───────────────────────────────────────────────────────────── */
