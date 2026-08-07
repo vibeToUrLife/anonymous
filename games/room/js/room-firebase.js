@@ -785,6 +785,22 @@
           if ((pet.thirst ?? 100) > 0) { pet.thirst = (pet.thirst ?? 100) - 1; changed = true; }
         }
         if (runLiveAutoFeed()) changed = true;
+        /* The farm runs on this heartbeat too. Its OWN tick lives behind
+           `isFarmView` and only turns while the farm is on screen, so a player
+           idling in the room came back to a trough nothing had touched — an
+           auto-feeder they had bought and switched on did nothing at all until
+           they next opened the farm.
+
+           Pets are fed first on purpose. Coins are finite, and a starving pet
+           bleeds affection while a hungry herd only slows down.
+
+           Settling here also means the 3h offline cap stops binding while the
+           page is open. That is the deal and it is even: the herd is charged
+           for every hour it eats, and produces for every hour it is fed. */
+        if (typeof runFarmProduction === 'function' && (roomData.farmAnimals || []).length) {
+          runFarmProduction();
+          changed = true;   // a settle always moves the food clock forward
+        }
         if (changed) { await saveRoom(); renderAllDebounced(); }
       }, 10 * 60 * 1000);
 

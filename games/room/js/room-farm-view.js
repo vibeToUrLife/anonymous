@@ -1311,7 +1311,16 @@
       _startFarmLive();
     }
 
-    // Render the farm + start the once-a-minute live production tick (owner only).
+    /* Render the farm + start the once-a-minute live production tick (owner only).
+
+       This tick is the FAST one, and it exists for what is on screen: a food
+       count and a happiness bar that would otherwise sit on the same digit for
+       ten minutes. The farm is settled whether or not anyone is looking at it —
+       the room's own ten-minute heartbeat calls runFarmProduction() as well
+       (room-firebase.js), so an auto-feeder keeps buying while its owner is off
+       in the room. Both are the same settle against the same clock, so running
+       both is not double-counting: whichever gets there first moves farmFoodAt
+       to now, and the other finds no elapsed time to bill. */
     function _startFarmLive() {
       renderFarmPanel();
       drawFarmCanvas();
