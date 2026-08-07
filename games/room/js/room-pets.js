@@ -307,12 +307,66 @@
       };
     }
 
-    /* True while a pet is in the spring or on its way there. Such a pet is
-       exempt from the floor clamp: its destination is legitimately above the
-       walkable band, and clamped it would never arrive — it would drift up,
-       get pulled back every frame, and finally settle for the clamped spot. */
-    function isSoaking(st) {
-      return st.action === 'soak' || !!st.soakOnArrive;
+    /* ── Sleeping in your own bed ──
+       Every type's collection unlocks a habitat of its own — the throne, the
+       kennel, the pond. Once one is standing in the room its owner takes its
+       naps ON it, instead of dropping asleep wherever it happened to stop.
+       Unlike the capybara's spring, which is an action of its own, this reuses
+       the sleep the pet already knows: only the place changes.
+       The capybara is absent on purpose. Its habitat IS the spring, and soaking
+       is a better thing to do in a bath than sleeping. */
+    const DEN_SLEEP = 9000;   // ms; a nap in your own bed runs DEN_SLEEP .. 2×
+
+    /* Where on each habitat its owner lies down, as a fraction of the picture's
+       own box. Every one is a spot you can point at in the drawing — the seat of
+       the throne, the mouth of the kennel, the cushion in the den — because ON
+       the furniture is the whole ask, and the middle of a bounding box is under
+       the thing about as often as on it. Which decoration belongs to which pet
+       is NOT repeated here; that lives in PET_COLLECTION_DECOR, and a second
+       copy is a second thing to keep true. */
+    const PET_DEN_ANCHOR = {
+      cat:     { u: 0.50, v: 0.62 },   // sat up on the throne's seat
+      dog:     { u: 0.50, v: 0.92 },   // in the kennel doorway
+      bunny:   { u: 0.50, v: 0.86 },   // the grass under the arch
+      hamster: { u: 0.50, v: 0.72 },   // the platform, not the bedding
+      fox:     { u: 0.50, v: 0.78 },   // the cushion inside the den
+      panda:   { u: 0.60, v: 0.90 },   // clear of the basin, not behind it
+      goose:   { u: 0.50, v: 0.74 },   // afloat, on the water itself
+      tom:     { u: 0.50, v: 0.60 },   // the seat, not the floor in front of it
+      jerry:   { u: 0.56, v: 0.88 },   // the mouth of the hole
+    };
+
+    /* The spot on a pet's own habitat to sleep on, or null when that habitat is
+       not in the room — or when its picture has not arrived, since a box has no
+       shape until then. Same division of labour as the spring: the decoration
+       works out where it is and how big, and this only bounds the answer. */
+    function denSpotFor(type, rw, rh) {
+      const den = PET_DEN_ANCHOR[type];
+      const id = den && PET_COLLECTION_DECOR[type];
+      if (!id || !hasDecor(id)) return null;
+      const pos = getDecorPos(id);
+      const box = decorArtBox(id, pos.x, pos.y, rw, rh);
+      if (!box) return null;
+      return {
+        x: Math.max(0.04, Math.min(0.70, (box.x + box.w * den.u) / rw)),
+        /* Deliberately NOT clamped into the walking band, for the reason the
+           spring gives: a seat on a throne is legitimately above it. */
+        y: Math.max(0.35, Math.min(0.94, (box.y + box.h * den.v) / rh)),
+        /* How far away the pet should LOOK, which is where the furniture stands
+           rather than where the pet sits on it. Sizing off the seat would shrink
+           a cat for climbing onto its own throne. */
+        depthY: Math.max(0.70, Math.min(0.92, pos.y))
+      };
+    }
+
+    /* True while a pet is up on a decoration — soaking in the spring, asleep on
+       its own habitat, or walking to either. Such a pet is exempt from the floor
+       clamp: its destination is legitimately above the walkable band, and
+       clamped it would never arrive — it would drift up, get pulled back every
+       frame, and finally settle for the clamped spot. */
+    function isPerched(st) {
+      return st.action === 'soak' || !!st.soakOnArrive
+          || !!st.onDen || !!st.denOnArrive;
     }
 
     let _lastPetAction = {};
@@ -643,20 +697,37 @@
               actionProgress = Math.max(0, Math.min(1, actionProgress));
             } else {
               if (st.action) {
-                /* Getting out of the bath. A soaking pet sits at the water
-                   line, which is above the band it may walk in — left there it
-                   would be yanked down by the floor clamp the moment it stopped
-                   counting as soaking. Stepping it onto the spring's own
-                   footing is the same move, done deliberately. */
-                if (st.action === 'soak' && st.soakDepthY != null) {
-                  st.y = st.soakDepthY;
-                  st.soakDepthY = null;
+                /* Climbing down. A perched pet sits at the water line or up on
+                   a seat, above the band it may walk in — left there it would be
+                   yanked down by the floor clamp the moment it stopped counting
+                   as perched. Stepping it onto the furniture's own footing is
+                   the same move, done deliberately. */
+                if ((st.action === 'soak' || st.onDen) && st.perchDepthY != null) {
+                  st.y = st.perchDepthY;
+                  st.perchDepthY = null;
                 }
+                st.onDen = false;
                 st.action = null;
                 st.actionCooldown = now + 4000 + Math.random() * 5000;
               }
               if (!st.action && now > st.actionCooldown && Math.random() < 0.008) {
                 st.action = pickAction(p.type);
+                /* A pet with its habitat in the room sleeps ON it. The nap is
+                   not cancelled, only deferred — the walk over ends in the same
+                   sleep, started by the arrival branch below. One already on its
+                   bed just drops off where it is. */
+                if ((st.action === 'sleep' || st.action === 'nap') && !st.onDen) {
+                  const den = denSpotFor(p.type, rw, rh);
+                  if (den) {
+                    st.action = null;
+                    st.denOnArrive = true;
+                    st.tx = den.x; st.ty = den.y;
+                    st.perchDepthY = den.depthY;
+                    // Far enough out that the wander below cannot re-aim a pet
+                    // that is already halfway home.
+                    st.nextWander = now + 20000;
+                  }
+                }
                 if (st.action === 'sleep' || st.action === 'nap' || st.action === 'flop') {
                   st.actionDur = 5000 + Math.random() * 3000;
                 } else if (st.action === 'yawn' || st.action === 'headtilt' || st.action === 'peek' || st.action === 'nosewiggle') {
@@ -666,16 +737,17 @@
                 } else {
                   st.actionDur = 2200 + Math.random() * 1200;
                 }
-                st.actionEnd = now + st.actionDur;
+                if (st.action) st.actionEnd = now + st.actionDur;
               }
 
               // Wander — sometimes towards the hot spring instead of anywhere
               if (now > st.nextWander) {
                 const soak = soakSpotFor(p.type, rw, rh);
                 st.soakOnArrive = !!soak && Math.random() < SOAK_CHANCE;
+                st.denOnArrive = false;          // a plain wander is not going home
                 if (st.soakOnArrive) {
                   st.tx = soak.x; st.ty = soak.y;
-                  st.soakDepthY = soak.depthY;   // sizes the pet; see soakSpotFor
+                  st.perchDepthY = soak.depthY;  // sizes the pet; see soakSpotFor
                 } else {
                   st.tx = 0.06 + Math.random() * 0.60;
                   st.ty = 0.72 + Math.random() * 0.18;
@@ -723,6 +795,16 @@
                     st.actionEnd = now + st.actionDur;
                     st.actionCooldown = st.actionEnd + 3000;
                     st.nextWander = st.actionEnd + 1500;
+                  } else if (st.denOnArrive && !moving) {
+                    // Home. The sleep deferred above starts here, and runs longer
+                    // than one taken on the floor — a bed is worth the walk.
+                    st.denOnArrive = false;
+                    st.onDen = true;
+                    st.action = 'sleep';
+                    st.actionDur = DEN_SLEEP + Math.random() * DEN_SLEEP;
+                    st.actionEnd = now + st.actionDur;
+                    st.actionCooldown = st.actionEnd + 3000;
+                    st.nextWander = st.actionEnd + 1500;
                   }
                 }
               }
@@ -730,13 +812,21 @@
           }
 
           // Parked/dragged/flying pets may be placed anywhere; others stay on the floor
+          /* A bed can be picked up while its owner is asleep on it. Losing the
+             furniture drops the pet back to the floor, rather than leaving it
+             asleep in mid-air until it happens to wake. */
+          if ((st.onDen || st.denOnArrive) && !hasDecor(PET_COLLECTION_DECOR[p.type])) {
+            st.onDen = false; st.denOnArrive = false; st.perchDepthY = null;
+          }
           if (st.parked || st.dragging || st.flying) {
+            // Carried off its bed, whatever it was doing there.
+            st.onDen = false; st.denOnArrive = false;
             st.x = Math.max(0.02, Math.min(0.98, st.x));
             st.y = Math.max(0.10, Math.min(0.96, st.y));
-          } else if (isSoaking(st)) {
+          } else if (isPerched(st)) {
             // Still bounded — by the room, not by the floor. See soakSpotFor.
             st.x = Math.max(0.04, Math.min(0.70, st.x));
-            st.y = Math.max(0.35, Math.min(0.92, st.y));
+            st.y = Math.max(0.35, Math.min(0.94, st.y));
           } else {
             st.x = Math.max(0.04, Math.min(0.70, st.x));
             st.y = Math.max(0.70, Math.min(0.92, st.y));
@@ -748,7 +838,7 @@
              from the floor the spring stands on. Depth is about how far away a
              thing is, not how high it is drawn, so its size comes from the
              spring's own footing. */
-          const depthY = (isSoaking(st) && st.soakDepthY != null) ? st.soakDepthY : st.y;
+          const depthY = (isPerched(st) && st.perchDepthY != null) ? st.perchDepthY : st.y;
           const depthScale = (st.dragging || st.flying)
             ? HELD_SCALE
             : Math.max(0.4, 0.6 + (depthY - 0.6) * 2.0);
@@ -1066,6 +1156,10 @@
     const OWN_SLEEP_POSE = {
       cat: true, dog: true, bunny: true, panda: true,
       fox: true, hamster: true, goose: true,
+      // Tom and Jerry joined the list when their sheets grew a sleeping cell.
+      // Before that they were tilted flat like the path-drawn pets; leaving them
+      // in that branch now would tip over two cats already lying down.
+      tom: true, jerry: true,
     };
 
     /* ── Action body transforms ── */

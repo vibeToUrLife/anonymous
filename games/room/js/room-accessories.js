@@ -224,14 +224,26 @@
         side:  { hx:  0.24, hy: -0.83, r: 0.14 },
         sleep: { hx:  0.41, hy:  0.13, r: 0.19 },
       },
-      // Tom comes from artwork (pets/img/tom.png), so these were measured off the
-      // sheet, not read from path geometry. His head sits lower while he walks
-      // than while he stands (eye line -0.46 vs -0.60), so the values split the
-      // difference: tuned to either pose alone, a hat floats in the other.
-      tom:     { hx:  0,    hy: -0.52, r: 0.14 },
-      // Jerry is upright with a big head centred over the body (front view).
-      // Values taken from his head geometry (arc 0,-0.26 r0.30).
-      jerry:   { hx:  0,    hy: -0.28, r: 0.28 },
+      /* Tom comes from artwork (pets/img/tom.png), so these were measured off
+         the sheet, not read from path geometry. Standing and walking share one
+         value: his head sits lower walking than standing (eye line -0.46 vs
+         -0.60) and -0.52 splits the difference, because tuned to either pose
+         alone a hat floats in the other. Asleep is a set apart — curled up, his
+         head is down by the floor and off to one side, most of a body from
+         where it stands. */
+      tom: {
+        front: { hx:  0,    hy: -0.52, r: 0.14 },
+        side:  { hx:  0,    hy: -0.52, r: 0.14 },
+        sleep: { hx:  0.25, hy:  0.12, r: 0.17 },
+      },
+      /* Jerry is upright with a big head centred over the body (front view);
+         the standing value came from his head geometry (arc 0,-0.26 r0.30) and
+         is kept for the walk too. Asleep is measured off the sheet's own cell. */
+      jerry: {
+        front: { hx:  0,    hy: -0.28, r: 0.28 },
+        side:  { hx:  0,    hy: -0.28, r: 0.28 },
+        sleep: { hx:  0.20, hy:  0.12, r: 0.22 },
+      },
       // Read off the sprite's side pose: the head sits forward and high, and
       // the sheet is drawn 1.15x the pet size with its feet at +0.40.
       capybara:{ hx:  0.25, hy: -0.23, r: 0.15 }
@@ -309,6 +321,8 @@
         case 'fox':     return typeof foxPose     === 'function' ? foxPose(moving, action)     : 'side';
         case 'hamster': return typeof hamsterPose === 'function' ? hamsterPose(moving, action) : 'side';
         case 'goose':   return typeof goosePose   === 'function' ? goosePose(moving, action)   : 'side';
+        case 'tom':     return typeof tomPose     === 'function' ? tomPose(moving, action)     : 'side';
+        case 'jerry':   return typeof jerryPose   === 'function' ? jerryPose(moving, action)   : 'side';
         default: return 'side';
       }
     }
