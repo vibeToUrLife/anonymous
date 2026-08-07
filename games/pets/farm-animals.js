@@ -222,6 +222,17 @@ function drawFarmAnimal(ctx, type, s, lp, moving, pal) {
   }
 }
 
+/* Would drawFarmAnimal actually paint this type right now?
+   Cow, pig and horse are canvas paths, so they are always ready. The goose is
+   drawn from a sheet (goose.js) and paints nothing until it has downloaded —
+   which only matters to a caller that caches what the drawer produced. Answers
+   false when it can't tell, because a wrong "ready" gets a blank cached and a
+   wrong "not ready" costs one uncached frame. */
+function farmAnimalReady(type) {
+  if (type !== 'goose') return true;
+  return typeof goosePetReady === 'function' ? goosePetReady() : false;
+}
+
 /* ── Farm decor drawers — drawn at the origin, base at y ≈ +0.3s ── */
 
 function _drawDecorLog(ctx, s) {

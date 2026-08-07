@@ -6136,6 +6136,19 @@
     let _animSpriteSize = 0;
 
     function _farmAnimalSprite(type, variant, size, moving, lp, pal) {
+      /* Never bake a drawer that isn't ready to paint.
+         The goose is drawn from a sheet (games/pets/goose.js) and paints NOTHING
+         until it has downloaded. Baking during that window stored an empty
+         canvas under this pose's key — and the cache is only ever dropped when
+         the drawn size changes, so the blank stayed for the rest of the session.
+         The walk is 6 poses baked lazily as the bird walks, so whichever ones
+         were baked before the sheet landed made the goose VANISH every time the
+         cycle came back round to them: about eight times a second, for good.
+         Reported as "farm 的动物会闪一下闪一下 … 直接不见".
+         Returning null hands this frame back to the live painter, which draws
+         nothing yet either — but caches nothing either, so the next frame is
+         free to bake it properly. */
+      if (typeof farmAnimalReady === 'function' && !farmAnimalReady(type)) return null;
       const sz = Math.round(size);                     // a sub-pixel wobble must not thrash the cache
       if (sz !== _animSpriteSize) { _animSprites = {}; _animSpriteSize = sz; }
       const TAU = Math.PI * 2;

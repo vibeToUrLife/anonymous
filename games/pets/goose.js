@@ -59,6 +59,15 @@ function gooseSheet() {
   return _gooseSheet;
 }
 
+/* Whether the sheet has arrived and this drawer will actually paint something.
+   Live painters don't need to ask — a goose that is missing for the first
+   moment of a page is invisible for that moment and then simply appears. A
+   caller that BAKES the drawing into a cached sprite does need to ask: a bake
+   taken while the sheet is still downloading paints nothing, and the blank
+   result is what gets cached and reused. See _farmAnimalSprite in
+   room-farm-view.js, where exactly that made the farm's geese flicker. */
+function goosePetReady() { return !!gooseSheet().naturalWidth; }
+
 function drawGoosePet(ctx, s, lp, moving, hunger, action, ap, t, pal, view) {
   const art = gooseSheet();
   if (!art.naturalWidth) return;   // sheet still downloading
