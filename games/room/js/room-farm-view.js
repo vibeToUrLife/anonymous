@@ -5093,7 +5093,7 @@
           ctx.clearRect(0, 0, RGB_BOX, RGB_BOX);
           ctx.save();
           ctx.translate(RGB_BOX / 2, RGB_BOX * 0.6);
-          ctx.filter = 'hue-rotate(' + Math.round((t / 5) % 360) + 'deg) saturate(1.7)';
+          ctx.filter = farmRgbFilter(t / 5, c.dataset.type);
           drawFarmAnimal(ctx, c.dataset.type, RGB_BOX * 0.42, t / 120, false, null);
           ctx.restore();
         }
@@ -6424,8 +6424,9 @@
           if (_hkA !== 1) ctx.scale(_hkA, _hkA);   // pointed at → lifts toward the player
           if (!st.facingRight) ctx.scale(-1, 1); // drawers face right
           // RGB coat: animated rainbow shimmer (filter is reset by ctx.restore()).
-          // ~1.8s per full color cycle so it visibly shimmers (was t/14 ≈ 5s, too slow).
-          if (a.variant === 'rgb') ctx.filter = 'hue-rotate(' + Math.round((t / 5 + idx * 60) % 360) + 'deg) saturate(1.7)';
+          // ~1.8s per full colour cycle so it visibly shimmers (was t/14 ≈ 5s, too
+          // slow), offset per animal so a herd of them doesn't pulse in unison.
+          if (a.variant === 'rgb') ctx.filter = farmRgbFilter(t / 5 + idx * 60, a.type);
           // Blit the baked pose. The mirror and the RGB filter still apply here,
           // so a left-facing or rainbow animal looks exactly as it always did.
           const _vf = _farmVariantFilter(a);

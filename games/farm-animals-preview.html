@@ -25,6 +25,9 @@
   <h2>Coat variants — the filter each rare one is baked with</h2>
   <div class="grid" id="coats"></div>
 
+  <h2>🌈 Rainbow coat — one sweep, in 60° steps</h2>
+  <div class="grid" id="rgb"></div>
+
   <p class="note">Standalone preview — no login needed. The dashed line is the ground the
   farm stands every animal on (FARM_ART_FEET_Y), so a hoof off it is a cutting bug.</p>
 
@@ -75,6 +78,19 @@
       for (const [name, filter] of COATS[type]) {
         tiles.push(tile(coats, type + ' · ' + name, (ctx) => {
           if (filter) ctx.filter = filter;
+          drawFarmAnimal(ctx, type, S, 0, false, null);
+        }));
+      }
+    }
+    /* The rainbow coat sweeps its hue with the clock, so a still of one frame
+       says nothing. Laid out in 60° steps instead: read along a row and that is
+       one animal over ~1.8 seconds — and it is also what a HERD of them looks
+       like at any one instant, since the farm offsets each animal by 60°. */
+    const rgbGrid = document.getElementById('rgb');
+    for (const type of TYPES) {
+      for (let deg = 0; deg < 360; deg += 60) {
+        tiles.push(tile(rgbGrid, type + ' · rgb ' + deg + '°', (ctx) => {
+          ctx.filter = farmRgbFilter(deg, type);
           drawFarmAnimal(ctx, type, S, 0, false, null);
         }));
       }

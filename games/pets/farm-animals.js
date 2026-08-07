@@ -90,6 +90,25 @@ function farmCoatFilter(type, variant) {
   return (FARM_COAT_FILTER[type] || {})[variant] || '';
 }
 
+/* The rainbow coat. Not in the table above because it MOVES: the hue sweeps
+   with the clock rather than sitting still, so it can't be baked into a sprite
+   the way a rare coat is — the farm applies it per frame at the draw site.
+   `deg` is where the sweep has got to; the farm takes it from the frame clock
+   and offsets it per animal, so a herd of rainbows shimmers out of step instead
+   of pulsing in unison.
+
+   Some artwork has nothing to rotate. hue-rotate moves a colour AROUND the grey
+   axis and leaves anything sitting on it alone however hard it is pushed, and
+   the goose is white — so the rarest coat in the game (3%, the cosmetic
+   jackpot) was coming out as an ordinary white goose with coloured feet. sepia
+   lands a neutral drawing on a real hue first, and the sweep has something to
+   take hold of. The other three carry their own colour and keep it. */
+const FARM_RGB_PREFIX = { goose: 'sepia(1) saturate(2.2) ' };
+function farmRgbFilter(deg, type) {
+  return (FARM_RGB_PREFIX[type] || '') +
+    'hue-rotate(' + Math.round(((deg % 360) + 360) % 360) + 'deg) saturate(1.7)';
+}
+
 /* Would drawFarmAnimal actually paint this type right now?
    Every farm animal is drawn from a sheet, and a sheet paints nothing until it
    has downloaded. Live painters don't need to ask — the animal is missing for a
