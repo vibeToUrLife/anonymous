@@ -426,6 +426,23 @@
       const top = hy - u;     // the crown: what a hat stands on
       const b = s;            // the unit for the pieces worn on the body
       const ink = u * 0.055;  // outline weight, so it thins with the head
+      /* Which way the BODY lies from the head — the four pieces worn on it
+         cannot just hang straight down. Facing you the body IS below the head;
+         walking, the head is out in front of it; asleep, the animal is
+         stretched out level and the body is off to one side. Every sprite is
+         drawn centred on its own x, so on the two sideways poses the body is
+         back at the middle of the picture. */
+      const facing = pose === 'front';
+      const lying  = pose === 'sleep';
+      /* The torso. Facing you it is straight below the head, so the head anchor
+         serves; turned sideways or lying down it is NOT, and hanging a cape off
+         the head then puts it over the animal's face. Every sprite is drawn
+         centred on x = 0 and standing on the same floor about 0.38 of a pet
+         size below the origin, so the torso is halfway between the head and
+         that floor, near the middle of the picture. Estimated rather than
+         written down per pet: a cape is forgiving about a few hundredths. */
+      const bodyX = facing ? hx : 0;
+      const bodyY = facing ? hy : (hy + s * 0.38) / 2;
 
       switch (acc.draw) {
 
@@ -737,17 +754,23 @@
           /* Behind the pet, on the body. Built from three overlapping feather
              lobes a side rather than one smooth blade — a blade at this size
              reads as a fin — and outlined, because they are the same white as
-             the goose wearing them. */
-          const wy = hy + b * 0.14;
+             the goose wearing them. Off the shoulders, not off the head: side
+             on, the head is a body-length in front of where these belong. */
+          /* Side on, they ride at the shoulder — which is up at the head's own
+             height, not halfway down the body. Set by the torso instead, they
+             sat inside the outline of every round pet and never showed. */
+          const wy = facing ? hy + b * 0.14 : hy - u * (lying ? 0.95 : 0.15);
+          const wx = facing ? hx : bodyX + b * 0.12;
+          const sweep = lying ? 0.72 : 1;
           [-1, 1].forEach(sgn => {
-            const rx = hx + sgn * b * 0.09;
+            const rx = wx + sgn * b * 0.09;
             const quill = accGrad(ctx, wy - b * 0.22, wy + b * 0.10, '#ffffff', '#bccbe3');
             [[0.40, -0.20, 0.09], [0.33, -0.07, 0.085], [0.24, 0.04, 0.075]].forEach(([len, lift, th]) => {
               accShape(ctx, quill, ink * 0.8, () => {
                 ctx.moveTo(rx, wy + b * 0.05);
-                ctx.quadraticCurveTo(rx + sgn * b * len * 0.55, wy + b * (lift - th * 1.5),
-                                     rx + sgn * b * len, wy + b * lift);
-                ctx.quadraticCurveTo(rx + sgn * b * len * 0.50, wy + b * (lift + th),
+                ctx.quadraticCurveTo(rx + sgn * b * len * 0.55, wy + b * (lift - th * 1.5) * sweep,
+                                     rx + sgn * b * len, wy + b * lift * sweep);
+                ctx.quadraticCurveTo(rx + sgn * b * len * 0.50, wy + b * (lift * sweep + th),
                                      rx, wy + b * 0.05);
                 ctx.closePath();
               });
@@ -757,32 +780,71 @@
         }
 
         case 'cape': {
-          // Also behind the pet: hangs from the neck and flares out past it.
+          /* Also behind the pet. Which way it falls depends on the pose: from
+             the throat when the pet faces you, streaming back over the body
+             when it walks, and spread out flat beside it when it sleeps. Hung
+             the one way, a walking pet wore its cape over its face and a
+             sleeping one lay next to a red slab on the floor. */
+          const red = (y0, y1) => accGrad(ctx, y0, y1, '#e0454c', '#8e1b22');
+          if (lying) {
+            // Spread out along the animal, low and wide, like a dropped cloak.
+            const cy = bodyY + b * 0.08, head = bodyX + b * 0.34, tail = bodyX - b * 0.64;
+            accShape(ctx, red(cy - b * 0.20, cy + b * 0.14), ink, () => {
+              // Rides UP behind the animal as well as lying under it, or all
+              // that shows of it is a red mat it appears to be sleeping on.
+              ctx.moveTo(head, cy - b * 0.08);
+              ctx.quadraticCurveTo(tail + b * 0.20, cy - b * 0.30, tail, cy - b * 0.06);
+              ctx.quadraticCurveTo(tail + b * 0.10, cy + b * 0.12, tail + b * 0.34, cy + b * 0.14);
+              ctx.quadraticCurveTo(head - b * 0.08, cy + b * 0.15, head, cy - b * 0.08);
+              ctx.closePath();
+            });
+            accShape(ctx, '#ffd23f', ink * 0.7, () => ctx.arc(head - b * 0.03, cy - b * 0.06, b * 0.026, 0, Math.PI * 2));
+            break;
+          }
+          if (!facing) {
+            /* Walking: from the shoulder, back over the spine and out past the
+               rump. It has to clear the animal's own outline to be seen at all
+               — drawn tight to the body it vanished behind every wide pet —
+               and stop above the floor, or it trails through the ground. */
+            const neckX = bodyX + b * 0.30, neckY = hy + u * 0.45;
+            const tail = bodyX - b * 0.82, hem = bodyY + b * 0.18;
+            accShape(ctx, red(neckY, hem), ink, () => {
+              ctx.moveTo(neckX, neckY);
+              // Top edge follows the spine DOWN as it goes back; held level it
+              // came out a banner the height of the animal.
+              ctx.quadraticCurveTo(bodyX - b * 0.28, hy + u * 0.72, tail + b * 0.10, hy + u * 0.95);
+              ctx.quadraticCurveTo(tail - b * 0.04, bodyY + b * 0.02, tail, hem - b * 0.04);
+              ctx.quadraticCurveTo(tail + b * 0.20, hem - b * 0.10, tail + b * 0.34, hem);
+              ctx.quadraticCurveTo(bodyX + b * 0.05, hem - b * 0.14, neckX + b * 0.04, neckY + b * 0.08);
+              ctx.closePath();
+            });
+            accShape(ctx, '#ffd23f', ink * 0.7, () => ctx.arc(neckX + b * 0.01, neckY + b * 0.03, b * 0.026, 0, Math.PI * 2));
+            break;
+          }
           const ny = hy + u * 0.80, hem = hy + b * 0.62, w = b * 0.42;
-          accShape(ctx, accGrad(ctx, ny, hem, '#e0454c', '#8e1b22'), ink, () => {
-            ctx.moveTo(hx - b * 0.13, ny);
-            ctx.quadraticCurveTo(hx - w * 0.9, hem - b * 0.20, hx - w, hem);
-            ctx.quadraticCurveTo(hx - w * 0.45, hem + b * 0.05, hx, hem - b * 0.01);
-            ctx.quadraticCurveTo(hx + w * 0.45, hem + b * 0.05, hx + w, hem);
-            ctx.quadraticCurveTo(hx + w * 0.9, hem - b * 0.20, hx + b * 0.13, ny);
+          accShape(ctx, red(ny, hem), ink, () => {
+            ctx.moveTo(bodyX - b * 0.13, ny);
+            ctx.quadraticCurveTo(bodyX - w * 0.9, hem - b * 0.20, bodyX - w, hem);
+            ctx.quadraticCurveTo(bodyX - w * 0.45, hem + b * 0.05, bodyX, hem - b * 0.01);
+            ctx.quadraticCurveTo(bodyX + w * 0.45, hem + b * 0.05, bodyX + w, hem);
+            ctx.quadraticCurveTo(bodyX + w * 0.9, hem - b * 0.20, bodyX + b * 0.13, ny);
             ctx.closePath();
           });
           ctx.globalAlpha = 0.22;
           accShape(ctx, '#3d0c10', 0, () => {
-            ctx.moveTo(hx + b * 0.02, ny + b * 0.02);
-            ctx.quadraticCurveTo(hx + w * 0.35, hem - b * 0.16, hx + w * 0.42, hem - b * 0.01);
-            ctx.lineTo(hx + w * 0.14, hem - b * 0.01);
+            ctx.moveTo(bodyX + b * 0.02, ny + b * 0.02);
+            ctx.quadraticCurveTo(bodyX + w * 0.35, hem - b * 0.16, bodyX + w * 0.42, hem - b * 0.01);
+            ctx.lineTo(bodyX + w * 0.14, hem - b * 0.01);
             ctx.closePath();
           });
           ctx.globalAlpha = 1;
-          // Collar and clasp, at the throat.
           accShape(ctx, '#c9333a', ink, () => {
-            ctx.moveTo(hx - b * 0.15, ny - b * 0.02);
-            ctx.quadraticCurveTo(hx, ny + b * 0.05, hx + b * 0.15, ny - b * 0.02);
-            ctx.quadraticCurveTo(hx, ny - b * 0.06, hx - b * 0.15, ny - b * 0.02);
+            ctx.moveTo(bodyX - b * 0.15, ny - b * 0.02);
+            ctx.quadraticCurveTo(bodyX, ny + b * 0.05, bodyX + b * 0.15, ny - b * 0.02);
+            ctx.quadraticCurveTo(bodyX, ny - b * 0.06, bodyX - b * 0.15, ny - b * 0.02);
             ctx.closePath();
           });
-          accShape(ctx, '#ffd23f', ink * 0.7, () => ctx.arc(hx, ny + b * 0.005, b * 0.028, 0, Math.PI * 2));
+          accShape(ctx, '#ffd23f', ink * 0.7, () => ctx.arc(bodyX, ny + b * 0.005, b * 0.028, 0, Math.PI * 2));
           break;
         }
 
@@ -878,7 +940,7 @@
 
         case 'starbadge': {
           // Pinned on the chest, which belongs to the body, not the head.
-          const cx = hx + b * 0.11, cy = hy + b * 0.30, r = b * 0.075;
+          const cx = bodyX + (facing ? b * 0.11 : b * 0.18), cy = facing ? hy + b * 0.26 : bodyY - b * 0.02, r = b * 0.075;
           const gold = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, 0, cx, cy, r);
           gold.addColorStop(0, '#ffe98a'); gold.addColorStop(0.55, '#fbbf24'); gold.addColorStop(1, '#c97d09');
           accShape(ctx, gold, ink * 0.9, () => accStarPath(ctx, cx, cy, r, r * 0.44, 5));
