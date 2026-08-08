@@ -238,7 +238,7 @@
          crouches to walk, so the walking head sits lower and smaller. */
       tom: {
         front: { hx:  0,    hy: -0.56, r: 0.20, ey: -0.52 },
-        side:  { hx:  0,    hy: -0.51, r: 0.17 },
+        side:  { hx:  0,    hy: -0.51, r: 0.17, ey: -0.47, ex: 0.12 },
         sleep: { hx:  0.25, hy:  0.12, r: 0.17 },
       },
       /* Jerry is upright with a big head centred over the body. Read off the
@@ -248,7 +248,7 @@
          head. Asleep is measured off the sheet's own cell. */
       jerry: {
         front: { hx:  0,    hy: -0.37, r: 0.23 },
-        side:  { hx:  0,    hy: -0.30, r: 0.24 },
+        side:  { hx:  0,    hy: -0.30, r: 0.24, ey: -0.25, ex: 0.14 },
         sleep: { hx:  0.20, hy:  0.12, r: 0.22 },
       },
       /* Both read off the sheet, which is drawn 1.15x the pet size with its feet
@@ -447,7 +447,10 @@
          A pair of sunglasses drawn symmetrically about the head centre put one
          lens on the cheek and one out in the air behind the skull. */
       const profile = !facing;
-      const eyeX = hx + (profile ? u * 0.34 : 0);
+      /* `ex` is written down for the two who need it: Tom and Jerry stand
+         upright with big faces low in a tall head, and a third of a radius
+         forward of the skull's centre lands behind the eye rather than on it. */
+      const eyeX = !profile ? hx : ho.ex === undefined ? hx + u * 0.34 : s * ho.ex;
       /* The torso. Facing you it is straight below the head, so the head anchor
          serves; turned sideways or lying down it is NOT, and hanging a cape off
          the head then puts it over the animal's face. Every sprite is drawn
@@ -573,8 +576,13 @@
         case 'scarf': {
           /* Round the neck, which is below the head facing you and BEHIND it
              in profile — centred on the head there, it hung off the muzzle. */
-          const nx = hx - (profile ? u * 0.55 : 0);
-          const ny = hy + u * (profile ? 0.72 : 0.86), w = b * (profile ? 0.20 : 0.26);
+          /* The neck is BETWEEN the head and the body, so in profile it is a
+             fraction of the way back from the head towards the middle of the
+             picture — not a fixed step measured in head radii, which is too
+             short a step on a big round head and put the scarf on the panda's
+             muzzle and the capybara's cheek. */
+          const nx = profile ? hx * 0.62 : hx;
+          const ny = hy + u * (profile ? 0.55 : 0.86), w = b * (profile ? 0.17 : 0.26);
           const red = accGrad(ctx, ny - b * 0.06, ny + b * 0.10, '#e8464d', '#a81f27');
           accShape(ctx, red, ink, () => {
             ctx.moveTo(nx - w, ny - b * 0.05);
@@ -805,24 +813,24 @@
         }
 
         case 'wings': {
-          /* Behind the pet, on the body. Built from three overlapping feather
-             lobes a side rather than one smooth blade — a blade at this size
-             reads as a fin — and outlined, because they are the same white as
-             the goose wearing them. Off the shoulders, not off the head: side
-             on, the head is a body-length in front of where these belong. */
-          // Side on they ride at the shoulder — see shoulderY above.
+          /* Three overlapping feather lobes a side rather than one smooth
+             blade — a blade at this size reads as a fin — and outlined,
+             because they are the same white as the goose wearing them.
+             In profile BOTH sweep back: drawn as a symmetric pair, the near
+             one went out over the animal's chest with nothing holding it. */
           const wy = facing ? hy + b * 0.14 : lying ? hy - u * 0.95 : shoulderY;
           const wx = facing ? hx : bodyX + b * 0.12;
-          const sweep = lying ? 0.72 : 1;
-          [-1, 1].forEach(sgn => {
-            const rx = wx + sgn * b * 0.09;
-            const quill = accGrad(ctx, wy - b * 0.22, wy + b * 0.10, '#ffffff', '#bccbe3');
+          const plan = facing ? [[-1, 1, 1], [1, 1, 1]] : [[-1, 0.86, 0.72], [-1, 1, 1]];
+          plan.forEach(([sgn, scale, shade]) => {
+            const rx = wx + sgn * b * 0.09 * scale + (facing ? 0 : b * 0.10 * (1 - scale) * 3);
+            const quill = accGrad(ctx, wy - b * 0.22, wy + b * 0.10,
+              shade < 1 ? '#dbe4f0' : '#ffffff', shade < 1 ? '#98a9c4' : '#bccbe3');
             [[0.40, -0.20, 0.09], [0.33, -0.07, 0.085], [0.24, 0.04, 0.075]].forEach(([len, lift, th]) => {
               accShape(ctx, quill, ink * 0.8, () => {
                 ctx.moveTo(rx, wy + b * 0.05);
-                ctx.quadraticCurveTo(rx + sgn * b * len * 0.55, wy + b * (lift - th * 1.5) * sweep,
-                                     rx + sgn * b * len, wy + b * lift * sweep);
-                ctx.quadraticCurveTo(rx + sgn * b * len * 0.50, wy + b * (lift * sweep + th),
+                ctx.quadraticCurveTo(rx + sgn * b * len * scale * 0.55, wy + b * (lift - th * 1.5),
+                                     rx + sgn * b * len * scale, wy + b * lift);
+                ctx.quadraticCurveTo(rx + sgn * b * len * scale * 0.50, wy + b * (lift + th),
                                      rx, wy + b * 0.05);
                 ctx.closePath();
               });
@@ -854,30 +862,42 @@
             break;
           }
           if (!facing) {
-            /* Over the back and streaming behind. Drawn in the FRONT layer for
-               this pose (see the layer choice above), so it reads as cloth
-               lying on the animal rather than a wedge appearing past its rump. */
-            const neckX = bodyX + b * 0.22, neckY = shoulderY - b * 0.02;
-            const tail = bodyX - b * 0.62, hem = bodyY + b * 0.16;
-            accShape(ctx, red(neckY, hem), ink, () => {
-              ctx.moveTo(neckX, neckY);
-              // Back edge over the spine, then down; the FRONT edge falls away
-              // behind the shoulder at once, or the cloth covers the chest and
-              // the animal walks about inside a red bag.
-              ctx.quadraticCurveTo(bodyX - b * 0.16, neckY - b * 0.04, tail + b * 0.04, neckY + b * 0.10);
-              ctx.quadraticCurveTo(tail - b * 0.05, bodyY, tail, hem);
-              ctx.quadraticCurveTo(tail + b * 0.20, hem - b * 0.06, tail + b * 0.34, hem + b * 0.02);
-              ctx.quadraticCurveTo(bodyX - b * 0.02, hem - b * 0.10, neckX - b * 0.06, neckY + b * 0.09);
-              ctx.closePath();
-            });
+            /* Drawn in the FRONT layer for this pose (see the layer choice
+               above), so it reads as cloth lying ON the animal. Which cloth
+               depends on how the animal is built: over the back of something
+               that walks on four legs, straight down the back of something
+               standing on two. One shape for both put a red sheet across Tom's
+               chest with nothing behind it. */
+            const neckY = upright ? hy + u * 0.85 : shoulderY - b * 0.02;
+            const neckX = upright ? hx - b * 0.08 : bodyX + b * 0.22;
+            if (upright) {
+              const hem = bodyY + b * 0.22, wide = b * 0.30;
+              accShape(ctx, red(neckY, hem), ink, () => {
+                ctx.moveTo(neckX + b * 0.07, neckY);
+                ctx.quadraticCurveTo(neckX - b * 0.24, neckY + b * 0.18, neckX - wide, hem - b * 0.04);
+                ctx.quadraticCurveTo(neckX - wide * 0.5, hem + b * 0.06, neckX + b * 0.06, hem);
+                ctx.quadraticCurveTo(neckX + b * 0.10, neckY + b * 0.20, neckX + b * 0.07, neckY);
+                ctx.closePath();
+              });
+            } else {
+              const tail = bodyX - b * 0.54, hem = bodyY + b * 0.12;
+              accShape(ctx, red(neckY, hem), ink, () => {
+                ctx.moveTo(neckX, neckY);
+                ctx.quadraticCurveTo(bodyX - b * 0.14, neckY - b * 0.03, tail + b * 0.04, neckY + b * 0.10);
+                ctx.quadraticCurveTo(tail - b * 0.04, bodyY, tail, hem);
+                ctx.quadraticCurveTo(tail + b * 0.18, hem - b * 0.05, tail + b * 0.30, hem + b * 0.02);
+                ctx.quadraticCurveTo(bodyX - b * 0.02, hem - b * 0.09, neckX - b * 0.06, neckY + b * 0.08);
+                ctx.closePath();
+              });
+            }
             // Collar over the shoulders, and the clasp at the throat.
             accShape(ctx, '#c9333a', ink, () => {
-              ctx.moveTo(neckX - b * 0.10, neckY + b * 0.02);
-              ctx.quadraticCurveTo(neckX + b * 0.02, neckY - b * 0.07, neckX + b * 0.10, neckY + b * 0.01);
-              ctx.quadraticCurveTo(neckX + b * 0.01, neckY + b * 0.05, neckX - b * 0.10, neckY + b * 0.02);
+              ctx.moveTo(neckX - b * 0.08, neckY + b * 0.02);
+              ctx.quadraticCurveTo(neckX + b * 0.02, neckY - b * 0.06, neckX + b * 0.09, neckY + b * 0.01);
+              ctx.quadraticCurveTo(neckX + b * 0.01, neckY + b * 0.05, neckX - b * 0.08, neckY + b * 0.02);
               ctx.closePath();
             });
-            accShape(ctx, '#ffd23f', ink * 0.7, () => ctx.arc(neckX + b * 0.02, neckY + b * 0.01, b * 0.026, 0, Math.PI * 2));
+            accShape(ctx, '#ffd23f', ink * 0.7, () => ctx.arc(neckX + b * 0.01, neckY + b * 0.01, b * 0.024, 0, Math.PI * 2));
             break;
           }
           const ny = hy + u * 0.80, hem = hy + b * 0.62, w = b * 0.42;
@@ -912,35 +932,39 @@
              the pet looks THROUGH the mask. Drawn as one hood and the slit cut
              out of it, the eyes went behind the cloth on every pet whose face
              is not proportioned like the drawing.
-             In profile the knot moves to the BACK of the head: tied on the
-             +x side, where the face is, it sat on the animal's nose. */
+             In profile it is not symmetric: the opening is at the FRONT, so
+             the cloth stops short of the muzzle and reaches back over the neck
+             instead. Centred, it swallowed the nose and the whiskers with it,
+             and the knot went on the face — that moves behind too. */
+          const fwd = profile ? u * 0.66 : u * 0.92;   // how far over the face
+          const bak = profile ? u * 1.02 : u * 0.92;   // and how far behind it
           const slitTop = ey - u * 0.24, slitBot = ey + u * 0.20;
           const cloth = accGrad(ctx, top - u * 0.2, hy + u, '#33343d', '#17181f');
           accShape(ctx, cloth, ink, () => {
-            ctx.moveTo(hx - u * 1.03, slitTop);
-            ctx.quadraticCurveTo(hx - u * 1.06, top - u * 0.30, hx, top - u * 0.32);
-            ctx.quadraticCurveTo(hx + u * 1.06, top - u * 0.30, hx + u * 1.03, slitTop);
-            ctx.quadraticCurveTo(hx, slitTop - u * 0.14, hx - u * 1.03, slitTop);
+            ctx.moveTo(hx - bak, slitTop);
+            ctx.quadraticCurveTo(hx - bak * 1.03, top - u * 0.16, hx, top - u * 0.18);
+            ctx.quadraticCurveTo(hx + fwd * 1.03, top - u * 0.16, hx + fwd, slitTop);
+            ctx.quadraticCurveTo(hx, slitTop - u * 0.12, hx - bak, slitTop);
             ctx.closePath();
           });
           accShape(ctx, cloth, ink, () => {
-            ctx.moveTo(hx - u * 1.0, slitBot);
-            ctx.quadraticCurveTo(hx, slitBot - u * 0.12, hx + u * 1.0, slitBot);
-            ctx.quadraticCurveTo(hx + u * 0.92, hy + u * 0.92, hx, hy + u * 1.0);
-            ctx.quadraticCurveTo(hx - u * 0.92, hy + u * 0.92, hx - u * 1.0, slitBot);
+            ctx.moveTo(hx - bak * 0.98, slitBot);
+            ctx.quadraticCurveTo(hx, slitBot - u * 0.12, hx + fwd * 0.98, slitBot);
+            ctx.quadraticCurveTo(hx + fwd * 0.88, hy + u * 0.80, hx, hy + u * 0.88);
+            ctx.quadraticCurveTo(hx - bak * 0.88, hy + u * 0.80, hx - bak * 0.98, slitBot);
             ctx.closePath();
           });
           // The knot, and its two tails streaming off behind the head.
-          const kd = profile ? -1 : 1;
-          accShape(ctx, '#22232b', ink, () => ctx.ellipse(hx + kd * u * 1.0, slitTop + u * 0.18, u * 0.17, u * 0.15, 0, 0, Math.PI * 2));
+          const kd = profile ? -1 : 1, kx = hx + kd * (profile ? bak : fwd);
+          accShape(ctx, '#22232b', ink, () => ctx.ellipse(kx, slitTop + u * 0.18, u * 0.17, u * 0.15, 0, 0, Math.PI * 2));
           accShape(ctx, '#22232b', ink, () => {
-            ctx.moveTo(hx + kd * u * 1.05, slitTop + u * 0.08);
-            ctx.lineTo(hx + kd * u * 1.62, slitTop - u * 0.10);
-            ctx.lineTo(hx + kd * u * 1.55, slitTop + u * 0.22);
+            ctx.moveTo(kx + kd * u * 0.05, slitTop + u * 0.08);
+            ctx.lineTo(kx + kd * u * 0.62, slitTop - u * 0.10);
+            ctx.lineTo(kx + kd * u * 0.55, slitTop + u * 0.22);
             ctx.closePath();
-            ctx.moveTo(hx + kd * u * 1.05, slitTop + u * 0.26);
-            ctx.lineTo(hx + kd * u * 1.58, slitTop + u * 0.44);
-            ctx.lineTo(hx + kd * u * 1.10, slitTop + u * 0.40);
+            ctx.moveTo(kx + kd * u * 0.05, slitTop + u * 0.26);
+            ctx.lineTo(kx + kd * u * 0.58, slitTop + u * 0.44);
+            ctx.lineTo(kx + kd * u * 0.10, slitTop + u * 0.40);
             ctx.closePath();
           });
           break;
