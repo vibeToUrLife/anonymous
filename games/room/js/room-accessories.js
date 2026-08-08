@@ -576,12 +576,12 @@
         case 'scarf': {
           /* Round the neck, which is below the head facing you and BEHIND it
              in profile — centred on the head there, it hung off the muzzle. */
-          /* The neck is BETWEEN the head and the body, so in profile it is a
-             fraction of the way back from the head towards the middle of the
-             picture — not a fixed step measured in head radii, which is too
-             short a step on a big round head and put the scarf on the panda's
-             muzzle and the capybara's cheek. */
-          const nx = profile ? hx * 0.62 : hx;
+          /* The neck is where the head ENDS — its back edge — which is the one
+             description that holds for a panda's huge round skull and a fox's
+             narrow one alike. A fraction of the way back towards the body was
+             still landing on the panda's muzzle. Upright pets keep the head's
+             own x: their neck is under it, not behind it. */
+          const nx = profile && !upright ? hx - u * 0.95 : hx;
           const ny = hy + u * (profile ? 0.55 : 0.86), w = b * (profile ? 0.17 : 0.26);
           const red = accGrad(ctx, ny - b * 0.06, ny + b * 0.10, '#e8464d', '#a81f27');
           accShape(ctx, red, ink, () => {
@@ -868,7 +868,10 @@
                that walks on four legs, straight down the back of something
                standing on two. One shape for both put a red sheet across Tom's
                chest with nothing behind it. */
-            const neckY = upright ? hy + u * 0.85 : shoulderY - b * 0.02;
+            /* Hung off the head, the goose's went on halfway up its neck and
+               reached the floor. Never higher than a body-length above the
+               torso, which is where a neck meets a pair of shoulders. */
+            const neckY = upright ? Math.max(hy + u * 0.85, bodyY - b * 0.42) : shoulderY - b * 0.02;
             const neckX = upright ? hx - b * 0.08 : bodyX + b * 0.22;
             if (upright) {
               const hem = bodyY + b * 0.22, wide = b * 0.30;
@@ -880,13 +883,16 @@
                 ctx.closePath();
               });
             } else {
-              const tail = bodyX - b * 0.54, hem = bodyY + b * 0.12;
+              /* Past the rump, and flicked up at the trailing corner. Stopped
+                 at the animal's own outline it lay there like a saddle blanket
+                 — what says cape is the bit behind that is not on the pet. */
+              const tail = bodyX - b * 0.78, hem = bodyY + b * 0.12;
               accShape(ctx, red(neckY, hem), ink, () => {
                 ctx.moveTo(neckX, neckY);
-                ctx.quadraticCurveTo(bodyX - b * 0.14, neckY - b * 0.03, tail + b * 0.04, neckY + b * 0.10);
-                ctx.quadraticCurveTo(tail - b * 0.04, bodyY, tail, hem);
-                ctx.quadraticCurveTo(tail + b * 0.18, hem - b * 0.05, tail + b * 0.30, hem + b * 0.02);
-                ctx.quadraticCurveTo(bodyX - b * 0.02, hem - b * 0.09, neckX - b * 0.06, neckY + b * 0.08);
+                ctx.quadraticCurveTo(bodyX - b * 0.20, neckY - b * 0.04, tail + b * 0.06, neckY + b * 0.04);
+                ctx.quadraticCurveTo(tail - b * 0.06, neckY + b * 0.14, tail - b * 0.02, hem - b * 0.06);
+                ctx.quadraticCurveTo(tail + b * 0.16, hem - b * 0.14, tail + b * 0.26, hem + b * 0.01);
+                ctx.quadraticCurveTo(bodyX - b * 0.04, hem - b * 0.07, neckX - b * 0.06, neckY + b * 0.08);
                 ctx.closePath();
               });
             }
@@ -936,22 +942,22 @@
              the cloth stops short of the muzzle and reaches back over the neck
              instead. Centred, it swallowed the nose and the whiskers with it,
              and the knot went on the face — that moves behind too. */
-          const fwd = profile ? u * 0.66 : u * 0.92;   // how far over the face
-          const bak = profile ? u * 1.02 : u * 0.92;   // and how far behind it
-          const slitTop = ey - u * 0.24, slitBot = ey + u * 0.20;
+          const fwd = profile ? u * 0.62 : u * 0.88;   // how far over the face
+          const bak = profile ? u * 0.94 : u * 0.88;   // and how far behind it
+          const slitTop = ey - u * 0.30, slitBot = ey + u * 0.28;
           const cloth = accGrad(ctx, top - u * 0.2, hy + u, '#33343d', '#17181f');
           accShape(ctx, cloth, ink, () => {
             ctx.moveTo(hx - bak, slitTop);
-            ctx.quadraticCurveTo(hx - bak * 1.03, top - u * 0.16, hx, top - u * 0.18);
-            ctx.quadraticCurveTo(hx + fwd * 1.03, top - u * 0.16, hx + fwd, slitTop);
+            ctx.quadraticCurveTo(hx - bak * 1.02, top + u * 0.02, hx, top - u * 0.02);
+            ctx.quadraticCurveTo(hx + fwd * 1.02, top + u * 0.02, hx + fwd, slitTop);
             ctx.quadraticCurveTo(hx, slitTop - u * 0.12, hx - bak, slitTop);
             ctx.closePath();
           });
           accShape(ctx, cloth, ink, () => {
             ctx.moveTo(hx - bak * 0.98, slitBot);
             ctx.quadraticCurveTo(hx, slitBot - u * 0.12, hx + fwd * 0.98, slitBot);
-            ctx.quadraticCurveTo(hx + fwd * 0.88, hy + u * 0.80, hx, hy + u * 0.88);
-            ctx.quadraticCurveTo(hx - bak * 0.88, hy + u * 0.80, hx - bak * 0.98, slitBot);
+            ctx.quadraticCurveTo(hx + fwd * 0.86, hy + u * 0.60, hx, hy + u * 0.70);
+            ctx.quadraticCurveTo(hx - bak * 0.86, hy + u * 0.60, hx - bak * 0.98, slitBot);
             ctx.closePath();
           });
           // The knot, and its two tails streaming off behind the head.
