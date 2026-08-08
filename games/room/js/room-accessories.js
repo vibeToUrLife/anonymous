@@ -237,7 +237,7 @@
          accessories were sized to the head as well, it was a doll's hat. He
          crouches to walk, so the walking head sits lower and smaller. */
       tom: {
-        front: { hx:  0,    hy: -0.56, r: 0.20 },
+        front: { hx:  0,    hy: -0.56, r: 0.20, ey: -0.52 },
         side:  { hx:  0,    hy: -0.51, r: 0.17 },
         sleep: { hx:  0.25, hy:  0.12, r: 0.17 },
       },
@@ -402,17 +402,28 @@
       // The halo hangs ABOVE the crown, and it is the ring that has to hang
       // there — the sparkles above it are half the picture's height.
       halo:       { w: 0.68, y: -0.24, ay: 0.69, ref: 'top' },
-      // A head-wrap: the opening goes over the crown and the cloth falls round.
-      bandana:    { w: 1.08, y:  0.08, ay: 0,    ref: 'top' },
+
       // Worn on the face. The eye line is the head centre.
       glasses:    { w: 0.84, y: -0.04 },
       heartglass: { w: 0.84, y: -0.04 },
-      ninja:      { w: 1.24, x:  0.08, y: -0.12 },
-      monocle:    { w: 0.72, x:  0.28, y:  0.08, ax: 0.36, ay: 0.34 },
-      pirate:     { w: 1.00, x: -0.40, y:  0.04, ax: 0.33, ay: 0.62 },
-      // Worn on the BODY, below the head, and sized to the animal rather than
-      // to its skull — a cape is a cape whatever the head on top of it.
+      /* All three name a point INSIDE their own drawing, because none of them
+         is centred on the thing that has to line up. Hung off their middles,
+         the hood's slit rode above the eyes and left the pet looking blind-
+         folded, and the lens and the patch sat off the eye they belong on. */
+      ninja:      { w: 1.24, y:  0,     ax: 0.34, ay: 0.44 },   // the eye slit
+      monocle:    { w: 0.72, x:  0.28, y: 0.08, ax: 0.36, ay: 0.34 },  // the lens
+      pirate:     { w: 0.85, x: -0.34, y: 0.02, ax: 0.33, ay: 0.62 },  // the patch
+      /* Worn on the BODY, below the head, and sized to the animal rather than
+         to its skull — a cape is a cape whatever the head on top of it.
+
+         The bandana is here rather than on the crown, which is where it started
+         out. It is drawn as a neckerchief — a triangle with the knot to one
+         side and the opening along the top — and worn on the head, seen from
+         the front, the triangle simply hangs over the face: on nearly every pet
+         it came out a blindfold. Round the neck it is the thing that was drawn,
+         and it never fights the eyes. */
       scarf:      { w: 0.48, x: -0.04, y: 0.14, ay: 0, on: 'body' },
+      bandana:    { w: 0.50, x: -0.02, y: 0.10, ay: 0.10, on: 'body' },
       starbadge:  { w: 0.22, x:  0.11, y: 0.30,        on: 'body' },
       /* Wide enough to clear the widest pet. Both are drawn BEHIND the animal,
          and at the width a cat wanted the hamster and the capybara — round,
@@ -469,6 +480,11 @@
       const hx = s * ho.hx;   // head centre X
       const hy = s * ho.hy;   // head centre Y
       const hr = s * ho.r;    // head radius
+      /* Where the EYES are, which is the head centre on almost every pet and is
+         written down separately where it is not: a tall head (Tom's) has its
+         box centred above its eyes, and glasses hung off the centre ride up the
+         forehead. Hats keep using the crown, which is the same either way. */
+      const ey = s * (ho.ey === undefined ? ho.hy : ho.ey);
       const art = ACC_ART[acc.draw];
       if (!art) return;
       const img = accArtImage(acc.draw, onReady);
@@ -481,9 +497,10 @@
       const oUnit = onBody ? s : hr;
       const w = wUnit * art.w;
       const h = w * img.naturalHeight / img.naturalWidth;
-      // y is measured from the crown for anything worn on top of the head, and
-      // from the head centre for everything else.
-      const originY = art.ref === 'top' ? hy - hr : hy;
+      // Measured from the crown for anything worn on top of the head, from the
+      // eye line for anything worn on the face, and from the head centre for
+      // the pieces that hang on the body.
+      const originY = art.ref === 'top' ? hy - hr : onBody ? hy : ey;
       ctx.drawImage(img,
         hx + oUnit * (art.x || 0) - w * (art.ax === undefined ? 0.5 : art.ax),
         originY + oUnit * (art.y || 0) - h * (art.ay === undefined ? 0.5 : art.ay),
