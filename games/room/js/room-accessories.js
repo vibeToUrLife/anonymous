@@ -244,9 +244,15 @@
         side:  { hx:  0,    hy: -0.28, r: 0.28 },
         sleep: { hx:  0.20, hy:  0.12, r: 0.22 },
       },
-      // Read off the sprite's side pose: the head sits forward and high, and
-      // the sheet is drawn 1.15x the pet size with its feet at +0.40.
-      capybara:{ hx:  0.25, hy: -0.23, r: 0.15 }
+      /* Both read off the sheet, which is drawn 1.15x the pet size with its feet
+         at +0.40. The capybara used to carry the SIDE anchor alone, and its
+         front cell is a sitting pose seen head-on — head centred, not a quarter
+         of a body to the right — so anything it wore sat out beside its ear
+         whenever it stopped and turned to face you. */
+      capybara: {
+        front: { hx:  0.00, hy: -0.28, r: 0.22 },
+        side:  { hx:  0.25, hy: -0.23, r: 0.15 },
+      },
     };
 
     /* The head anchor for one pet in one pose, always as a plain {hx,hy,r}.
@@ -273,7 +279,11 @@
        the other half. In the room they are worn against a pet, which is what
        this grey stands in for. */
     function drawAccessoryPreview(ctx, accId, size) {
-      const s = size * 0.7;
+      /* Sized so the TALLEST accessory fits the square, not so the head fills
+         it: a wizard hat reaches 0.6 of the pet size above the crown and a cape
+         hangs 0.77 below the head, and at the old 0.7 the cape and the scarf
+         ran off the bottom of every card. */
+      const s = size * 0.62;
       // The head below faces the viewer — two ears, two eyes — so the accessory
       // is anchored to the FRONT pose. On the side anchor it would land where a
       // walking cat's head is, off past the edge of this square.
@@ -286,11 +296,17 @@
       ctx.fill();
 
       ctx.save();
-      // Centre so the cat's head anchor lands in the middle of the square
-      ctx.translate(size / 2 - s * ho.hx, size / 2 + s * 0.1 - s * ho.hy);
+      /* Centre so the cat's head anchor lands in the middle of the square —
+         nudged UP rather than down, because far more of an accessory hangs
+         below a head (scarf, cape, wings) than stands above it. */
+      ctx.translate(size / 2 - s * ho.hx, size / 2 - s * 0.05 - s * ho.hy);
       const hx = s * ho.hx, hy = s * ho.hy;
-      // Anything worn BEHIND the pet — wings — goes down before the head does.
-      drawPetAccessory(ctx, 'cat', accId, s, 'back', 'front');
+      /* This square is painted ONCE, unlike the room, so a picture that has not
+         arrived yet would leave a bare head sitting on the card for good. Draw
+         the whole square again when it lands. */
+      const again = () => drawAccessoryPreview(ctx, accId, size);
+      // Anything worn BEHIND the pet — the wings, the cape — goes down first.
+      drawPetAccessory(ctx, 'cat', accId, s, 'back', 'front', again);
       // Stand-in head: skull, ears, eyes
       ctx.fillStyle = 'rgba(255,255,255,0.30)';
       ctx.beginPath(); ctx.arc(hx, hy, s * ho.r, 0, Math.PI * 2); ctx.fill();
@@ -299,7 +315,7 @@
       ctx.fillStyle = 'rgba(35,28,22,0.55)';
       ctx.beginPath(); ctx.arc(hx - s*0.08, hy - s*0.02, s*0.03, 0, Math.PI*2); ctx.fill();
       ctx.beginPath(); ctx.arc(hx + s*0.08, hy - s*0.02, s*0.03, 0, Math.PI*2); ctx.fill();
-      drawPetAccessory(ctx, 'cat', accId, s, 'front', 'front');
+      drawPetAccessory(ctx, 'cat', accId, s, 'front', 'front', again);
       ctx.restore();
     }
 
@@ -312,7 +328,12 @@
        other way throws. Hence a switch rather than a lookup table — a table
        would evaluate all seven names to build itself, so one absent module
        would take the other six down with it. */
-    function petPoseOf(type, moving, action) {
+    /* `view` is only read by the capybara. Its front cell is a SITTING pose, so
+       whether it is showing depends on something no pet module can see — the
+       room shows it to whoever has the capybara selected, the World to anyone
+       standing still — and the caller that already worked that out passes it
+       in rather than having this guess. */
+    function petPoseOf(type, moving, action, view) {
       switch (type) {
         case 'cat':     return typeof catPose     === 'function' ? catPose(moving, action)     : 'side';
         case 'dog':     return typeof dogPose     === 'function' ? dogPose(moving, action)     : 'side';
@@ -323,17 +344,102 @@
         case 'goose':   return typeof goosePose   === 'function' ? goosePose(moving, action)   : 'side';
         case 'tom':     return typeof tomPose     === 'function' ? tomPose(moving, action)     : 'side';
         case 'jerry':   return typeof jerryPose   === 'function' ? jerryPose(moving, action)   : 'side';
+        case 'capybara': return view === 'front' ? 'front' : 'side';
         default: return 'side';
       }
     }
 
-    // Accessories that render behind the pet body
-    const BACK_LAYER_ACCESSORIES = ['wings'];
+    /* Worn BEHIND the pet: drawn before the body, so the pet stands in front
+       of it. The cape joined the wings when the artwork landed — it is a real
+       drawing of a cape now, opaque, and in front it covered the pet wearing
+       it. */
+    const BACK_LAYER_ACCESSORIES = ['wings', 'cape'];
+
+    /* ── The pictures ─────────────────────────────────────────────────────
+       Each accessory is one drawing now (img/accessories/<draw>.png) where it
+       used to be twenty-odd canvas paths. The file says what it looks like;
+       this table says only how big it is drawn and where it sits.
+
+       `w` is the drawn width as a fraction of the pet size — kept at the width
+       each path version occupied, so nothing changes size on any pet.
+
+       `x`/`y` place the picture, in that same fraction of the pet size, from
+       the head centre — except under `ref: 'top'`, where y is measured from the
+       CROWN (the head centre less its radius). Hats use the crown because heads
+       differ between pets: a fox's is 0.18 of its body and a panda's 0.29, and
+       a hat measured from the centre sinks into one while hovering over the
+       other. This is what the paths did too, in the arithmetic.
+
+       `ax`/`ay` say which point OF THE PICTURE lands there, as a fraction of
+       its own width and height. The middle (0.5) unless said otherwise; ay:1 is
+       the bottom edge a hat stands on, ay:0 the top edge a scarf hangs from.
+       The monocle and the pirate patch name a point inside their own drawing —
+       the lens, the patch — because both pictures are mostly chain and strap,
+       and it is the lens that has to land on the eye. */
+    const ACC_ART = {
+      // Worn on the crown.
+      tophat:     { w: 0.40, y:  0.06, ay: 1,    ref: 'top' },
+      crown:      { w: 0.44, y:  0.04, ay: 1,    ref: 'top' },
+      wizard:     { w: 0.46, y:  0.05, ay: 1,    ref: 'top' },
+      partyhat:   { w: 0.30, y:  0.04, ay: 1,    ref: 'top' },
+      tiara:      { w: 0.40, y:  0.06, ay: 1,    ref: 'top' },
+      devil:      { w: 0.44, y:  0.06, ay: 1,    ref: 'top' },
+      bow:        { w: 0.30, x: 0.02, y: 0.05, ay: 1, ref: 'top' },
+      flower:     { w: 0.20, x: 0.13, y: 0.06, ay: 1, ref: 'top' },
+      // The halo hangs ABOVE the crown, and it is the ring that has to hang
+      // there — the sparkles above it are half the picture's height.
+      halo:       { w: 0.34, y: -0.06, ay: 0.69, ref: 'top' },
+      // A head-wrap: the opening goes over the crown and the cloth falls round.
+      bandana:    { w: 0.54, y:  0.02, ay: 0,    ref: 'top' },
+      // Worn on the face. The eye line is the head centre.
+      glasses:    { w: 0.42, y: -0.01 },
+      heartglass: { w: 0.42, y: -0.01 },
+      ninja:      { w: 0.62, x:  0.02, y: -0.03 },
+      monocle:    { w: 0.36, x:  0.07,  y:  0.02, ax: 0.36, ay: 0.34 },
+      pirate:     { w: 0.50, x: -0.10, y:  0.01, ax: 0.33, ay: 0.62 },
+      // Worn on the body, below the head.
+      scarf:      { w: 0.48, x: -0.04, y: 0.14, ay: 0 },
+      starbadge:  { w: 0.22, x: 0.11, y: 0.30 },
+      cape:       { w: 0.74, y: 0.10, ay: 0 },
+      wings:      { w: 0.95, y: 0.22 },
+    };
+
+    /* One file per accessory, fetched on FIRST WEAR rather than at page load: a
+       room of bare pets must not pay for nineteen drawings. Resolved against
+       this script's own URL, because the room and the World load it from
+       different depths, and carrying the script's own ?v= so new artwork ships
+       with the version that places it. */
+    const _accArtScript = (typeof document !== 'undefined' && document.currentScript && document.currentScript.src) || '';
+    function accArtUrl(draw) {
+      const q = _accArtScript.indexOf('?');
+      const file = draw + '.png' + (q >= 0 ? _accArtScript.slice(q) : '');
+      // The fallback is the room's own path, for anything that loads this file
+      // without a resolvable URL to hang the picture off.
+      try { return new URL('../img/accessories/' + file, _accArtScript).href; }
+      catch (e) { return 'room/img/accessories/' + file; }
+    }
+
+    const _accImgs = {};
+    /* The picture for one accessory, or null while it is still coming down the
+       wire. `onReady` matters for the pictures drawn ONCE — a shop card, a
+       gacha prize — which would otherwise stay empty for the one frame they
+       have; the room and the World redraw every frame and pass nothing. */
+    function accArtImage(draw, onReady) {
+      if (!ACC_ART[draw] || typeof Image === 'undefined') return null;
+      let img = _accImgs[draw];
+      if (!img) {
+        img = _accImgs[draw] = new Image();
+        img.src = accArtUrl(draw);
+      }
+      if (img.naturalWidth) return img;
+      if (onReady) img.addEventListener('load', onReady, { once: true });
+      return null;
+    }
 
     /* `pose` is only read for pets whose entry above is a set — the sprite pets
        that change silhouette. Everything else keeps one head all its life and
        ignores it, so callers that do not know the pose can leave it out. */
-    function drawPetAccessory(ctx, petType, accId, s, layer, pose) {
+    function drawPetAccessory(ctx, petType, accId, s, layer, pose, onReady) {
       if (!accId) return;
       const acc = PET_ACCESSORIES.find(a => a.id === accId);
       if (!acc) return;
@@ -345,601 +451,18 @@
       const hx = s * ho.hx;   // head centre X
       const hy = s * ho.hy;   // head centre Y
       const hr = s * ho.r;    // head radius
-      switch (acc.draw) {
-        case 'tophat':
-          ctx.fillStyle = '#1a1a2e';
-          ctx.fillRect(hx - s*0.12, hy - hr - s*0.2, s*0.24, s*0.2);
-          ctx.fillRect(hx - s*0.18, hy - hr - s*0.02, s*0.36, s*0.07);
-          ctx.fillStyle = '#c084fc';
-          ctx.fillRect(hx - s*0.1, hy - hr - s*0.08, s*0.2, s*0.03);
-          break;
-        case 'crown':
-          ctx.fillStyle = '#ffd700';
-          ctx.beginPath();
-          ctx.moveTo(hx - s*0.15, hy - hr + s*0.02);
-          ctx.lineTo(hx - s*0.18, hy - hr - s*0.16);
-          ctx.lineTo(hx - s*0.08, hy - hr - s*0.08);
-          ctx.lineTo(hx, hy - hr - s*0.20);
-          ctx.lineTo(hx + s*0.08, hy - hr - s*0.08);
-          ctx.lineTo(hx + s*0.18, hy - hr - s*0.16);
-          ctx.lineTo(hx + s*0.15, hy - hr + s*0.02);
-          ctx.closePath(); ctx.fill();
-          ctx.fillStyle = '#e74c3c';
-          ctx.beginPath(); ctx.arc(hx, hy - hr - s*0.12, s*0.025, 0, Math.PI*2); ctx.fill();
-          break;
-        case 'glasses':
-          ctx.strokeStyle = '#333'; ctx.lineWidth = s*0.02;
-          ctx.beginPath(); ctx.arc(hx - s*0.08, hy, s*0.06, 0, Math.PI*2); ctx.stroke();
-          ctx.beginPath(); ctx.arc(hx + s*0.08, hy, s*0.06, 0, Math.PI*2); ctx.stroke();
-          ctx.beginPath(); ctx.moveTo(hx - s*0.02, hy); ctx.lineTo(hx + s*0.02, hy); ctx.stroke();
-          ctx.fillStyle = 'rgba(0,0,0,0.25)';
-          ctx.beginPath(); ctx.arc(hx - s*0.08, hy, s*0.055, 0, Math.PI*2); ctx.fill();
-          ctx.beginPath(); ctx.arc(hx + s*0.08, hy, s*0.055, 0, Math.PI*2); ctx.fill();
-          break;
-        case 'bow':
-          ctx.fillStyle = '#ff69b4';
-          ctx.beginPath(); ctx.ellipse(hx - s*0.08, hy - hr, s*0.08, s*0.05, -0.3, 0, Math.PI*2); ctx.fill();
-          ctx.beginPath(); ctx.ellipse(hx + s*0.08, hy - hr, s*0.08, s*0.05, 0.3, 0, Math.PI*2); ctx.fill();
-          ctx.fillStyle = '#ff1493';
-          ctx.beginPath(); ctx.arc(hx, hy - hr, s*0.025, 0, Math.PI*2); ctx.fill();
-          break;
-        case 'scarf':
-          // Scarf wraps around the neck area (positioned relative to body, below the head)
-          ctx.fillStyle = '#e74c3c';
-          // Main scarf band (sits at neck level, just below the head)
-          ctx.beginPath();
-          ctx.ellipse(hx, hy + hr + s*0.02, s*0.22, s*0.05, 0, 0, Math.PI * 2);
-          ctx.fill();
-          // Scarf knot
-          ctx.fillStyle = '#c0392b';
-          ctx.beginPath(); ctx.arc(hx + s*0.08, hy + hr + s*0.04, s*0.035, 0, Math.PI * 2); ctx.fill();
-          // Hanging tail piece 1
-          ctx.fillStyle = '#e74c3c';
-          ctx.beginPath();
-          ctx.moveTo(hx + s*0.06, hy + hr + s*0.06);
-          ctx.quadraticCurveTo(hx + s*0.14, hy + hr + s*0.14, hx + s*0.10, hy + hr + s*0.24);
-          ctx.lineTo(hx + s*0.04, hy + hr + s*0.22);
-          ctx.quadraticCurveTo(hx + s*0.08, hy + hr + s*0.12, hx + s*0.02, hy + hr + s*0.06);
-          ctx.closePath(); ctx.fill();
-          // Hanging tail piece 2 (shorter)
-          ctx.beginPath();
-          ctx.moveTo(hx + s*0.08, hy + hr + s*0.06);
-          ctx.quadraticCurveTo(hx + s*0.18, hy + hr + s*0.10, hx + s*0.16, hy + hr + s*0.18);
-          ctx.lineTo(hx + s*0.12, hy + hr + s*0.16);
-          ctx.quadraticCurveTo(hx + s*0.14, hy + hr + s*0.08, hx + s*0.08, hy + hr + s*0.06);
-          ctx.closePath(); ctx.fill();
-          // Green stripe pattern on the scarf
-          ctx.fillStyle = '#27ae60';
-          ctx.beginPath();
-          ctx.ellipse(hx, hy + hr + s*0.02, s*0.20, s*0.015, 0, 0, Math.PI * 2);
-          ctx.fill();
-          // Fringe at end of tail
-          ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = s*0.01; ctx.lineCap = 'round';
-          for (let i = 0; i < 3; i++) {
-            ctx.beginPath();
-            ctx.moveTo(hx + s*0.08 + i*s*0.025, hy + hr + s*0.22);
-            ctx.lineTo(hx + s*0.08 + i*s*0.025, hy + hr + s*0.27);
-            ctx.stroke();
-          }
-          break;
-        case 'flower': {
-          const fc = ['#ff69b4','#ff69b4','#ff69b4','#ff69b4','#ff69b4'];
-          fc.forEach((c, i) => {
-            const a = (i / 5) * Math.PI * 2;
-            ctx.fillStyle = c;
-            ctx.beginPath(); ctx.arc(hx + Math.cos(a)*s*0.06, hy - hr + Math.sin(a)*s*0.06, s*0.03, 0, Math.PI*2); ctx.fill();
-          });
-          ctx.fillStyle = '#ffd700';
-          ctx.beginPath(); ctx.arc(hx, hy - hr, s*0.025, 0, Math.PI*2); ctx.fill();
-          break;
-        }
-        case 'bandana':
-          ctx.fillStyle = '#2c3e50';
-          ctx.beginPath();
-          ctx.moveTo(hx - s*0.18, hy - s*0.02); ctx.lineTo(hx + s*0.18, hy - s*0.02);
-          ctx.lineTo(hx + s*0.14, hy + s*0.06); ctx.lineTo(hx - s*0.14, hy + s*0.06);
-          ctx.closePath(); ctx.fill();
-          ctx.fillStyle = '#ecf0f1';
-          ctx.beginPath(); ctx.arc(hx, hy + s*0.02, s*0.015, 0, Math.PI*2); ctx.fill();
-          break;
-        case 'monocle':
-          ctx.strokeStyle = '#c9952a'; ctx.lineWidth = s*0.015;
-          ctx.beginPath(); ctx.arc(hx + s*0.08, hy, s*0.07, 0, Math.PI*2); ctx.stroke();
-          ctx.fillStyle = 'rgba(200,220,255,0.15)';
-          ctx.beginPath(); ctx.arc(hx + s*0.08, hy, s*0.06, 0, Math.PI*2); ctx.fill();
-          ctx.strokeStyle = '#c9952a'; ctx.lineWidth = s*0.008;
-          ctx.beginPath(); ctx.moveTo(hx + s*0.08, hy + s*0.07); ctx.lineTo(hx + s*0.08, hy + s*0.3); ctx.stroke();
-          break;
-        case 'halo':
-          ctx.strokeStyle = '#ffd700'; ctx.lineWidth = s*0.025;
-          ctx.globalAlpha = 0.7;
-          ctx.beginPath(); ctx.ellipse(hx, hy - hr - s*0.06, s*0.14, s*0.04, 0, 0, Math.PI*2); ctx.stroke();
-          ctx.globalAlpha = 1;
-          break;
-        case 'wizard':
-          ctx.fillStyle = '#2c1654';
-          ctx.beginPath();
-          ctx.moveTo(hx, hy - hr - s*0.35);
-          ctx.lineTo(hx - s*0.2, hy - hr + s*0.02);
-          ctx.lineTo(hx + s*0.2, hy - hr + s*0.02);
-          ctx.closePath(); ctx.fill();
-          ctx.fillStyle = '#ffd700';
-          ctx.beginPath(); ctx.arc(hx, hy - hr - s*0.28, s*0.025, 0, Math.PI*2); ctx.fill();
-          ctx.fillStyle = '#8b5cf6';
-          ctx.fillRect(hx - s*0.2, hy - hr - s*0.02, s*0.4, s*0.04);
-          break;
-        case 'partyhat':
-          ctx.fillStyle = '#ff6b6b';
-          ctx.beginPath();
-          ctx.moveTo(hx, hy - hr - s*0.28);
-          ctx.lineTo(hx - s*0.14, hy - hr + s*0.02);
-          ctx.lineTo(hx + s*0.14, hy - hr + s*0.02);
-          ctx.closePath(); ctx.fill();
-          // Stripes
-          ctx.fillStyle = '#fbbf24';
-          ctx.beginPath();
-          ctx.moveTo(hx - s*0.04, hy - hr - s*0.16);
-          ctx.lineTo(hx - s*0.1, hy - hr - s*0.04);
-          ctx.lineTo(hx + s*0.02, hy - hr - s*0.04);
-          ctx.closePath(); ctx.fill();
-          // Pom pom
-          ctx.fillStyle = '#34d399';
-          ctx.beginPath(); ctx.arc(hx, hy - hr - s*0.28, s*0.03, 0, Math.PI*2); ctx.fill();
-          break;
-        case 'heartglass':
-          ctx.fillStyle = '#ff1493';
-          // Left heart lens
-          ctx.beginPath();
-          ctx.moveTo(hx - s*0.08, hy + s*0.02);
-          ctx.bezierCurveTo(hx - s*0.08, hy - s*0.04, hx - s*0.16, hy - s*0.04, hx - s*0.16, hy);
-          ctx.bezierCurveTo(hx - s*0.16, hy + s*0.04, hx - s*0.08, hy + s*0.06, hx - s*0.08, hy + s*0.02);
-          ctx.fill();
-          // Right heart lens
-          ctx.beginPath();
-          ctx.moveTo(hx + s*0.08, hy + s*0.02);
-          ctx.bezierCurveTo(hx + s*0.08, hy - s*0.04, hx + s*0.16, hy - s*0.04, hx + s*0.16, hy);
-          ctx.bezierCurveTo(hx + s*0.16, hy + s*0.04, hx + s*0.08, hy + s*0.06, hx + s*0.08, hy + s*0.02);
-          ctx.fill();
-          // Bridge
-          ctx.strokeStyle = '#ff1493'; ctx.lineWidth = s*0.015;
-          ctx.beginPath(); ctx.moveTo(hx - s*0.02, hy); ctx.lineTo(hx + s*0.02, hy); ctx.stroke();
-          break;
-        case 'devil':
-          // Left horn — curved, tapered with depth shading
-          ctx.fillStyle = '#dc2626';
-          ctx.beginPath();
-          ctx.moveTo(hx - s*0.12, hy - hr + s*0.02);
-          ctx.quadraticCurveTo(hx - s*0.22, hy - hr - s*0.18, hx - s*0.10, hy - hr - s*0.14);
-          ctx.lineTo(hx - s*0.08, hy - hr + s*0.02);
-          ctx.closePath(); ctx.fill();
-          // Left horn dark inner side
-          ctx.fillStyle = '#991b1b';
-          ctx.beginPath();
-          ctx.moveTo(hx - s*0.10, hy - hr + s*0.02);
-          ctx.quadraticCurveTo(hx - s*0.18, hy - hr - s*0.12, hx - s*0.10, hy - hr - s*0.10);
-          ctx.lineTo(hx - s*0.09, hy - hr + s*0.02);
-          ctx.closePath(); ctx.fill();
-          // Left horn highlight
-          ctx.fillStyle = 'rgba(255,100,100,0.3)';
-          ctx.beginPath();
-          ctx.moveTo(hx - s*0.13, hy - hr);
-          ctx.quadraticCurveTo(hx - s*0.20, hy - hr - s*0.14, hx - s*0.12, hy - hr - s*0.12);
-          ctx.lineTo(hx - s*0.11, hy - hr);
-          ctx.closePath(); ctx.fill();
-          // Right horn — curved, tapered with depth shading
-          ctx.fillStyle = '#dc2626';
-          ctx.beginPath();
-          ctx.moveTo(hx + s*0.12, hy - hr + s*0.02);
-          ctx.quadraticCurveTo(hx + s*0.22, hy - hr - s*0.18, hx + s*0.10, hy - hr - s*0.14);
-          ctx.lineTo(hx + s*0.08, hy - hr + s*0.02);
-          ctx.closePath(); ctx.fill();
-          // Right horn dark inner side
-          ctx.fillStyle = '#991b1b';
-          ctx.beginPath();
-          ctx.moveTo(hx + s*0.10, hy - hr + s*0.02);
-          ctx.quadraticCurveTo(hx + s*0.18, hy - hr - s*0.12, hx + s*0.10, hy - hr - s*0.10);
-          ctx.lineTo(hx + s*0.09, hy - hr + s*0.02);
-          ctx.closePath(); ctx.fill();
-          // Right horn highlight
-          ctx.fillStyle = 'rgba(255,100,100,0.3)';
-          ctx.beginPath();
-          ctx.moveTo(hx + s*0.13, hy - hr);
-          ctx.quadraticCurveTo(hx + s*0.20, hy - hr - s*0.14, hx + s*0.12, hy - hr - s*0.12);
-          ctx.lineTo(hx + s*0.11, hy - hr);
-          ctx.closePath(); ctx.fill();
-          // Horn base ring
-          ctx.fillStyle = '#b91c1c';
-          ctx.beginPath(); ctx.ellipse(hx - s*0.10, hy - hr + s*0.02, s*0.04, s*0.015, 0, 0, Math.PI * 2); ctx.fill();
-          ctx.beginPath(); ctx.ellipse(hx + s*0.10, hy - hr + s*0.02, s*0.04, s*0.015, 0, 0, Math.PI * 2); ctx.fill();
-          break;
-        case 'wings':
-          // Angel wings — side view, natural proportions, not too tall
-          ctx.save();
-          const wingRootX = -s * 0.08;
-          const wingRootY = -s * 0.22;
-
-          // Soft glow
-          ctx.globalAlpha = 0.08;
-          const wingGlowGrad = ctx.createRadialGradient(wingRootX, wingRootY - s*0.12, 0, wingRootX, wingRootY - s*0.12, s*0.45);
-          wingGlowGrad.addColorStop(0, '#fff');
-          wingGlowGrad.addColorStop(1, 'rgba(255,255,255,0)');
-          ctx.fillStyle = wingGlowGrad;
-          ctx.fillRect(wingRootX - s*0.5, wingRootY - s*0.5, s*1.0, s*0.8);
-          ctx.globalAlpha = 1;
-
-          // --- Far wing (behind body, slightly to the left) ---
-          ctx.globalAlpha = 0.55;
-          ctx.fillStyle = '#c8d0e8';
-          ctx.beginPath();
-          ctx.moveTo(wingRootX - s*0.04, wingRootY + s*0.02);
-          ctx.quadraticCurveTo(wingRootX - s*0.22, wingRootY - s*0.20, wingRootX - s*0.14, wingRootY - s*0.36);
-          ctx.quadraticCurveTo(wingRootX - s*0.04, wingRootY - s*0.42, wingRootX + s*0.06, wingRootY - s*0.30);
-          ctx.quadraticCurveTo(wingRootX + s*0.10, wingRootY - s*0.16, wingRootX + s*0.04, wingRootY - s*0.04);
-          ctx.closePath(); ctx.fill();
-          ctx.strokeStyle = 'rgba(160,170,200,0.3)'; ctx.lineWidth = s*0.004;
-          for (let i = 0; i < 3; i++) {
-            ctx.beginPath();
-            ctx.moveTo(wingRootX - s*0.02, wingRootY + s*0.00 - i*s*0.015);
-            ctx.quadraticCurveTo(wingRootX - s*0.14, wingRootY - s*0.18 - i*s*0.04, wingRootX - s*0.06, wingRootY - s*0.30 - i*s*0.02);
-            ctx.stroke();
-          }
-          ctx.globalAlpha = 1;
-
-          // --- Near wing (front, slightly to the right, bigger) ---
-          ctx.fillStyle = '#e0e7ff';
-          ctx.beginPath();
-          ctx.moveTo(wingRootX + s*0.04, wingRootY + s*0.02);
-          ctx.quadraticCurveTo(wingRootX - s*0.10, wingRootY - s*0.22, wingRootX - s*0.02, wingRootY - s*0.42);
-          ctx.quadraticCurveTo(wingRootX + s*0.14, wingRootY - s*0.48, wingRootX + s*0.28, wingRootY - s*0.34);
-          ctx.quadraticCurveTo(wingRootX + s*0.34, wingRootY - s*0.18, wingRootX + s*0.24, wingRootY - s*0.04);
-          ctx.quadraticCurveTo(wingRootX + s*0.16, wingRootY + s*0.06, wingRootX + s*0.04, wingRootY + s*0.02);
-          ctx.closePath(); ctx.fill();
-          ctx.strokeStyle = 'rgba(180,190,220,0.35)'; ctx.lineWidth = s*0.005;
-          ctx.stroke();
-          // Mid feathers
-          ctx.fillStyle = 'rgba(200,210,240,0.7)';
-          ctx.beginPath();
-          ctx.moveTo(wingRootX + s*0.04, wingRootY + s*0.02);
-          ctx.quadraticCurveTo(wingRootX - s*0.02, wingRootY - s*0.14, wingRootX + s*0.04, wingRootY - s*0.32);
-          ctx.quadraticCurveTo(wingRootX + s*0.14, wingRootY - s*0.38, wingRootX + s*0.22, wingRootY - s*0.24);
-          ctx.quadraticCurveTo(wingRootX + s*0.24, wingRootY - s*0.10, wingRootX + s*0.16, wingRootY);
-          ctx.closePath(); ctx.fill();
-          // Inner highlight
-          ctx.fillStyle = 'rgba(255,255,255,0.4)';
-          ctx.beginPath();
-          ctx.moveTo(wingRootX + s*0.06, wingRootY);
-          ctx.quadraticCurveTo(wingRootX + s*0.04, wingRootY - s*0.12, wingRootX + s*0.10, wingRootY - s*0.22);
-          ctx.quadraticCurveTo(wingRootX + s*0.16, wingRootY - s*0.18, wingRootX + s*0.14, wingRootY - s*0.06);
-          ctx.closePath(); ctx.fill();
-          // Feather lines
-          ctx.strokeStyle = 'rgba(170,180,215,0.3)'; ctx.lineWidth = s*0.004;
-          for (let i = 0; i < 5; i++) {
-            const t = i / 4;
-            ctx.beginPath();
-            ctx.moveTo(wingRootX + s*0.04, wingRootY + s*0.01 - i*s*0.012);
-            ctx.quadraticCurveTo(wingRootX + s*(0.00 + t*0.16), wingRootY - s*(0.25 + t*0.10),
-                                 wingRootX + s*(0.02 + t*0.20), wingRootY - s*(0.36 + t*0.04));
-            ctx.stroke();
-          }
-          // Sparkles
-          ctx.fillStyle = 'rgba(255,255,255,0.6)';
-          [[0.04, -0.36], [0.20, -0.38], [0.30, -0.24], [0.16, -0.18], [0.26, -0.10],
-           [-0.18, -0.28], [-0.24, -0.18], [-0.10, -0.32]].forEach(([dx, dy]) => {
-            ctx.beginPath(); ctx.arc(wingRootX + s*dx, wingRootY + s*dy, s*0.008, 0, Math.PI*2); ctx.fill();
-          });
-          ctx.restore();
-          break;
-        case 'cape':
-          // Majestic pet cape with embroidery, gold trim, and rich textures
-          ctx.save();
-          const capeX1 = s * 0.15;
-          const capeX2 = -s * 0.45;
-          const capeTopY = -s * 0.38;
-          const capeHangY = s * 0.22;
-          // Drop shadow
-          ctx.globalAlpha = 0.12;
-          ctx.fillStyle = '#000';
-          ctx.beginPath();
-          ctx.moveTo(capeX1 + s*0.01, capeTopY + s*0.04);
-          ctx.quadraticCurveTo(s*0.02, capeTopY, -s*0.15, capeTopY + s*0.03);
-          ctx.quadraticCurveTo(-s*0.30, capeTopY + s*0.06, capeX2, capeTopY + s*0.12);
-          ctx.quadraticCurveTo(capeX2 - s*0.03, 0, capeX2 + s*0.02, capeHangY + s*0.02);
-          ctx.quadraticCurveTo(-s*0.25, capeHangY + s*0.06, -s*0.05, capeHangY + s*0.04);
-          ctx.quadraticCurveTo(s*0.06, capeHangY + s*0.02, capeX1 + s*0.01, capeHangY - s*0.04);
-          ctx.closePath(); ctx.fill();
-          ctx.globalAlpha = 1;
-          // Cape body — rich velvet gradient
-          const capeGrad = ctx.createLinearGradient(capeX1, capeTopY, capeX2, capeHangY);
-          capeGrad.addColorStop(0, '#8b5cf6');
-          capeGrad.addColorStop(0.25, '#7c3aed');
-          capeGrad.addColorStop(0.55, '#6d28d9');
-          capeGrad.addColorStop(0.8, '#5b21b6');
-          capeGrad.addColorStop(1, '#4c1d95');
-          ctx.fillStyle = capeGrad;
-          ctx.beginPath();
-          ctx.moveTo(capeX1, capeTopY + s*0.02);
-          ctx.quadraticCurveTo(s*0.02, capeTopY - s*0.01, -s*0.15, capeTopY + s*0.01);
-          ctx.quadraticCurveTo(-s*0.30, capeTopY + s*0.04, capeX2, capeTopY + s*0.10);
-          ctx.quadraticCurveTo(capeX2 - s*0.03, 0, capeX2 + s*0.02, capeHangY);
-          ctx.quadraticCurveTo(-s*0.25, capeHangY + s*0.04, -s*0.05, capeHangY + s*0.02);
-          ctx.quadraticCurveTo(s*0.06, capeHangY, capeX1, capeHangY - s*0.06);
-          ctx.closePath(); ctx.fill();
-          // Gold trim along top edge
-          ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = s*0.010;
-          ctx.beginPath();
-          ctx.moveTo(capeX1, capeTopY + s*0.02);
-          ctx.quadraticCurveTo(s*0.02, capeTopY - s*0.01, -s*0.15, capeTopY + s*0.01);
-          ctx.quadraticCurveTo(-s*0.30, capeTopY + s*0.04, capeX2, capeTopY + s*0.10);
-          ctx.stroke();
-          // Gold trim along bottom hem
-          ctx.lineWidth = s*0.008;
-          ctx.beginPath();
-          ctx.moveTo(capeX2 + s*0.02, capeHangY);
-          ctx.quadraticCurveTo(-s*0.25, capeHangY + s*0.04, -s*0.05, capeHangY + s*0.02);
-          ctx.quadraticCurveTo(s*0.06, capeHangY, capeX1, capeHangY - s*0.06);
-          ctx.stroke();
-          // Inner dark gold shimmer along trim
-          ctx.strokeStyle = '#d97706'; ctx.lineWidth = s*0.004;
-          ctx.beginPath();
-          ctx.moveTo(capeX1, capeTopY + s*0.04);
-          ctx.quadraticCurveTo(s*0.02, capeTopY + s*0.01, -s*0.15, capeTopY + s*0.03);
-          ctx.quadraticCurveTo(-s*0.30, capeTopY + s*0.06, capeX2, capeTopY + s*0.12);
-          ctx.stroke();
-          // Inner lining peek at hem — dark red silk
-          ctx.fillStyle = '#881337'; ctx.globalAlpha = 0.35;
-          ctx.beginPath();
-          ctx.moveTo(capeX1 - s*0.02, capeHangY - s*0.08);
-          ctx.quadraticCurveTo(0, capeHangY, -s*0.15, capeHangY + s*0.01);
-          ctx.quadraticCurveTo(-s*0.30, capeHangY + s*0.02, capeX2 + s*0.06, capeHangY - s*0.04);
-          ctx.lineTo(capeX2 + s*0.06, capeHangY - s*0.10);
-          ctx.quadraticCurveTo(-s*0.15, capeHangY - s*0.04, capeX1 - s*0.02, capeHangY - s*0.08);
-          ctx.closePath(); ctx.fill();
-          ctx.globalAlpha = 1;
-          // Royal emblem / crest at centre of cape
-          const embX = -s*0.12, embY = capeTopY + s*0.14;
-          // Shield shape
-          ctx.fillStyle = 'rgba(255, 215, 0, 0.25)';
-          ctx.beginPath();
-          ctx.moveTo(embX, embY - s*0.05);
-          ctx.lineTo(embX + s*0.04, embY - s*0.03);
-          ctx.lineTo(embX + s*0.04, embY + s*0.02);
-          ctx.quadraticCurveTo(embX, embY + s*0.06, embX - s*0.04, embY + s*0.02);
-          ctx.lineTo(embX - s*0.04, embY - s*0.03);
-          ctx.closePath(); ctx.fill();
-          ctx.strokeStyle = 'rgba(255, 200, 0, 0.4)'; ctx.lineWidth = s*0.004;
-          ctx.stroke();
-          // Crown on emblem
-          ctx.fillStyle = 'rgba(255, 200, 0, 0.3)';
-          ctx.beginPath();
-          ctx.moveTo(embX - s*0.025, embY - s*0.01);
-          ctx.lineTo(embX - s*0.02, embY - s*0.03);
-          ctx.lineTo(embX - s*0.008, embY - s*0.015);
-          ctx.lineTo(embX, embY - s*0.035);
-          ctx.lineTo(embX + s*0.008, embY - s*0.015);
-          ctx.lineTo(embX + s*0.02, embY - s*0.03);
-          ctx.lineTo(embX + s*0.025, embY - s*0.01);
-          ctx.closePath(); ctx.fill();
-          // Fabric fold lines
-          ctx.strokeStyle = 'rgba(80, 30, 160, 0.18)'; ctx.lineWidth = s*0.004;
-          for (let fi = 0; fi < 3; fi++) {
-            const fy = capeTopY + s*0.06 + fi * s*0.09;
-            ctx.beginPath();
-            ctx.moveTo(capeX1 - s*0.04 - fi*s*0.02, fy);
-            ctx.quadraticCurveTo(-s*0.10, fy - s*0.015, capeX2 + s*0.12 + fi*s*0.04, fy + s*0.02);
-            ctx.stroke();
-          }
-          // Light sheen across cape surface
-          ctx.globalAlpha = 0.08;
-          ctx.fillStyle = '#fff';
-          ctx.beginPath();
-          ctx.moveTo(capeX1 - s*0.02, capeTopY + s*0.04);
-          ctx.quadraticCurveTo(-s*0.05, capeTopY, -s*0.25, capeTopY + s*0.06);
-          ctx.quadraticCurveTo(-s*0.15, capeTopY + s*0.12, capeX1 - s*0.02, capeTopY + s*0.10);
-          ctx.closePath(); ctx.fill();
-          ctx.globalAlpha = 1;
-          // Scalloped rear edge
-          ctx.strokeStyle = '#9333ea'; ctx.lineWidth = s*0.005;
-          ctx.beginPath();
-          const rearTopSc = capeTopY + s*0.10;
-          const rearBotSc = capeHangY;
-          ctx.moveTo(capeX2 + s*0.02, rearTopSc);
-          for (let i = 0; i < 3; i++) {
-            const ry = rearTopSc + i * (rearBotSc - rearTopSc) / 3;
-            const ry2 = rearTopSc + (i + 1) * (rearBotSc - rearTopSc) / 3;
-            ctx.quadraticCurveTo(capeX2 - s*0.02, (ry + ry2)/2, capeX2 + s*0.02, ry2);
-          }
-          ctx.stroke();
-          // Ornate gold clasp at collar
-          const clY = capeTopY + s*0.02 + (capeHangY - capeTopY)*0.15;
-          // Clasp outer ring
-          ctx.fillStyle = '#fbbf24';
-          ctx.beginPath(); ctx.arc(capeX1, clY, s*0.035, 0, Math.PI*2); ctx.fill();
-          ctx.strokeStyle = '#92400e'; ctx.lineWidth = s*0.005;
-          ctx.stroke();
-          // Clasp inner ring
-          ctx.strokeStyle = '#d97706'; ctx.lineWidth = s*0.003;
-          ctx.beginPath(); ctx.arc(capeX1, clY, s*0.025, 0, Math.PI*2); ctx.stroke();
-          // Clasp gem
-          ctx.fillStyle = '#dc2626';
-          ctx.beginPath(); ctx.arc(capeX1, clY, s*0.015, 0, Math.PI*2); ctx.fill();
-          // Gem facet highlight
-          ctx.fillStyle = 'rgba(255,255,255,0.55)';
-          ctx.beginPath(); ctx.arc(capeX1 - s*0.004, clY - s*0.005, s*0.006, 0, Math.PI*2); ctx.fill();
-          // Small decorative dots on clasp
-          ctx.fillStyle = '#fbbf24';
-          for (let d = 0; d < 4; d++) {
-            const da = Math.PI/2 * d;
-            ctx.beginPath(); ctx.arc(capeX1 + Math.cos(da)*s*0.028, clY + Math.sin(da)*s*0.028, s*0.004, 0, Math.PI*2); ctx.fill();
-          }
-          ctx.restore();
-          break;
-        case 'ninja':
-          // Ninja face mask — covers nose/mouth only, headband above eyes
-          ctx.fillStyle = '#1a1a2e';
-          // Lower face mask (covers below eyes, wraps around face)
-          ctx.beginPath();
-          ctx.moveTo(hx - hr*0.85, hy + s*0.02);
-          ctx.quadraticCurveTo(hx - hr*0.90, hy + hr*0.6, hx - hr*0.5, hy + hr*0.85);
-          ctx.quadraticCurveTo(hx, hy + hr*0.95, hx + hr*0.5, hy + hr*0.85);
-          ctx.quadraticCurveTo(hx + hr*0.90, hy + hr*0.6, hx + hr*0.85, hy + s*0.02);
-          ctx.closePath(); ctx.fill();
-          // Slight wrinkle lines on cloth
-          ctx.strokeStyle = 'rgba(60,60,90,0.3)'; ctx.lineWidth = s*0.003;
-          ctx.beginPath();
-          ctx.moveTo(hx - hr*0.5, hy + s*0.04);
-          ctx.quadraticCurveTo(hx, hy + s*0.06, hx + hr*0.5, hy + s*0.04);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(hx - hr*0.4, hy + s*0.07);
-          ctx.quadraticCurveTo(hx, hy + s*0.09, hx + hr*0.4, hy + s*0.07);
-          ctx.stroke();
-          // Headband across forehead (above eyes)
-          ctx.fillStyle = '#2d2d4e';
-          const hbY = hy - hr*0.35; // headband position above eyes
-          ctx.beginPath();
-          ctx.moveTo(hx - hr*0.95, hbY - s*0.02);
-          ctx.lineTo(hx + hr*0.95, hbY - s*0.02);
-          ctx.lineTo(hx + hr*0.95, hbY + s*0.03);
-          ctx.lineTo(hx - hr*0.95, hbY + s*0.03);
-          ctx.closePath(); ctx.fill();
-          // Metal forehead plate on headband
-          ctx.fillStyle = '#6b7280';
-          roundRectPath(ctx, hx - s*0.05, hbY - s*0.015, s*0.10, s*0.04, 2);
-          ctx.fill();
-          // Plate engraving line
-          ctx.strokeStyle = 'rgba(200,200,200,0.4)'; ctx.lineWidth = s*0.004;
-          ctx.beginPath();
-          ctx.moveTo(hx - s*0.025, hbY + s*0.005);
-          ctx.lineTo(hx + s*0.025, hbY + s*0.005);
-          ctx.stroke();
-          // Plate shine
-          ctx.fillStyle = 'rgba(255,255,255,0.2)';
-          ctx.fillRect(hx - s*0.04, hbY - s*0.012, s*0.03, s*0.015);
-          // Headband knot at back (trailing tails)
-          ctx.fillStyle = '#1a1a2e';
-          // Tail 1
-          ctx.beginPath();
-          ctx.moveTo(hx + hr*0.90, hbY);
-          ctx.quadraticCurveTo(hx + hr*1.3, hbY - s*0.03, hx + hr*1.4, hbY + s*0.04);
-          ctx.lineTo(hx + hr*1.35, hbY + s*0.06);
-          ctx.quadraticCurveTo(hx + hr*1.15, hbY, hx + hr*0.90, hbY + s*0.01);
-          ctx.closePath(); ctx.fill();
-          // Tail 2
-          ctx.beginPath();
-          ctx.moveTo(hx + hr*0.90, hbY + s*0.01);
-          ctx.quadraticCurveTo(hx + hr*1.2, hbY + s*0.02, hx + hr*1.30, hbY + s*0.10);
-          ctx.lineTo(hx + hr*1.25, hbY + s*0.12);
-          ctx.quadraticCurveTo(hx + hr*1.05, hbY + s*0.04, hx + hr*0.90, hbY + s*0.02);
-          ctx.closePath(); ctx.fill();
-          break;
-        case 'pirate':
-          // Eye patch — leather with stitching
-          ctx.fillStyle = '#1a1a1a';
-          ctx.beginPath(); ctx.ellipse(hx - s*0.08, hy, s*0.065, s*0.055, 0.1, 0, Math.PI*2); ctx.fill();
-          // Patch border
-          ctx.strokeStyle = '#3a3a3a'; ctx.lineWidth = s*0.008;
-          ctx.beginPath(); ctx.ellipse(hx - s*0.08, hy, s*0.065, s*0.055, 0.1, 0, Math.PI*2); ctx.stroke();
-          // Stitch lines on the patch
-          ctx.strokeStyle = '#555'; ctx.lineWidth = s*0.004;
-          ctx.beginPath(); ctx.moveTo(hx - s*0.08, hy - s*0.04); ctx.lineTo(hx - s*0.08, hy + s*0.04); ctx.stroke();
-          ctx.beginPath(); ctx.moveTo(hx - s*0.12, hy); ctx.lineTo(hx - s*0.04, hy); ctx.stroke();
-          // Skull & crossbones on patch
-          ctx.fillStyle = '#aaa';
-          ctx.beginPath(); ctx.arc(hx - s*0.08, hy - s*0.005, s*0.015, 0, Math.PI*2); ctx.fill();
-          ctx.fillStyle = '#666';
-          ctx.fillRect(hx - s*0.105, hy + s*0.01, s*0.05, s*0.006);
-          // Strap — leather band going over head
-          ctx.strokeStyle = '#2a1a0e'; ctx.lineWidth = s*0.018;
-          ctx.beginPath();
-          ctx.moveTo(hx - s*0.08, hy - s*0.05);
-          ctx.quadraticCurveTo(hx + s*0.02, hy - hr - s*0.06, hx + s*0.14, hy - s*0.02);
-          ctx.stroke();
-          // Strap edge highlight
-          ctx.strokeStyle = '#3a2a1e'; ctx.lineWidth = s*0.006;
-          ctx.beginPath();
-          ctx.moveTo(hx - s*0.08, hy - s*0.05);
-          ctx.quadraticCurveTo(hx + s*0.02, hy - hr - s*0.07, hx + s*0.14, hy - s*0.02);
-          ctx.stroke();
-          // Strap buckle
-          ctx.fillStyle = '#c9952a';
-          roundRectPath(ctx, hx + s*0.10, hy - s*0.035, s*0.04, s*0.035, 1);
-          ctx.fill();
-          ctx.fillStyle = '#a07820';
-          ctx.fillRect(hx + s*0.115, hy - s*0.025, s*0.01, s*0.02);
-          break;
-        case 'tiara':
-          ctx.fillStyle = '#f0abfc';
-          ctx.beginPath();
-          ctx.moveTo(hx - s*0.16, hy - hr + s*0.02);
-          ctx.lineTo(hx - s*0.12, hy - hr - s*0.1);
-          ctx.lineTo(hx - s*0.06, hy - hr - s*0.04);
-          ctx.lineTo(hx, hy - hr - s*0.15);
-          ctx.lineTo(hx + s*0.06, hy - hr - s*0.04);
-          ctx.lineTo(hx + s*0.12, hy - hr - s*0.1);
-          ctx.lineTo(hx + s*0.16, hy - hr + s*0.02);
-          ctx.closePath(); ctx.fill();
-          // Centre gem
-          ctx.fillStyle = '#ec4899';
-          ctx.beginPath(); ctx.arc(hx, hy - hr - s*0.08, s*0.02, 0, Math.PI*2); ctx.fill();
-          // Side gems
-          ctx.fillStyle = '#a78bfa';
-          ctx.beginPath(); ctx.arc(hx - s*0.1, hy - hr - s*0.04, s*0.015, 0, Math.PI*2); ctx.fill();
-          ctx.beginPath(); ctx.arc(hx + s*0.1, hy - hr - s*0.04, s*0.015, 0, Math.PI*2); ctx.fill();
-          break;
-        case 'starbadge':
-          // Gold star badge with depth, shine, and pin
-          const sx3 = hx + s*0.14, sy3 = hy - s*0.02;
-          const badgeR = s*0.07;
-          // Badge shadow
-          ctx.fillStyle = 'rgba(0,0,0,0.15)';
-          ctx.beginPath();
-          for (let i = 0; i < 5; i++) {
-            const a = -Math.PI/2 + i * Math.PI*2/5;
-            const ai = a + Math.PI/5;
-            ctx.lineTo(sx3 + 1 + Math.cos(a)*badgeR, sy3 + 1 + Math.sin(a)*badgeR);
-            ctx.lineTo(sx3 + 1 + Math.cos(ai)*badgeR*0.42, sy3 + 1 + Math.sin(ai)*badgeR*0.42);
-          }
-          ctx.closePath(); ctx.fill();
-          // Star body — gradient gold
-          const starGrad = ctx.createRadialGradient(sx3 - s*0.015, sy3 - s*0.015, 0, sx3, sy3, badgeR);
-          starGrad.addColorStop(0, '#ffe066');
-          starGrad.addColorStop(0.5, '#fbbf24');
-          starGrad.addColorStop(1, '#d97706');
-          ctx.fillStyle = starGrad;
-          ctx.beginPath();
-          for (let i = 0; i < 5; i++) {
-            const a = -Math.PI/2 + i * Math.PI*2/5;
-            const ai = a + Math.PI/5;
-            ctx.lineTo(sx3 + Math.cos(a)*badgeR, sy3 + Math.sin(a)*badgeR);
-            ctx.lineTo(sx3 + Math.cos(ai)*badgeR*0.42, sy3 + Math.sin(ai)*badgeR*0.42);
-          }
-          ctx.closePath(); ctx.fill();
-          // Star outline
-          ctx.strokeStyle = '#b45309'; ctx.lineWidth = s*0.006;
-          ctx.beginPath();
-          for (let i = 0; i < 5; i++) {
-            const a = -Math.PI/2 + i * Math.PI*2/5;
-            const ai = a + Math.PI/5;
-            ctx.lineTo(sx3 + Math.cos(a)*badgeR, sy3 + Math.sin(a)*badgeR);
-            ctx.lineTo(sx3 + Math.cos(ai)*badgeR*0.42, sy3 + Math.sin(ai)*badgeR*0.42);
-          }
-          ctx.closePath(); ctx.stroke();
-          // Centre circle
-          ctx.fillStyle = '#d97706';
-          ctx.beginPath(); ctx.arc(sx3, sy3, badgeR * 0.25, 0, Math.PI * 2); ctx.fill();
-          ctx.strokeStyle = '#92400e'; ctx.lineWidth = s*0.004;
-          ctx.beginPath(); ctx.arc(sx3, sy3, badgeR * 0.25, 0, Math.PI * 2); ctx.stroke();
-          // Shine highlight
-          ctx.fillStyle = 'rgba(255,255,255,0.5)';
-          ctx.beginPath();
-          ctx.moveTo(sx3 - s*0.02, sy3 - badgeR * 0.6);
-          ctx.quadraticCurveTo(sx3, sy3 - badgeR * 0.4, sx3 + s*0.01, sy3 - badgeR * 0.3);
-          ctx.quadraticCurveTo(sx3 - s*0.01, sy3 - badgeR * 0.4, sx3 - s*0.02, sy3 - badgeR * 0.6);
-          ctx.closePath(); ctx.fill();
-          // Pin on back (small line)
-          ctx.strokeStyle = '#9ca3af'; ctx.lineWidth = s*0.006;
-          ctx.beginPath(); ctx.moveTo(sx3, sy3 + badgeR * 0.6); ctx.lineTo(sx3 + s*0.02, sy3 + badgeR * 0.9); ctx.stroke();
-          break;
-      }
+      const art = ACC_ART[acc.draw];
+      if (!art) return;
+      const img = accArtImage(acc.draw, onReady);
+      if (!img) return;                       // still downloading
+      const w = s * art.w;
+      const h = w * img.naturalHeight / img.naturalWidth;
+      // y is measured from the crown for anything worn on top of the head, and
+      // from the head centre for everything else.
+      const originY = art.ref === 'top' ? hy - hr : hy;
+      ctx.drawImage(img,
+        hx + s * (art.x || 0) - w * (art.ax === undefined ? 0.5 : art.ax),
+        originY + s * (art.y || 0) - h * (art.ay === undefined ? 0.5 : art.ay),
+        w, h);
     }
 

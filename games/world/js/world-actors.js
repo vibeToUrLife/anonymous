@@ -63,11 +63,13 @@ const WorldActors = (function () {
     // petPoseOf lives in room-accessories.js, which this page already loads —
     // it used to be answered here for the cat and the dog only, so every other
     // sprite pet wore its hat at the walking anchor even standing still.
-    const accPose = typeof petPoseOf === 'function' ? petPoseOf(a.pet, moving, action) : 'side';
-    if (a.outfit) { try { drawPetAccessory(ctx, a.pet, a.outfit, size, 'back', accPose); } catch (e) {} }
     // Only the capybara reads this: standing still means its sitting pose.
     // Tom and Jerry pick their own frame from `moving`, and the rest ignore it.
+    // Worked out BEFORE the accessory, which needs it too — the capybara's head
+    // is centred in that sitting cell and off to the right in every other.
     const view = moving ? 'side' : 'front';
+    const accPose = typeof petPoseOf === 'function' ? petPoseOf(a.pet, moving, action, view) : 'side';
+    if (a.outfit) { try { drawPetAccessory(ctx, a.pet, a.outfit, size, 'back', accPose); } catch (e) {} }
     worldDrawPet(ctx, a.pet, size, legPhase, moving, action, ap, t, a.color, view);
     if (a.outfit) { try { drawPetAccessory(ctx, a.pet, a.outfit, size, 'front', accPose); } catch (e) {} }
     ctx.restore();

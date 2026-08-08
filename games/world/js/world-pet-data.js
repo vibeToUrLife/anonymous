@@ -63,10 +63,11 @@ const PET_ACCESSORIES = [
   { id: 'acc_starbadge', emoji: '⭐', name: 'Star Badge',    draw: 'starbadge', gachaOnly: true },
 ];
 
-// Rounded-rectangle path helper. The shared accessory renderer
-// (room-accessories.js) uses this for a few pieces (ninja mask, pirate patch);
-// it normally lives in room-pets.js, which the World page does not load, so it
-// is mirrored here. Defined globally before drawPetAccessory is ever called.
+// Rounded-rectangle path helper, mirrored from room-pets.js, which the World
+// page does not load. The accessories themselves stopped needing it when they
+// became drawings — nothing in the World calls it today — but the shop-card
+// picture in room-accessories.js still rounds its backdrop with it, and that
+// file IS loaded here, so the name has to resolve if the World ever shows one.
 function roundRectPath(ctx, x, y, w, h, r) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);

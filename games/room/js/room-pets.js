@@ -884,7 +884,7 @@
           const accId = petInst ? petInst.accessory : null;
           // Sprite pets change silhouette, so the hat has to know which pose is
           // showing; petPoseOf asks the pet's own module rather than guessing.
-          const accPose = petPoseOf(p.type, moving, currentAction);
+          const accPose = petPoseOf(p.type, moving, currentAction, petView);
           if (accId) drawPetAccessory(ctx, p.type, accId, size, 'back', accPose);
           drawPetCanvas(ctx, p.type, size, legPhase, moving, hunger, t, currentAction, actionProgress, color, petView);
           // Draw front-layer accessories on top of the pet
