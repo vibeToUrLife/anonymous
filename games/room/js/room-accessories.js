@@ -231,17 +231,24 @@
          alone a hat floats in the other. Asleep is a set apart — curled up, his
          head is down by the floor and off to one side, most of a body from
          where it stands. */
+      /* Measured off the sheet's own silhouette, front and walk cells apart.
+         Both used to carry r 0.14, which put Tom's crown at -0.66 when the
+         artwork's head reaches -0.78 — a hat sank into his face, and once the
+         accessories were sized to the head as well, it was a doll's hat. He
+         crouches to walk, so the walking head sits lower and smaller. */
       tom: {
-        front: { hx:  0,    hy: -0.52, r: 0.14 },
-        side:  { hx:  0,    hy: -0.52, r: 0.14 },
+        front: { hx:  0,    hy: -0.56, r: 0.20 },
+        side:  { hx:  0,    hy: -0.51, r: 0.17 },
         sleep: { hx:  0.25, hy:  0.12, r: 0.17 },
       },
-      /* Jerry is upright with a big head centred over the body (front view);
-         the standing value came from his head geometry (arc 0,-0.26 r0.30) and
-         is kept for the walk too. Asleep is measured off the sheet's own cell. */
+      /* Jerry is upright with a big head centred over the body. Read off the
+         silhouette like Tom's: his ears are two circles wider than the skull
+         between them, so r follows the FACE and a hat lands between the ears.
+         The old pair sat 0.09 low, which hung every hat off the back of his
+         head. Asleep is measured off the sheet's own cell. */
       jerry: {
-        front: { hx:  0,    hy: -0.28, r: 0.28 },
-        side:  { hx:  0,    hy: -0.28, r: 0.28 },
+        front: { hx:  0,    hy: -0.37, r: 0.23 },
+        side:  { hx:  0,    hy: -0.30, r: 0.24 },
         sleep: { hx:  0.20, hy:  0.12, r: 0.22 },
       },
       /* Both read off the sheet, which is drawn 1.15x the pet size with its feet
@@ -299,7 +306,7 @@
       /* Centre so the cat's head anchor lands in the middle of the square —
          nudged UP rather than down, because far more of an accessory hangs
          below a head (scarf, cape, wings) than stands above it. */
-      ctx.translate(size / 2 - s * ho.hx, size / 2 - s * 0.05 - s * ho.hy);
+      ctx.translate(size / 2 - s * ho.hx, size / 2 - s * 0.17 - s * ho.hy);
       const hx = s * ho.hx, hy = s * ho.hy;
       /* This square is painted ONCE, unlike the room, so a picture that has not
          arrived yet would leave a bare head sitting on the card for good. Draw
@@ -360,15 +367,21 @@
        used to be twenty-odd canvas paths. The file says what it looks like;
        this table says only how big it is drawn and where it sits.
 
-       `w` is the drawn width as a fraction of the pet size — kept at the width
-       each path version occupied, so nothing changes size on any pet.
+       EVERYTHING IS MEASURED IN HEADS, not in pet sizes. The heads these are
+       worn on run from 0.14 of the body (the goose, Tom) to 0.35 (the hamster,
+       which is mostly head) — two and a half times — so one width as a fraction
+       of the PET swallowed the goose and perched a doll's hat on the hamster.
+       `w` is a multiple of the head's WIDTH and `x`/`y` are multiples of its
+       radius, both taken from the same anchor the accessory hangs off, so every
+       piece arrives sized to the animal actually wearing it.
 
-       `x`/`y` place the picture, in that same fraction of the pet size, from
-       the head centre — except under `ref: 'top'`, where y is measured from the
-       CROWN (the head centre less its radius). Hats use the crown because heads
-       differ between pets: a fox's is 0.18 of its body and a panda's 0.29, and
-       a hat measured from the centre sinks into one while hovering over the
-       other. This is what the paths did too, in the arithmetic.
+       `y` is measured from the head centre, except under `ref: 'top'` where it
+       is measured from the CROWN — the head centre less its radius — which is
+       what a hat stands on.
+
+       `on: 'body'` opts out for the four pieces that are NOT worn on the head:
+       a cape drapes over an animal, not over its skull, so those keep the pet
+       size as their unit and are placed from the head centre in the same.
 
        `ax`/`ay` say which point OF THE PICTURE lands there, as a fraction of
        its own width and height. The middle (0.5) unless said otherwise; ay:1 is
@@ -378,30 +391,35 @@
        and it is the lens that has to land on the eye. */
     const ACC_ART = {
       // Worn on the crown.
-      tophat:     { w: 0.40, y:  0.06, ay: 1,    ref: 'top' },
-      crown:      { w: 0.44, y:  0.04, ay: 1,    ref: 'top' },
-      wizard:     { w: 0.46, y:  0.05, ay: 1,    ref: 'top' },
-      partyhat:   { w: 0.30, y:  0.04, ay: 1,    ref: 'top' },
-      tiara:      { w: 0.40, y:  0.06, ay: 1,    ref: 'top' },
-      devil:      { w: 0.44, y:  0.06, ay: 1,    ref: 'top' },
-      bow:        { w: 0.30, x: 0.02, y: 0.05, ay: 1, ref: 'top' },
-      flower:     { w: 0.20, x: 0.13, y: 0.06, ay: 1, ref: 'top' },
+      tophat:     { w: 0.80, y:  0.24, ay: 1,    ref: 'top' },
+      crown:      { w: 0.88, y:  0.16, ay: 1,    ref: 'top' },
+      wizard:     { w: 0.92, y:  0.20, ay: 1,    ref: 'top' },
+      partyhat:   { w: 0.60, y:  0.16, ay: 1,    ref: 'top' },
+      tiara:      { w: 0.80, y:  0.24, ay: 1,    ref: 'top' },
+      devil:      { w: 0.88, y:  0.24, ay: 1,    ref: 'top' },
+      bow:        { w: 0.60, x: 0.08, y: 0.20, ay: 1, ref: 'top' },
+      flower:     { w: 0.40, x: 0.52, y: 0.24, ay: 1, ref: 'top' },
       // The halo hangs ABOVE the crown, and it is the ring that has to hang
       // there — the sparkles above it are half the picture's height.
-      halo:       { w: 0.34, y: -0.06, ay: 0.69, ref: 'top' },
+      halo:       { w: 0.68, y: -0.24, ay: 0.69, ref: 'top' },
       // A head-wrap: the opening goes over the crown and the cloth falls round.
-      bandana:    { w: 0.54, y:  0.02, ay: 0,    ref: 'top' },
+      bandana:    { w: 1.08, y:  0.08, ay: 0,    ref: 'top' },
       // Worn on the face. The eye line is the head centre.
-      glasses:    { w: 0.42, y: -0.01 },
-      heartglass: { w: 0.42, y: -0.01 },
-      ninja:      { w: 0.62, x:  0.02, y: -0.03 },
-      monocle:    { w: 0.36, x:  0.07,  y:  0.02, ax: 0.36, ay: 0.34 },
-      pirate:     { w: 0.50, x: -0.10, y:  0.01, ax: 0.33, ay: 0.62 },
-      // Worn on the body, below the head.
-      scarf:      { w: 0.48, x: -0.04, y: 0.14, ay: 0 },
-      starbadge:  { w: 0.22, x: 0.11, y: 0.30 },
-      cape:       { w: 0.74, y: 0.10, ay: 0 },
-      wings:      { w: 0.95, y: 0.22 },
+      glasses:    { w: 0.84, y: -0.04 },
+      heartglass: { w: 0.84, y: -0.04 },
+      ninja:      { w: 1.24, x:  0.08, y: -0.12 },
+      monocle:    { w: 0.72, x:  0.28, y:  0.08, ax: 0.36, ay: 0.34 },
+      pirate:     { w: 1.00, x: -0.40, y:  0.04, ax: 0.33, ay: 0.62 },
+      // Worn on the BODY, below the head, and sized to the animal rather than
+      // to its skull — a cape is a cape whatever the head on top of it.
+      scarf:      { w: 0.48, x: -0.04, y: 0.14, ay: 0, on: 'body' },
+      starbadge:  { w: 0.22, x:  0.11, y: 0.30,        on: 'body' },
+      /* Wide enough to clear the widest pet. Both are drawn BEHIND the animal,
+         and at the width a cat wanted the hamster and the capybara — round,
+         nearly as wide as they are tall — swallowed them whole: the cape did
+         not show at all. */
+      cape:       { w: 0.94, y: 0.10, ay: 0,           on: 'body' },
+      wings:      { w: 1.14, y: 0.20,                  on: 'body' },
     };
 
     /* One file per accessory, fetched on FIRST WEAR rather than at page load: a
@@ -455,14 +473,20 @@
       if (!art) return;
       const img = accArtImage(acc.draw, onReady);
       if (!img) return;                       // still downloading
-      const w = s * art.w;
+      /* Head pieces are measured in heads and body pieces in pet sizes — see
+         ACC_ART. One unit for the width (the head's WIDTH, or the pet size) and
+         one for the offsets (its radius, or the pet size again). */
+      const onBody = art.on === 'body';
+      const wUnit = onBody ? s : hr * 2;
+      const oUnit = onBody ? s : hr;
+      const w = wUnit * art.w;
       const h = w * img.naturalHeight / img.naturalWidth;
       // y is measured from the crown for anything worn on top of the head, and
       // from the head centre for everything else.
       const originY = art.ref === 'top' ? hy - hr : hy;
       ctx.drawImage(img,
-        hx + s * (art.x || 0) - w * (art.ax === undefined ? 0.5 : art.ax),
-        originY + s * (art.y || 0) - h * (art.ay === undefined ? 0.5 : art.ay),
+        hx + oUnit * (art.x || 0) - w * (art.ax === undefined ? 0.5 : art.ax),
+        originY + oUnit * (art.y || 0) - h * (art.ay === undefined ? 0.5 : art.ay),
         w, h);
     }
 
