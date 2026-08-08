@@ -410,7 +410,14 @@
       if (!accId) return;
       const acc = PET_ACCESSORIES.find(a => a.id === accId);
       if (!acc) return;
-      const isBack = BACK_LAYER_ACCESSORIES.includes(acc.draw);
+      /* Which side of the pet each piece is drawn on. The wings are always
+         behind it. The cape is behind it facing you, where the body sits in the
+         middle of it, and behind it asleep, where it is spread out on the floor
+         and drawing it in front buried the sleeping animal under a red sheet.
+         Walking, it goes IN FRONT: a cape lies over an animal's back, and drawn
+         behind there the body hid all of it but a wedge past the rump that read
+         as a detached red flag. */
+      const isBack = acc.draw === 'wings' || (acc.draw === 'cape' && pose !== 'side' && pose !== 'walk');
       // If layer is specified, only draw matching layer
       if (layer === 'back' && !isBack) return;
       if (layer === 'front' && isBack) return;
@@ -434,15 +441,31 @@
          back at the middle of the picture. */
       const facing = pose === 'front';
       const lying  = pose === 'sleep';
+      /* In profile only ONE eye is showing, and every sprite is drawn facing
+         RIGHT — the room mirrors the whole canvas to turn a pet round — so the
+         eye on view is the one towards +x and the back of the head is at -x.
+         A pair of sunglasses drawn symmetrically about the head centre put one
+         lens on the cheek and one out in the air behind the skull. */
+      const profile = !facing;
+      const eyeX = hx + (profile ? u * 0.34 : 0);
       /* The torso. Facing you it is straight below the head, so the head anchor
          serves; turned sideways or lying down it is NOT, and hanging a cape off
          the head then puts it over the animal's face. Every sprite is drawn
-         centred on x = 0 and standing on the same floor about 0.38 of a pet
-         size below the origin, so the torso is halfway between the head and
-         that floor, near the middle of the picture. Estimated rather than
-         written down per pet: a cape is forgiving about a few hundredths. */
+         centred on x = 0 and standing on the same floor, so sideways the torso
+         is near the middle of the picture at a height set by that FLOOR — not
+         by the head. Measuring down from the head instead put the goose's
+         wings up its neck: its head is 0.83 of a body up and its back is at
+         nothing like half of that. */
       const bodyX = facing ? hx : 0;
-      const bodyY = facing ? hy : (hy + s * 0.38) / 2;
+      const bodyY = facing ? hy : s * (lying ? 0.20 : 0.06);
+      /* Where the SHOULDER is, which is not the same question. On a quadruped
+         the head is carried out in front at roughly shoulder height, so the
+         head's own y is the shoulder's. Standing upright — Tom, Jerry, the
+         goose on its neck — the head is well above it, and the wings pinned at
+         head height came out beside their ears. Upright is either a head
+         centred over the body or one carried high above the floor. */
+      const upright = Math.abs(ho.hx) < 0.15 || Math.abs(ho.hy) > 0.45;
+      const shoulderY = upright ? bodyY - s * 0.24 : hy - u * 0.15;
 
       switch (acc.draw) {
 
@@ -491,7 +514,26 @@
         }
 
         case 'glasses': {
-          const lx = u * 0.46, ly = ey, rw = u * 0.40, rh = u * 0.30;
+          const rw = u * 0.40, rh = u * 0.30;
+          if (profile) {
+            // One lens on the eye that shows, and the arm running back to the
+            // ear. Drawn as a pair, the far lens floated behind the skull.
+            accShape(ctx, null, ink * 1.3, () => {
+              ctx.moveTo(eyeX - rw * 0.8, ey - rh * 0.5); ctx.lineTo(hx - u * 0.95, ey - rh * 0.75);
+            });
+            accShape(ctx, '#1d2027', ink, () => ctx.ellipse(eyeX, ey, rw, rh, 0, 0, Math.PI * 2));
+            ctx.globalAlpha = 0.45;
+            accShape(ctx, '#9fd3ff', 0, () => {
+              ctx.moveTo(eyeX - rw * 0.55, ey + rh * 0.35);
+              ctx.lineTo(eyeX - rw * 0.05, ey - rh * 0.60);
+              ctx.lineTo(eyeX + rw * 0.30, ey - rh * 0.60);
+              ctx.lineTo(eyeX - rw * 0.20, ey + rh * 0.35);
+              ctx.closePath();
+            });
+            ctx.globalAlpha = 1;
+            break;
+          }
+          const lx = u * 0.46, ly = ey;
           // Arms first — they run back to the ears behind the lenses.
           accShape(ctx, null, ink * 1.3, () => {
             ctx.moveTo(hx - lx - rw, ly - rh * 0.35); ctx.lineTo(hx - u * 1.05, ly - rh * 0.55);
@@ -529,18 +571,21 @@
         }
 
         case 'scarf': {
-          // Round the neck, which is below the head and belongs to the body.
-          const ny = hy + u * 0.86, w = b * 0.26, red = accGrad(ctx, ny - b * 0.06, ny + b * 0.10, '#e8464d', '#a81f27');
+          /* Round the neck, which is below the head facing you and BEHIND it
+             in profile — centred on the head there, it hung off the muzzle. */
+          const nx = hx - (profile ? u * 0.55 : 0);
+          const ny = hy + u * (profile ? 0.72 : 0.86), w = b * (profile ? 0.20 : 0.26);
+          const red = accGrad(ctx, ny - b * 0.06, ny + b * 0.10, '#e8464d', '#a81f27');
           accShape(ctx, red, ink, () => {
-            ctx.moveTo(hx - w, ny - b * 0.05);
-            ctx.quadraticCurveTo(hx, ny + b * 0.07, hx + w, ny - b * 0.05);
-            ctx.quadraticCurveTo(hx + w * 1.05, ny + b * 0.06, hx + w * 0.9, ny + b * 0.08);
-            ctx.quadraticCurveTo(hx, ny + b * 0.18, hx - w * 0.9, ny + b * 0.08);
-            ctx.quadraticCurveTo(hx - w * 1.05, ny + b * 0.06, hx - w, ny - b * 0.05);
+            ctx.moveTo(nx - w, ny - b * 0.05);
+            ctx.quadraticCurveTo(nx, ny + b * 0.07, nx + w, ny - b * 0.05);
+            ctx.quadraticCurveTo(nx + w * 1.05, ny + b * 0.06, nx + w * 0.9, ny + b * 0.08);
+            ctx.quadraticCurveTo(nx, ny + b * 0.18, nx - w * 0.9, ny + b * 0.08);
+            ctx.quadraticCurveTo(nx - w * 1.05, ny + b * 0.06, nx - w, ny - b * 0.05);
             ctx.closePath();
           });
           // The loose end, hanging down the pet's left with a fringe on it.
-          const tx = hx + w * 0.55, ty = ny + b * 0.06, tl = b * 0.20;
+          const tx = nx + w * 0.55, ty = ny + b * 0.06, tl = b * 0.20;
           accShape(ctx, '#c9333a', ink, () => {
             ctx.moveTo(tx - b * 0.055, ty);
             ctx.quadraticCurveTo(tx - b * 0.02, ty + tl * 0.6, tx - b * 0.045, ty + tl);
@@ -702,14 +747,9 @@
              pixels, or these are just the sunglasses again in a red frame:
              hence two full circles for the top and a deep V under them, rather
              than one smooth bezier that rounds itself away at this size. */
-          const lx = u * 0.50, ly = ey, w = u * 0.52, h = u * 0.46;
-          accShape(ctx, null, ink * 1.4, () => {
-            ctx.moveTo(hx - lx + w * 0.55, ly - h * 0.35); ctx.lineTo(hx + lx - w * 0.55, ly - h * 0.35);
-            ctx.moveTo(hx - lx - w * 0.85, ly - h * 0.30); ctx.lineTo(hx - u * 1.06, ly - h * 0.55);
-            ctx.moveTo(hx + lx + w * 0.85, ly - h * 0.30); ctx.lineTo(hx + u * 1.06, ly - h * 0.55);
-          });
-          [-1, 1].forEach(sgn => {
-            const cx = hx + sgn * lx, lobe = w * 0.40;
+          const w = u * 0.52, h = u * 0.46, ly = ey;
+          const oneHeart = (cx) => {
+            const lobe = w * 0.40;
             const heart = () => {
               ctx.moveTo(cx - w * 0.80, ly - h * 0.22);
               ctx.arc(cx - lobe, ly - h * 0.30, lobe, Math.PI, Math.PI * 1.92);
@@ -728,7 +768,21 @@
             accShape(ctx, '#ffd9e4', 0, () =>
               ctx.ellipse(cx - w * 0.32, ly - h * 0.30, w * 0.20, h * 0.13, -0.6, 0, Math.PI * 2));
             ctx.globalAlpha = 1;
+          };
+          if (profile) {
+            accShape(ctx, null, ink * 1.4, () => {
+              ctx.moveTo(eyeX - w * 0.7, ly - h * 0.40); ctx.lineTo(hx - u * 0.95, ly - h * 0.62);
+            });
+            oneHeart(eyeX);
+            break;
+          }
+          const lx = u * 0.50;
+          accShape(ctx, null, ink * 1.4, () => {
+            ctx.moveTo(hx - lx + w * 0.55, ly - h * 0.35); ctx.lineTo(hx + lx - w * 0.55, ly - h * 0.35);
+            ctx.moveTo(hx - lx - w * 0.85, ly - h * 0.30); ctx.lineTo(hx - u * 1.06, ly - h * 0.55);
+            ctx.moveTo(hx + lx + w * 0.85, ly - h * 0.30); ctx.lineTo(hx + u * 1.06, ly - h * 0.55);
           });
+          [-1, 1].forEach(sgn => oneHeart(hx + sgn * lx));
           break;
         }
 
@@ -756,10 +810,8 @@
              reads as a fin — and outlined, because they are the same white as
              the goose wearing them. Off the shoulders, not off the head: side
              on, the head is a body-length in front of where these belong. */
-          /* Side on, they ride at the shoulder — which is up at the head's own
-             height, not halfway down the body. Set by the torso instead, they
-             sat inside the outline of every round pet and never showed. */
-          const wy = facing ? hy + b * 0.14 : hy - u * (lying ? 0.95 : 0.15);
+          // Side on they ride at the shoulder — see shoulderY above.
+          const wy = facing ? hy + b * 0.14 : lying ? hy - u * 0.95 : shoulderY;
           const wx = facing ? hx : bodyX + b * 0.12;
           const sweep = lying ? 0.72 : 1;
           [-1, 1].forEach(sgn => {
@@ -802,23 +854,30 @@
             break;
           }
           if (!facing) {
-            /* Walking: from the shoulder, back over the spine and out past the
-               rump. It has to clear the animal's own outline to be seen at all
-               — drawn tight to the body it vanished behind every wide pet —
-               and stop above the floor, or it trails through the ground. */
-            const neckX = bodyX + b * 0.30, neckY = hy + u * 0.45;
-            const tail = bodyX - b * 0.82, hem = bodyY + b * 0.18;
+            /* Over the back and streaming behind. Drawn in the FRONT layer for
+               this pose (see the layer choice above), so it reads as cloth
+               lying on the animal rather than a wedge appearing past its rump. */
+            const neckX = bodyX + b * 0.22, neckY = shoulderY - b * 0.02;
+            const tail = bodyX - b * 0.62, hem = bodyY + b * 0.16;
             accShape(ctx, red(neckY, hem), ink, () => {
               ctx.moveTo(neckX, neckY);
-              // Top edge follows the spine DOWN as it goes back; held level it
-              // came out a banner the height of the animal.
-              ctx.quadraticCurveTo(bodyX - b * 0.28, hy + u * 0.72, tail + b * 0.10, hy + u * 0.95);
-              ctx.quadraticCurveTo(tail - b * 0.04, bodyY + b * 0.02, tail, hem - b * 0.04);
-              ctx.quadraticCurveTo(tail + b * 0.20, hem - b * 0.10, tail + b * 0.34, hem);
-              ctx.quadraticCurveTo(bodyX + b * 0.05, hem - b * 0.14, neckX + b * 0.04, neckY + b * 0.08);
+              // Back edge over the spine, then down; the FRONT edge falls away
+              // behind the shoulder at once, or the cloth covers the chest and
+              // the animal walks about inside a red bag.
+              ctx.quadraticCurveTo(bodyX - b * 0.16, neckY - b * 0.04, tail + b * 0.04, neckY + b * 0.10);
+              ctx.quadraticCurveTo(tail - b * 0.05, bodyY, tail, hem);
+              ctx.quadraticCurveTo(tail + b * 0.20, hem - b * 0.06, tail + b * 0.34, hem + b * 0.02);
+              ctx.quadraticCurveTo(bodyX - b * 0.02, hem - b * 0.10, neckX - b * 0.06, neckY + b * 0.09);
               ctx.closePath();
             });
-            accShape(ctx, '#ffd23f', ink * 0.7, () => ctx.arc(neckX + b * 0.01, neckY + b * 0.03, b * 0.026, 0, Math.PI * 2));
+            // Collar over the shoulders, and the clasp at the throat.
+            accShape(ctx, '#c9333a', ink, () => {
+              ctx.moveTo(neckX - b * 0.10, neckY + b * 0.02);
+              ctx.quadraticCurveTo(neckX + b * 0.02, neckY - b * 0.07, neckX + b * 0.10, neckY + b * 0.01);
+              ctx.quadraticCurveTo(neckX + b * 0.01, neckY + b * 0.05, neckX - b * 0.10, neckY + b * 0.02);
+              ctx.closePath();
+            });
+            accShape(ctx, '#ffd23f', ink * 0.7, () => ctx.arc(neckX + b * 0.02, neckY + b * 0.01, b * 0.026, 0, Math.PI * 2));
             break;
           }
           const ny = hy + u * 0.80, hem = hy + b * 0.62, w = b * 0.42;
@@ -852,7 +911,9 @@
           /* Two pieces with a gap between them, and the gap is the eye slit —
              the pet looks THROUGH the mask. Drawn as one hood and the slit cut
              out of it, the eyes went behind the cloth on every pet whose face
-             is not proportioned like the drawing. */
+             is not proportioned like the drawing.
+             In profile the knot moves to the BACK of the head: tied on the
+             +x side, where the face is, it sat on the animal's nose. */
           const slitTop = ey - u * 0.24, slitBot = ey + u * 0.20;
           const cloth = accGrad(ctx, top - u * 0.2, hy + u, '#33343d', '#17181f');
           accShape(ctx, cloth, ink, () => {
@@ -869,26 +930,32 @@
             ctx.quadraticCurveTo(hx - u * 0.92, hy + u * 0.92, hx - u * 1.0, slitBot);
             ctx.closePath();
           });
-          // The knot, and its two tails streaming off to one side.
-          accShape(ctx, '#22232b', ink, () => ctx.ellipse(hx + u * 1.0, slitTop + u * 0.18, u * 0.17, u * 0.15, 0, 0, Math.PI * 2));
+          // The knot, and its two tails streaming off behind the head.
+          const kd = profile ? -1 : 1;
+          accShape(ctx, '#22232b', ink, () => ctx.ellipse(hx + kd * u * 1.0, slitTop + u * 0.18, u * 0.17, u * 0.15, 0, 0, Math.PI * 2));
           accShape(ctx, '#22232b', ink, () => {
-            ctx.moveTo(hx + u * 1.05, slitTop + u * 0.08);
-            ctx.lineTo(hx + u * 1.62, slitTop - u * 0.10);
-            ctx.lineTo(hx + u * 1.55, slitTop + u * 0.22);
+            ctx.moveTo(hx + kd * u * 1.05, slitTop + u * 0.08);
+            ctx.lineTo(hx + kd * u * 1.62, slitTop - u * 0.10);
+            ctx.lineTo(hx + kd * u * 1.55, slitTop + u * 0.22);
             ctx.closePath();
-            ctx.moveTo(hx + u * 1.05, slitTop + u * 0.26);
-            ctx.lineTo(hx + u * 1.58, slitTop + u * 0.44);
-            ctx.lineTo(hx + u * 1.10, slitTop + u * 0.40);
+            ctx.moveTo(hx + kd * u * 1.05, slitTop + u * 0.26);
+            ctx.lineTo(hx + kd * u * 1.58, slitTop + u * 0.44);
+            ctx.lineTo(hx + kd * u * 1.10, slitTop + u * 0.40);
             ctx.closePath();
           });
           break;
         }
 
         case 'pirate': {
-          const px = hx - u * 0.46, py = ey;
+          /* Facing you it covers the pet's left eye; in profile it covers the
+             one eye there is, and the strap runs BACK round the skull. Fixed
+             to one side, it sat on the cheek of every walking pet with the
+             strap laid across its muzzle. */
+          const px = profile ? eyeX : hx - u * 0.46, py = ey;
+          const back = profile ? -1 : 1;
           accShape(ctx, null, ink * 1.5, () => {
-            ctx.moveTo(px - u * 0.52, py - u * 0.16);
-            ctx.quadraticCurveTo(hx - u * 0.1, py - u * 0.62, hx + u * 1.02, py - u * 0.34);
+            ctx.moveTo(px - back * u * 0.52, py - u * 0.16);
+            ctx.quadraticCurveTo(px + back * u * 0.35, py - u * 0.62, hx + back * u * 1.02, py - u * 0.34);
           });
           accShape(ctx, '#1c1c22', ink, () => {
             ctx.moveTo(px - u * 0.36, py - u * 0.26);
