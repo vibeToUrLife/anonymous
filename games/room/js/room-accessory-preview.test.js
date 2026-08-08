@@ -42,11 +42,7 @@ function strictCtx() {
   const ctx = { bad, drawn, canvas: { width: 60, height: 60 } };
   for (const m of ['clearRect', 'fillRect', 'strokeRect', 'translate', 'scale', 'rotate',
                    'moveTo', 'lineTo', 'arc', 'ellipse', 'quadraticCurveTo', 'bezierCurveTo',
-                   'rect', 'roundRect', 'arcTo', 'setLineDash', 'fillText', 'strokeText',
-                   // The accessories are drawings now, so this is where a NaN
-                   // would land — and a canvas drops a drawImage with one in it
-                   // exactly as silently as it dropped the paths.
-                   'drawImage']) {
+                   'rect', 'roundRect', 'arcTo', 'setLineDash', 'fillText', 'strokeText']) {
     ctx[m] = (...args) => check(m, args);
   }
   for (const m of ['save', 'restore', 'beginPath', 'closePath', 'fill', 'stroke', 'clip']) {
@@ -63,13 +59,6 @@ function accSandbox() {
     isNaN, parseInt, parseFloat, Infinity, NaN, Promise,
     setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {},
     document: { getElementById: () => null, querySelectorAll: () => [] },
-    /* Stands in for the browser's Image. It reports a size straight away, which
-       a real one does not — the point here is to exercise the drawing that
-       happens once a picture HAS arrived, not the wait. */
-    Image: function () {
-      this.naturalWidth = 200; this.naturalHeight = 160;
-      this.addEventListener = () => {};
-    },
     T: (s) => s, showToast() {}, saveRoom: () => Promise.resolve(true),
     fitCanvas() {}, getActivePets: () => [], getPet: () => null, petDisplayName: () => 'Pet',
     renderAccessoryShop() {}, renderAll() {},
@@ -140,19 +129,15 @@ test('a pet that is not in the table still gets an anchor', () => {
   assert.ok(Number.isFinite(a.hx) && Number.isFinite(a.hy) && a.r > 0);
 });
 
-/* Every accessory is a file on disk now. A catalogue entry with no picture
-   behind it is not a broken drawing — it is an invisible one, and the shop card
-   for it looks like a bare head that someone forgot to finish. */
-test('every accessory has a picture, and every picture is named by an accessory', () => {
-  const ART = evalIn('ACC_ART');
+/* The catalogue and the switch that draws it are two lists, and nothing makes
+   them agree: an accessory whose `draw` key has no case falls straight through
+   and paints nothing at all, which on a shop card looks like a bare head that
+   someone forgot to finish. */
+test('every accessory in the catalogue actually draws something', () => {
   for (const acc of ACCESSORIES) {
-    assert.ok(ART[acc.draw], acc.id + ' has no ACC_ART entry');
-    assert.ok(ART[acc.draw].w > 0, acc.id + ' is drawn at no width');
-    const file = path.join(DIR, '..', 'img', 'accessories', acc.draw + '.png');
-    assert.ok(fs.existsSync(file), 'no artwork on disk for ' + acc.id + ': ' + file);
-  }
-  for (const draw of Object.keys(ART)) {
-    assert.ok(ACCESSORIES.some(a => a.draw === draw), 'ACC_ART lists ' + draw + ', which nothing wears');
+    const ctx = strictCtx();
+    sb.drawPetAccessory(ctx, 'cat', acc.id, 60, null, 'front');
+    assert.ok(ctx.drawn.length > 0, acc.id + " has no case in drawPetAccessory — it draws nothing");
   }
 });
 
@@ -164,8 +149,6 @@ test('every accessory preview draws, and none of it lands on NaN', () => {
     assert.deepEqual(ctx.bad, [], acc.id + ' drew with a non-finite number');
     // Backdrop + head + the accessory itself: a blank canvas is the bug.
     assert.ok(ctx.drawn.length > 6, acc.id + ' drew almost nothing (' + ctx.drawn.length + ' calls)');
-    // ...and the accessory specifically, not just the head it sits on.
-    assert.ok(ctx.drawn.includes('drawImage'), acc.id + ' drew a bare head — its picture never landed');
   }
 });
 

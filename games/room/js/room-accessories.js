@@ -287,10 +287,9 @@
        this grey stands in for. */
     function drawAccessoryPreview(ctx, accId, size) {
       /* Sized so the TALLEST accessory fits the square, not so the head fills
-         it: a wizard hat reaches 0.6 of the pet size above the crown and a cape
-         hangs 0.77 below the head, and at the old 0.7 the cape and the scarf
-         ran off the bottom of every card. */
-      const s = size * 0.62;
+         it: the wizard hat stands well above the crown and the cape hangs most
+         of a body below the head, and at a bigger scale both ran off the card. */
+      const s = size * 0.66;
       // The head below faces the viewer — two ears, two eyes — so the accessory
       // is anchored to the FRONT pose. On the side anchor it would land where a
       // walking cat's head is, off past the edge of this square.
@@ -306,14 +305,10 @@
       /* Centre so the cat's head anchor lands in the middle of the square —
          nudged UP rather than down, because far more of an accessory hangs
          below a head (scarf, cape, wings) than stands above it. */
-      ctx.translate(size / 2 - s * ho.hx, size / 2 - s * 0.17 - s * ho.hy);
+      ctx.translate(size / 2 - s * ho.hx, size / 2 - s * 0.12 - s * ho.hy);
       const hx = s * ho.hx, hy = s * ho.hy;
-      /* This square is painted ONCE, unlike the room, so a picture that has not
-         arrived yet would leave a bare head sitting on the card for good. Draw
-         the whole square again when it lands. */
-      const again = () => drawAccessoryPreview(ctx, accId, size);
       // Anything worn BEHIND the pet — the wings, the cape — goes down first.
-      drawPetAccessory(ctx, 'cat', accId, s, 'back', 'front', again);
+      drawPetAccessory(ctx, 'cat', accId, s, 'back', 'front');
       // Stand-in head: skull, ears, eyes
       ctx.fillStyle = 'rgba(255,255,255,0.30)';
       ctx.beginPath(); ctx.arc(hx, hy, s * ho.r, 0, Math.PI * 2); ctx.fill();
@@ -322,7 +317,7 @@
       ctx.fillStyle = 'rgba(35,28,22,0.55)';
       ctx.beginPath(); ctx.arc(hx - s*0.08, hy - s*0.02, s*0.03, 0, Math.PI*2); ctx.fill();
       ctx.beginPath(); ctx.arc(hx + s*0.08, hy - s*0.02, s*0.03, 0, Math.PI*2); ctx.fill();
-      drawPetAccessory(ctx, 'cat', accId, s, 'front', 'front', again);
+      drawPetAccessory(ctx, 'cat', accId, s, 'front', 'front');
       ctx.restore();
     }
 
@@ -362,113 +357,56 @@
        it. */
     const BACK_LAYER_ACCESSORIES = ['wings', 'cape'];
 
-    /* ── The pictures ─────────────────────────────────────────────────────
-       Each accessory is one drawing now (img/accessories/<draw>.png) where it
-       used to be twenty-odd canvas paths. The file says what it looks like;
-       this table says only how big it is drawn and where it sits.
+    /* ── Drawing the accessories ──────────────────────────────────────────
+       Every piece is drawn here rather than loaded as a picture, and every one
+       is measured in HEADS: `u` below is the wearer's head radius, so a hat is
+       a hat on the goose (whose head is 0.14 of its body) and on the hamster
+       (0.35), instead of one fixed slice of the animal that fits neither. The
+       four worn on the BODY — scarf, cape, wings, badge — measure in `b`, the
+       pet size, because a cape drapes over an animal, not over its skull.
 
-       EVERYTHING IS MEASURED IN HEADS, not in pet sizes. The heads these are
-       worn on run from 0.14 of the body (the goose, Tom) to 0.35 (the hamster,
-       which is mostly head) — two and a half times — so one width as a fraction
-       of the PET swallowed the goose and perched a doll's hat on the hamster.
-       `w` is a multiple of the head's WIDTH and `x`/`y` are multiples of its
-       radius, both taken from the same anchor the accessory hangs off, so every
-       piece arrives sized to the animal actually wearing it.
+       Everything carries its own dark outline. These are seen at forty pixels
+       against fur that runs from the bunny's white to the panda's black, and
+       an unoutlined shape disappears into one end or the other. */
+    const ACC_INK = 'rgba(38,30,26,0.85)';
 
-       `y` is measured from the head centre, except under `ref: 'top'` where it
-       is measured from the CROWN — the head centre less its radius — which is
-       what a hat stands on.
-
-       `on: 'body'` opts out for the four pieces that are NOT worn on the head:
-       a cape drapes over an animal, not over its skull, so those keep the pet
-       size as their unit and are placed from the head centre in the same.
-
-       `ax`/`ay` say which point OF THE PICTURE lands there, as a fraction of
-       its own width and height. The middle (0.5) unless said otherwise; ay:1 is
-       the bottom edge a hat stands on, ay:0 the top edge a scarf hangs from.
-       The monocle and the pirate patch name a point inside their own drawing —
-       the lens, the patch — because both pictures are mostly chain and strap,
-       and it is the lens that has to land on the eye. */
-    const ACC_ART = {
-      // Worn on the crown.
-      tophat:     { w: 0.80, y:  0.24, ay: 1,    ref: 'top' },
-      crown:      { w: 0.88, y:  0.16, ay: 1,    ref: 'top' },
-      wizard:     { w: 0.92, y:  0.20, ay: 1,    ref: 'top' },
-      partyhat:   { w: 0.60, y:  0.16, ay: 1,    ref: 'top' },
-      tiara:      { w: 0.80, y:  0.24, ay: 1,    ref: 'top' },
-      devil:      { w: 0.88, y:  0.24, ay: 1,    ref: 'top' },
-      bow:        { w: 0.60, x: 0.08, y: 0.20, ay: 1, ref: 'top' },
-      flower:     { w: 0.40, x: 0.52, y: 0.24, ay: 1, ref: 'top' },
-      // The halo hangs ABOVE the crown, and it is the ring that has to hang
-      // there — the sparkles above it are half the picture's height.
-      halo:       { w: 0.68, y: -0.24, ay: 0.69, ref: 'top' },
-
-      // Worn on the face. The eye line is the head centre.
-      glasses:    { w: 0.84, y: -0.04 },
-      heartglass: { w: 0.84, y: -0.04 },
-      /* All three name a point INSIDE their own drawing, because none of them
-         is centred on the thing that has to line up. Hung off their middles,
-         the hood's slit rode above the eyes and left the pet looking blind-
-         folded, and the lens and the patch sat off the eye they belong on. */
-      ninja:      { w: 1.24, y:  0,     ax: 0.34, ay: 0.44 },   // the eye slit
-      monocle:    { w: 0.72, x:  0.28, y: 0.08, ax: 0.36, ay: 0.34 },  // the lens
-      pirate:     { w: 0.85, x: -0.34, y: 0.02, ax: 0.33, ay: 0.62 },  // the patch
-      /* Worn on the BODY, below the head, and sized to the animal rather than
-         to its skull — a cape is a cape whatever the head on top of it.
-
-         The bandana is here rather than on the crown, which is where it started
-         out. It is drawn as a neckerchief — a triangle with the knot to one
-         side and the opening along the top — and worn on the head, seen from
-         the front, the triangle simply hangs over the face: on nearly every pet
-         it came out a blindfold. Round the neck it is the thing that was drawn,
-         and it never fights the eyes. */
-      scarf:      { w: 0.48, x: -0.04, y: 0.14, ay: 0, on: 'body' },
-      bandana:    { w: 0.50, x: -0.02, y: 0.10, ay: 0.10, on: 'body' },
-      starbadge:  { w: 0.22, x:  0.11, y: 0.30,        on: 'body' },
-      /* Wide enough to clear the widest pet. Both are drawn BEHIND the animal,
-         and at the width a cat wanted the hamster and the capybara — round,
-         nearly as wide as they are tall — swallowed them whole: the cape did
-         not show at all. */
-      cape:       { w: 0.94, y: 0.10, ay: 0,           on: 'body' },
-      wings:      { w: 1.14, y: 0.20,                  on: 'body' },
-    };
-
-    /* One file per accessory, fetched on FIRST WEAR rather than at page load: a
-       room of bare pets must not pay for nineteen drawings. Resolved against
-       this script's own URL, because the room and the World load it from
-       different depths, and carrying the script's own ?v= so new artwork ships
-       with the version that places it. */
-    const _accArtScript = (typeof document !== 'undefined' && document.currentScript && document.currentScript.src) || '';
-    function accArtUrl(draw) {
-      const q = _accArtScript.indexOf('?');
-      const file = draw + '.png' + (q >= 0 ? _accArtScript.slice(q) : '');
-      // The fallback is the room's own path, for anything that loads this file
-      // without a resolvable URL to hang the picture off.
-      try { return new URL('../img/accessories/' + file, _accArtScript).href; }
-      catch (e) { return 'room/img/accessories/' + file; }
+    /* Fill a path and outline it in that one ink. `lw` is in pixels already —
+       every caller scales it off the head, so a hat on a small pet gets a
+       proportionally fine line rather than a thick one. */
+    function accShape(ctx, fill, lw, path) {
+      ctx.beginPath();
+      path();
+      if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+      if (lw > 0) {
+        ctx.strokeStyle = ACC_INK; ctx.lineWidth = lw;
+        ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+        ctx.stroke();
+      }
     }
 
-    const _accImgs = {};
-    /* The picture for one accessory, or null while it is still coming down the
-       wire. `onReady` matters for the pictures drawn ONCE — a shop card, a
-       gacha prize — which would otherwise stay empty for the one frame they
-       have; the room and the World redraw every frame and pass nothing. */
-    function accArtImage(draw, onReady) {
-      if (!ACC_ART[draw] || typeof Image === 'undefined') return null;
-      let img = _accImgs[draw];
-      if (!img) {
-        img = _accImgs[draw] = new Image();
-        img.src = accArtUrl(draw);
+    // A vertical two-stop gradient over a box, for the pieces that want a
+    // little roundness — gold, silk, lacquer.
+    function accGrad(ctx, y0, y1, a, c) {
+      const g = ctx.createLinearGradient(0, y0, 0, y1);
+      g.addColorStop(0, a); g.addColorStop(1, c);
+      return g;
+    }
+
+    // An n-pointed star, as a path. Used by the badge and the hat spangles.
+    function accStarPath(ctx, cx, cy, rOuter, rInner, points) {
+      for (let i = 0; i < points * 2; i++) {
+        const r = i % 2 ? rInner : rOuter;
+        const a = -Math.PI / 2 + i * Math.PI / points;
+        const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+        if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
       }
-      if (img.naturalWidth) return img;
-      if (onReady) img.addEventListener('load', onReady, { once: true });
-      return null;
+      ctx.closePath();
     }
 
     /* `pose` is only read for pets whose entry above is a set — the sprite pets
        that change silhouette. Everything else keeps one head all its life and
        ignores it, so callers that do not know the pose can leave it out. */
-    function drawPetAccessory(ctx, petType, accId, s, layer, pose, onReady) {
+    function drawPetAccessory(ctx, petType, accId, s, layer, pose) {
       if (!accId) return;
       const acc = PET_ACCESSORIES.find(a => a.id === accId);
       if (!acc) return;
@@ -479,31 +417,477 @@
       const ho = petHeadAnchor(petType, pose);
       const hx = s * ho.hx;   // head centre X
       const hy = s * ho.hy;   // head centre Y
-      const hr = s * ho.r;    // head radius
+      const u  = s * ho.r;    // ONE HEAD RADIUS — the unit every head piece uses
       /* Where the EYES are, which is the head centre on almost every pet and is
          written down separately where it is not: a tall head (Tom's) has its
          box centred above its eyes, and glasses hung off the centre ride up the
          forehead. Hats keep using the crown, which is the same either way. */
       const ey = s * (ho.ey === undefined ? ho.hy : ho.ey);
-      const art = ACC_ART[acc.draw];
-      if (!art) return;
-      const img = accArtImage(acc.draw, onReady);
-      if (!img) return;                       // still downloading
-      /* Head pieces are measured in heads and body pieces in pet sizes — see
-         ACC_ART. One unit for the width (the head's WIDTH, or the pet size) and
-         one for the offsets (its radius, or the pet size again). */
-      const onBody = art.on === 'body';
-      const wUnit = onBody ? s : hr * 2;
-      const oUnit = onBody ? s : hr;
-      const w = wUnit * art.w;
-      const h = w * img.naturalHeight / img.naturalWidth;
-      // Measured from the crown for anything worn on top of the head, from the
-      // eye line for anything worn on the face, and from the head centre for
-      // the pieces that hang on the body.
-      const originY = art.ref === 'top' ? hy - hr : onBody ? hy : ey;
-      ctx.drawImage(img,
-        hx + oUnit * (art.x || 0) - w * (art.ax === undefined ? 0.5 : art.ax),
-        originY + oUnit * (art.y || 0) - h * (art.ay === undefined ? 0.5 : art.ay),
-        w, h);
+      const top = hy - u;     // the crown: what a hat stands on
+      const b = s;            // the unit for the pieces worn on the body
+      const ink = u * 0.055;  // outline weight, so it thins with the head
+
+      switch (acc.draw) {
+
+        case 'tophat': {
+          const brimY = top + u * 0.06, hatH = u * 0.95;
+          // Brim first, so the crown of the hat sits on top of its own ellipse.
+          accShape(ctx, '#23212e', ink, () => ctx.ellipse(hx, brimY, u * 0.98, u * 0.20, 0, 0, Math.PI * 2));
+          accShape(ctx, accGrad(ctx, brimY - hatH, brimY, '#3a3750', '#1a1826'), ink, () => {
+            ctx.moveTo(hx - u * 0.56, brimY);
+            ctx.lineTo(hx - u * 0.50, brimY - hatH);
+            ctx.lineTo(hx + u * 0.50, brimY - hatH);
+            ctx.lineTo(hx + u * 0.56, brimY);
+            ctx.closePath();
+          });
+          // Band, and one soft highlight down the left of the silk.
+          accShape(ctx, '#c0392b', 0, () => ctx.rect(hx - u * 0.545, brimY - u * 0.28, u * 1.09, u * 0.22));
+          ctx.globalAlpha = 0.28;
+          accShape(ctx, '#ffffff', 0, () => ctx.rect(hx - u * 0.40, brimY - hatH + u * 0.10, u * 0.13, hatH - u * 0.48));
+          ctx.globalAlpha = 1;
+          break;
+        }
+
+        case 'crown': {
+          const baseY = top + u * 0.12, tipY = baseY - u * 0.82, w = u * 0.88;
+          const gold = accGrad(ctx, tipY, baseY + u * 0.2, '#ffe486', '#c8890f');
+          accShape(ctx, gold, ink, () => {
+            ctx.moveTo(hx - w, baseY);
+            ctx.lineTo(hx - w, tipY + u * 0.22);
+            ctx.lineTo(hx - w * 0.55, baseY - u * 0.30);
+            ctx.lineTo(hx - w * 0.28, tipY);
+            ctx.lineTo(hx, baseY - u * 0.34);
+            ctx.lineTo(hx + w * 0.28, tipY);
+            ctx.lineTo(hx + w * 0.55, baseY - u * 0.30);
+            ctx.lineTo(hx + w, tipY + u * 0.22);
+            ctx.lineTo(hx + w, baseY);
+            ctx.closePath();
+          });
+          // Rim, then the balls on the points, then the stones.
+          accShape(ctx, '#e0a51c', ink * 0.8, () => ctx.rect(hx - w, baseY - u * 0.20, w * 2, u * 0.22));
+          [[-0.28, tipY], [0.28, tipY], [-1, tipY + u * 0.22], [1, tipY + u * 0.22]].forEach(([fx, ty]) =>
+            accShape(ctx, '#ffd75e', ink * 0.7, () => ctx.arc(hx + w * fx, ty, u * 0.10, 0, Math.PI * 2)));
+          accShape(ctx, '#e5484d', ink * 0.6, () => ctx.ellipse(hx, baseY - u * 0.09, u * 0.11, u * 0.14, 0, 0, Math.PI * 2));
+          accShape(ctx, '#3fa4c8', 0, () => ctx.arc(hx - w * 0.60, baseY - u * 0.09, u * 0.07, 0, Math.PI * 2));
+          accShape(ctx, '#43b581', 0, () => ctx.arc(hx + w * 0.60, baseY - u * 0.09, u * 0.07, 0, Math.PI * 2));
+          break;
+        }
+
+        case 'glasses': {
+          const lx = u * 0.46, ly = ey, rw = u * 0.40, rh = u * 0.30;
+          // Arms first — they run back to the ears behind the lenses.
+          accShape(ctx, null, ink * 1.3, () => {
+            ctx.moveTo(hx - lx - rw, ly - rh * 0.35); ctx.lineTo(hx - u * 1.05, ly - rh * 0.55);
+            ctx.moveTo(hx + lx + rw, ly - rh * 0.35); ctx.lineTo(hx + u * 1.05, ly - rh * 0.55);
+          });
+          accShape(ctx, null, ink * 1.4, () => {
+            ctx.moveTo(hx - lx + rw, ly - rh * 0.2); ctx.lineTo(hx + lx - rw, ly - rh * 0.2);
+          });
+          [-1, 1].forEach(sgn => {
+            accShape(ctx, '#1d2027', ink, () => ctx.ellipse(hx + sgn * lx, ly, rw, rh, 0, 0, Math.PI * 2));
+            ctx.globalAlpha = 0.45;
+            accShape(ctx, '#9fd3ff', 0, () => {
+              ctx.moveTo(hx + sgn * lx - rw * 0.55, ly + rh * 0.35);
+              ctx.lineTo(hx + sgn * lx - rw * 0.05, ly - rh * 0.60);
+              ctx.lineTo(hx + sgn * lx + rw * 0.30, ly - rh * 0.60);
+              ctx.lineTo(hx + sgn * lx - rw * 0.20, ly + rh * 0.35);
+              ctx.closePath();
+            });
+            ctx.globalAlpha = 1;
+          });
+          break;
+        }
+
+        case 'bow': {
+          const cx = hx + u * 0.10, cy = top + u * 0.02, w = u * 0.52, h = u * 0.40;
+          const red = accGrad(ctx, cy - h, cy + h, '#ef4b52', '#b3252c');
+          [-1, 1].forEach(sgn => accShape(ctx, red, ink, () => {
+            ctx.moveTo(cx, cy);
+            ctx.quadraticCurveTo(cx + sgn * w * 1.15, cy - h * 1.25, cx + sgn * w * 1.05, cy - h * 0.15);
+            ctx.quadraticCurveTo(cx + sgn * w * 0.95, cy + h * 0.95, cx, cy);
+            ctx.closePath();
+          }));
+          accShape(ctx, '#d13a41', ink * 0.8, () => ctx.ellipse(cx, cy - h * 0.05, u * 0.15, u * 0.15, 0, 0, Math.PI * 2));
+          break;
+        }
+
+        case 'scarf': {
+          // Round the neck, which is below the head and belongs to the body.
+          const ny = hy + u * 0.86, w = b * 0.26, red = accGrad(ctx, ny - b * 0.06, ny + b * 0.10, '#e8464d', '#a81f27');
+          accShape(ctx, red, ink, () => {
+            ctx.moveTo(hx - w, ny - b * 0.05);
+            ctx.quadraticCurveTo(hx, ny + b * 0.07, hx + w, ny - b * 0.05);
+            ctx.quadraticCurveTo(hx + w * 1.05, ny + b * 0.06, hx + w * 0.9, ny + b * 0.08);
+            ctx.quadraticCurveTo(hx, ny + b * 0.18, hx - w * 0.9, ny + b * 0.08);
+            ctx.quadraticCurveTo(hx - w * 1.05, ny + b * 0.06, hx - w, ny - b * 0.05);
+            ctx.closePath();
+          });
+          // The loose end, hanging down the pet's left with a fringe on it.
+          const tx = hx + w * 0.55, ty = ny + b * 0.06, tl = b * 0.20;
+          accShape(ctx, '#c9333a', ink, () => {
+            ctx.moveTo(tx - b * 0.055, ty);
+            ctx.quadraticCurveTo(tx - b * 0.02, ty + tl * 0.6, tx - b * 0.045, ty + tl);
+            ctx.lineTo(tx + b * 0.055, ty + tl);
+            ctx.quadraticCurveTo(tx + b * 0.075, ty + tl * 0.6, tx + b * 0.055, ty);
+            ctx.closePath();
+          });
+          accShape(ctx, null, ink * 0.9, () => {
+            for (let i = -1; i <= 1; i++) {
+              ctx.moveTo(tx + i * b * 0.035, ty + tl);
+              ctx.lineTo(tx + i * b * 0.035, ty + tl + b * 0.045);
+            }
+          });
+          break;
+        }
+
+        case 'flower': {
+          const cx = hx + u * 0.68, cy = top + u * 0.02, pr = u * 0.25;
+          accShape(ctx, '#4ba14b', ink * 0.8, () => {
+            ctx.moveTo(cx - u * 0.02, cy + pr * 0.6);
+            ctx.quadraticCurveTo(cx - u * 0.30, cy + pr * 1.5, cx - u * 0.34, cy + pr * 0.7);
+            ctx.quadraticCurveTo(cx - u * 0.16, cy + pr * 0.5, cx - u * 0.02, cy + pr * 0.6);
+            ctx.closePath();
+          });
+          for (let i = 0; i < 5; i++) {
+            const a = -Math.PI / 2 + i * Math.PI * 2 / 5;
+            accShape(ctx, '#ff86bd', ink * 0.7, () =>
+              ctx.ellipse(cx + Math.cos(a) * pr * 0.95, cy + Math.sin(a) * pr * 0.95, pr * 0.62, pr * 0.62, 0, 0, Math.PI * 2));
+          }
+          accShape(ctx, '#ffd54a', ink * 0.7, () => ctx.arc(cx, cy, pr * 0.46, 0, Math.PI * 2));
+          break;
+        }
+
+        case 'bandana': {
+          /* Tied over the crown, pirate-fashion, with the knot and two tails at
+             the side. It used to be a band across the eyes, which read as a
+             bandit's mask and hid the face of every pet that wore it. */
+          const capY = top + u * 0.52;
+          const cloth = accGrad(ctx, top - u * 0.12, capY, '#e8464d', '#ad2129');
+          accShape(ctx, cloth, ink, () => {
+            ctx.moveTo(hx - u * 1.0, capY);
+            ctx.quadraticCurveTo(hx - u * 1.02, top - u * 0.28, hx, top - u * 0.30);
+            ctx.quadraticCurveTo(hx + u * 1.02, top - u * 0.28, hx + u * 1.0, capY);
+            ctx.quadraticCurveTo(hx, capY - u * 0.22, hx - u * 1.0, capY);
+            ctx.closePath();
+          });
+          // Knot and tails, off to the pet's left.
+          accShape(ctx, '#c9333a', ink, () => ctx.ellipse(hx + u * 0.98, capY - u * 0.12, u * 0.20, u * 0.17, 0, 0, Math.PI * 2));
+          accShape(ctx, '#c9333a', ink, () => {
+            ctx.moveTo(hx + u * 1.05, capY - u * 0.20);
+            ctx.lineTo(hx + u * 1.55, capY - u * 0.02);
+            ctx.lineTo(hx + u * 1.02, capY + u * 0.12);
+            ctx.closePath();
+          });
+          ctx.globalAlpha = 0.35;
+          accShape(ctx, '#ffffff', 0, () => {
+            ctx.ellipse(hx - u * 0.42, top - u * 0.02, u * 0.10, u * 0.07, -0.5, 0, Math.PI * 2);
+          });
+          ctx.globalAlpha = 1;
+          break;
+        }
+
+        case 'monocle': {
+          const cx = hx + u * 0.46, cy = ey, r = u * 0.34;
+          ctx.globalAlpha = 0.30;
+          accShape(ctx, '#cfe8ff', 0, () => ctx.arc(cx, cy, r, 0, Math.PI * 2));
+          ctx.globalAlpha = 1;
+          accShape(ctx, null, ink * 1.9, () => ctx.arc(cx, cy, r, 0, Math.PI * 2));
+          ctx.strokeStyle = '#e0a51c'; ctx.lineWidth = ink * 1.3;
+          ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+          ctx.globalAlpha = 0.55;
+          accShape(ctx, '#ffffff', 0, () => {
+            ctx.moveTo(cx - r * 0.45, cy + r * 0.30);
+            ctx.lineTo(cx + r * 0.05, cy - r * 0.55);
+            ctx.lineTo(cx + r * 0.35, cy - r * 0.50);
+            ctx.lineTo(cx - r * 0.20, cy + r * 0.35);
+            ctx.closePath();
+          });
+          ctx.globalAlpha = 1;
+          // The chain, swinging off towards the collar.
+          ctx.strokeStyle = '#c9952a'; ctx.lineWidth = ink;
+          ctx.setLineDash([ink * 1.6, ink * 1.2]);
+          ctx.beginPath();
+          ctx.moveTo(cx + r * 0.5, cy + r * 0.75);
+          ctx.quadraticCurveTo(cx + r * 1.5, cy + r * 1.6, cx + r * 1.1, cy + r * 2.6);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          break;
+        }
+
+        case 'halo': {
+          const cy = top - u * 0.42, rx = u * 0.60, ry = u * 0.19;
+          ctx.globalAlpha = 0.30;
+          ctx.strokeStyle = '#ffe27a'; ctx.lineWidth = u * 0.30;
+          ctx.beginPath(); ctx.ellipse(hx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+          ctx.globalAlpha = 1;
+          ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = u * 0.13;
+          ctx.beginPath(); ctx.ellipse(hx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+          ctx.strokeStyle = '#fff3bf'; ctx.lineWidth = u * 0.05;
+          ctx.beginPath(); ctx.ellipse(hx - rx * 0.15, cy - ry * 0.45, rx * 0.55, ry * 0.35, 0, Math.PI * 0.9, Math.PI * 1.9); ctx.stroke();
+          // Three little ticks of light above it.
+          ctx.strokeStyle = '#ffe27a'; ctx.lineWidth = u * 0.06;
+          ctx.beginPath();
+          [-0.62, 0, 0.62].forEach(fx => {
+            ctx.moveTo(hx + rx * fx, cy - ry - u * 0.14);
+            ctx.lineTo(hx + rx * fx * 1.12, cy - ry - u * 0.34);
+          });
+          ctx.stroke();
+          break;
+        }
+
+        case 'wizard': {
+          const brimY = top + u * 0.06, tipX = hx + u * 0.62, tipY = top - u * 1.62;
+          accShape(ctx, accGrad(ctx, tipY, brimY, '#7b4fd1', '#3b1f73'), ink, () => {
+            ctx.moveTo(hx - u * 0.78, brimY);
+            ctx.quadraticCurveTo(hx - u * 0.34, top - u * 0.85, tipX, tipY);
+            ctx.quadraticCurveTo(hx + u * 0.30, top - u * 0.62, hx + u * 0.80, brimY);
+            ctx.closePath();
+          });
+          accShape(ctx, '#5b34a8', ink, () => ctx.ellipse(hx, brimY, u * 1.02, u * 0.22, 0, 0, Math.PI * 2));
+          ctx.fillStyle = '#ffd23f';
+          [[-0.30, -0.55, 0.13], [0.16, -1.02, 0.10], [-0.06, -0.24, 0.09]].forEach(([fx, fy, r]) => {
+            ctx.beginPath(); accStarPath(ctx, hx + u * fx, top + u * fy, u * r, u * r * 0.42, 4); ctx.fill();
+          });
+          break;
+        }
+
+        case 'partyhat': {
+          const baseY = top + u * 0.04, tipX = hx + u * 0.06, tipY = top - u * 1.30, hw = u * 0.46;
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(hx - hw, baseY); ctx.lineTo(tipX, tipY); ctx.lineTo(hx + hw, baseY); ctx.closePath();
+          ctx.clip();
+          ctx.fillStyle = '#ffd23f';
+          ctx.fillRect(hx - u * 1.2, tipY, u * 2.4, baseY - tipY);
+          ctx.fillStyle = '#5b8dee';
+          for (let i = -3; i < 4; i++) {
+            ctx.beginPath();
+            ctx.moveTo(hx + i * u * 0.42, baseY + u * 0.1);
+            ctx.lineTo(hx + i * u * 0.42 + u * 0.20, baseY + u * 0.1);
+            ctx.lineTo(hx + i * u * 0.42 + u * 0.62, tipY - u * 0.1);
+            ctx.lineTo(hx + i * u * 0.42 + u * 0.42, tipY - u * 0.1);
+            ctx.closePath(); ctx.fill();
+          }
+          ctx.restore();
+          accShape(ctx, null, ink, () => {
+            ctx.moveTo(hx - hw, baseY); ctx.lineTo(tipX, tipY); ctx.lineTo(hx + hw, baseY); ctx.closePath();
+          });
+          // Pompom, and the scalloped trim round the brim.
+          accShape(ctx, '#ff9ecb', ink * 0.8, () => ctx.arc(tipX, tipY - u * 0.06, u * 0.15, 0, Math.PI * 2));
+          accShape(ctx, '#ff9ecb', ink * 0.7, () => {
+            for (let i = -2; i <= 2; i++) ctx.ellipse(hx + i * u * 0.21, baseY, u * 0.12, u * 0.09, 0, 0, Math.PI * 2);
+          });
+          break;
+        }
+
+        case 'heartglass': {
+          /* The lobes and the notch between them have to survive at forty
+             pixels, or these are just the sunglasses again in a red frame:
+             hence two full circles for the top and a deep V under them, rather
+             than one smooth bezier that rounds itself away at this size. */
+          const lx = u * 0.50, ly = ey, w = u * 0.52, h = u * 0.46;
+          accShape(ctx, null, ink * 1.4, () => {
+            ctx.moveTo(hx - lx + w * 0.55, ly - h * 0.35); ctx.lineTo(hx + lx - w * 0.55, ly - h * 0.35);
+            ctx.moveTo(hx - lx - w * 0.85, ly - h * 0.30); ctx.lineTo(hx - u * 1.06, ly - h * 0.55);
+            ctx.moveTo(hx + lx + w * 0.85, ly - h * 0.30); ctx.lineTo(hx + u * 1.06, ly - h * 0.55);
+          });
+          [-1, 1].forEach(sgn => {
+            const cx = hx + sgn * lx, lobe = w * 0.40;
+            const heart = () => {
+              ctx.moveTo(cx - w * 0.80, ly - h * 0.22);
+              ctx.arc(cx - lobe, ly - h * 0.30, lobe, Math.PI, Math.PI * 1.92);
+              ctx.arc(cx + lobe, ly - h * 0.30, lobe, Math.PI * 1.08, 0);
+              ctx.lineTo(cx + w * 0.80, ly - h * 0.14);
+              ctx.quadraticCurveTo(cx + w * 0.45, ly + h * 0.42, cx, ly + h * 0.72);
+              ctx.quadraticCurveTo(cx - w * 0.45, ly + h * 0.42, cx - w * 0.80, ly - h * 0.14);
+              ctx.closePath();
+            };
+            accShape(ctx, '#f0505a', ink * 2.0, heart);   // frame, drawn as a fat outline
+            accShape(ctx, '#3a1220', 0, () => {           // the tinted glass inside it
+              ctx.save(); ctx.translate(cx, ly - h * 0.05); ctx.scale(0.74, 0.74);
+              ctx.translate(-cx, -(ly - h * 0.05)); heart(); ctx.restore();
+            });
+            ctx.globalAlpha = 0.5;
+            accShape(ctx, '#ffd9e4', 0, () =>
+              ctx.ellipse(cx - w * 0.32, ly - h * 0.30, w * 0.20, h * 0.13, -0.6, 0, Math.PI * 2));
+            ctx.globalAlpha = 1;
+          });
+          break;
+        }
+
+        case 'devil': {
+          const bandY = top + u * 0.14;
+          [-1, 1].forEach(sgn => accShape(ctx, accGrad(ctx, bandY - u * 0.85, bandY, '#ff6b5e', '#a8201a'), ink, () => {
+            const bx = hx + sgn * u * 0.58;
+            ctx.moveTo(bx - sgn * u * 0.20, bandY);
+            ctx.quadraticCurveTo(bx - sgn * u * 0.30, bandY - u * 0.62, bx + sgn * u * 0.24, bandY - u * 0.82);
+            ctx.quadraticCurveTo(bx + sgn * u * 0.06, bandY - u * 0.44, bx + sgn * u * 0.18, bandY);
+            ctx.closePath();
+          }));
+          accShape(ctx, '#2b2b33', ink * 0.8, () => {
+            ctx.moveTo(hx - u * 0.92, bandY + u * 0.04);
+            ctx.quadraticCurveTo(hx, bandY - u * 0.30, hx + u * 0.92, bandY + u * 0.04);
+            ctx.quadraticCurveTo(hx, bandY - u * 0.12, hx - u * 0.92, bandY + u * 0.04);
+            ctx.closePath();
+          });
+          break;
+        }
+
+        case 'wings': {
+          /* Behind the pet, on the body. Built from three overlapping feather
+             lobes a side rather than one smooth blade — a blade at this size
+             reads as a fin — and outlined, because they are the same white as
+             the goose wearing them. */
+          const wy = hy + b * 0.14;
+          [-1, 1].forEach(sgn => {
+            const rx = hx + sgn * b * 0.09;
+            const quill = accGrad(ctx, wy - b * 0.22, wy + b * 0.10, '#ffffff', '#bccbe3');
+            [[0.40, -0.20, 0.09], [0.33, -0.07, 0.085], [0.24, 0.04, 0.075]].forEach(([len, lift, th]) => {
+              accShape(ctx, quill, ink * 0.8, () => {
+                ctx.moveTo(rx, wy + b * 0.05);
+                ctx.quadraticCurveTo(rx + sgn * b * len * 0.55, wy + b * (lift - th * 1.5),
+                                     rx + sgn * b * len, wy + b * lift);
+                ctx.quadraticCurveTo(rx + sgn * b * len * 0.50, wy + b * (lift + th),
+                                     rx, wy + b * 0.05);
+                ctx.closePath();
+              });
+            });
+          });
+          break;
+        }
+
+        case 'cape': {
+          // Also behind the pet: hangs from the neck and flares out past it.
+          const ny = hy + u * 0.80, hem = hy + b * 0.62, w = b * 0.42;
+          accShape(ctx, accGrad(ctx, ny, hem, '#e0454c', '#8e1b22'), ink, () => {
+            ctx.moveTo(hx - b * 0.13, ny);
+            ctx.quadraticCurveTo(hx - w * 0.9, hem - b * 0.20, hx - w, hem);
+            ctx.quadraticCurveTo(hx - w * 0.45, hem + b * 0.05, hx, hem - b * 0.01);
+            ctx.quadraticCurveTo(hx + w * 0.45, hem + b * 0.05, hx + w, hem);
+            ctx.quadraticCurveTo(hx + w * 0.9, hem - b * 0.20, hx + b * 0.13, ny);
+            ctx.closePath();
+          });
+          ctx.globalAlpha = 0.22;
+          accShape(ctx, '#3d0c10', 0, () => {
+            ctx.moveTo(hx + b * 0.02, ny + b * 0.02);
+            ctx.quadraticCurveTo(hx + w * 0.35, hem - b * 0.16, hx + w * 0.42, hem - b * 0.01);
+            ctx.lineTo(hx + w * 0.14, hem - b * 0.01);
+            ctx.closePath();
+          });
+          ctx.globalAlpha = 1;
+          // Collar and clasp, at the throat.
+          accShape(ctx, '#c9333a', ink, () => {
+            ctx.moveTo(hx - b * 0.15, ny - b * 0.02);
+            ctx.quadraticCurveTo(hx, ny + b * 0.05, hx + b * 0.15, ny - b * 0.02);
+            ctx.quadraticCurveTo(hx, ny - b * 0.06, hx - b * 0.15, ny - b * 0.02);
+            ctx.closePath();
+          });
+          accShape(ctx, '#ffd23f', ink * 0.7, () => ctx.arc(hx, ny + b * 0.005, b * 0.028, 0, Math.PI * 2));
+          break;
+        }
+
+        case 'ninja': {
+          /* Two pieces with a gap between them, and the gap is the eye slit —
+             the pet looks THROUGH the mask. Drawn as one hood and the slit cut
+             out of it, the eyes went behind the cloth on every pet whose face
+             is not proportioned like the drawing. */
+          const slitTop = ey - u * 0.24, slitBot = ey + u * 0.20;
+          const cloth = accGrad(ctx, top - u * 0.2, hy + u, '#33343d', '#17181f');
+          accShape(ctx, cloth, ink, () => {
+            ctx.moveTo(hx - u * 1.03, slitTop);
+            ctx.quadraticCurveTo(hx - u * 1.06, top - u * 0.30, hx, top - u * 0.32);
+            ctx.quadraticCurveTo(hx + u * 1.06, top - u * 0.30, hx + u * 1.03, slitTop);
+            ctx.quadraticCurveTo(hx, slitTop - u * 0.14, hx - u * 1.03, slitTop);
+            ctx.closePath();
+          });
+          accShape(ctx, cloth, ink, () => {
+            ctx.moveTo(hx - u * 1.0, slitBot);
+            ctx.quadraticCurveTo(hx, slitBot - u * 0.12, hx + u * 1.0, slitBot);
+            ctx.quadraticCurveTo(hx + u * 0.92, hy + u * 0.92, hx, hy + u * 1.0);
+            ctx.quadraticCurveTo(hx - u * 0.92, hy + u * 0.92, hx - u * 1.0, slitBot);
+            ctx.closePath();
+          });
+          // The knot, and its two tails streaming off to one side.
+          accShape(ctx, '#22232b', ink, () => ctx.ellipse(hx + u * 1.0, slitTop + u * 0.18, u * 0.17, u * 0.15, 0, 0, Math.PI * 2));
+          accShape(ctx, '#22232b', ink, () => {
+            ctx.moveTo(hx + u * 1.05, slitTop + u * 0.08);
+            ctx.lineTo(hx + u * 1.62, slitTop - u * 0.10);
+            ctx.lineTo(hx + u * 1.55, slitTop + u * 0.22);
+            ctx.closePath();
+            ctx.moveTo(hx + u * 1.05, slitTop + u * 0.26);
+            ctx.lineTo(hx + u * 1.58, slitTop + u * 0.44);
+            ctx.lineTo(hx + u * 1.10, slitTop + u * 0.40);
+            ctx.closePath();
+          });
+          break;
+        }
+
+        case 'pirate': {
+          const px = hx - u * 0.46, py = ey;
+          accShape(ctx, null, ink * 1.5, () => {
+            ctx.moveTo(px - u * 0.52, py - u * 0.16);
+            ctx.quadraticCurveTo(hx - u * 0.1, py - u * 0.62, hx + u * 1.02, py - u * 0.34);
+          });
+          accShape(ctx, '#1c1c22', ink, () => {
+            ctx.moveTo(px - u * 0.36, py - u * 0.26);
+            ctx.quadraticCurveTo(px + u * 0.40, py - u * 0.30, px + u * 0.34, py + u * 0.06);
+            ctx.quadraticCurveTo(px + u * 0.24, py + u * 0.36, px - u * 0.14, py + u * 0.32);
+            ctx.quadraticCurveTo(px - u * 0.42, py + u * 0.20, px - u * 0.36, py - u * 0.26);
+            ctx.closePath();
+          });
+          // Skull: two sockets and a jaw, which is all that survives at this size.
+          ctx.fillStyle = '#f0ece4';
+          [[-0.13, -0.04], [0.09, -0.05]].forEach(([fx, fy]) => {
+            ctx.beginPath(); ctx.arc(px + u * fx, py + u * fy, u * 0.075, 0, Math.PI * 2); ctx.fill();
+          });
+          ctx.beginPath(); ctx.ellipse(px - u * 0.02, py + u * 0.14, u * 0.10, u * 0.05, 0, 0, Math.PI * 2); ctx.fill();
+          break;
+        }
+
+        case 'tiara': {
+          /* An open band with three spires standing off it — filled in as one
+             solid arch (which is what a first pass gives you) it reads as a
+             helmet. The gaps between the spires ARE the tiara. Outlined
+             heavily too: silver on a white bunny is nearly the fur's colour. */
+          const baseY = top + u * 0.12, w = u * 0.80;
+          const silver = accGrad(ctx, baseY - u * 0.90, baseY, '#ffffff', '#8199bd');
+          const bandTop = (x) => baseY - u * 0.30 * (1 - (x / w) * (x / w));
+          // The three spires, tallest in the middle.
+          [[-0.60, 0.44], [0, 0.78], [0.60, 0.44]].forEach(([fx, hgt]) => {
+            const sx = hx + w * fx, sy = bandTop(w * fx);
+            accShape(ctx, silver, ink * 1.1, () => {
+              ctx.moveTo(sx - u * 0.17, sy);
+              ctx.quadraticCurveTo(sx - u * 0.11, sy - u * hgt * 0.75, sx, sy - u * hgt);
+              ctx.quadraticCurveTo(sx + u * 0.11, sy - u * hgt * 0.75, sx + u * 0.17, sy);
+              ctx.closePath();
+            });
+            accShape(ctx, '#eaf4ff', ink * 0.6, () => ctx.arc(sx, sy - u * hgt - u * 0.06, u * 0.075, 0, Math.PI * 2));
+          });
+          // The band itself, laid over the feet of the spires.
+          accShape(ctx, silver, ink * 1.1, () => {
+            ctx.moveTo(hx - w, baseY);
+            ctx.quadraticCurveTo(hx, baseY - u * 0.56, hx + w, baseY);
+            ctx.quadraticCurveTo(hx + w * 0.55, baseY + u * 0.14, hx, baseY + u * 0.16);
+            ctx.quadraticCurveTo(hx - w * 0.55, baseY + u * 0.14, hx - w, baseY);
+            ctx.closePath();
+          });
+          accShape(ctx, '#4fc3f7', ink * 0.85, () => ctx.ellipse(hx, baseY - u * 0.13, u * 0.16, u * 0.18, 0, 0, Math.PI * 2));
+          accShape(ctx, '#bde9ff', 0, () => ctx.ellipse(hx - u * 0.05, baseY - u * 0.19, u * 0.055, u * 0.065, -0.5, 0, Math.PI * 2));
+          break;
+        }
+
+        case 'starbadge': {
+          // Pinned on the chest, which belongs to the body, not the head.
+          const cx = hx + b * 0.11, cy = hy + b * 0.30, r = b * 0.075;
+          const gold = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, 0, cx, cy, r);
+          gold.addColorStop(0, '#ffe98a'); gold.addColorStop(0.55, '#fbbf24'); gold.addColorStop(1, '#c97d09');
+          accShape(ctx, gold, ink * 0.9, () => accStarPath(ctx, cx, cy, r, r * 0.44, 5));
+          accShape(ctx, '#d98a0c', ink * 0.6, () => ctx.arc(cx, cy, r * 0.26, 0, Math.PI * 2));
+          ctx.globalAlpha = 0.55;
+          accShape(ctx, '#fffbe8', 0, () => ctx.ellipse(cx - r * 0.28, cy - r * 0.34, r * 0.20, r * 0.11, -0.7, 0, Math.PI * 2));
+          ctx.globalAlpha = 1;
+          break;
+        }
+      }
     }
 
